@@ -65,38 +65,67 @@ This hobby project aims to provide families with a secure, private, and intuitiv
 
 ## Architecture Overview
 
+> **⚠️ IMPORTANT**: The cryptographic architecture must be designed **before** implementing local storage, sync, or sharing features. The choice of database technology (Core Data vs SQLCipher) is downstream from the crypto architecture design, as the sharing model and key hierarchy fundamentally affect how encrypted data is structured and stored.
+
+### Cryptographic Architecture (Design Required - See Issue #2)
+
+The following cryptographic components require detailed design before implementation:
+
+#### Key Hierarchy
+- **User Master Key**: Derived from user password using strong KDF (PBKDF2-HMAC-SHA256 with 100k+ iterations or Argon2id)
+- **Data Encryption Keys**: Strategy TBD (per-record, per-family-member, or hybrid approach)
+- **Sharing Keys**: Mechanism TBD (symmetric key wrapping, public-key encryption, or per-family-member keys)
+- **Key Rotation**: Strategy for updating encryption keys without data loss
+
+#### Sharing Model
+Design decisions required:
+- **Key Distribution**: How are data encryption keys shared with authorized family members?
+- **Access Revocation**: How to cryptographically enforce removal of access (key rotation, re-encryption)?
+- **Multi-User Encryption**: Each record accessible by multiple authorized users without server decryption
+- **Ownership Model**: How children's data remains accessible when ownership transfers (age-based access control)
+
+#### Sync Encryption
+- **Blob Packaging**: How to package encrypted data for server storage
+- **Metadata Encryption**: What sync metadata must be encrypted vs can be plaintext
+- **Conflict Resolution**: How to merge conflicts in encrypted data
+- **Delta Sync**: How to efficiently sync encrypted changes (especially for large attachments)
+
+**Status**: Cryptographic architecture design is prerequisite for implementation. See `docs/adr/` for architectural decisions.
+
+---
+
 ### Client-Side (iOS)
 - **Swift/SwiftUI**: Native iOS development
-- **Local Database**: Encrypted local storage (initial thoughts: SQLite + SQLCipher or Core Data + encryption - but TBD)
-- **Cryptography**: Industry-standard libraries (CryptoKit, potentially libsodium)
+- **Cryptography**: CryptoKit (AES-256-GCM) per AGENTS.md requirements
+- **Local Database**: Core Data with manual field-level encryption (decision pending crypto architecture design)
 - **Keychain**: Secure key storage using iOS Keychain Services
-- **Sync Engine**: Handles data synchronization including conflict resolution
+- **Sync Engine**: Handles data synchronization including conflict resolution (design TBD)
 
-### Server-Side (Sync Backend)
+### Server-Side (Sync Backend - Phase 2)
 - **Purpose**: Encrypted blob storage and synchronization only
-- **No Access**: Cannot decrypt user data
+- **No Access**: Cannot decrypt user data (zero-knowledge architecture)
 - **Minimal Metadata**: Only essential sync metadata (timestamps, device IDs, encrypted payloads)
 - **Technology**: TBD - potentially simple REST API or cloud storage (evaluated for privacy)
 - **Scalability**: Designed to handle multiple users and family groups efficiently
-- **efficient Sync Protocol**: Delta sync to minimize data transfer, particularly for large with e.g. attachments
+- **Efficient Sync Protocol**: Delta sync to minimize data transfer, particularly for large attachments
 
-### Encryption Model
-- **User Master Key**: Derived from user password using strong KDF (e.g., Argon2)
-- **Data Encryption Keys**: Per-record or per-family-member encryption keys
-- **Sharing Keys**: Encrypted copies of data keys for authorized family members
-- **Transport Security**: TLS 1.3+ for all network communication
+### Transport Security
+- **TLS 1.3+**: All network communication over TLS 1.3 or higher
+- **Certificate Pinning**: URLSession with certificate pinning to prevent MITM attacks
 
 ## Technology Stack (Proposed)
 
 ### iOS Client
-- **Language**: Swift 5.x+
+- **Language**: Swift 5.9+
 - **UI Framework**: SwiftUI
-- **Minimum iOS**: iOS 15+ (TBD based on feature requirements)
+- **Minimum iOS**: iOS 16.0+ (per AGENTS.md)
 - **Cryptography**:
-  - Apple CryptoKit (primary)
-  - libsodium (if additional algorithms needed)
-- **Local Storage**: Core Data with encryption or SQLCipher
+  - **Primary**: Apple CryptoKit (AES-256-GCM mandatory per AGENTS.md)
+  - **KDF**: PBKDF2-HMAC-SHA256 (min 100k iterations) or Argon2id
+  - **NO custom crypto implementations** - CryptoKit only
+- **Local Storage**: Core Data with manual field-level encryption using CryptoKit (pending crypto architecture design)
 - **Networking**: URLSession with certificate pinning
+- **Authentication**: LocalAuthentication framework (Face ID / Touch ID)
 
 ### Backend (TBD)
 Options under consideration:
@@ -121,13 +150,48 @@ This project is in initial planning. The roadmap will be managed through GitHub 
 
 The project will be developed in phases:
 
-1. **Foundation**: Core encryption, local storage, basic UI
-2. **Sync**: Cross-device synchronization
-3. **Sharing**: Family member management and selective sharing
-4. **Polish**: UX refinement, documentation, testing
-5. **Compliance**: Privacy policy, security audit, compliance review
+### Phase 0: Cryptographic Architecture Design (Current)
+**Prerequisites for all implementation work**
+- Design complete key hierarchy (master key → data keys → sharing keys)
+- Design sharing model (how multiple users decrypt same data)
+- Design sync encryption (how to package encrypted blobs for server)
+- Design access revocation mechanism
+- Document in ADRs before any implementation begins
+
+### Phase 1: Local-Only Foundation
+**Depends on**: Phase 0 complete
+- Implement key derivation and management (Keychain integration)
+- Implement Core Data model with field-level encryption (CryptoKit)
+- Basic UI for single-user medical record entry
+- Biometric authentication (Face ID / Touch ID)
+- Local data export/import (encrypted backups)
+
+### Phase 2: Cross-Device Sync
+**Depends on**: Phase 1 complete
+- Implement sync backend (encrypted blob storage)
+- Sync protocol implementation (conflict resolution)
+- Multi-device key management
+- Delta sync for efficient data transfer
+
+### Phase 3: Family Sharing
+**Depends on**: Phase 2 complete
+- Implement cryptographic sharing model from Phase 0 design
+- Family member management UI
+- Granular permission system
+- Access revocation and key rotation
+- Age-based access control
+
+### Phase 4: Polish & Compliance
+**Depends on**: Phase 3 complete
+- UX refinement and accessibility
+- Comprehensive testing and security audit
+- Privacy policy and compliance documentation (GDPR, HIPAA-aware)
+- Performance optimization
+- Beta testing
 
 Detailed user stories and tasks will be tracked as GitHub Issues.
+
+**Current Status**: Phase 0 - Researching cryptographic architecture decisions (see Issue #2)
 
 ## Security Considerations
 

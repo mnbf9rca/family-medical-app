@@ -16,7 +16,8 @@ ADRs document significant architectural decisions, their context, and consequenc
 ## Index
 
 ### Security & Cryptography
-<!-- Add ADRs related to encryption, authentication, key management -->
+- [ADR-0001: Cryptographic Architecture Must Be Designed Before Implementation](adr-0001-crypto-architecture-first.md) - **Accepted** (2025-12-19)
+  - Establishes "crypto-first architecture" principle: design complete cryptographic architecture before any implementation
 
 ### Data Storage & Sync
 <!-- Add ADRs related to databases, sync protocols, conflict resolution -->

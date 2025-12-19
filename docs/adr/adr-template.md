@@ -8,6 +8,9 @@
     3. Fill in all sections below
     4. Update the ADR index (docs/adr/README.md)
     5. Remove these usage instructions before committing
+
+** IMPORTANT **: ADRs are to capture design INTENT, not technical details (that lives in the code), or to capture a log of changes (that lives in version control).
+
 -->
 
 # [Short title of solved problem and solution]
