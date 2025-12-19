@@ -72,6 +72,24 @@ For security-critical code (auth, encryption, key derivation, sharing):
 - Test failure cases (wrong password, corrupted data, missing keys)
 - Test key rotation and access revocation
 
+## Communication Style
+
+**Be direct. No fluff.**
+
+### Don't
+- Suggest what to do while waiting for downloads/builds
+- Say "Let me know when..." (user will tell you)
+- Offer patronizing suggestions ("take a break", "review the docs")
+- Add encouragement or motivational content
+- State the obvious ("this is a big download")
+- Repeat information already in documentation
+
+### Do
+- Give only necessary technical information
+- State what's required, then stop
+- Answer questions directly
+- Provide context only when it prevents mistakes
+
 ---
 
 See README.md for architecture and threat model.
