@@ -6,16 +6,28 @@
 - **Swift**: 5.9+
 - **iOS Target**: 16.0+
 - **UI**: SwiftUI only
-- **Crypto**: CryptoKit (Apple's framework)
+- **Crypto**: CryptoKit (Apple's framework) + CommonCrypto (PBKDF2 only)
 - **Auth**: LocalAuthentication framework
-- **Storage**: TBD (Core Data + encryption OR SQLCipher)
+- **Storage**: Core Data with field-level encryption (CryptoKit)
 - **Networking**: URLSession with certificate pinning
 
 ### Cryptography - Use These Exact Specs
 - **Symmetric Encryption**: AES-256-GCM (CryptoKit.AES.GCM)
-- **Key Derivation**: Argon2id OR PBKDF2-HMAC-SHA256 (min 100k iterations)
+- **Key Derivation**: PBKDF2-HMAC-SHA256 (100k iterations via CommonCrypto.CCKeyDerivationPBKDF)
+  - Future enhancement: Argon2id (Phase 4)
+- **Public-Key Crypto**: Curve25519 (CryptoKit.Curve25519.KeyAgreement for ECDH)
+- **Key Wrapping**: AES.KeyWrap (CryptoKit.AES.KeyWrap - RFC 3394)
+- **Key Derivation Function**: HKDF (SharedSecret.hkdfDerivedSymmetricKey)
 - **Random Generation**: CryptoKit.SymmetricKey, SecRandomCopyBytes
 - **NO custom crypto implementations - ever**
+
+## Key Hierarchy
+
+Three tiers: User Master Key → User Identity (Curve25519) → Family Member Keys → Medical Records.
+
+**Per-family-member encryption**: Each patient has their own FMK. Use ECDH + Key Wrapping for sharing.
+
+**See**: [ADR-0002](docs/adr/adr-0002-key-hierarchy.md) for complete design and rationale.
 
 ## Encryption Boundaries
 
@@ -35,13 +47,17 @@
 ### Never Store Anywhere (even encrypted)
 - Decryption keys in logs or analytics
 - Stack traces containing medical data
-- User passwords (only derived keys in Keychain)
+- User passwords (store salt in UserDefaults, derive Master Key on-demand)
+- Master Key or Private Key on server (they NEVER leave the device)
+- Unwrapped Family Member Keys on server (only wrapped versions)
 
 ## iOS-Specific Gotchas
 
 ### Keychain
-- **Use Keychain for**: encryption keys, derived user secrets
+- **Use Keychain for**: Master Key, Private Key (Curve25519), owned Family Member Keys
+- **Use Core Data for**: Shared/wrapped keys, encrypted records, public keys
 - **Never use UserDefaults for**: keys, passwords, tokens
+- **Protection**: `kSecAttrAccessibleWhenUnlockedThisDeviceOnly`, never sync to iCloud
 
 ### Biometric Auth
 - **Always provide fallback**: Face/Touch ID may be disabled, unavailable, or fail
@@ -59,11 +75,15 @@
 ## Common Mistakes to Avoid
 
 1. **Storing keys in UserDefaults** → Use Keychain
-2. **Assuming biometrics work** → Always have password fallback
-3. **Custom crypto** → Use CryptoKit only
-4. **Trusting server timestamps** → Validate on client
-5. **Weak KDF iterations** → Use ≥100k for PBKDF2, proper params for Argon2
-6. **Logging decrypted data** → Never log medical data, even for debugging
+2. **Storing Master Key on server** → NEVER (device-only)
+3. **Deriving user identity from password** → Generate randomly (see ADR-0002)
+4. **Per-record encryption keys** → Use per-family-member FMKs (see ADR-0002)
+5. **Assuming biometrics work** → Always have password fallback
+6. **Custom crypto** → Use CryptoKit + CommonCrypto only
+7. **Trusting server timestamps** → Validate on client
+8. **Weak KDF iterations** → Use ≥100k for PBKDF2
+9. **Logging decrypted data** → Never log medical data, even for debugging
+10. **"Soft delete" for revocation** → Re-encrypt with new FMK (see ADR-0002)
 
 ## Testing Requirements
 
