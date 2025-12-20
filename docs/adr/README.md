@@ -24,6 +24,12 @@ ADRs document significant architectural decisions, their context, and consequenc
   - Per-family-member data encryption keys for granular access control
   - ECDH-based key wrapping for sharing over insecure channels
   - Re-encryption strategy for cryptographic access revocation
+- [ADR-0003: Multi-User Sharing Model](adr-0003-multi-user-sharing-model.md) - **Proposed** (2025-12-19)
+  - TOFU (Trust On First Use) for public key exchange with optional verification codes
+  - Email invitation flow with embedded public keys (works over insecure channels)
+  - ECDH + HKDF + AES-KeyWrap for Family Member Key distribution
+  - Per-family-member sharing granularity (e.g., "share Emma's records")
+  - Security vs. UX trade-offs: convenience prioritized for medical records (static data threat model)
 
 ### Data Storage & Sync
 <!-- Add ADRs related to databases, sync protocols, conflict resolution -->
