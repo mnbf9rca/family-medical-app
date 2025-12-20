@@ -24,15 +24,30 @@ ADRs document significant architectural decisions, their context, and consequenc
   - Per-family-member data encryption keys for granular access control
   - ECDH-based key wrapping for sharing over insecure channels
   - Re-encryption strategy for cryptographic access revocation
-- [ADR-0003: Multi-User Sharing Model](adr-0003-multi-user-sharing-model.md) - **Proposed** (2025-12-19)
+- [ADR-0003: Multi-User Sharing Model](adr-0003-multi-user-sharing-model.md) - **Proposed** (2025-12-20)
   - TOFU (Trust On First Use) for public key exchange with optional verification codes
   - Email invitation flow with embedded public keys (works over insecure channels)
   - ECDH + HKDF + AES-KeyWrap for Family Member Key distribution
   - Per-family-member sharing granularity (e.g., "share Emma's records")
   - Security vs. UX trade-offs: convenience prioritized for medical records (static data threat model)
+  - Async operation (users never need to be online simultaneously)
+  - Content zero-knowledge (server sees social graph metadata, not medical content)
+- [ADR-0005: Access Revocation and Cryptographic Key Rotation](adr-0005-access-revocation.md) - **Proposed** (2025-12-20)
+  - Full re-encryption with new FMK for true cryptographic revocation (not UI-only)
+  - Performance: ~500ms for 500 records (acceptable for user-initiated action)
+  - Realtime propagation across all devices (immediate revocation)
+  - Atomic revocation with server-side transactions (all-or-nothing)
+  - Encrypted audit trail for compliance and transparency
+  - Limitation: Historical data downloaded before revocation remains accessible (fundamental E2EE constraint)
 
 ### Data Storage & Sync
-<!-- Add ADRs related to databases, sync protocols, conflict resolution -->
+- [ADR-0004: Sync Encryption and Multi-Device Support](adr-0004-sync-encryption.md) - **Proposed** (2025-12-20)
+  - 24-word BIP39 recovery code for Master Key distribution across devices
+  - Pull-based sync with Supabase Realtime notifications for instant updates
+  - Last-write-wins conflict resolution (timestamp-based, KISS principle)
+  - Offline-first: queue changes locally, sync when network available
+  - Device management: audit trail and revocation
+  - Zero-knowledge maintained: encrypted Master Key on server (recovery code never transmitted)
 
 ### Build & Test Infrastructure
 <!-- Add ADRs related to CI/CD, testing strategy, build configuration -->
