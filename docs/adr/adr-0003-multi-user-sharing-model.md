@@ -304,6 +304,140 @@ let fmkEmma = try AES.KeyWrap.unwrap(wrappedFMK, using: wrappingKey)
 - ✅ **Context Binding**: HKDF `sharedInfo` includes family member ID (prevents key reuse across patients)
 - ✅ **Standard Primitives**: X25519 (Curve25519 ECDH) + HKDF-SHA256 + AES-KeyWrap (all CryptoKit native)
 
+### Asynchronous Operation and Metadata Privacy
+
+#### Asynchronous Support (Hard Requirement)
+
+The design **fully supports async operation** - users never need to be online simultaneously:
+
+**Example Timeline** (users in different time zones, never online together):
+```
+Day 1, 9:00 AM PT - Adult A (California):
+├─ Sends invitation email to Adult B
+├─ Uploads public key to server
+└─ Closes app
+
+Day 3, 2:00 PM GMT - Adult B (UK):
+├─ Receives email, clicks link
+├─ Generates keypair, uploads public key
+├─ Accepts invitation (status: "pending" → "accepted")
+└─ Closes app
+
+Day 4, 8:00 AM PT - Adult A (California):
+├─ Opens app, sees "Adult B accepted"
+├─ Downloads Adult B's public key
+├─ Performs ECDH, wraps FMK_Emma
+├─ Uploads wrapped FMK to server
+└─ Invitation complete
+
+Day 7, 6:00 PM GMT - Adult B (UK):
+├─ Opens app, sees "New access granted"
+├─ Downloads wrapped FMK
+├─ Unwraps with ECDH, decrypts Emma's records
+└─ Full access ✅
+
+Total time: 6 days | Simultaneous presence: Never required
+```
+
+**Server as Persistent Mailbox**:
+- Users deposit data (invitations, public keys, wrapped FMKs) when convenient
+- Server stores persistently (no expiration except invitations: 7 days)
+- Other users retrieve when they check app (pull-based model)
+- No real-time coordination, handshakes, or synchronous agreement
+
+**Why This is Critical**:
+- ✅ **Time zones**: Grandma in UK, parents in California (8-hour difference)
+- ✅ **Usage patterns**: One parent checks daily, other checks weekly
+- ✅ **Device availability**: Kids don't have phones, adults share iPad
+- ✅ **Real-world friction**: "Install this app right now while I wait" kills adoption
+
+Medical records are **not time-critical** like messaging. Sharing Emma's vaccine record today, Adult B checking it 3 days later is perfectly acceptable.
+
+#### Metadata Privacy (Accepted Trade-off)
+
+**What the Server Can See** (Metadata Exposure):
+1. ✅ **Social Graph**: "User A shared family member X with User B"
+2. ✅ **Volume Metadata**: "Family member X has 15 records totaling 125 KB"
+3. ✅ **Temporal Metadata**: "User A logs in daily at 2pm PT"
+4. ✅ **Email Addresses**: Required for invitations (PII)
+5. ⚠️ **Record Types** (if plaintext): "vaccine", "allergy", etc. (depends on filtering approach)
+
+**What the Server Cannot See** (Zero-Knowledge Properties):
+1. ❌ **Medical Record Content**: Encrypted with FMKs (AES-256-GCM)
+2. ❌ **Family Member Keys**: Only wrapped versions (opaque to server)
+3. ❌ **User Master Keys**: Device-only, never transmitted
+4. ❌ **Private Keys**: Keychain-only, never transmitted
+5. ❌ **Family Member Names**: Encrypted in profile data
+6. ❌ **ECDH Shared Secrets**: Computed locally, ephemeral, never stored
+
+**Example Server View**:
+```json
+{
+  "invitation": {
+    "inviter_user_id": "550e8400-...",
+    "invitee_email": "bob@example.com",
+    "family_member_id": "7c9e6679-...",
+    "status": "completed"
+  },
+  "access_grant": {
+    "family_member_id": "7c9e6679-...",
+    "granted_to_user_id": "9b2e8400-...",
+    "wrapped_fmk": "AgEAAHicY2BkYGBg..."  // Opaque encrypted blob
+  },
+  "medical_record": {
+    "family_member_id": "7c9e6679-...",
+    "encrypted_data": "AQAAAACAAABZwg..."  // Opaque ciphertext
+  }
+}
+
+Server knows: "User 550e shared family member 7c9e with user 9b2e"
+Server doesn't know: "Alice shared Emma's records with Bob"
+```
+
+**Honest Assessment**: This is **content zero-knowledge**, not **metadata zero-knowledge**.
+
+**Why Metadata Exposure is Acceptable**:
+
+1. **Routing Requirement**: Async support requires server to know "this data is for User B"
+   - Mathematical impossibility: Cannot route without destination information
+   - Same limitation as Signal (server knows who messages whom for routing)
+
+2. **Threat Model Fit**: Medical records are **static data**, not real-time intelligence
+   - NSA cares about "who is planning terrorism" (messaging metadata valuable for surveillance)
+   - Less interested in "who shares their child's vaccine records" (lower intelligence value)
+   - Family relationships already known to family members (metadata reveals little new)
+
+3. **UX vs. Privacy**: Convenience critical for adoption
+   - If too hard to share, users fall back to unencrypted email/photos (worse outcome)
+   - Email invitations more accessible than mandatory in-person QR code scanning
+   - Real-world families: Geographic distance, estranged members, custody arrangements
+
+4. **Future Hardening Path**: Can add metadata privacy without breaking design
+   - **Phase 4a**: Encrypted metadata (blind server to social graph, trade-off: client-side filtering)
+   - **Phase 4b**: QR code option (zero metadata, trade-off: in-person only)
+   - **Phase 4c**: Audit trail (transparency, trade-off: additional metadata collected)
+
+**Comparison to Industry Standards**:
+
+| App | Content E2EE | Metadata Privacy | Async Support |
+|-----|--------------|------------------|---------------|
+| **Our App** | ✅ Yes | ⚠️ Server sees graph | ✅ Full |
+| **Signal** | ✅ Yes | ⚠️ Server sees graph* | ✅ Full |
+| **1Password** | ✅ Yes | ⚠️ Server sees graph | ✅ Full |
+| **WhatsApp** | ✅ Yes | ⚠️ Server sees graph | ✅ Full |
+| **ProtonMail** | ✅ Yes | ⚠️ Server sees graph | ✅ Full |
+
+*Signal uses Sealed Sender to hide sender in some cases, but server still sees recipient.
+
+**Privacy Level**: Comparable to **industry-leading E2EE consumer apps** (content zero-knowledge, routing metadata exposed).
+
+**Detailed Analysis**: See `docs/research/privacy-and-data-exposure-analysis.md` for comprehensive breakdown of:
+- What each actor can see (server, users, attackers)
+- Attack scenarios and mitigations
+- Metadata leakage implications
+- Comparison to alternatives (encrypted metadata, QR codes, P2P)
+- Privacy-enhancing roadmap
+
 ## Consequences
 
 ### Positive
@@ -410,7 +544,9 @@ let fmkEmma = try AES.KeyWrap.unwrap(wrappedFMK, using: wrappingKey)
 ## References
 
 - Issue #36: Research E2EE Sharing Patterns
+- Issue #38: ADR-0003 Multi-User Sharing Model
 - `docs/research/e2ee-sharing-patterns-research.md` (Section 10: Public Key Exchange UX)
+- `docs/research/privacy-and-data-exposure-analysis.md` (Comprehensive privacy analysis)
 - `docs/research/poc-public-key-sharing.swift`
 - `docs/research/poc-hybrid-family-keys.swift`
 - AGENTS.md: Cryptography specifications
