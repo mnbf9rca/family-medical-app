@@ -12,6 +12,7 @@ import Foundation
 // 3. Wrap the DEK with the shared secret
 // This allows secure sharing without requiring a secure channel for key exchange.
 
+// Namespace enum for public-key sharing example; not intended to be instantiated.
 enum PublicKeySharingExample {
     // User's identity: keypair for key exchange
     struct UserIdentity {

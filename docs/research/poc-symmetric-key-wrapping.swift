@@ -9,6 +9,7 @@ import Foundation
 // The DEK is then "wrapped" (encrypted) with each authorized user's master key.
 // This allows multiple users to decrypt the same record using their own keys.
 
+// Namespace enum for symmetric key wrapping example; not intended to be instantiated.
 enum SymmetricKeyWrappingExample {
     // STEP 1: User derives their master key from password
     static func deriveMasterKey(from password: String, salt: Data) -> SymmetricKey {

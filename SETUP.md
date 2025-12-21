@@ -78,6 +78,7 @@ To see SwiftLint warnings/errors directly in Xcode while coding:
 ```bash
 if command -v swiftlint >/dev/null 2>&1
 then
+    # SRCROOT points to ios/FamilyMedicalApp/, so ../../ reaches repo root
     swiftlint --config "${SRCROOT}/../../.swiftlint.yml"
 else
     echo "warning: SwiftLint not installed, download from https://github.com/realm/SwiftLint"

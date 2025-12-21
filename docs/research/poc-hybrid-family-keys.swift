@@ -15,6 +15,7 @@ import Foundation
 // - Adding new records doesn't require updating any keys
 // - Revoking access = delete one wrapped FMK (+ re-wrap with new FMK)
 
+// Namespace enum for hybrid family key example; not intended to be instantiated.
 enum HybridFamilyKeyExample {
     // User identity (adults who manage medical records)
     struct UserIdentity {

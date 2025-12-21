@@ -79,6 +79,9 @@ jobs:
           xcodebuild -version
           swift --version
 
+      - name: Install xcpretty
+        run: gem install xcpretty
+
       - name: Cache derived data
         uses: actions/cache@v4
         with:
@@ -120,6 +123,19 @@ jobs:
           # Extract coverage percentage
           COVERAGE=$(cat coverage.json | python3 -c "import sys, json; print(json.load(sys.stdin)['lineCoverage'] * 100)")
           echo "Code coverage: ${COVERAGE}%"
+
+          # Enforce minimum coverage threshold
+          THRESHOLD=90
+          echo "Required minimum coverage: ${THRESHOLD}%"
+
+          # Convert coverage to an integer for comparison
+          COVERAGE_INT=$(printf '%.0f' "${COVERAGE}")
+          if (( COVERAGE_INT < THRESHOLD )); then
+            echo "❌ Coverage check failed: ${COVERAGE_INT}% is below the required ${THRESHOLD}%."
+            exit 1
+          else
+            echo "✅ Coverage check passed: ${COVERAGE_INT}% meets or exceeds ${THRESHOLD}%."
+          fi
 
       - name: Upload coverage reports
         if: matrix.destination == 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.2'
