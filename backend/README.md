@@ -20,6 +20,7 @@ See Issue #14 for backend technology research and selection.
 ## Development Environment
 
 When implementation begins, this directory will include:
+
 - `.devcontainer/` - VS Code devcontainer configuration
 - `docker-compose.yml` - Local development services
 - Backend API code (Python/FastAPI, Node.js, or chosen stack)

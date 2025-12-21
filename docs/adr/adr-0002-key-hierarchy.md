@@ -7,6 +7,7 @@
 ## Context
 
 The Family Medical App requires a cryptographic key hierarchy that supports:
+
 - **Phase 1**: Local encryption on a single device
 - **Phase 2**: Multi-device synchronization with zero-knowledge server
 - **Phase 3**: Multi-user family sharing with granular access control
@@ -82,6 +83,7 @@ We will implement a **three-tier hierarchical key structure** with **per-family-
 **Decision**: Use PBKDF2-HMAC-SHA256 with 100,000 iterations (not Argon2id).
 
 **Rationale**:
+
 - ✅ **CryptoKit Compatibility**: Available via CommonCrypto (no third-party dependencies)
 - ✅ **AGENTS.md Compliance**: Meets minimum requirement
 - ✅ **KISS Principle**: Simpler than integrating Argon2id library
@@ -90,6 +92,7 @@ We will implement a **three-tier hierarchical key structure** with **per-family-
 - ⚠️ **Future Enhancement**: Can migrate to Argon2id in Phase 4 if needed
 
 **Implementation**:
+
 ```swift
 import CommonCrypto
 
@@ -119,6 +122,7 @@ func deriveMasterKey(from password: String, salt: Data) -> SymmetricKey {
 ```
 
 **Salt Generation**:
+
 - Generate unique 32-byte salt per user on account creation
 - Store salt in UserDefaults (not sensitive)
 - Use same salt for all PBKDF2 operations for that user
@@ -128,6 +132,7 @@ func deriveMasterKey(from password: String, salt: Data) -> SymmetricKey {
 **Decision**: Use three tiers (Master Key → User Identity → Family Member Keys → Medical Records).
 
 **Rationale**:
+
 - ✅ **Separation of Concerns**:
   - Tier 1: User authentication (password-derived)
   - Tier 2: User identity for sharing (not password-derived for forward secrecy)
@@ -137,6 +142,7 @@ func deriveMasterKey(from password: String, salt: Data) -> SymmetricKey {
 - ⚠️ **Complexity**: More complex than two-tier, but necessary for sharing model
 
 **Why Not Two Tiers?**
+
 - If we derived Curve25519 keypair from password, changing password would break all sharing relationships
 - Separating identity from authentication enables key rotation without re-establishing trust
 
@@ -145,6 +151,7 @@ func deriveMasterKey(from password: String, salt: Data) -> SymmetricKey {
 **Decision**: One Family Member Key (FMK) per family member (patient), encrypting all their medical records.
 
 **Rationale** (from Issue #36 research):
+
 - ✅ **Natural Access Control**: "Share Emma's records" is a natural user action
 - ✅ **Efficiency**: Wrap FMK once per authorized user (not once per record)
 - ✅ **Scalability**: 5-10 family members × 2-4 authorized adults = 10-40 wrapped keys
@@ -153,6 +160,7 @@ func deriveMasterKey(from password: String, salt: Data) -> SymmetricKey {
 - ✅ **Matches Use Case**: Medical records naturally group by patient
 
 **Not Chosen**:
+
 - ❌ **Per-record**: Excessive key management overhead
 - ❌ **Per-user**: No granular sharing (all-or-nothing)
 - ❌ **Hybrid (per-record + per-field)**: Violates KISS without meaningful security benefit
@@ -171,6 +179,7 @@ func deriveMasterKey(from password: String, salt: Data) -> SymmetricKey {
 | **Encrypted Medical Records** | Core Data | N/A (encrypted with FMK) | Yes | Synced as encrypted blobs |
 
 **Keychain Organization**:
+
 ```
 com.family-medical-app.master-key.<userID>
 com.family-medical-app.identity-private-key.<userID>
@@ -178,6 +187,7 @@ com.family-medical-app.fmk.<familyMemberID>
 ```
 
 **Rationale**:
+
 - ✅ **Master Key Never Syncs**: Device-only prevents cloud extraction
 - ✅ **FMKs Wrapped Multiple Ways**: Owner has Keychain copy (secure), shared users have Core Data copy (encrypted with ECDH)
 - ✅ **Public Keys on Server**: Enables key exchange without secure channel
@@ -189,6 +199,7 @@ com.family-medical-app.fmk.<familyMemberID>
 ##### Scenario A: User Changes Password
 
 **Flow**:
+
 1. Derive new Master Key from new password
 2. Re-encrypt User Private Key with new Master Key
 3. Re-wrap owner's FMKs with new Master Key
@@ -200,6 +211,7 @@ com.family-medical-app.fmk.<familyMemberID>
 ##### Scenario B: Access Revocation (Adult C loses access to Emma)
 
 **Flow**:
+
 1. Generate new FMK_Emma
 2. Decrypt all Emma's records with old FMK_Emma
 3. Re-encrypt all Emma's records with new FMK_Emma (AES-256-GCM)
@@ -208,11 +220,13 @@ com.family-medical-app.fmk.<familyMemberID>
 6. Sync changes to server (new encrypted records + new wrapped keys)
 
 **Performance**:
+
 - 500 records × ~1ms per decrypt+encrypt = ~500ms
 - Acceptable for mobile device
 - User-initiated action (expected delay)
 
 **Alternative Considered: Key Versioning**
+
 - ❌ Rejected: Old records still encrypted with compromised key
 - ❌ Violates cryptographic revocation requirement
 
@@ -221,6 +235,7 @@ com.family-medical-app.fmk.<familyMemberID>
 **Recommendation**: Not required for hobby app scope.
 
 **Rationale**:
+
 - Medical records are static (not high-value real-time communications)
 - Rotation cost (re-encryption) outweighs benefit for small dataset
 - Can be added in Phase 4 if needed
@@ -230,6 +245,7 @@ com.family-medical-app.fmk.<familyMemberID>
 **Decision**: User identity keypair is NOT rotated (no perfect forward secrecy).
 
 **Rationale**:
+
 - ⚠️ **Trade-off**: If User Private Key is compromised, past shared FMKs can be unwrapped
 - ✅ **Acceptable**: Medical records are not time-sensitive communications
 - ✅ **KISS**: Rotating identity keys breaks all sharing relationships
@@ -332,6 +348,7 @@ com.family-medical-app.fmk.<familyMemberID>
 ### Phase 1: Local Encryption (Foundation)
 
 Implement:
+
 - User Master Key derivation (PBKDF2)
 - Curve25519 keypair generation
 - FMK generation and wrapping (owner only)
@@ -343,6 +360,7 @@ Implement:
 ### Phase 2: Multi-Device Sync
 
 Add:
+
 - Sync encrypted medical records (already encrypted with FMK)
 - Sync user's Public Key to server
 - Sync user's wrapped FMKs (Core Data)
@@ -352,6 +370,7 @@ Add:
 ### Phase 3: Family Sharing
 
 Add:
+
 - ECDH key agreement for FMK wrapping
 - Public key exchange (email + TOFU)
 - Multiple wrapped FMKs per family member (Core Data)
@@ -362,6 +381,7 @@ Add:
 ### Phase 4: Access Revocation
 
 Add:
+
 - FMK rotation (re-encryption) implementation
 - Audit trail for revocation events
 - Optional: User identity key rotation

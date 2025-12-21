@@ -11,6 +11,7 @@ The Family Medical App must support granular sharing of medical records among fa
 ### Foundation
 
 This ADR builds on:
+
 - **Issue #36**: Research E2EE Sharing Patterns → Recommended Hybrid Per-Family-Member model
 - **ADR-0002**: Key Hierarchy → Established 3-tier structure with Curve25519 identity keys and per-family-member FMKs
 
@@ -111,12 +112,14 @@ Both devices compute verification code:
 **Decision**: Use TOFU by default, with optional verification codes for paranoid users.
 
 **Flow**:
+
 1. Public keys exchanged automatically via server (no user verification required)
 2. Sharing works immediately upon invitation acceptance
 3. Verification codes displayed in Settings for optional out-of-band confirmation
 4. Users can verify later if concerned about MITM attacks
 
 **Rationale**:
+
 - ✅ **Simplest UX**: No friction for initial sharing (critical for adoption)
 - ✅ **Real-World Families**: Works for geographically distant family members, estranged members, custody arrangements
 - ✅ **Threat Model Fit**: Medical records are static data (not real-time messaging where MITM enables active surveillance)
@@ -126,6 +129,7 @@ Both devices compute verification code:
   - **Acceptable Trade-off**: Convenience over perfect forward secrecy for hobby app scope
 
 **Alternatives Considered**:
+
 - ❌ **Mandatory Verification**: Too much friction, reduces adoption
 - ❌ **QR Code Only**: Requires in-person meeting (not always feasible for families)
 - ⚠️ **Future Enhancement**: Add QR code option for in-person sharing in Phase 3
@@ -135,12 +139,14 @@ Both devices compute verification code:
 **Decision**: Share access at the family member (patient) level, not per-record or all-or-nothing.
 
 **Implementation**:
+
 - One Family Member Key (FMK) per patient (Emma, Liam, etc.)
 - All of Emma's records encrypted with FMK_Emma
 - When sharing "Emma's records", Adult A wraps FMK_Emma for Adult B
 - Adult B can decrypt all of Emma's records (but not Liam's unless also shared)
 
 **Rationale** (from ADR-0002 and Issue #36):
+
 - ✅ **Natural User Mental Model**: "Share Emma's records with Grandma"
 - ✅ **Efficient**: Wrap FMK once per relationship (not per record)
   - 5 family members × 3 authorized adults = 15 wrapped keys
@@ -149,6 +155,7 @@ Both devices compute verification code:
 - ✅ **Revocation**: Re-encrypt ~100-500 records per family member (~500ms)
 
 **Not Chosen**:
+
 - ❌ **Per-Record Sharing**: Excessive overhead, unnatural UX ("Share this one vaccine record?")
 - ❌ **All-or-Nothing**: No granularity ("Share all family medical records?")
 
@@ -157,6 +164,7 @@ Both devices compute verification code:
 **Decision**: Primary sharing mechanism is email invitation with embedded public key.
 
 **Email Template**:
+
 ```
 Subject: [Family Medical App] Adult A wants to share Emma's records
 
@@ -176,6 +184,7 @@ comparing verification codes in Settings > Shared Access.
 **Deep Link Format**: `familymedicalapp://accept-share?inviteToken=<JWT>`
 
 **JWT Payload** (signed by server, but server doesn't see private data):
+
 ```json
 {
   "inviterUserId": "uuid-adult-a",
@@ -186,6 +195,7 @@ comparing verification codes in Settings > Shared Access.
 ```
 
 **Rationale**:
+
 - ✅ **Familiar UX**: Email invitations are well-understood
 - ✅ **Async**: Doesn't require both users online simultaneously
 - ✅ **Insecure Channel**: Email is insecure, but public keys can be transmitted safely
@@ -196,6 +206,7 @@ comparing verification codes in Settings > Shared Access.
 **Decision**: 6-digit hex code (3 bytes of SHA256 hash), formatted with dashes.
 
 **Implementation**:
+
 ```swift
 func generateVerificationCode(sharedSecret: SharedSecret) -> String {
     let hash = SHA256.hash(data: sharedSecret.rawRepresentation)
@@ -207,6 +218,7 @@ func generateVerificationCode(sharedSecret: SharedSecret) -> String {
 ```
 
 **Display in App**:
+
 ```
 Settings > Shared Access > Adult B
 ─────────────────────────────────
@@ -222,6 +234,7 @@ Security Code: A3-5F-2B
 ```
 
 **Rationale**:
+
 - ✅ **Easy to Verify**: 6 digits readable over phone call
 - ✅ **Sufficient Entropy**: 3 bytes = 16,777,216 combinations (MITM has 1/16M chance)
 - ✅ **Familiar Pattern**: Similar to Signal, WhatsApp safety numbers
@@ -232,6 +245,7 @@ Security Code: A3-5F-2B
 **Decision**: Store wrapped FMKs in Core Data with metadata for sync and access management.
 
 **Schema** (simplified):
+
 ```swift
 entity FamilyMemberAccessGrant {
     grantId: UUID                      // Primary key
@@ -245,11 +259,13 @@ entity FamilyMemberAccessGrant {
 ```
 
 **Sync Behavior**:
+
 - All `FamilyMemberAccessGrant` records synced to server (encrypted blobs)
 - Server knows: who has access to which family member (metadata)
 - Server doesn't know: actual FMK values (wrapped with ECDH-derived keys)
 
 **Rationale**:
+
 - ✅ **Queryable**: Can list "Who has access to Emma's records?"
 - ✅ **Syncable**: Zero-knowledge sync (server can't decrypt wrapped FMKs)
 - ✅ **Revocable**: Set `revokedAt` to soft-delete, then re-encrypt in background
@@ -257,6 +273,7 @@ entity FamilyMemberAccessGrant {
 ### CryptoKit Implementation Details
 
 #### Key Agreement (ECDH)
+
 ```swift
 import CryptoKit
 
@@ -279,6 +296,7 @@ let wrappedFMK = try AES.KeyWrap.wrap(fmkEmma, using: wrappingKey)
 ```
 
 #### Key Unwrapping (Adult B's side)
+
 ```swift
 // Adult B's side (receiving)
 let privateKeyB = Curve25519.KeyAgreement.PrivateKey() // from Keychain
@@ -300,6 +318,7 @@ let fmkEmma = try AES.KeyWrap.unwrap(wrappedFMK, using: wrappingKey)
 ```
 
 **Security Properties**:
+
 - ✅ **Perfect Forward Secrecy (per relationship)**: Each FMK wrapping uses unique ECDH shared secret
 - ✅ **Context Binding**: HKDF `sharedInfo` includes family member ID (prevents key reuse across patients)
 - ✅ **Standard Primitives**: X25519 (Curve25519 ECDH) + HKDF-SHA256 + AES-KeyWrap (all CryptoKit native)
@@ -311,6 +330,7 @@ let fmkEmma = try AES.KeyWrap.unwrap(wrappedFMK, using: wrappingKey)
 The design **fully supports async operation** - users never need to be online simultaneously:
 
 **Example Timeline** (users in different time zones, never online together):
+
 ```
 Day 1, 9:00 AM PT - Adult A (California):
 ├─ Sends invitation email to Adult B
@@ -340,12 +360,14 @@ Total time: 6 days | Simultaneous presence: Never required
 ```
 
 **Server as Persistent Mailbox**:
+
 - Users deposit data (invitations, public keys, wrapped FMKs) when convenient
 - Server stores persistently (no expiration except invitations: 7 days)
 - Other users retrieve when they check app (pull-based model)
 - No real-time coordination, handshakes, or synchronous agreement
 
 **Why This is Critical**:
+
 - ✅ **Time zones**: Grandma in UK, parents in California (8-hour difference)
 - ✅ **Usage patterns**: One parent checks daily, other checks weekly
 - ✅ **Device availability**: Kids don't have phones, adults share iPad
@@ -356,6 +378,7 @@ Medical records are **not time-critical** like messaging. Sharing Emma's vaccine
 #### Metadata Privacy (Accepted Trade-off)
 
 **What the Server Can See** (Metadata Exposure):
+
 1. ✅ **Social Graph**: "User A shared family member X with User B"
 2. ✅ **Volume Metadata**: "Family member X has 15 records totaling 125 KB"
 3. ✅ **Temporal Metadata**: "User A logs in daily at 2pm PT"
@@ -363,6 +386,7 @@ Medical records are **not time-critical** like messaging. Sharing Emma's vaccine
 5. ⚠️ **Record Types** (if plaintext): "vaccine", "allergy", etc. (depends on filtering approach)
 
 **What the Server Cannot See** (Zero-Knowledge Properties):
+
 1. ❌ **Medical Record Content**: Encrypted with FMKs (AES-256-GCM)
 2. ❌ **Family Member Keys**: Only wrapped versions (opaque to server)
 3. ❌ **User Master Keys**: Device-only, never transmitted
@@ -371,6 +395,7 @@ Medical records are **not time-critical** like messaging. Sharing Emma's vaccine
 6. ❌ **ECDH Shared Secrets**: Computed locally, ephemeral, never stored
 
 **Example Server View**:
+
 ```json
 {
   "invitation": {
@@ -432,6 +457,7 @@ Server doesn't know: "Alice shared Emma's records with Bob"
 **Privacy Level**: Comparable to **industry-leading E2EE consumer apps** (content zero-knowledge, routing metadata exposed).
 
 **Detailed Analysis**: See `docs/research/privacy-and-data-exposure-analysis.md` for comprehensive breakdown of:
+
 - What each actor can see (server, users, attackers)
 - Attack scenarios and mitigations
 - Metadata leakage implications
@@ -504,14 +530,17 @@ Server doesn't know: "Alice shared Emma's records with Bob"
 ## Implementation Notes
 
 ### Phase 1: Local Encryption
+
 - **Not needed**: Sharing is Phase 3 feature
 - **Preparation**: User Curve25519 keypair generation (ADR-0002 Tier 2)
 
 ### Phase 2: Multi-Device Sync
+
 - **Partial implementation**: Sync public keys to server
 - **Not needed**: ECDH wrapping (no sharing yet)
 
 ### Phase 3: Family Sharing (FULL IMPLEMENTATION)
+
 1. **Email Invitation System**:
    - Server-side: JWT signing, email delivery
    - Client-side: Deep link handling, invitation acceptance UI
@@ -529,6 +558,7 @@ Server doesn't know: "Alice shared Emma's records with Bob"
    - Re-keying flow for compromised relationships
 
 ### Phase 4: Enhancements
+
 - **QR Code Sharing**: For in-person sharing (most secure)
 - **Mandatory Verification Mode**: Enterprise/paranoid users setting
 - **Key Rotation**: User identity key rotation with re-wrapping

@@ -11,6 +11,7 @@
 During initial planning, we began evaluating local encrypted storage options (Core Data vs SQLCipher vs Realm) for Phase 1 implementation. However, this revealed a critical architectural dependency: **the choice of local storage technology is downstream from the cryptographic architecture design**.
 
 The application requires:
+
 1. **End-to-end encrypted sharing** between family members
 2. **Zero-knowledge sync** to backend server
 3. **Cryptographic access revocation** when permissions change
@@ -18,6 +19,7 @@ The application requires:
 5. **Age-based access control** with ownership transfer
 
 These requirements demand design decisions about:
+
 - **Key hierarchy**: How user password → master key → data keys → sharing keys
 - **Sharing model**: Symmetric key wrapping vs public-key encryption vs hybrid
 - **Key distribution**: How authorized users receive decryption keys
@@ -26,6 +28,7 @@ These requirements demand design decisions about:
 - **Metadata encryption**: What can remain plaintext for sync efficiency
 
 Without these design decisions, we risk:
+
 1. **Implementation rework**: Building local storage that doesn't support the sharing model
 2. **Security vulnerabilities**: Making incorrect assumptions about key management
 3. **Performance issues**: Choosing encryption granularity incompatible with sync
@@ -36,6 +39,7 @@ Without these design decisions, we risk:
 **The complete cryptographic architecture must be designed before any implementation begins.**
 
 Specifically:
+
 1. **Phase 0 (new)**: Design cryptographic architecture
    - Key hierarchy and derivation
    - Sharing model (how multiple users decrypt same data)
@@ -51,6 +55,7 @@ Specifically:
 3. **Phase 2+**: Sync and sharing implementations follow Phase 0 design
 
 This establishes **"crypto-first architecture"** as a core principle:
+
 - Cryptographic requirements drive implementation decisions
 - Security design precedes feature implementation
 - No "add encryption later" approaches
@@ -95,6 +100,7 @@ This establishes **"crypto-first architecture"** as a core principle:
 ## Implementation Notes
 
 When designing the cryptographic architecture, we must research:
+
 1. **Signal Protocol**: Double Ratchet for forward secrecy (may be overkill for our use case)
 2. **Key wrapping patterns**: How to share symmetric keys securely
 3. **Public-key sharing**: Each user has keypair, encrypt data keys with recipient's public key
@@ -103,6 +109,7 @@ When designing the cryptographic architecture, we must research:
 6. **Tombstoning**: How to cryptographically prove access was revoked
 
 The design must balance:
+
 - **Security**: No server access to plaintext, cryptographic access revocation
 - **Performance**: Efficient for small dataset (< 1000 records), works offline
 - **Complexity**: Keep It Simple - don't over-engineer for theoretical attacks

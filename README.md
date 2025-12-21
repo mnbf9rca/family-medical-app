@@ -18,6 +18,7 @@ This hobby project aims to provide families with a secure, private, and intuitiv
 ## Key Features
 
 ### Security & Privacy
+
 - **End-to-End Encryption (E2EE)**: All data encrypted on device before sync
 - **Zero-Knowledge Architecture**: Server cannot decrypt user data
 - **Biometric Authentication**: Face ID / Touch ID support
@@ -25,6 +26,7 @@ This hobby project aims to provide families with a secure, private, and intuitiv
 - **Secure Key Management**: Keys derived from user credentials, never transmitted
 
 ### Data Management
+
 - **Offline-First**: Full functionality without internet connection
 - **Cross-Device Sync**: Seamless synchronization across user's devices
 - **Data Export/Import**: Standard formats for portability
@@ -32,6 +34,7 @@ This hobby project aims to provide families with a secure, private, and intuitiv
 - **Audit Trail**: Track data changes for security and compliance
 
 ### Family Sharing
+
 - **Granular Permissions**: Share specific family members' data, not everything
 - **Role-Based Access**: Owner, read-write, read-only roles
 - **Multi-Adult Support**: Multiple adults can manage shared family members
@@ -43,11 +46,12 @@ This hobby project aims to provide families with a secure, private, and intuitiv
   - etc.
 - **Flexible ownership**: children's data is independent of any single adult
 - **Privacy-Preserving Sharing**: Shared data remains encrypted end-to-end
-- **Age-Based Access Control**: Automatically adjust access as children reach certain ages. For example, in UK children gain more control over their medical data at various ages (https://www.nhs.uk/nhs-services/gps/gp-services-for-someone-else-proxy-access/information-for-under-16s-parent-guardian-accessing-your-doctors-services/).
+- **Age-Based Access Control**: Automatically adjust access as children reach certain ages. For example, in UK children gain more control over their medical data at various ages (<https://www.nhs.uk/nhs-services/gps/gp-services-for-someone-else-proxy-access/information-for-under-16s-parent-guardian-accessing-your-doctors-services/>).
 - **Periodic Access Reviews**: Prompt users to review shared access periodically
 - **Revocable Access**: Easily remove shared access, including ensuring data is no longer accessible
 
 ### User Experience
+
 - **Intuitive Interface**: Clean, accessible design following iOS HIG
 - **Quick Access**: Biometric unlock for fast access
 - **Search & Filter**: Find records quickly
@@ -58,6 +62,7 @@ This hobby project aims to provide families with a secure, private, and intuitiv
 - **Documents**: Upload and view PDFs, images of medical records
 
 ### Compliance Considerations
+
 - **GDPR-Ready**: Data portability, right to deletion, transparency
 - **HIPAA-Aware**: PHI protection best practices (note: full compliance requires broader organizational controls)
 - **Data Minimization**: Collect only necessary information
@@ -72,19 +77,23 @@ This hobby project aims to provide families with a secure, private, and intuitiv
 The following cryptographic components require detailed design before implementation:
 
 #### Key Hierarchy
+
 - **User Master Key**: Derived from user password using strong KDF (PBKDF2-HMAC-SHA256 with 100k+ iterations or Argon2id)
 - **Data Encryption Keys**: Strategy TBD (per-record, per-family-member, or hybrid approach)
 - **Sharing Keys**: Mechanism TBD (symmetric key wrapping, public-key encryption, or per-family-member keys)
 - **Key Rotation**: Strategy for updating encryption keys without data loss
 
 #### Sharing Model
+
 Design decisions required:
+
 - **Key Distribution**: How are data encryption keys shared with authorized family members?
 - **Access Revocation**: How to cryptographically enforce removal of access (key rotation, re-encryption)?
 - **Multi-User Encryption**: Each record accessible by multiple authorized users without server decryption
 - **Ownership Model**: How children's data remains accessible when ownership transfers (age-based access control)
 
 #### Sync Encryption
+
 - **Blob Packaging**: How to package encrypted data for server storage
 - **Metadata Encryption**: What sync metadata must be encrypted vs can be plaintext
 - **Conflict Resolution**: How to merge conflicts in encrypted data
@@ -95,6 +104,7 @@ Design decisions required:
 ---
 
 ### Client-Side (iOS)
+
 - **Swift/SwiftUI**: Native iOS development
 - **Cryptography**: CryptoKit (AES-256-GCM) per AGENTS.md requirements
 - **Local Database**: Core Data with manual field-level encryption (decision pending crypto architecture design)
@@ -102,6 +112,7 @@ Design decisions required:
 - **Sync Engine**: Handles data synchronization including conflict resolution (design TBD)
 
 ### Server-Side (Sync Backend - Phase 2)
+
 - **Purpose**: Encrypted blob storage and synchronization only
 - **No Access**: Cannot decrypt user data (zero-knowledge architecture)
 - **Minimal Metadata**: Only essential sync metadata (timestamps, device IDs, encrypted payloads)
@@ -110,12 +121,14 @@ Design decisions required:
 - **Efficient Sync Protocol**: Delta sync to minimize data transfer, particularly for large attachments
 
 ### Transport Security
+
 - **TLS 1.3+**: All network communication over TLS 1.3 or higher
 - **Certificate Pinning**: URLSession with certificate pinning to prevent MITM attacks
 
 ## Technology Stack (Proposed)
 
 ### iOS Client
+
 - **Language**: Swift 5.9+
 - **UI Framework**: SwiftUI
 - **Minimum iOS**: iOS 16.0+ (per AGENTS.md)
@@ -128,13 +141,17 @@ Design decisions required:
 - **Authentication**: LocalAuthentication framework (Face ID / Touch ID)
 
 ### Backend (TBD)
+
 Options under consideration:
+
 - Custom backend (FastAPI/Flask, Node.js)
 - Cloud storage with E2EE (evaluated carefully)
 - Self-hosted solution
 
 ### Open Source Libraries (Candidates)
+
 All libraries must be:
+
 - Actively maintained
 - Security-audited or widely peer-reviewed
 - Minimal dependencies
@@ -151,7 +168,9 @@ This project is in initial planning. The roadmap will be managed through GitHub 
 The project will be developed in phases:
 
 ### Phase 0: Cryptographic Architecture Design (Current)
+
 **Prerequisites for all implementation work**
+
 - Design complete key hierarchy (master key → data keys → sharing keys)
 - Design sharing model (how multiple users decrypt same data)
 - Design sync encryption (how to package encrypted blobs for server)
@@ -159,7 +178,9 @@ The project will be developed in phases:
 - Document in ADRs before any implementation begins
 
 ### Phase 1: Local-Only Foundation
+
 **Depends on**: Phase 0 complete
+
 - Implement key derivation and management (Keychain integration)
 - Implement Core Data model with field-level encryption (CryptoKit)
 - Basic UI for single-user medical record entry
@@ -167,14 +188,18 @@ The project will be developed in phases:
 - Local data export/import (encrypted backups)
 
 ### Phase 2: Cross-Device Sync
+
 **Depends on**: Phase 1 complete
+
 - Implement sync backend (encrypted blob storage)
 - Sync protocol implementation (conflict resolution)
 - Multi-device key management
 - Delta sync for efficient data transfer
 
 ### Phase 3: Family Sharing
+
 **Depends on**: Phase 2 complete
+
 - Implement cryptographic sharing model from Phase 0 design
 - Family member management UI
 - Granular permission system
@@ -182,7 +207,9 @@ The project will be developed in phases:
 - Age-based access control
 
 ### Phase 4: Polish & Compliance
+
 **Depends on**: Phase 3 complete
+
 - UX refinement and accessibility
 - Comprehensive testing and security audit
 - Privacy policy and compliance documentation (GDPR, HIPAA-aware)
@@ -196,16 +223,16 @@ Detailed user stories and tasks will be tracked as GitHub Issues.
 ## Security Considerations
 
 ### Threat Model
+
 - **Trusted**: User's device when locked, iOS Keychain
 - **Untrusted**: Network, server/cloud storage, backups in cloud
 - **Attack Vectors**: Device theft, network interception, server compromise, malicious sharing
 
 ### Security Practices
-- Regular security reviews
-- Dependency vulnerability scanning
-- Penetration testing (when feasible)
-- Responsible disclosure policy
-- Security-focused code reviews
+
+- **Automated scanning**: CodeQL, SwiftLint security rules, pre-commit hooks, Dependabot
+- **Security reviews**: Code reviews with security focus
+- **Responsible disclosure**: See [SECURITY.md](SECURITY.md) for reporting vulnerabilities
 
 ## Privacy by Design
 
@@ -220,7 +247,10 @@ Detailed user stories and tasks will be tracked as GitHub Issues.
 This is currently a hobby project. Contributions, suggestions, and security reviews are welcome. Please open an issue for discussion before submitting PRs.
 
 ### Security Issues
-If you discover a security vulnerability, please email [SECURITY EMAIL TBD] instead of opening a public issue.
+
+**Do not open public issues for security vulnerabilities.**
+
+Please see [SECURITY.md](SECURITY.md) for our responsible disclosure policy and how to report security vulnerabilities privately via GitHub's Security tab.
 
 ## License
 

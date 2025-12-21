@@ -12,17 +12,20 @@ This document provides a transparent analysis of **what data is exposed to whom*
 ### Quick Assessment
 
 **✅ Strong Privacy Properties:**
+
 - Medical record **content** is end-to-end encrypted (server cannot read)
 - Family Member Keys (FMKs) are wrapped with user-specific keys (server cannot decrypt)
 - User passwords never transmitted to server
 - Master keys stored device-only (never synced)
 
 **⚠️ Metadata Exposure:**
+
 - Server knows social graph (who shares with whom)
 - Server knows which family members exist (pseudonymous IDs)
 - Server knows usage patterns (login times, sync frequency)
 
 **Trade-off Rationale:**
+
 - Async operation requires server-side routing → Some metadata exposure unavoidable
 - UX simplicity prioritized (email invitations vs. in-person QR codes)
 - Threat model: Protect medical content from everyone, accept relationship metadata for convenience
@@ -61,6 +64,7 @@ The server (Supabase or equivalent backend) has access to certain metadata requi
 | **Private key** | ❌ **Never transmitted** | Stored encrypted in Keychain | N/A (client-only) |
 
 **Example server view:**
+
 ```json
 {
   "user_id": "550e8400-e29b-41d4-a716-446655440000",
@@ -73,6 +77,7 @@ The server (Supabase or equivalent backend) has access to certain metadata requi
 ```
 
 **Privacy implications:**
+
 - ✅ **Email is PII**: Server knows real identity (required for invitations)
 - ✅ **Pseudonymous UUIDs**: Medical records linked to UUIDs, not directly to emails
 - ⚠️ **Login timestamps**: Server knows when users access app
@@ -87,6 +92,7 @@ The server (Supabase or equivalent backend) has access to certain metadata requi
 | **Owner user ID** | ✅ Plaintext | Access control | Low (UUID link) |
 
 **Example server view:**
+
 ```json
 {
   "family_member_id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
@@ -97,6 +103,7 @@ The server (Supabase or equivalent backend) has access to certain metadata requi
 ```
 
 **Privacy implications:**
+
 - ✅ **Names encrypted**: Server sees UUID "7c9e...ae7", not "Emma age 5"
 - ⚠️ **Relationship type**: If included as plaintext metadata for filtering (e.g., "show only my children"), server knows family structure
 - ⚠️ **Ownership**: Server knows "User 550e...000 created family member 7c9e...ae7"
@@ -115,6 +122,7 @@ The server (Supabase or equivalent backend) has access to certain metadata requi
 | **Wrapped FMK** | ❌ **Encrypted** | Key wrapping (opaque blob) | High (key material) |
 
 **Example server view:**
+
 ```json
 // Invitation table
 {
@@ -139,6 +147,7 @@ The server (Supabase or equivalent backend) has access to certain metadata requi
 ```
 
 **Privacy implications:**
+
 - ✅ **Social graph visible**: Server knows "User 550e...000 shared family member 7c9e...ae7 with user 9b2e...000"
 - ✅ **Wrapped FMK is opaque**: Server cannot decrypt (requires recipient's private key for ECDH)
 - ⚠️ **Timing analysis**: Server knows when invitations sent/accepted (correlation possible)
@@ -157,6 +166,7 @@ The server (Supabase or equivalent backend) has access to certain metadata requi
 | **Record size** | ✅ Plaintext | Network metadata | Low (size in bytes) |
 
 **Example server view:**
+
 ```json
 {
   "record_id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
@@ -170,6 +180,7 @@ The server (Supabase or equivalent backend) has access to certain metadata requi
 ```
 
 **Privacy implications:**
+
 - ✅ **Content encrypted**: Server sees ciphertext, cannot read "COVID vaccine 2023-05-15"
 - ⚠️ **Record type**: If plaintext (e.g., for "show all vaccines" filter), server knows health categories
 - ⚠️ **Record count**: Server knows "Family member 7c9e...ae7 has 15 vaccine records" (volume metadata)
@@ -187,6 +198,7 @@ The server (Supabase or equivalent backend) has access to certain metadata requi
 | **Device type** | ⚠️ Optional | Analytics | Low (iOS version, etc.) |
 
 **Privacy implications:**
+
 - ⚠️ **IP addresses reveal location**: Server knows "User logged in from San Francisco"
 - ⚠️ **Usage patterns**: "User checks app every day at 8am" (behavioral metadata)
 - ⚠️ **Correlation risk**: If server logs are retained, can correlate users' activities
@@ -213,6 +225,7 @@ The cryptographic architecture ensures the server is **blind to actual medical c
 | **Scanned documents** | ❌ Ciphertext only | ✅ Decrypted locally |
 
 **Example:**
+
 ```
 Plaintext (client-side only):
 {
@@ -228,6 +241,7 @@ Ciphertext (server sees):
 ```
 
 **Why server can't decrypt:**
+
 - FMK is random 256-bit key, never transmitted to server
 - Server only has wrapped FMKs (encrypted with ECDH-derived keys)
 - ECDH-derived keys require user's private key (device-only, in Keychain)
@@ -244,6 +258,7 @@ Ciphertext (server sees):
 | **HKDF Wrapping Keys** | ❌ Never transmitted (derived from shared secrets) | Computed in memory, never stored |
 
 **Key derivation chain (all local):**
+
 ```
 User Password (known only to user)
    ↓ PBKDF2 (100k iterations, local)
@@ -269,6 +284,7 @@ Wrapped FMK (uploaded to server as opaque blob)
 | **Derived Master Key** | ❌ Never transmitted | Stored in Keychain, device-only |
 
 **Authentication flow:**
+
 ```
 Traditional (NOT zero-knowledge):
 ├─ User enters password
@@ -297,6 +313,7 @@ Server authentication:
 | **Photo** | ❌ Encrypted with FMK | AES-256-GCM |
 
 **Server sees:**
+
 ```json
 {
   "family_member_id": "7c9e6679-...",
@@ -323,6 +340,7 @@ Server authentication:
 | **Adult A's Master Key** | ❌ Cannot see | Never shared |
 
 **Granularity**: Per-family-member. If Adult A shares Emma's records but not Liam's, Adult B sees:
+
 - ✅ Emma: All records
 - ❌ Liam: Nothing (not even existence)
 
@@ -337,6 +355,7 @@ Server authentication:
 | **Server metadata** | ❌ No access | Supabase RLS prevents queries |
 
 **Row-Level Security (RLS) example:**
+
 ```sql
 -- Adult C tries to query Emma's records
 SELECT * FROM medical_records WHERE family_member_id = '7c9e6679-...';
@@ -412,10 +431,11 @@ USING (
 |--------|-----------|-----------|
 | **Read medical records** | ❌ Cannot decrypt | No FMKs |
 | **Build social graph** | ✅ Yes | Can see who shares with whom |
-| **Correlate with external data** | ⚠️ Possible if emails leak | "alice@company.com shared with bob@company.com" |
+| **Correlate with external data** | ⚠️ Possible if emails leak | "<alice@company.com> shared with <bob@company.com>" |
 | **Change user data** | ⚠️ Can modify ciphertext | Detected by authentication tags (AES-GCM) |
 
 **Mitigation**:
+
 - Zero-knowledge architecture prevents content access
 - Audit logs for database modifications
 - Consider: Encrypted metadata (Phase 4)
@@ -434,6 +454,7 @@ USING (
 **Critical**: If device is unlocked, attacker has full access. This is fundamental to iOS security model.
 
 **Mitigations**:
+
 - Device encryption (hardware-backed on modern iPhones)
 - Auto-lock timeout (user responsibility)
 - Biometric authentication (Touch ID/Face ID)
@@ -453,6 +474,7 @@ USING (
 **Critical**: Attacker can impersonate user for server operations, but cannot decrypt data (keys are device-only).
 
 **Mitigations**:
+
 - 2FA (Supabase supports, not in Phase 1)
 - Email notifications for new invitations
 - Audit trail (user can see "Unexpected invitation sent")
@@ -526,6 +548,7 @@ Goal: Access Emma's Medical Records
 ```
 
 **Key takeaways**:
+
 - ✅ Server compromise doesn't reveal content (zero-knowledge holds)
 - ⚠️ TOFU vulnerability requires active MITM (sophisticated attack)
 - ⚠️ Device theft with unlocked phone is biggest risk (physical security)
@@ -533,6 +556,7 @@ Goal: Access Emma's Medical Records
 ### 5.4 Out-of-Scope Threats
 
 **Not protected against** (accepted limitations):
+
 1. **Malicious app binary**: If attacker modifies the app itself, all bets are off (mitigated by App Store code signing)
 2. **iOS/hardware backdoors**: If Apple or hardware manufacturer is malicious (fundamental trust assumption)
 3. **Compromised CryptoKit**: If Apple's crypto library is backdoored (industry-standard trust)
@@ -617,6 +641,7 @@ Goal: Access Emma's Medical Records
 #### 7.2.1 Social Graph Metadata
 
 **Server knows:**
+
 ```
 User A (550e8400-...) shared:
   - Family Member X (7c9e6679-...) with User B (9b2e8400-...)
@@ -627,11 +652,13 @@ User B shared:
 ```
 
 **Implications:**
+
 - ⚠️ Can infer relationships: "A and B share each other's family members → likely spouses"
 - ⚠️ Can count connections: "User A has 5 sharing relationships → large family"
 - ⚠️ Can detect clusters: "Users A, B, C all share with each other → family unit"
 
 **Real-world example**: If Alice shares Emma (child) and Michael (child) with Bob, and Bob shares Linda (child) with Alice, server infers:
+
 - Alice and Bob are likely co-parents
 - Emma, Michael, Linda are likely siblings
 - This is a 2-parent household with 3 children
@@ -639,6 +666,7 @@ User B shared:
 #### 7.2.2 Volume Metadata
 
 **Server knows:**
+
 ```
 Family Member X (7c9e6679-...) has:
   - 15 vaccine records
@@ -648,17 +676,20 @@ Family Member X (7c9e6679-...) has:
 ```
 
 **Implications:**
+
 - ⚠️ High record count suggests chronic condition (frequent doctor visits)
 - ⚠️ Large data size suggests scanned documents (specialist reports?)
 - ⚠️ Sudden spike in records suggests medical event
 
 **Real-world example**: If family member has 2 records in 2024, then suddenly 50 records in January 2025:
+
 - Server knows: "Medical event occurred in January"
 - Server doesn't know: "Cancer diagnosis" (content encrypted)
 
 #### 7.2.3 Temporal Metadata
 
 **Server knows:**
+
 ```
 User A:
   - Created account: 2024-01-15
@@ -668,6 +699,7 @@ User A:
 ```
 
 **Implications:**
+
 - ⚠️ Regular login pattern suggests monitoring chronic condition
 - ⚠️ Quarterly spikes suggest routine checkups
 - ⚠️ Sudden inactivity after regular use suggests... something (hospitalization? Lost interest?)
@@ -675,6 +707,7 @@ User A:
 #### 7.2.4 Category Metadata (If Plaintext)
 
 **If `record_type` is plaintext:**
+
 ```
 Family Member X has:
   - 15 records with type: "vaccine"
@@ -683,6 +716,7 @@ Family Member X has:
 ```
 
 **Implications:**
+
 - ⚠️ Knows health categories (not specific diagnoses)
 - ⚠️ "Surgery" record reveals major medical event
 - ⚠️ Can correlate: "3 allergy records created same day → severe allergic reaction?"
@@ -694,6 +728,7 @@ Family Member X has:
 **Sophisticated attacker with metadata access:**
 
 #### Attack 1: Size-Based Inference
+
 ```
 Observation: Record for family member X is 1.2 MB (much larger than others)
 Inference: Likely scanned document (e.g., radiology report, genetic test)
@@ -703,6 +738,7 @@ Correlation: If created after 15 vaccine records, might be vaccine injury report
 **Mitigation**: Padding (make all records same size). Trade-off: Wasted bandwidth.
 
 #### Attack 2: Timing Correlation
+
 ```
 Observation: User A and User B both create records for same family member within 1 hour
 Inference: Doctor visit (both parents updating records from same appointment)
@@ -712,6 +748,7 @@ Correlation: If happens every 3 months, routine pediatric checkup
 **Mitigation**: Delayed sync (random delay before uploading). Trade-off: Less real-time.
 
 #### Attack 3: Social Graph Analysis
+
 ```
 Observation: Users A, B, C, D, E all share with each other (fully connected graph)
 Inference: Extended family (grandparents, aunts/uncles)
@@ -765,7 +802,8 @@ Correlation: If one user (E) suddenly stops sharing, family conflict? Legal issu
 
 **What if we encrypted ALL metadata?**
 
-#### Implementation:
+#### Implementation
+
 ```sql
 CREATE TABLE family_member_access_grants (
     grant_id UUID PRIMARY KEY,
@@ -776,6 +814,7 @@ CREATE TABLE family_member_access_grants (
 ```
 
 **Client-side flow:**
+
 ```
 Adult B downloads all access grants for themselves:
 ├─ Server returns: 50 encrypted_metadata blobs
@@ -784,7 +823,7 @@ Adult B downloads all access grants for themselves:
 └─ Result: Found after decrypting 23rd blob
 ```
 
-#### Comparison:
+#### Comparison
 
 | Feature | Plaintext Metadata (Current) | Encrypted Metadata |
 |---------|----------------------------|-------------------|
@@ -804,7 +843,8 @@ Adult B downloads all access grants for themselves:
 
 **What if we used QR codes instead of email invitations?**
 
-#### Implementation:
+#### Implementation
+
 ```
 Adult A generates QR code:
 ├─ Contains: { public_key, wrapped_fmk, family_member_id }
@@ -812,7 +852,7 @@ Adult A generates QR code:
 └─ No server involved in key exchange
 ```
 
-#### Comparison:
+#### Comparison
 
 | Feature | Email Invitation (Current) | QR Code Sharing |
 |---------|---------------------------|-----------------|
@@ -831,7 +871,8 @@ Adult A generates QR code:
 
 **What if we eliminated the server entirely?**
 
-#### Implementation:
+#### Implementation
+
 ```
 Adult A and Adult B connect directly:
 ├─ Via local network (Bonjour/MultipeerConnectivity)
@@ -839,7 +880,7 @@ Adult A and Adult B connect directly:
 └─ No central server
 ```
 
-#### Comparison:
+#### Comparison
 
 | Feature | Server Mailbox (Current) | Fully P2P |
 |---------|-------------------------|-----------|
@@ -861,6 +902,7 @@ Adult A and Adult B connect directly:
 ### 9.1 Scenario: Malicious Server MITM (TOFU Attack)
 
 **Attack**:
+
 ```
 Day 1: Alice sends invitation to Bob
 ├─ Email contains: Alice's public key
@@ -878,6 +920,7 @@ Day 3: Bob accepts invitation
 **Probability**: Low (requires malicious/compromised server + targeted attack)
 
 **Detection**:
+
 ```
 Alice and Bob compare verification codes:
 ├─ Alice computes: SHA256(ECDH(Alice_Private, Bob_Public)).prefix(3) = "A3-5F-2B"
@@ -886,6 +929,7 @@ Alice and Bob compare verification codes:
 ```
 
 **Mitigations**:
+
 1. ✅ **Verification codes** (out-of-band comparison via phone call)
 2. ✅ **UI warning**: "If codes don't match, DO NOT share sensitive data"
 3. ⚠️ **Future**: Mandatory verification for high-sensitivity accounts (opt-in)
@@ -896,6 +940,7 @@ Alice and Bob compare verification codes:
 ### 9.2 Scenario: Stolen Unlocked Device
 
 **Attack**:
+
 ```
 Thief steals Alice's unlocked iPhone:
 ├─ Opens Family Medical App (already unlocked)
@@ -908,6 +953,7 @@ Thief steals Alice's unlocked iPhone:
 **Probability**: Medium (opportunistic theft, device left unlocked)
 
 **Mitigations**:
+
 1. ✅ **Device auto-lock** (user responsibility, iOS default)
 2. ✅ **Biometric protection** (Touch ID/Face ID)
 3. ⚠️ **Future**: App-level biometric auth (require Face ID before viewing records)
@@ -920,6 +966,7 @@ Thief steals Alice's unlocked iPhone:
 ### 9.3 Scenario: Compromised Server Database Dump
 
 **Attack**:
+
 ```
 Hacker breaches Supabase, steals database:
 ├─ Downloads all tables:
@@ -937,11 +984,13 @@ Hacker breaches Supabase, steals database:
 **Probability**: Medium (server breaches happen)
 
 **Impact**:
+
 - ✅ **Content protected**: Zero-knowledge holds
 - ⚠️ **Metadata exposed**: Social graph, record counts, timestamps
 - ⚠️ **Email addresses exposed**: PII leakage
 
 **Mitigations**:
+
 1. ✅ **Zero-knowledge architecture**: Content unreadable
 2. ✅ **Encrypted columns**: Wrapped FMKs are opaque blobs
 3. ⚠️ **Future**: Encrypted metadata (social graph protection)
@@ -952,6 +1001,7 @@ Hacker breaches Supabase, steals database:
 ### 9.4 Scenario: Malicious Family Member
 
 **Attack**:
+
 ```
 Alice shares Emma's records with Bob (authorized)
 Bob becomes malicious:
@@ -964,11 +1014,13 @@ Bob becomes malicious:
 **Probability**: Low (family trust model)
 
 **Impact**:
+
 - ⚠️ **Authorized data accessible**: Bob can read Emma's records (intended)
 - ✅ **Unauthorized data protected**: Bob cannot access Liam's records
 - ⚠️ **Re-sharing prevented**: Bob cannot grant access to others (no owner privileges)
 
 **Mitigations**:
+
 1. ✅ **Granular access control**: Per-family-member, not all-or-nothing
 2. ✅ **Revocation**: Alice can revoke Bob's access (see ADR-0005)
 3. ⚠️ **Future**: Audit trail (log when Bob accesses Emma's records)
@@ -981,6 +1033,7 @@ Bob becomes malicious:
 ### 9.5 Scenario: Account Takeover (Credentials Stolen)
 
 **Attack**:
+
 ```
 Hacker steals Alice's Supabase credentials:
 ├─ Logs into Alice's account (server-side)
@@ -996,11 +1049,13 @@ Hacker steals Alice's Supabase credentials:
 **Probability**: Medium (phishing, credential reuse)
 
 **Impact**:
+
 - ✅ **Content protected**: Cannot decrypt (no device access)
 - ⚠️ **Impersonation possible**: Can invite malicious users
 - ⚠️ **DoS possible**: Can revoke legitimate access
 
 **Mitigations**:
+
 1. ✅ **2FA** (Supabase supports, Phase 4)
 2. ✅ **Email notifications**: "New invitation sent" (user can detect unauthorized)
 3. ⚠️ **Future**: Require device confirmation for critical actions (invite, revoke)
@@ -1013,36 +1068,42 @@ Hacker steals Alice's Supabase credentials:
 ## 10. Privacy-Enhancing Roadmap
 
 ### Phase 1-3: Current Design (Content Zero-Knowledge)
+
 - ✅ Medical records encrypted (AES-256-GCM)
 - ✅ FMKs wrapped (ECDH + AES.KeyWrap)
 - ✅ Device-only master keys
 - ⚠️ Metadata exposed (social graph, volume, timing)
 
 ### Phase 4a: Encrypted Metadata (Optional Hardening)
+
 - Encrypt social graph (family_member_id, granter_id)
 - Client-side filtering (download all, decrypt locally)
 - Trade-off: Performance vs. metadata privacy
 - Opt-in for privacy-focused users
 
 ### Phase 4b: QR Code Sharing (Maximum Privacy)
+
 - In-person key exchange (no server MITM)
 - Complementary to email invitations
 - Best metadata privacy (server uninvolved)
 - Trade-off: Requires in-person meeting
 
 ### Phase 4c: Audit Trail (Transparency)
+
 - Encrypted logs of access events
 - "Who accessed Emma's records when"
 - Detect unauthorized access
 - Trade-off: Additional metadata collected
 
 ### Phase 4d: 2FA and Device Confirmation
+
 - Two-factor authentication (Supabase)
 - Device-based confirmation for critical actions
 - Prevents account takeover impact
 - Trade-off: UX friction for security
 
 ### Phase 5: Advanced Mitigations (Speculative)
+
 - Padding (uniform record sizes)
 - Delayed sync (random timing)
 - Anonymized email lookups (hash-based)
@@ -1056,11 +1117,13 @@ Hacker steals Alice's Supabase credentials:
 ### Honest Assessment
 
 **What we protect:**
+
 - ✅ **Medical record content**: Strong zero-knowledge (AES-256-GCM E2EE)
 - ✅ **Cryptographic keys**: Device-only, never on server
 - ✅ **User passwords**: Never transmitted (local derivation only)
 
 **What we don't protect:**
+
 - ⚠️ **Social graph**: Server knows who shares with whom
 - ⚠️ **Volume metadata**: Server knows record counts, sizes
 - ⚠️ **Usage patterns**: Server knows login times, sync frequency
@@ -1073,6 +1136,7 @@ Hacker steals Alice's Supabase credentials:
 ### Transparency Commitment
 
 This document represents **honest disclosure** of privacy properties. We acknowledge:
+
 1. ✅ Not "fully zero-knowledge" (metadata exposed)
 2. ✅ Trade-offs made for UX and async support
 3. ✅ Future hardening possible (encrypted metadata, QR codes)
@@ -1081,6 +1145,7 @@ This document represents **honest disclosure** of privacy properties. We acknowl
 ### For Security Auditors
 
 **Key claims to verify:**
+
 1. Server cannot decrypt medical record content (verify: no FMKs on server)
 2. Master Keys never transmitted (verify: Keychain-only storage)
 3. ECDH shared secrets ephemeral (verify: computed in-memory, not stored)

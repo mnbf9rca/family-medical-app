@@ -3,6 +3,7 @@
 ## Tech Stack
 
 ### iOS
+
 - **Xcode**: 26.2+ (December 2025)
 - **Swift**: 6.2.3+ (ships with Xcode 26.2)
 - **iOS Deployment Target**: 16.0+ (supports 93.9% of devices, good balance of reach and modern APIs)
@@ -14,6 +15,7 @@
 - **Networking**: URLSession with certificate pinning
 
 ### Cryptography - Use These Exact Specs
+
 - **Symmetric Encryption**: AES-256-GCM (CryptoKit.AES.GCM)
 - **Key Derivation**: PBKDF2-HMAC-SHA256 (100k iterations via CommonCrypto.CCKeyDerivationPBKDF)
   - Future enhancement: Argon2id (Phase 4)
@@ -34,6 +36,7 @@ Three tiers: User Master Key → User Identity (Curve25519) → Family Member Ke
 ## Encryption Boundaries
 
 ### Must Be Encrypted (before leaving device)
+
 - All medical records (vaccines, conditions, medications, allergies)
 - Family member PII (names, DOB, relationships)
 - Document attachments (images, PDFs)
@@ -41,12 +44,14 @@ Three tiers: User Master Key → User Identity (Curve25519) → Family Member Ke
 - Sharing metadata (who has access to what)
 
 ### Can Be Plaintext (locally or in transit over TLS)
+
 - App configuration
 - UI strings
 - Sync metadata: timestamps, device IDs, version numbers
 - User's own device list (for their account only)
 
 ### Never Store Anywhere (even encrypted)
+
 - Decryption keys in logs or analytics
 - Stack traces containing medical data
 - User passwords (store salt in UserDefaults, derive Master Key on-demand)
@@ -56,21 +61,25 @@ Three tiers: User Master Key → User Identity (Curve25519) → Family Member Ke
 ## iOS-Specific Gotchas
 
 ### Keychain
+
 - **Use Keychain for**: Master Key, Private Key (Curve25519), owned Family Member Keys
 - **Use Core Data for**: Shared/wrapped keys, encrypted records, public keys
 - **Never use UserDefaults for**: keys, passwords, tokens
 - **Protection**: `kSecAttrAccessibleWhenUnlockedThisDeviceOnly`, never sync to iCloud
 
 ### Biometric Auth
+
 - **Always provide fallback**: Face/Touch ID may be disabled, unavailable, or fail
 - **Don't assume it's configured**: gracefully degrade to password
 - **Use LAContext**: check availability before attempting auth
 
 ### Memory Management
+
 - Clear sensitive data from memory after use (zero out, don't just dereference)
 - Use `withUnsafeBytes` carefully with crypto operations
 
 ### Background Modes
+
 - App may be killed while syncing - handle partial sync states
 - Don't decrypt data in app extensions unless absolutely necessary
 
@@ -90,6 +99,7 @@ Three tiers: User Master Key → User Identity (Curve25519) → Family Member Ke
 ## Testing Requirements
 
 For security-critical code (auth, encryption, key derivation, sharing):
+
 - Write unit tests
 - Test failure cases (wrong password, corrupted data, missing keys)
 - Test key rotation and access revocation
@@ -99,6 +109,7 @@ For security-critical code (auth, encryption, key derivation, sharing):
 **Be direct. No fluff.**
 
 ### Don't
+
 - Suggest what to do while waiting for downloads/builds
 - Say "Let me know when..." (user will tell you)
 - Offer patronizing suggestions ("take a break", "review the docs")
@@ -107,6 +118,7 @@ For security-critical code (auth, encryption, key derivation, sharing):
 - Repeat information already in documentation
 
 ### Do
+
 - Give only necessary technical information
 - State what's required, then stop
 - Answer questions directly
