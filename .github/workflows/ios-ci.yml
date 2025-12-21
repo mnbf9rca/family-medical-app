@@ -57,7 +57,7 @@ jobs:
 
   build:
     name: Build & Test
-    runs-on: macos-26
+    runs-on: macos-26  # Required for Xcode 26 / iOS 26.2 simulators
     timeout-minutes: 45  # Increased for CodeQL analysis
 
     permissions:
@@ -127,6 +127,16 @@ jobs:
         with:
           path: ~/Library/Developer/Xcode/DerivedData
           key: ${{ runner.os }}-deriveddata-${{ hashFiles('ios/**/*.swift') }}
+
+      - name: Disable CPU-intensive services
+        run: |
+          # Disable PerfPowerServices (power management analytics that causes simulator hangs)
+          sudo launchctl bootout system/com.apple.PerfPowerServices 2>/dev/null || true
+
+          # Disable Spotlight indexing (CPU-intensive during tests)
+          sudo launchctl bootout system/com.apple.metadata.mds 2>/dev/null || true
+
+          echo "Disabled CPU-intensive services for stable simulator testing"
 
       - name: Run Unit Tests
         run: |
