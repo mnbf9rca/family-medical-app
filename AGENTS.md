@@ -48,7 +48,7 @@ For security-critical code (auth, encryption, key derivation, sharing):
 ### Pull Requests
 
 - Warn the user if the resulting PR is likely to be too large to review easily
-- Suggest breaking it into smaller PRs, although note that the build and test on a PR takes about 30 minutes.
+- Suggest breaking it into smaller PRs, although note that the build and test on a PR typically takes around 6-8 minutes.
 
 ### Issue Tracking
 
