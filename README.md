@@ -230,11 +230,9 @@ Detailed user stories and tasks will be tracked as GitHub Issues.
 
 ### Security Practices
 
-- Regular security reviews
-- Dependency vulnerability scanning
-- Penetration testing (when feasible)
-- Responsible disclosure policy
-- Security-focused code reviews
+- **Automated scanning**: CodeQL, SwiftLint security rules, pre-commit hooks, Dependabot
+- **Security reviews**: Code reviews with security focus
+- **Responsible disclosure**: See [SECURITY.md](SECURITY.md) for reporting vulnerabilities
 
 ## Privacy by Design
 
@@ -250,7 +248,9 @@ This is currently a hobby project. Contributions, suggestions, and security revi
 
 ### Security Issues
 
-If you discover a security vulnerability, please email [SECURITY EMAIL TBD] instead of opening a public issue.
+**Do not open public issues for security vulnerabilities.**
+
+Please see [SECURITY.md](SECURITY.md) for our responsible disclosure policy and how to report security vulnerabilities privately via GitHub's Security tab.
 
 ## License
 

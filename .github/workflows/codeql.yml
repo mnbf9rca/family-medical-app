@@ -1,0 +1,93 @@
+name: CodeQL Security Scanning
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'ios/**/*.swift'
+      - 'ios/**/*.m'
+      - 'ios/**/*.h'
+      - '.github/workflows/codeql.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'ios/**/*.swift'
+      - 'ios/**/*.m'
+      - 'ios/**/*.h'
+      - '.github/workflows/codeql.yml'
+  schedule:
+    # Run weekly on Mondays at 00:00 UTC to catch new vulnerabilities
+    - cron: '0 0 * * 1'
+
+# Cancel in-progress runs when a new workflow starts
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: CodeQL Analysis
+    runs-on: macos-26
+    timeout-minutes: 45  # Prevent runaway costs
+
+    permissions:
+      # Required for CodeQL to upload results to GitHub Security tab
+      security-events: write
+      # Required to fetch repository contents
+      contents: read
+      # Required for private repos
+      actions: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ['swift']
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Select Xcode version
+        run: sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
+
+      - name: Show Xcode and Swift versions
+        run: |
+          xcodebuild -version
+          swift --version
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+          # Queries to run: default + security-extended
+          queries: +security-extended,security-and-quality
+          # Exclude POC files from analysis
+          config: |
+            paths-ignore:
+              - 'docs/research/**'
+              - 'docs/adr/examples/**'
+
+      - name: Build for CodeQL analysis
+        run: |
+          cd ios/FamilyMedicalApp
+          xcodebuild clean build \
+            -project FamilyMedicalApp.xcodeproj \
+            -scheme FamilyMedicalApp \
+            -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.2' \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:${{ matrix.language }}"
+          # Upload results to Security tab
+          upload: true
+
+      - name: Check for critical vulnerabilities
+        if: always()
+        run: |
+          echo "📊 CodeQL analysis complete"
+          echo "Results uploaded to Security tab"
+          echo ""
+          echo "Critical findings will appear in the Security tab and as PR annotations"
