@@ -1,0 +1,84 @@
+name: CodeQL Security Analysis
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'ios/**/*.swift'
+      - 'ios/**/*.m'
+      - 'ios/**/*.h'
+      - '.github/workflows/codeql.yml'
+  schedule:
+    # Run weekly on Mondays at 00:00 UTC
+    - cron: '0 0 * * 1'
+  workflow_dispatch: # Allow manual trigger
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: CodeQL Analysis
+    runs-on: macos-26
+    timeout-minutes: 30
+
+    permissions:
+      security-events: write
+      contents: read
+      actions: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode version
+        run: sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
+
+      - name: Show Xcode and Swift versions
+        run: |
+          xcodebuild -version
+          swift --version
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: swift
+          queries: +security-extended,security-and-quality
+          config: |
+            paths-ignore:
+              - 'docs/research/**'
+              - 'docs/adr/examples/**'
+
+      - name: Build for CodeQL
+        run: |
+          cd ios/FamilyMedicalApp
+          # CodeQL requires clean build
+          xcodebuild clean build \
+            -project FamilyMedicalApp.xcodeproj \
+            -scheme FamilyMedicalApp \
+            -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.2' \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:swift"
+          upload: true
+
+      - name: Summary
+        if: always()
+        env:
+          REPO: ${{ github.repository }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          {
+            echo "## CodeQL Analysis Complete"
+            echo ""
+            echo "Results uploaded to [Security tab](https://github.com/${REPO}/security/code-scanning)"
+            echo ""
+            echo "- **Queries**: security-extended + security-and-quality"
+            echo "- **Language**: Swift"
+            echo "- **Trigger**: ${EVENT}"
+          } >> "$GITHUB_STEP_SUMMARY"

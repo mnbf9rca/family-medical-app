@@ -58,13 +58,7 @@ jobs:
   build:
     name: Build & Test
     runs-on: macos-26  # Required for Xcode 26 / iOS 26.2 simulators
-    timeout-minutes: 45  # Increased for CodeQL analysis
-
-    permissions:
-      # Required for CodeQL to upload results to Security tab
-      security-events: write
-      contents: read
-      actions: read
+    timeout-minutes: 20  # Reduced now that CodeQL runs separately
 
     strategy:
       matrix:
@@ -88,17 +82,6 @@ jobs:
       - name: Install xcpretty
         run: gem install xcpretty
 
-      - name: Initialize CodeQL
-        if: matrix.destination == 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.2'
-        uses: github/codeql-action/init@v4
-        with:
-          languages: swift
-          queries: +security-extended,security-and-quality
-          config: |
-            paths-ignore:
-              - 'docs/research/**'
-              - 'docs/adr/examples/**'
-
       - name: Restore DerivedData cache
         uses: actions/cache/restore@v4
         with:
@@ -109,11 +92,11 @@ jobs:
 
       - name: Build
         run: |
-          # Tell Xcode to respect cached DerivedData (50% faster builds)
+          # Use cached DerivedData for faster incremental builds
           defaults write com.apple.dt.Xcode IgnoreFileSystemDeviceInodeChanges -bool YES
 
           cd ios/FamilyMedicalApp
-          xcodebuild clean build \
+          xcodebuild build \
             -project FamilyMedicalApp.xcodeproj \
             -scheme FamilyMedicalApp \
             -destination "${{ matrix.destination }}" \
@@ -184,12 +167,6 @@ jobs:
           name: coverage-report
           path: ios/FamilyMedicalApp/coverage.json
           retention-days: 30
-
-      - name: Perform CodeQL Analysis
-        if: matrix.destination == 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.2'
-        uses: github/codeql-action/analyze@v4
-        with:
-          category: "/language:swift"
 
   security-scan:
     name: Security Scan
