@@ -82,13 +82,17 @@ jobs:
       - name: Install xcpretty
         run: gem install xcpretty
 
+      - name: Generate cache key
+        id: cache-key
+        run: echo "key=$(echo '${{ matrix.destination }}' | md5sum | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+
       - name: Restore DerivedData cache
         uses: actions/cache/restore@v4
         with:
           path: ~/Library/Developer/Xcode/DerivedData
-          key: ${{ runner.os }}-deriveddata-${{ matrix.destination }}-${{ hashFiles('ios/**/*.swift') }}
+          key: ${{ runner.os }}-deriveddata-${{ steps.cache-key.outputs.key }}-${{ hashFiles('ios/**/*.swift') }}
           restore-keys: |
-            ${{ runner.os }}-deriveddata-${{ matrix.destination }}-
+            ${{ runner.os }}-deriveddata-${{ steps.cache-key.outputs.key }}-
             ${{ runner.os }}-deriveddata-
 
       - name: Build
@@ -107,7 +111,7 @@ jobs:
         if: always()
         with:
           path: ~/Library/Developer/Xcode/DerivedData
-          key: ${{ runner.os }}-deriveddata-${{ matrix.destination }}-${{ hashFiles('ios/**/*.swift') }}
+          key: ${{ runner.os }}-deriveddata-${{ steps.cache-key.outputs.key }}-${{ hashFiles('ios/**/*.swift') }}
 
       - name: Disable CPU-intensive services
         run: |
