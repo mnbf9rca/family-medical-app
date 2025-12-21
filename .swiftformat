@@ -1,0 +1,64 @@
+# SwiftFormat Configuration for Family Medical App
+# Code formatting rules for consistent Swift style
+
+# File options
+--exclude ios/FamilyMedicalApp/FamilyMedicalApp.xcodeproj,Pods,.build,ios/FamilyMedicalApp/FamilyMedicalAppUITests,docs/research,docs/adr/examples
+
+# Format options
+--swiftversion 6.2
+
+# Indentation
+--indent 4
+--tabwidth 4
+--indentcase false
+--ifdef no-indent
+--xcodeindentation enabled
+
+# Wrapping
+--maxwidth 120
+--wraparguments before-first
+--wrapparameters before-first
+--wrapcollections before-first
+--closingparen balanced
+
+# Spacing
+--trimwhitespace always
+--commas inline
+--semicolons inline
+
+# Line breaks
+--linebreaks lf
+--elseposition same-line
+--guardelse auto
+
+# Imports
+--importgrouping testable-bottom
+
+# Headers
+--header strip
+
+# Unused code
+--stripunusedargs closure-only
+
+# Mark
+--marktypes always
+--markextensions always
+--extensionmark "MARK: - %t + %c"
+--groupedextension "MARK: %c"
+
+# Enabled rules
+--enable isEmpty
+--enable redundantReturn
+--enable redundantSelf
+--enable sortImports  # Was sortedImports (deprecated)
+--enable sortSwitchCases  # Was sortedSwitchCases (deprecated)
+--enable trailingCommas
+--enable wrapMultilineStatementBraces
+--enable redundantType
+--enable strongifiedSelf
+--enable redundantObjc
+
+# Disabled rules (prefer explicit for security code)
+--disable blankLinesAroundMark
+--disable redundantNilInit  # Explicit nil initialization OK in crypto code
+--disable redundantOptionalBinding  # Explicit checks OK in crypto code

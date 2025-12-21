@@ -1,6 +1,6 @@
-import Foundation
-import CryptoKit
 import CommonCrypto
+import CryptoKit
+import Foundation
 
 // PROOF OF CONCEPT: Complete Key Hierarchy Implementation
 // Demonstrates ADR-0002 (Key Hierarchy and Derivation)
@@ -56,18 +56,18 @@ struct UserIdentity {
 
     init(userID: String) {
         self.userID = userID
-        self.privateKey = Curve25519.KeyAgreement.PrivateKey()
-        self.publicKey = privateKey.publicKey
+        privateKey = Curve25519.KeyAgreement.PrivateKey()
+        publicKey = privateKey.publicKey
     }
 
     /// Export public key for sharing (safe to send over insecure channels)
     func exportPublicKey() -> Data {
-        return publicKey.rawRepresentation
+        publicKey.rawRepresentation
     }
 
     /// Import another user's public key
     static func importPublicKey(from data: Data) throws -> Curve25519.KeyAgreement.PublicKey {
-        return try Curve25519.KeyAgreement.PublicKey(rawRepresentation: data)
+        try Curve25519.KeyAgreement.PublicKey(rawRepresentation: data)
     }
 
     /// Encrypt private key with master key for Keychain storage
@@ -79,7 +79,8 @@ struct UserIdentity {
     }
 
     /// Decrypt private key from Keychain storage
-    static func decryptPrivateKey(encryptedData: Data, using masterKey: SymmetricKey) throws -> Curve25519.KeyAgreement.PrivateKey {
+    static func decryptPrivateKey(encryptedData: Data, using masterKey: SymmetricKey) throws -> Curve25519.KeyAgreement
+    .PrivateKey {
         let sealedBox = try AES.GCM.SealedBox(combined: encryptedData)
         let privateKeyData = try AES.GCM.open(sealedBox, using: masterKey)
         return try Curve25519.KeyAgreement.PrivateKey(rawRepresentation: privateKeyData)
@@ -97,18 +98,18 @@ struct FamilyMember {
         self.memberID = memberID
         self.name = name
         // Generate random FMK (NOT password-derived)
-        self.fmk = SymmetricKey(size: .bits256)
+        fmk = SymmetricKey(size: .bits256)
     }
 }
 
 /// Wrap FMK with owner's Master Key (for Keychain storage)
 func wrapFMK(_ fmk: SymmetricKey, withMasterKey masterKey: SymmetricKey) throws -> Data {
-    return try AES.KeyWrap.wrap(fmk, using: masterKey)
+    try AES.KeyWrap.wrap(fmk, using: masterKey)
 }
 
 /// Unwrap FMK from Keychain
 func unwrapFMK(wrappedData: Data, withMasterKey masterKey: SymmetricKey) throws -> SymmetricKey {
-    return try AES.KeyWrap.unwrap(wrappedData, using: masterKey)
+    try AES.KeyWrap.unwrap(wrappedData, using: masterKey)
 }
 
 /// Wrap FMK for sharing with another user (ECDH)

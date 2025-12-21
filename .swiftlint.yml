@@ -1,0 +1,194 @@
+# SwiftLint Configuration for Family Medical App
+# Security-focused medical records app - stricter rules than typical projects
+
+# Paths to include/exclude
+included:
+  - ios/FamilyMedicalApp/FamilyMedicalApp
+  - ios/FamilyMedicalApp/FamilyMedicalAppTests
+
+excluded:
+  - ios/FamilyMedicalApp/FamilyMedicalApp.xcodeproj
+  - ios/FamilyMedicalApp/FamilyMedicalAppUITests
+  - docs/research  # POC examples - intentionally use print(), force unwrap, etc.
+  - docs/adr/examples  # POC examples for ADRs
+  - Pods
+  - .build
+
+# Enabled rules
+opt_in_rules:
+  - array_init
+  - attributes
+  - closure_end_indentation
+  - closure_spacing
+  - collection_alignment
+  - contains_over_filter_count
+  - contains_over_filter_is_empty
+  - contains_over_first_not_nil
+  - contains_over_range_nil_comparison
+  - discouraged_object_literal
+  - empty_collection_literal
+  - empty_count
+  - empty_string
+  - enum_case_associated_values_count
+  - explicit_init
+  - extension_access_modifier
+  - fallthrough
+  - fatal_error_message
+  - file_header
+  - first_where
+  - force_unwrapping  # Important for security: avoid force unwrapping
+  - implicitly_unwrapped_optional  # Security: explicit optionals for crypto code
+  - joined_default_parameter
+  - last_where
+  - literal_expression_end_indentation
+  - modifier_order
+  - multiline_arguments
+  - multiline_function_chains
+  - multiline_literal_brackets
+  - multiline_parameters
+  - nimble_operator
+  - nslocalizedstring_key
+  - number_separator
+  - operator_usage_whitespace
+  - overridden_super_call
+  - override_in_extension
+  - pattern_matching_keywords
+  - prefer_self_type_over_type_of_self
+  - private_action
+  - private_outlet
+  - prohibited_super_call
+  - quick_discouraged_call
+  - quick_discouraged_focused_test
+  - quick_discouraged_pending_test
+  - redundant_nil_coalescing
+  - redundant_type_annotation
+  - sorted_first_last
+  - static_operator
+  - strong_iboutlet
+  - toggle_bool
+  - trailing_closure
+  - unneeded_parentheses_in_closure_argument
+  - vertical_parameter_alignment_on_call
+  - vertical_whitespace_closing_braces
+  - vertical_whitespace_opening_braces
+  - yoda_condition
+
+# Disabled rules
+disabled_rules:
+  - todo  # Allow TODOs during development
+
+# Rule configurations
+line_length:
+  warning: 120
+  error: 150
+  ignores_function_declarations: true
+  ignores_comments: true
+  ignores_urls: true
+
+file_length:
+  warning: 500
+  error: 1000
+  ignore_comment_only_lines: true
+
+function_body_length:
+  warning: 50
+  error: 100
+
+function_parameter_count:
+  warning: 5
+  error: 8
+
+type_body_length:
+  warning: 300
+  error: 500
+
+cyclomatic_complexity:
+  warning: 10
+  error: 20
+  ignores_case_statements: true
+
+nesting:
+  type_level:
+    warning: 2
+  function_level:
+    warning: 5
+
+identifier_name:
+  min_length:
+    warning: 2
+    error: 1
+  max_length:
+    warning: 50
+    error: 60
+  excluded:
+    - id
+    - db
+    - iv  # Initialization vector (crypto term)
+    - fmk # Family Member Key (crypto term)
+    - kdf # Key Derivation Function (crypto term)
+    - aes # AES encryption (crypto term)
+    - gcm # GCM mode (crypto term)
+
+# Type name rules
+type_name:
+  min_length:
+    warning: 3
+    error: 2
+  max_length:
+    warning: 50
+    error: 60
+
+# Force unwrapping - strict for security code
+force_unwrapping:
+  severity: error  # No force unwrapping in crypto/security code
+
+# Force cast - strict for security code
+force_cast:
+  severity: error
+
+# Implicitly unwrapped optionals - avoid in crypto code
+implicitly_unwrapped_optional:
+  severity: warning
+  mode: all_except_iboutlets
+
+# Custom rules for security-sensitive code
+custom_rules:
+  no_print_in_production:
+    name: "No Print Statements"
+    regex: '(^|\s)print\s*\('
+    match_kinds:
+      - identifier
+    message: "Use proper logging instead of print() for security-sensitive app"
+    severity: warning
+
+  no_nslog:
+    name: "No NSLog"
+    regex: '\bNSLog\s*\('
+    match_kinds:
+      - identifier
+    message: "Use proper logging instead of NSLog for security-sensitive app"
+    severity: warning
+
+  no_force_try_crypto:
+    name: "No Force Try in Crypto Code"
+    regex: 'try!\s+(.*)(Encrypt|Decrypt|Derive|Key|Hash|Sign|Verify)'
+    message: "Never use try! with cryptographic operations - handle errors explicitly"
+    severity: error
+
+  password_in_code:
+    name: "No Hardcoded Passwords"
+    regex: '(password|secret|apiKey|token)\s*=\s*"[^"]+"'
+    message: "Never hardcode passwords, secrets, or API keys"
+    severity: error
+
+  master_key_logging:
+    name: "No Master Key in Logs"
+    regex: '(print|NSLog|os_log|logger)\s*\(.*[Mm]aster[Kk]ey'
+    message: "Never log master keys or encryption keys"
+    severity: error
+
+# Reporter
+reporter: "xcode"
+
+# Strict mode for CI
+strict: false  # Set to true in CI via command line flag

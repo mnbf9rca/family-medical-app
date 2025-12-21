@@ -1,0 +1,70 @@
+# Pre-commit hooks for Family Medical App
+# Run: pre-commit install
+# Manual run: pre-commit run --all-files
+
+repos:
+  # Swift code formatting
+  - repo: https://github.com/nicklockwood/SwiftFormat
+    rev: 0.58.7  # Latest as of Dec 2025
+    hooks:
+      - id: swiftformat
+        args:
+          - --config
+          - .swiftformat
+
+  # Swift linting
+  - repo: https://github.com/realm/SwiftLint
+    rev: 0.62.2  # Latest as of Dec 2025
+    hooks:
+      - id: swiftlint
+        args:
+          - --config
+          - .swiftlint.yml
+          - --strict
+
+  # GitHub Actions workflow linting
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.7.9  # Latest as of Dec 2025
+    hooks:
+      - id: actionlint
+
+  # General file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0  # Latest as of Dec 2025
+    hooks:
+      - id: trailing-whitespace
+        exclude: '\.md$'
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+      - id: check-added-large-files
+        args: ['--maxkb=1000']  # Max 1MB files
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+      - id: detect-private-key  # Security: prevent committing private keys
+
+  # Markdown linting
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.47.0  # Latest as of Dec 2025
+    hooks:
+      - id: markdownlint
+        args: ['--fix', '--config', '.markdownlint.json']
+        exclude: '^docs/adr/adr-template\.md$'
+
+# Global settings
+default_language_version:
+  python: python3
+
+ci:
+  autofix_commit_msg: |
+    [pre-commit.ci] auto fixes from pre-commit hooks
+
+    for more information, see https://pre-commit.ci
+  autofix_prs: true
+  autoupdate_branch: ''
+  autoupdate_commit_msg: '[pre-commit.ci] pre-commit autoupdate'
+  autoupdate_schedule: monthly
+  skip: []
+  submodules: false

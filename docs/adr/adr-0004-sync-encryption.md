@@ -11,6 +11,7 @@ The Family Medical App must support **multi-device synchronization** while maint
 ### Foundation
 
 This ADR builds on:
+
 - **ADR-0002**: Key Hierarchy → Established Master Key (device-only) and FMKs (per-family-member)
 - **ADR-0003**: Multi-User Sharing Model → Server as persistent mailbox for async operations
 
@@ -29,6 +30,7 @@ Medical Records ✅                Encrypted Records ✅      Medical Records ??
 ```
 
 **The Dilemma**:
+
 - ✅ Server has encrypted records (can sync them)
 - ❌ Server doesn't have Master Key (can't decrypt)
 - ❌ iPad doesn't have Master Key (can't derive FMKs)
@@ -116,6 +118,7 @@ Conflict: Simultaneous Edits
 **Decision**: Use a **256-bit recovery code** (24-word mnemonic) to encrypt Master Key for server storage.
 
 **Flow**:
+
 ```
 Account Creation (iPhone):
 ├─ Generate recovery code: 24 random words from BIP39 wordlist
@@ -137,6 +140,7 @@ New Device Setup (iPad):
 ```
 
 **Recovery Code Format** (BIP39-style):
+
 ```
 abandon ability able about above absent absorb abstract
 absurd abuse access accident account accuse achieve acid
@@ -144,12 +148,14 @@ acoustic acquire across act action actor actress actual
 ```
 
 **Why 24 words?**
+
 - 24 words × 11 bits = 264 bits entropy (256 bits + 8-bit checksum)
 - Industry standard (hardware wallets: Ledger, Trezor)
 - Easy to write down, hard to mistype (BIP39 wordlist has error detection)
 - More user-friendly than "AgK3jD9mP2xL7nF4sB1qW9vR8cT5yH6z" (random string)
 
 **Rationale**:
+
 - ✅ **Zero-Knowledge Maintained**: Server has encrypted Master Key, but no recovery code
 - ✅ **User-Controlled**: Only user knows recovery code (written down)
 - ✅ **Industry Standard**: Same approach as 1Password, Bitwarden, crypto wallets
@@ -157,11 +163,13 @@ acoustic acquire across act action actor actress actual
 - ⚠️ **User Responsibility**: If recovery code lost, data unrecoverable (acceptable trade-off)
 
 **Alternatives Considered**:
+
 - ❌ **iCloud Keychain Sync**: Not zero-knowledge (Apple can access)
 - ❌ **PAKE Protocol**: Too complex for hobby app
 - ⚠️ **Device-to-Device Transfer**: Great UX, but only works if old device available (complementary, not primary)
 
 **Security Properties**:
+
 - If attacker steals server database: Has encrypted Master Key, but no recovery code (useless)
 - If attacker steals recovery code: Has recovery code, but no encrypted Master Key from server (useless)
 - If attacker steals BOTH: Can decrypt Master Key → Full access ⚠️ (same as stealing device password)
@@ -171,6 +179,7 @@ acoustic acquire across act action actor actress actual
 **Decision**: Use **pull-based sync** (client polls server) with **Realtime notifications** for instant updates.
 
 **Implementation** (Supabase):
+
 ```swift
 // On app launch / foreground
 func syncData() async {
@@ -213,6 +222,7 @@ channel.subscribe()
 ```
 
 **Sync Triggers**:
+
 1. **App launch**: Full sync
 2. **App foreground**: Quick sync (changes since last sync)
 3. **Realtime notification**: Instant download of specific record
@@ -220,6 +230,7 @@ channel.subscribe()
 5. **After local edit**: Push change to server immediately
 
 **Rationale**:
+
 - ✅ **Simple**: Pull-based is easier than bidirectional sync protocols
 - ✅ **Offline-Friendly**: Works even if server unreachable (queue changes)
 - ✅ **Real-Time UX**: Realtime notifications feel instant (like iCloud)
@@ -231,6 +242,7 @@ channel.subscribe()
 **Decision**: Use **timestamp-based last-write-wins** for conflict resolution.
 
 **Schema**:
+
 ```sql
 CREATE TABLE medical_records (
     record_id UUID PRIMARY KEY,
@@ -248,6 +260,7 @@ CREATE TABLE medical_records (
 ```
 
 **Conflict Resolution Flow**:
+
 ```
 Scenario: iPhone and iPad both edit Emma's allergy record offline
 
@@ -279,6 +292,7 @@ iPhone receives notification:
 ```
 
 **User Experience**:
+
 - ✅ **No manual merge**: System automatically picks latest version
 - ⚠️ **Data Loss Possible**: iPhone's edits discarded (rare for medical records)
 - ⚠️ **No conflict UI**: Users don't see "Conflict detected, choose version"
@@ -303,10 +317,12 @@ iPhone receives notification:
 **Trade-off Accepted**: Rare data loss in exchange for simplicity.
 
 **Future Enhancement** (Phase 4):
+
 - Audit trail: Show "This record was edited on iPad at 14:32, overwrote iPhone edit"
 - Conflict log: Let user review lost edits (if they care)
 
 **Alternatives Considered**:
+
 - ❌ **CRDTs**: Too complex for hobby app, overkill for medical records
 - ❌ **Manual Merge UI**: Poor UX, intimidating for non-technical users
 - ⚠️ **Append-Only Log**: Good for audit trail, but doesn't solve conflict (complementary)
@@ -316,6 +332,7 @@ iPhone receives notification:
 **Decision**: Sync metadata is **plaintext** for coordination, content is **encrypted**.
 
 **Plaintext Metadata** (Required for Sync):
+
 ```json
 {
   "record_id": "f47ac10b-...",
@@ -330,6 +347,7 @@ iPhone receives notification:
 ```
 
 **Encrypted Content**:
+
 ```json
 {
   "encrypted_data": "AQAAAACAAABZwg...",  // AES-256-GCM ciphertext
@@ -339,6 +357,7 @@ iPhone receives notification:
 ```
 
 **Why Metadata is Plaintext**:
+
 1. **Sync Coordination**: Server needs `updated_at` to determine "latest version"
 2. **Efficient Queries**: `WHERE family_member_id = X AND updated_at > Y`
 3. **Realtime Notifications**: Server sends "Record X updated" (need ID)
@@ -354,6 +373,7 @@ iPhone receives notification:
 **Decision**: **Queue local changes** in Core Data, sync when online.
 
 **Schema**:
+
 ```swift
 // Core Data entity: PendingSyncOperation
 entity PendingSyncOperation {
@@ -367,6 +387,7 @@ entity PendingSyncOperation {
 ```
 
 **Flow**:
+
 ```
 User edits record (offline):
 ├─ Save to local Core Data (encrypted with FMK)
@@ -389,6 +410,7 @@ Error Handling:
 ```
 
 **Rationale**:
+
 - ✅ **Offline-First UX**: User can edit records on airplane, subway
 - ✅ **No Data Loss**: Changes queued locally until successfully synced
 - ✅ **Background Sync**: iOS background tasks can sync opportunistically
@@ -399,6 +421,7 @@ Error Handling:
 **Decision**: Track devices in server database for audit and revocation.
 
 **Schema**:
+
 ```sql
 CREATE TABLE user_devices (
     device_id UUID PRIMARY KEY,
@@ -412,6 +435,7 @@ CREATE TABLE user_devices (
 ```
 
 **Device Registration** (Automatic):
+
 ```swift
 // On first launch
 func registerDevice() async {
@@ -444,6 +468,7 @@ func updateLastSeen() async {
 ```
 
 **Device Revocation**:
+
 ```
 User goes to Settings > Devices:
 ├─ Sees list: "iPhone (last seen: 2 min ago)", "iPad (last seen: 3 days ago)"
@@ -459,17 +484,20 @@ iPad re-setup:
 ```
 
 **Rationale**:
+
 - ✅ **Audit Trail**: User can see "I don't recognize that iPad → revoke"
 - ✅ **Security**: Stolen device can be remotely disabled
 - ⚠️ **Not Cryptographic Revocation**: Device can still decrypt local data (only blocks sync)
 
 **Future Enhancement** (Phase 4):
+
 - Per-device encryption keys (rotate keys on revocation)
 - Remote wipe (delete local Keychain via server command)
 
 ### CryptoKit Implementation Details
 
 #### Recovery Code Generation
+
 ```swift
 import CryptoKit
 import Foundation
@@ -543,6 +571,7 @@ func decryptMasterKey(encryptedBlob: Data, recoveryCode: [String]) throws -> Sym
 ```
 
 #### Sync Encryption (AES-GCM)
+
 ```swift
 // Encrypt medical record for sync
 func encryptRecord(record: MedicalRecord, fmk: SymmetricKey) throws -> EncryptedRecord {
@@ -639,10 +668,12 @@ func decryptRecord(encrypted: EncryptedRecord, fmk: SymmetricKey) throws -> Medi
 ## Implementation Notes
 
 ### Phase 1: Local Encryption
+
 - **Not needed**: Sync is Phase 2 feature
 - **Preparation**: Design Core Data schema for sync (include `updated_at`, `version`)
 
 ### Phase 2: Multi-Device Sync (FULL IMPLEMENTATION)
+
 1. **Recovery Code System**:
    - Generate 24-word BIP39 mnemonic
    - Encrypt Master Key with recovery code
@@ -667,10 +698,12 @@ func decryptRecord(encrypted: EncryptedRecord, fmk: SymmetricKey) throws -> Medi
    - Settings UI: List devices, revoke device
 
 ### Phase 3: Family Sharing
+
 - Sync access grants (wrapped FMKs) same way as medical records
 - Realtime notification when new access granted
 
 ### Phase 4: Enhancements
+
 - **Audit Trail**: Show edit history, conflicting versions
 - **Per-Device Keys**: Cryptographic device revocation (rotate FMKs)
 - **Device-to-Device Transfer**: iOS 12.4+ Quick Start (in-person QR code)

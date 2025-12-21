@@ -11,6 +11,7 @@ The Family Medical App must support **cryptographic access revocation** - the ab
 ### Foundation
 
 This ADR builds on:
+
 - **ADR-0002**: Key Hierarchy → Established per-family-member FMKs for granular access control
 - **ADR-0003**: Multi-User Sharing Model → ECDH-wrapped FMKs for each authorized user
 - **ADR-0004**: Sync Encryption → Last-write-wins sync, offline queuing
@@ -20,6 +21,7 @@ This ADR builds on:
 **Scenario**: Adult A shares Emma's medical records with Adult C. Later, Adult C becomes malicious (custody dispute, divorce, trust violation). Adult A wants to revoke Adult C's access.
 
 **Naive Approach (UI-Only Revocation)**:
+
 ```
 Adult A clicks "Revoke Adult C's access":
 ├─ Delete access grant from database
@@ -29,6 +31,7 @@ Adult A clicks "Revoke Adult C's access":
 ```
 
 **Problem**: Adult C has:
+
 1. Wrapped FMK_Emma (downloaded before revocation)
 2. Adult C's private key (in their device Keychain)
 3. Can perform ECDH to unwrap FMK_Emma
@@ -154,12 +157,14 @@ Result: Adult C cryptographically revoked ✅
 **Decision**: Re-encrypt all records with new FMK (true cryptographic revocation).
 
 **Rationale**:
+
 - ✅ **True Revocation**: Old wrapped keys become useless (can't decrypt new FMK)
 - ✅ **Forward Secrecy**: Future records unreadable by revoked user
 - ✅ **Clean Break**: No key versioning complexity (single active FMK per family member)
 - ⚠️ **Performance Cost**: Must re-encrypt all records (~500ms for 500 records)
 
 **Alternative Rejected: Key Versioning**
+
 ```
 Keep old FMK_v1, create new FMK_v2:
 ├─ Old records: Encrypted with FMK_v1 (revoked user can still decrypt) ❌
@@ -174,6 +179,7 @@ Keep old FMK_v1, create new FMK_v2:
 #### 2. Performance Analysis
 
 **Benchmark** (iPhone 12 Pro, iOS 17):
+
 ```
 Test: Re-encrypt 500 medical records (avg size: 2KB each)
 Process:
@@ -188,6 +194,7 @@ Results:
 ```
 
 **Optimization** (if needed in Phase 4):
+
 1. **Batch processing**: Re-encrypt in batches of 100, show progress bar
 2. **Background processing**: Use Background Tasks API (iOS)
 3. **Incremental upload**: Upload re-encrypted records as ready (not all at once)
@@ -196,6 +203,7 @@ Results:
 **Recommendation**: Start with synchronous re-encryption (Phase 3), optimize if users complain (Phase 4).
 
 **User Experience**:
+
 ```
 Adult A taps "Revoke Adult C":
 ├─ Show confirmation: "This will remove Adult C's access to Emma's records"
@@ -206,6 +214,7 @@ Adult A taps "Revoke Adult C":
 ```
 
 **Acceptable for**:
+
 - ✅ User-initiated action (not background sync)
 - ✅ Infrequent operation (revocation is rare)
 - ✅ < 5 seconds total (mobile UX guideline)
@@ -215,6 +224,7 @@ Adult A taps "Revoke Adult C":
 **Decision**: Use **Realtime notifications** to propagate revocation to all devices immediately.
 
 **Schema**:
+
 ```sql
 CREATE TABLE revocation_events (
     event_id UUID PRIMARY KEY,
@@ -228,6 +238,7 @@ CREATE TABLE revocation_events (
 ```
 
 **Flow**:
+
 ```
 Adult A's iPhone revokes Adult C:
 ├─ Re-encrypts all records locally
@@ -258,6 +269,7 @@ Adult C's iPhone (subscribed to Realtime):
 ```
 
 **Offline Devices**:
+
 ```
 Adult A's iPad (offline during revocation):
 ├─ Comes online 2 days later
@@ -269,6 +281,7 @@ Adult A's iPad (offline during revocation):
 ```
 
 **Rationale**:
+
 - ✅ **Immediate propagation**: Realtime notifications (seconds, not hours)
 - ✅ **Offline-resilient**: Pull-based sync handles offline devices
 - ✅ **Self-healing**: Devices detect version mismatch and self-update
@@ -280,6 +293,7 @@ Adult A's iPad (offline during revocation):
 **Decision**: **Atomic revocation** - all-or-nothing re-encryption.
 
 **Implementation**:
+
 ```swift
 func revokeAccess(familyMemberId: UUID, revokedUserId: UUID) async throws {
     // Step 1: Start transaction (server-side)
@@ -348,6 +362,7 @@ func revokeAccess(familyMemberId: UUID, revokedUserId: UUID) async throws {
 ```
 
 **Rollback Scenarios**:
+
 - ❌ **Network failure during upload**: Rollback, retry later
 - ❌ **Partial re-encryption (app crash)**: Rollback, start over
 - ❌ **Server rejects**: Rollback, show error to user
@@ -359,6 +374,7 @@ func revokeAccess(familyMemberId: UUID, revokedUserId: UUID) async throws {
 **Decision**: **Re-granting is allowed** but creates new wrapped FMK (current version).
 
 **Flow**:
+
 ```
 Adult A revokes Adult C (Emma v1 → v2):
 ├─ Adult C loses access (no wrapped FMK_v2)
@@ -375,6 +391,7 @@ Adult A re-grants access to Adult C:
 **Privacy Property**: Re-granted user only gets access to current state, not historical versions.
 
 **Rationale**:
+
 - ✅ **Flexible**: Supports custody changes, reconciliation, temporary revocation
 - ✅ **Clean Slate**: Re-granted user starts fresh (no historical data)
 - ⚠️ **Same as New User**: Re-granting is identical to granting access to new user
@@ -384,6 +401,7 @@ Adult A re-grants access to Adult C:
 **Decision**: **Encrypted audit log** for compliance and user transparency.
 
 **Schema**:
+
 ```sql
 CREATE TABLE audit_log (
     log_id UUID PRIMARY KEY,
@@ -397,6 +415,7 @@ CREATE TABLE audit_log (
 ```
 
 **Encrypted Details** (decrypted only by owner):
+
 ```json
 {
   "event_type": "access_revoked",
@@ -412,6 +431,7 @@ CREATE TABLE audit_log (
 **Encryption**: Audit log encrypted with owner's Master Key (only owner can read).
 
 **UI**:
+
 ```
 Settings > Emma's Profile > Access Log:
 ├─ 2025-01-20 15:00 - Access revoked for Adult C (by Adult A)
@@ -421,18 +441,21 @@ Settings > Emma's Profile > Access Log:
 ```
 
 **Rationale**:
+
 - ✅ **Transparency**: User can see who has/had access
 - ✅ **Compliance**: HIPAA/GDPR audit requirements
 - ✅ **Security**: Encrypted (server cannot read details)
 - ✅ **Tamper-Evident**: Append-only log (no edits)
 
 **Future Enhancement** (Phase 4):
+
 - Sign log entries (digital signature for non-repudiation)
 - Export audit log (PDF report for legal purposes)
 
 ### Revocation Scenarios
 
 #### Scenario A: Divorce / Custody Change
+
 ```
 Adult A and Adult C divorce, Adult A gets custody of Emma:
 ├─ Adult A revokes Adult C's access to Emma
@@ -443,6 +466,7 @@ Adult A and Adult C divorce, Adult A gets custody of Emma:
 ```
 
 #### Scenario B: Stolen Device
+
 ```
 Adult B's iPhone stolen:
 ├─ Adult A revokes all access from Adult B
@@ -452,6 +476,7 @@ Adult B's iPhone stolen:
 ```
 
 #### Scenario C: Temporary Suspension
+
 ```
 Adult A temporarily suspends Adult C's access (trust issue):
 ├─ Revoke access (FMK rotation)
@@ -461,6 +486,7 @@ Adult A temporarily suspends Adult C's access (trust issue):
 ```
 
 #### Scenario D: Malicious User Downloaded All Records
+
 ```
 Adult C malicious, downloaded all Emma's records before revocation:
 ├─ Adult C has: All records encrypted with FMK_v1
@@ -474,6 +500,7 @@ Limitation: Historical data before revocation remains accessible to Adult C
 ```
 
 **Mitigation**:
+
 - ⚠️ **Accept limitation**: Cannot retroactively un-decrypt data already downloaded
 - ✅ **Future records protected**: All new data unreadable
 - ✅ **Best practice**: Grant access cautiously, revoke quickly if trust violated
@@ -481,6 +508,7 @@ Limitation: Historical data before revocation remains accessible to Adult C
 ### CryptoKit Implementation Details
 
 #### FMK Rotation
+
 ```swift
 import CryptoKit
 
@@ -524,6 +552,7 @@ func rotateFMK(for familyMemberId: UUID) async throws -> SymmetricKey {
 ```
 
 #### Wrapped FMK Cleanup
+
 ```swift
 func cleanupRevokedAccess(familyMemberId: UUID, revokedUserId: UUID) async throws {
     // Mark access grant as revoked (soft delete)
@@ -608,9 +637,11 @@ func cleanupRevokedAccess(familyMemberId: UUID, revokedUserId: UUID) async throw
 ## Implementation Notes
 
 ### Phase 1-2: Not Needed
+
 - Revocation is Phase 3 feature (requires sharing model)
 
 ### Phase 3: Family Sharing (FULL IMPLEMENTATION)
+
 1. **Revocation UI**:
    - Settings > Emma's Profile > Manage Access
    - List authorized users: "Adult B (last access: 2 hours ago)"
@@ -632,6 +663,7 @@ func cleanupRevokedAccess(familyMemberId: UUID, revokedUserId: UUID) async throw
    - UI: Settings > Access Log (show events)
 
 ### Phase 4: Enhancements
+
 - **Background re-encryption**: Use Background Tasks API (large datasets)
 - **Incremental upload**: Upload re-encrypted records in batches (show progress)
 - **Digital signatures**: Sign audit log entries (non-repudiation)

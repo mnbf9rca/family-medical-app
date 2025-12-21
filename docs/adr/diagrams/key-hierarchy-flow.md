@@ -268,11 +268,13 @@ Adult A revokes Adult C's access to Emma's records:
 ### Zero-Knowledge Server
 
 The server stores:
+
 - ✅ User Public Keys (public, not sensitive)
 - ✅ Wrapped FMKs (encrypted, server cannot unwrap)
 - ✅ Encrypted medical records (encrypted with FMKs, server cannot decrypt)
 
 The server does NOT have:
+
 - ❌ User passwords
 - ❌ Master Keys
 - ❌ Private Keys
@@ -284,16 +286,19 @@ The server does NOT have:
 ### Device Security
 
 If device is stolen:
+
 - 🔒 **Locked**: All keys in Keychain are inaccessible (Secure Enclave protection)
 - 🔓 **Unlocked**: Keychain keys accessible, but require biometric/password to decrypt private key (future enhancement)
 
 ### Cryptographic Revocation
 
 Traditional "soft delete" (hide in UI):
+
 - ❌ Revoked user still has FMK
 - ❌ Can still decrypt if they saved data locally
 
 Our approach (re-encryption):
+
 - ✅ Revoked user's FMK is deleted
 - ✅ All records re-encrypted with new FMK
 - ✅ Cryptographically enforced (not just UI hiding)

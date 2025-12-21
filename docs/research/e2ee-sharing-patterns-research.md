@@ -69,6 +69,7 @@ The [Signal Protocol](https://signal.org/docs/specifications/doubleratchet/) use
 ### **Verdict: Not Suitable**
 
 Double Ratchet is **overkill** for medical records because:
+
 - Medical records are **static data**, not real-time messages
 - Forward secrecy is less important (records don't change frequently)
 - Complexity violates KISS principle
@@ -219,6 +220,7 @@ This solves the key distribution problem and enables "share via email" UX.
 This is what we demonstrated in [PoC: Public-Key Sharing](poc-public-key-sharing.swift).
 
 **Pattern:**
+
 - Symmetric encryption (AES-GCM) for data
 - Public-key crypto (X25519 ECDH) for key distribution
 
@@ -231,6 +233,7 @@ This is what we demonstrated in [PoC: Public-Key Sharing](poc-public-key-sharing
 See [PoC: Hybrid Family Keys](poc-hybrid-family-keys.swift)
 
 **Pattern:**
+
 - Each **family member** (patient) has a Family Member Key (FMK)
 - All records for that patient are encrypted with their FMK
 - FMK is wrapped separately for each authorized adult using ECDH
@@ -281,12 +284,14 @@ Adult B accesses Emma's records:
 **Scenario:** Adult A revokes Adult C's access to Emma's records.
 
 **Steps:**
+
 1. Generate new FMK_Emma
 2. Re-encrypt all of Emma's records (~100-500 records)
 3. Re-wrap FMK_Emma for Adult A and Adult B (not Adult C)
 4. Delete old wrapped FMK for Adult C
 
 **Performance:**
+
 - Re-encryption: ~100-500 records × AES-GCM decrypt + encrypt
 - iOS benchmarks: ~1-2ms per record on modern devices
 - Total: ~100-1000ms (acceptable for hobby app)
@@ -294,6 +299,7 @@ Adult B accesses Emma's records:
 ### **Verdict: RECOMMENDED**
 
 This is the **best fit** for the family medical app because:
+
 - Matches the use case (family-centered access control)
 - Excellent performance for < 1000 records per family member
 - Natural UX flow
@@ -309,12 +315,14 @@ This is the **best fit** for the family medical app because:
 **Architecture:** Dual-key model with RSA public-key sharing
 
 **How it works:**
+
 - Each user has RSA keypair
 - Each vault has symmetric Organization Key
 - Organization Key is encrypted with each member's RSA public key
 - Vault items are encrypted with Organization Key
 
 **Key takeaways:**
+
 - ✅ Hybrid approach (symmetric + asymmetric)
 - ✅ Zero-knowledge architecture maintained
 - ⚠️ Uses RSA (CryptoKit doesn't support RSA for encryption)
@@ -326,12 +334,14 @@ This is the **best fit** for the family medical app because:
 **Architecture:** Public-key encryption for vault sharing
 
 **How it works:**
+
 - Each user has public/private keypair
 - Each vault has symmetric vault key
 - When sharing: Encrypt vault key with recipient's public key
 - Server never has decrypted vault key
 
 **Key takeaways:**
+
 - ✅ Same pattern as our recommended approach
 - ✅ "Two-Key Derivation" (password + Secret Key) for added entropy
 - ✅ Zero-knowledge maintained
@@ -343,16 +353,19 @@ This is the **best fit** for the family medical app because:
 **Architecture:** Zero-knowledge with XChaCha20-Poly1305
 
 **How it works:**
+
 - Items keys generated randomly (not password-derived)
 - Items keys encrypted with master key
 - Server is "dumb data store"
 
 **Sharing limitations:**
+
 - ❌ **No real-time collaboration** due to E2EE architecture
 - ⚠️ Multiple users can share account, but conflicts occur
 - ✅ Can share via public links (Listed extension)
 
 **Key takeaways:**
+
 - Real-time collaboration **conflicts with zero-knowledge E2EE**
 - This is acceptable for medical records (not real-time)
 - Subscription sharing ≠ data sharing (important distinction)
@@ -364,16 +377,19 @@ This is the **best fit** for the family medical app because:
 **Architecture:** PGP-based with bcrypt key derivation
 
 **How it works:**
+
 - Private key encrypted with mailbox password
 - Two categories: email encryption keys + account keys
 - Each address has separate keys
 
 **Shared mailbox status:**
+
 - ⚠️ Limited shared mailbox support
 - Unclear how key management works for multi-user access
 - Community requests suggest this is a feature gap
 
 **Key takeaways:**
+
 - ProtonMail's architecture optimized for individual mailboxes
 - Multi-user shared access is complex with E2EE
 - Not a good model for our use case
@@ -387,26 +403,33 @@ This is the **best fit** for the family medical app because:
 ### 6.1 Supported Algorithms
 
 ✅ **Hash Functions:**
+
 - SHA256, SHA384, SHA512
 
 ✅ **Symmetric Encryption:**
+
 - AES-256-GCM (required per AGENTS.md)
 - ChaChaPoly
 
 ✅ **Key Derivation:**
+
 - HKDF (HMAC-based KDF)
 
 ✅ **Key Wrapping:**
+
 - AES.KeyWrap (RFC 3394 / NIST SP 800-38F)
 
 ✅ **Public-Key Crypto:**
+
 - Curve25519 (X25519 key agreement, Ed25519 signatures)
 - P256, P384, P521 (NIST curves)
 
 ✅ **Digital Signatures:**
+
 - Ed25519, ECDSA
 
 ✅ **Secure Enclave:**
+
 - Subset of APIs can use Secure Enclave for key storage
 
 ### 6.2 Notable Limitations
@@ -414,17 +437,21 @@ This is the **best fit** for the family medical app because:
 ❌ **AES-CBC:** Not supported (intentionally - easy to misuse)
 
 ❌ **RSA Encryption:** Not supported
+
 - CryptoKit has RSA signatures, but not RSA encryption
 - Bitwarden uses RSA, but we can use Curve25519 instead
 
 ❌ **PBKDF2:** Not in CryptoKit
+
 - Must use CommonCrypto's `CCKeyDerivationPBKDF`
 - Or use Argon2id via vetted third-party library
 
 ❌ **Argon2:** Not in CryptoKit
+
 - Requires third-party library (check licensing & audits)
 
 ❌ **Cross-platform:** CryptoKit is Apple-only
+
 - For cross-platform: use [Swift Crypto](https://github.com/apple/swift-crypto) (BoringSSL-backed)
 
 ### 6.3 CryptoKit Version History
@@ -436,6 +463,7 @@ This is the **best fit** for the family medical app because:
 **Verdict:** CryptoKit has everything we need for the recommended hybrid approach.
 
 **Sources:**
+
 - [Apple CryptoKit Documentation](https://developer.apple.com/documentation/cryptokit/)
 - [Swift Crypto GitHub](https://github.com/apple/swift-crypto)
 
@@ -446,14 +474,17 @@ This is the **best fit** for the family medical app because:
 ### 7.1 iOS Keychain Sharing
 
 **Between apps (same developer):**
+
 - ✅ Keychain access groups enable sharing between apps
 - Requirement: Same App ID prefix
 
 **Between users on same device:**
+
 - ❌ **Not supported** for different user accounts
 - Each iOS user has separate Keychain
 
 **Family Sharing (iOS 17+):**
+
 - ✅ iCloud Keychain supports password/passkey sharing groups
 - ⚠️ Requires iCloud Family setup
 - ❌ **Not suitable** for our use case (can't assume iCloud Family)
@@ -461,23 +492,28 @@ This is the **best fit** for the family medical app because:
 **Verdict:** Cannot rely on iOS Keychain for cross-user sharing. Must use public-key crypto.
 
 **Sources:**
+
 - [Apple: Sharing Keychain Items](https://developer.apple.com/documentation/security/sharing-access-to-keychain-items-among-a-collection-of-apps)
 - [iOS 17 Password Sharing](https://appleinsider.com/inside/ios-17/tips/how-to-share-passwords-with-family-friends-in-ios-17)
 
 ### 7.2 Performance Considerations
 
 **AES-GCM Encryption:**
+
 - ~0.5-1ms per record (< 10KB data) on modern iOS devices
 - Negligible overhead for < 1000 records
 
 **X25519 Key Agreement:**
+
 - ~1-2ms per operation
 - Acceptable for unwrapping FMK (one-time cost per family member)
 
 **AES Key Wrapping:**
+
 - < 0.1ms (very fast)
 
 **Re-encryption for Revocation:**
+
 - 500 records × 1ms = ~500ms
 - Acceptable for hobby app
 
@@ -490,6 +526,7 @@ let privateKey = try P256.KeyAgreement.PrivateKey(secureEnclaveKey: true)
 ```
 
 **Limitations:**
+
 - Only P256, not Curve25519
 - Keys cannot be exported from Secure Enclave
 
@@ -507,6 +544,7 @@ let privateKey = try P256.KeyAgreement.PrivateKey(secureEnclaveKey: true)
 | **Hybrid Per-Family-Member** | ✅✅ | ✅✅ | ✅ | ✅✅ | ✅✅ | ⚠️ | ✅✅ | ✅✅ **BEST** |
 
 **Legend:**
+
 - ✅✅ Excellent
 - ✅ Good
 - ⚠️ Moderate / Trade-offs
@@ -563,24 +601,28 @@ Medical Records (encrypted at rest)
 ### 9.2 Implementation Details for ADRs
 
 **For ADR-0002 (Key Hierarchy):**
+
 - User Master Key: PBKDF2-HMAC-SHA256 (100k+ iterations) or Argon2id
 - User Identity: Curve25519.KeyAgreement.PrivateKey (stored encrypted in Keychain)
 - Family Member Keys: Random SymmetricKey(size: .bits256)
 - Storage: iOS Keychain for user keys, Core Data for wrapped FMKs
 
 **For ADR-0003 (Sharing Model):**
+
 - Public key exchange: QR code (in-person) or email + verification code
 - Key wrapping: ECDH (X25519) + HKDF + AES.KeyWrap
 - Granularity: Per-family-member (not per-record)
 - Revocation: Re-encrypt all records for that family member
 
 **For ADR-0004 (Sync Encryption):**
+
 - Encrypted blobs: Entire records encrypted with FMK
 - Metadata: recordId (UUID), familyMemberId (UUID), recordType (plaintext)
 - Wrapped keys: Synced separately (userId → wrapped FMK mapping)
 - Conflict resolution: Last-write-wins for simplicity (KISS)
 
 **For ADR-0005 (Access Revocation):**
+
 - Method: Re-encrypt with new FMK + delete old wrapped keys
 - Performance: Acceptable for < 1000 records per family member
 - Audit trail: Log revocation events (encrypted)
@@ -588,6 +630,7 @@ Medical Records (encrypted at rest)
 ### 9.3 CryptoKit Code Patterns
 
 See proof-of-concept files:
+
 - [poc-symmetric-key-wrapping.swift](poc-symmetric-key-wrapping.swift)
 - [poc-public-key-sharing.swift](poc-public-key-sharing.swift)
 - [poc-hybrid-family-keys.swift](poc-hybrid-family-keys.swift) ← **Recommended**
@@ -607,6 +650,7 @@ The user asked: *"I imagine the easiest way to do it is that Adult A initiates s
 #### Option 1: Email + Out-of-Band Verification (RECOMMENDED)
 
 **Flow:**
+
 1. Adult A clicks "Share Emma's records with someone"
 2. App shows Adult A's public key fingerprint (6-digit code)
 3. Adult A sends email: "I'm sharing Emma's medical records with you. Install the app and verify code: 123-456"
@@ -618,17 +662,20 @@ The user asked: *"I imagine the easiest way to do it is that Adult A initiates s
 9. If codes match, sharing is confirmed
 
 **Security:**
+
 - ✅ Prevents MITM (attacker would have different code)
 - ✅ Similar to Signal's "Safety Numbers"
 - ✅ User-friendly (6-digit code easy to verify)
 
 **UX Challenge:**
+
 - ⚠️ Requires out-of-band verification step
 - Mitigation: Clear instructions, optional step (TOFU mode)
 
 #### Option 2: QR Code (In-Person)
 
 **Flow:**
+
 1. Adult A and Adult B meet in person
 2. Adult A clicks "Share Emma's records"
 3. App generates QR code containing Adult A's public key
@@ -636,15 +683,18 @@ The user asked: *"I imagine the easiest way to do it is that Adult A initiates s
 5. Sharing confirmed immediately (no verification needed)
 
 **Security:**
+
 - ✅ Most secure (no MITM possible)
 - ✅ No out-of-band verification needed
 
 **UX Challenge:**
+
 - ❌ Requires in-person meeting (not always convenient)
 
 #### Option 3: TOFU (Trust On First Use) + Later Verification
 
 **Flow:**
+
 1. Adult A initiates sharing via email
 2. Public keys exchanged automatically (no verification)
 3. Sharing works immediately
@@ -653,26 +703,31 @@ The user asked: *"I imagine the easiest way to do it is that Adult A initiates s
 6. App warns if code doesn't match
 
 **Security:**
+
 - ⚠️ Vulnerable to MITM on first use
 - ✅ Can detect attacks if users verify later
 
 **UX:**
+
 - ✅ Easiest (no verification step required)
 - ⚠️ Less secure than Option 1
 
 ### 10.2 Recommendation
 
 **Phase 1:** Implement Option 3 (TOFU + Optional Later Verification)
+
 - **Simplest UX** - critical for adoption
 - Works for all family dynamics (local, remote, complex situations)
 - Medical records are less time-sensitive than messaging (MITM risk is lower)
 - Users can optionally verify later if concerned
 
 **Phase 2 Enhancement:** Add Option 2 (QR Code)
+
 - For users who prefer maximum security
 - Good for initial family setup
 
 **Why TOFU is acceptable for medical records:**
+
 - ✅ Medical data is **static** (not real-time messaging where MITM enables active surveillance)
 - ✅ Attackers need to intercept **specific** sharing invitation (harder than passive surveillance)
 - ✅ Later verification catches attacks and allows re-keying
@@ -683,6 +738,7 @@ The user asked: *"I imagine the easiest way to do it is that Adult A initiates s
 ### 10.3 Implementation Notes
 
 **Verification Code Generation:**
+
 ```swift
 // Both users derive the same code from shared secret
 let sharedSecret = try privateKey.sharedSecretFromKeyAgreement(with: theirPublicKey)
@@ -693,6 +749,7 @@ let verificationCode = SHA256.hash(data: sharedSecret.rawRepresentation)
 ```
 
 **Email Template (TOFU approach):**
+
 ```
 Subject: [Family Medical App] Adult A wants to share Emma's records
 
@@ -738,6 +795,7 @@ Use this research to inform:
 ### Proof-of-Concept Code
 
 Three PoC files created:
+
 1. `poc-symmetric-key-wrapping.swift` - Foundation pattern
 2. `poc-public-key-sharing.swift` - Insecure channel sharing
 3. `poc-hybrid-family-keys.swift` - **Recommended approach**

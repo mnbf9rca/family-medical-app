@@ -1,5 +1,5 @@
-import Foundation
 import CryptoKit
+import Foundation
 
 // PROOF OF CONCEPT: Hybrid Approach - Per-Family-Member Keys
 // This demonstrates a hierarchical key model optimized for family medical records.
@@ -15,8 +15,7 @@ import CryptoKit
 // - Adding new records doesn't require updating any keys
 // - Revoking access = delete one wrapped FMK (+ re-wrap with new FMK)
 
-struct HybridFamilyKeyExample {
-
+enum HybridFamilyKeyExample {
     // User identity (adults who manage medical records)
     struct UserIdentity {
         let userId: String
@@ -25,22 +24,22 @@ struct HybridFamilyKeyExample {
 
         init(userId: String) {
             self.userId = userId
-            self.privateKey = Curve25519.KeyAgreement.PrivateKey()
-            self.publicKey = privateKey.publicKey
+            privateKey = Curve25519.KeyAgreement.PrivateKey()
+            publicKey = privateKey.publicKey
         }
     }
 
     // Family member (child/patient whose records are being managed)
     struct FamilyMember {
         let memberId: UUID
-        let name: String  // Encrypted in production
-        let familyMemberKey: SymmetricKey  // FMK - encrypts all records for this person
+        let name: String // Encrypted in production
+        let familyMemberKey: SymmetricKey // FMK - encrypts all records for this person
 
         init(memberId: UUID, name: String) {
             self.memberId = memberId
             self.name = name
             // Generate random FMK (never derived from passwords!)
-            self.familyMemberKey = SymmetricKey(size: .bits256)
+            familyMemberKey = SymmetricKey(size: .bits256)
         }
     }
 
@@ -48,16 +47,16 @@ struct HybridFamilyKeyExample {
     struct WrappedFamilyMemberKey {
         let familyMemberId: UUID
         let authorizedUserId: String
-        let wrappedFMK: Data  // FMK encrypted with ECDH-derived key
-        let ownerPublicKey: Data  // Public key of the user who granted access
+        let wrappedFMK: Data // FMK encrypted with ECDH-derived key
+        let ownerPublicKey: Data // Public key of the user who granted access
     }
 
     // Medical record encrypted with FMK
     struct MedicalRecord {
         let recordId: UUID
-        let familyMemberId: UUID  // Which family member this belongs to
-        let encryptedData: Data  // Encrypted with that family member's FMK
-        let recordType: String  // "vaccine", "allergy", etc. (plaintext metadata)
+        let familyMemberId: UUID // Which family member this belongs to
+        let encryptedData: Data // Encrypted with that family member's FMK
+        let recordType: String // "vaccine", "allergy", etc. (plaintext metadata)
         let createdAt: Date
     }
 
@@ -276,7 +275,7 @@ struct HybridFamilyKeyExample {
             // Decrypt with old FMK
             let decryptedData = try decryptMedicalRecord(
                 encryptedData: record.encryptedData,
-                using: child1.familyMemberKey  // old FMK
+                using: child1.familyMemberKey // old FMK
             )
             // Re-encrypt with new FMK
             let reencryptedData = try encryptMedicalRecord(
@@ -313,12 +312,14 @@ struct HybridFamilyKeyExample {
         print("--- Performance Analysis ---")
         print("Family members: 2 (Emma, Liam)")
         print("Authorized adults for Emma: 3 → 2 (after revocation)")
-        print("Medical records for Emma: \(medicalRecords.filter { $0.familyMemberId == child1.memberId }.count)")
+        print("Medical records for Emma: \(medicalRecords.count(where: { $0.familyMemberId == child1.memberId }))")
         print("\nStorage overhead for Emma:")
         print("  - Wrapped FMKs: 2 × ~40 bytes = ~80 bytes")
-        print("  - Medical records: \(medicalRecords.filter { $0.familyMemberId == child1.memberId }.count) × ~100 bytes = ~\(medicalRecords.filter { $0.familyMemberId == child1.memberId }.count * 100) bytes")
+        print(
+            "  - Medical records: \(medicalRecords.count(where: { $0.familyMemberId == child1.memberId })) × ~100 bytes = ~\(medicalRecords.count(where: { $0.familyMemberId == child1.memberId }) * 100) bytes"
+        )
         print("\nRevocation cost:")
-        print("  - Re-encrypt: \(medicalRecords.filter { $0.familyMemberId == child1.memberId }.count) records")
+        print("  - Re-encrypt: \(medicalRecords.count(where: { $0.familyMemberId == child1.memberId })) records")
         print("  - Re-wrap: 2 FMKs")
         print("  - Delete: 1 wrapped FMK (Adult C)")
     }

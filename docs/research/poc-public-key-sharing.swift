@@ -1,5 +1,5 @@
-import Foundation
 import CryptoKit
+import Foundation
 
 // PROOF OF CONCEPT: Public-Key Encryption for Sharing
 // This demonstrates how to share medical records using Curve25519 public-key encryption.
@@ -12,8 +12,7 @@ import CryptoKit
 // 3. Wrap the DEK with the shared secret
 // This allows secure sharing without requiring a secure channel for key exchange.
 
-struct PublicKeySharingExample {
-
+enum PublicKeySharingExample {
     // User's identity: keypair for key exchange
     struct UserIdentity {
         let userId: String
@@ -22,17 +21,17 @@ struct PublicKeySharingExample {
 
         init(userId: String) {
             self.userId = userId
-            self.privateKey = Curve25519.KeyAgreement.PrivateKey()
-            self.publicKey = privateKey.publicKey
+            privateKey = Curve25519.KeyAgreement.PrivateKey()
+            publicKey = privateKey.publicKey
         }
 
         // Public key can be shared over insecure channels
         func exportPublicKey() -> Data {
-            return publicKey.rawRepresentation
+            publicKey.rawRepresentation
         }
 
         static func importPublicKey(from data: Data) throws -> Curve25519.KeyAgreement.PublicKey {
-            return try Curve25519.KeyAgreement.PublicKey(rawRepresentation: data)
+            try Curve25519.KeyAgreement.PublicKey(rawRepresentation: data)
         }
     }
 
@@ -40,7 +39,7 @@ struct PublicKeySharingExample {
     static func deriveSharedSecret(
         myPrivateKey: Curve25519.KeyAgreement.PrivateKey,
         theirPublicKey: Curve25519.KeyAgreement.PublicKey,
-        context: String  // e.g., "medical_record_sharing"
+        context: String // e.g., "medical_record_sharing"
     ) throws -> SymmetricKey {
         // Perform X25519 key agreement
         let sharedSecret = try myPrivateKey.sharedSecretFromKeyAgreement(with: theirPublicKey)
@@ -49,9 +48,9 @@ struct PublicKeySharingExample {
         let contextData = context.data(using: .utf8)!
         let symmetricKey = sharedSecret.hkdfDerivedSymmetricKey(
             using: SHA256.self,
-            salt: Data(),  // In production, use a per-record salt
+            salt: Data(), // In production, use a per-record salt
             sharedInfo: contextData,
-            outputByteCount: 32  // 256 bits
+            outputByteCount: 32 // 256 bits
         )
 
         return symmetricKey
@@ -96,8 +95,8 @@ struct PublicKeySharingExample {
     // Storage structure for a shared medical record
     struct SharedMedicalRecord {
         let recordId: UUID
-        let encryptedData: Data  // Encrypted with DEK using AES-GCM
-        let ownerPublicKey: Data  // Curve25519 public key of record creator
+        let encryptedData: Data // Encrypted with DEK using AES-GCM
+        let ownerPublicKey: Data // Curve25519 public key of record creator
 
         // Wrapped DEK for each authorized user
         // Key: recipient's userId

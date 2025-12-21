@@ -5,6 +5,7 @@ Guide for setting up iOS development environment on macOS (M4 Mac).
 ## Prerequisites
 
 ### Required
+
 - **macOS**: Sonoma (14.0) or later
 - **Xcode**: 15.0+ (free from App Store)
   - Includes Swift compiler, iOS Simulator, and all iOS SDKs
@@ -12,12 +13,14 @@ Guide for setting up iOS development environment on macOS (M4 Mac).
 - **Apple ID**: Free (required for Xcode and running on simulator)
 
 ### Optional but Recommended
+
 - **Homebrew**: Package manager for macOS
 - **Git**: Already installed on macOS, but Homebrew version is newer
 
 ## Installation Steps
 
 ### 1. Install Xcode
+
 ```bash
 # Open Mac App Store
 open "macstore://apps.apple.com/app/xcode/id497799835"
@@ -26,6 +29,7 @@ open "macstore://apps.apple.com/app/xcode/id497799835"
 ```
 
 After installation:
+
 ```bash
 # Accept Xcode license
 sudo xcodebuild -license accept
@@ -42,11 +46,13 @@ swift --version
 ```
 
 ### 2. Install Homebrew (Optional)
+
 ```bash
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 ```
 
 ### 3. Install Development Tools (Optional)
+
 ```bash
 # SwiftLint: Linting and style checking
 brew install swiftlint
@@ -57,6 +63,30 @@ brew install swiftformat
 # gh: GitHub CLI (if not already installed)
 brew install gh
 ```
+
+### 4. Configure Xcode Integration (Optional)
+
+To see SwiftLint warnings/errors directly in Xcode while coding:
+
+1. Open `FamilyMedicalApp.xcodeproj` in Xcode
+2. Select the **FamilyMedicalApp** target
+3. Go to **Build Phases** tab
+4. Click **+** → **New Run Script Phase**
+5. Name it **SwiftLint**
+6. Add this script:
+
+```bash
+if command -v swiftlint >/dev/null 2>&1
+then
+    swiftlint --config "${SRCROOT}/../../.swiftlint.yml"
+else
+    echo "warning: SwiftLint not installed, download from https://github.com/realm/SwiftLint"
+fi
+```
+
+1. Drag the SwiftLint phase to run **before** "Compile Sources"
+
+This shows linting violations as Xcode warnings/errors in real-time as you code.
 
 ## Project Setup
 
@@ -161,6 +191,7 @@ struct Greeting: View {
 ### Key SwiftUI Concepts
 
 **Declarative UI** (just like React):
+
 ```swift
 VStack {              // Vertical stack (like flexbox column)
     Text("Title")
@@ -170,6 +201,7 @@ VStack {              // Vertical stack (like flexbox column)
 ```
 
 **State Management**:
+
 ```swift
 @State var name = ""           // Local state (like useState)
 @Binding var name: String      // Passed from parent (like props with setter)
@@ -177,6 +209,7 @@ VStack {              // Vertical stack (like flexbox column)
 ```
 
 **Modifiers** (like CSS but chained):
+
 ```swift
 Text("Hello")
     .font(.title)
@@ -188,6 +221,7 @@ Text("Hello")
 ## Learning Resources
 
 ### Before Starting Development
+
 Recommended Swift/SwiftUI tutorials (1-2 hours total):
 
 1. **Swift Basics** (if new to Swift):
@@ -204,6 +238,7 @@ Recommended Swift/SwiftUI tutorials (1-2 hours total):
    - SwiftUI preview canvas (live preview while coding)
 
 ### Reference
+
 - [Swift Language Guide](https://docs.swift.org/swift-book/)
 - [SwiftUI Documentation](https://developer.apple.com/documentation/swiftui/)
 - [Human Interface Guidelines](https://developer.apple.com/design/human-interface-guidelines/ios)
@@ -211,6 +246,7 @@ Recommended Swift/SwiftUI tutorials (1-2 hours total):
 ## Xcode Tips
 
 ### Shortcuts (similar to VS Code)
+
 - `⌘ + B`: Build project
 - `⌘ + R`: Build and run in simulator
 - `⌘ + .`: Stop running app
@@ -220,11 +256,13 @@ Recommended Swift/SwiftUI tutorials (1-2 hours total):
 - `⌘ + /`: Comment/uncomment
 
 ### Live Preview
+
 - Canvas on the right shows live preview of SwiftUI views
 - `⌘ + Option + P`: Resume preview
 - `⌘ + Option + Enter`: Toggle canvas
 
 ### Simulator
+
 - iOS Simulator runs on your Mac (no device needed for development)
 - Test different iPhone/iPad models
 - Simulate Face ID, location, etc.
@@ -232,6 +270,7 @@ Recommended Swift/SwiftUI tutorials (1-2 hours total):
 ## Backend Development (Phase 2)
 
 When we reach Phase 2 (sync backend), we'll add:
+
 - **Devcontainer** for backend API (Python FastAPI likely)
 - **Docker Compose** for local database
 - Backend can be developed in VS Code while iOS in Xcode
@@ -241,6 +280,7 @@ Configuration will be added in Phase 2 issues.
 ## Verification
 
 Check your setup:
+
 ```bash
 # Xcode installed and licensed
 xcodebuild -version
@@ -258,17 +298,20 @@ gh --version
 ## Troubleshooting
 
 ### "xcode-select: error: tool 'xcodebuild' requires Xcode"
+
 ```bash
 sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
 ```
 
 ### Simulator won't launch
+
 ```bash
 # Reset simulator
 xcrun simctl erase all
 ```
 
 ### Xcode acting weird
+
 ```bash
 # Clear derived data (like node_modules or __pycache__)
 rm -rf ~/Library/Developer/Xcode/DerivedData
@@ -284,6 +327,7 @@ rm -rf ~/Library/Developer/Xcode/DerivedData
 ## Python Background Notes
 
 Coming from Python, you'll find:
+
 - ✅ **Swift is more familiar than you think**: Clean syntax, type inference, first-class functions
 - ✅ **No manual memory management**: Like Python (ARC handles it)
 - ✅ **Strong typing catches bugs early**: More like TypeScript than JavaScript
@@ -293,6 +337,7 @@ Coming from Python, you'll find:
 ## React Background Notes
 
 Coming from React:
+
 - ✅ **SwiftUI is very similar**: Declarative, component-based, state-driven
 - ✅ **No separate styling**: Modifiers replace CSS
 - ✅ **Type-safe props**: Function parameters instead of PropTypes

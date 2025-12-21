@@ -1,5 +1,5 @@
-import Foundation
 import CryptoKit
+import Foundation
 
 // PROOF OF CONCEPT: Symmetric Key Wrapping Pattern
 // This demonstrates how to use AES Key Wrapping (RFC 3394 / NIST SP 800-38F)
@@ -9,8 +9,7 @@ import CryptoKit
 // The DEK is then "wrapped" (encrypted) with each authorized user's master key.
 // This allows multiple users to decrypt the same record using their own keys.
 
-struct SymmetricKeyWrappingExample {
-
+enum SymmetricKeyWrappingExample {
     // STEP 1: User derives their master key from password
     static func deriveMasterKey(from password: String, salt: Data) -> SymmetricKey {
         // Using PBKDF2-HMAC-SHA256 with 100k iterations (AGENTS.md requirement)
@@ -27,7 +26,7 @@ struct SymmetricKeyWrappingExample {
 
     // STEP 2: Generate a random Data Encryption Key (DEK) for a medical record
     static func generateDataEncryptionKey() -> SymmetricKey {
-        return SymmetricKey(size: .bits256)
+        SymmetricKey(size: .bits256)
     }
 
     // STEP 3: Encrypt medical record data with the DEK
@@ -50,8 +49,8 @@ struct SymmetricKeyWrappingExample {
     // STEP 5: Store the encrypted record + wrapped keys for each user
     struct StoredMedicalRecord {
         let recordId: UUID
-        let encryptedData: Data  // Encrypted with DEK
-        let wrappedKeys: [String: Data]  // userId -> wrapped DEK
+        let encryptedData: Data // Encrypted with DEK
+        let wrappedKeys: [String: Data] // userId -> wrapped DEK
 
         // In production, this would be stored in Core Data with field-level encryption
     }

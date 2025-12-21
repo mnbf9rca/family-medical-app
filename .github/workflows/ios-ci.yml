@@ -1,0 +1,206 @@
+name: iOS CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'ios/**'
+      - '.github/workflows/ios-ci.yml'
+      - '.swiftlint.yml'
+      - '.swiftformat'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'ios/**'
+      - '.github/workflows/ios-ci.yml'
+      - '.swiftlint.yml'
+      - '.swiftformat'
+
+# Cancel in-progress runs when a new workflow with the same group name starts
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: macos-15
+    timeout-minutes: 10  # Prevent runaway costs
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install SwiftLint
+        run: brew install swiftlint
+
+      - name: SwiftLint
+        run: |
+          cd ios/FamilyMedicalApp
+          swiftlint lint --config ../../.swiftlint.yml --strict --reporter github-actions-logging
+
+  format-check:
+    name: Format Check
+    runs-on: macos-15
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install SwiftFormat
+        run: brew install swiftformat
+
+      - name: Check formatting
+        run: |
+          swiftformat --config .swiftformat --lint ios/FamilyMedicalApp/FamilyMedicalApp
+
+  build:
+    name: Build & Test
+    runs-on: macos-15
+    timeout-minutes: 30  # Build + tests should complete quickly
+
+    strategy:
+      matrix:
+        # Test on multiple iOS versions for compatibility
+        destination:
+          - platform=iOS Simulator,name=iPhone 17 Pro,OS=26.2
+          - platform=iOS Simulator,name=iPad Pro 13-inch (M5),OS=26.2
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode version
+        run: sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
+
+      - name: Show Xcode and Swift versions
+        run: |
+          xcodebuild -version
+          swift --version
+
+      - name: Cache derived data
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Developer/Xcode/DerivedData
+          key: ${{ runner.os }}-deriveddata-${{ hashFiles('ios/**/*.swift') }}
+          restore-keys: |
+            ${{ runner.os }}-deriveddata-
+
+      - name: Build
+        run: |
+          cd ios/FamilyMedicalApp
+          xcodebuild clean build \
+            -project FamilyMedicalApp.xcodeproj \
+            -scheme FamilyMedicalApp \
+            -destination "${{ matrix.destination }}" \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            | xcpretty
+
+      - name: Run Unit Tests
+        run: |
+          cd ios/FamilyMedicalApp
+          xcodebuild test \
+            -project FamilyMedicalApp.xcodeproj \
+            -scheme FamilyMedicalApp \
+            -destination "${{ matrix.destination }}" \
+            -enableCodeCoverage YES \
+            -derivedDataPath DerivedData \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            | xcpretty
+
+      - name: Generate code coverage report
+        if: matrix.destination == 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.2'
+        run: |
+          cd ios/FamilyMedicalApp
+          xcrun xccov view --report --json DerivedData/Logs/Test/*.xcresult > coverage.json
+
+          # Extract coverage percentage
+          COVERAGE=$(cat coverage.json | python3 -c "import sys, json; print(json.load(sys.stdin)['lineCoverage'] * 100)")
+          echo "Code coverage: ${COVERAGE}%"
+
+      - name: Upload coverage reports
+        if: matrix.destination == 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.2'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: ios/FamilyMedicalApp/coverage.json
+          retention-days: 30
+
+  security-scan:
+    name: Security Scan
+    runs-on: macos-15
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run SwiftLint security rules
+        run: |
+          brew install swiftlint
+          cd ios/FamilyMedicalApp
+          swiftlint lint --config ../../.swiftlint.yml --strict --reporter json > swiftlint-results.json || true
+
+          # Check for security-related violations
+          SECURITY_ISSUES=$(cat swiftlint-results.json | python3 -c "
+          import sys, json
+          results = json.load(sys.stdin)
+          security_rules = ['force_try_crypto', 'password_in_code', 'master_key_logging']
+          count = sum(1 for r in results if r.get('rule_id') in security_rules)
+          print(count)
+          ")
+
+          if [ "$SECURITY_ISSUES" -gt 0 ]; then
+            echo "❌ Found $SECURITY_ISSUES security-related violations"
+            cat swiftlint-results.json | python3 -c "
+            import sys, json
+            results = json.load(sys.stdin)
+            security_rules = ['force_try_crypto', 'password_in_code', 'master_key_logging']
+            for r in results:
+              if r.get('rule_id') in security_rules:
+                print(f\"⚠️  {r['file']}:{r['line']} - {r['reason']}\")
+            "
+            exit 1
+          fi
+
+      - name: Check for sensitive files
+        run: |
+          # Ensure no sensitive files are committed
+          SENSITIVE_FILES=$(find . -type f \( -name "*.p12" -o -name "*.mobileprovision" -o -name "*_key.pem" -o -name "*.keystore" \) | grep -v ".git" || true)
+          if [ -n "$SENSITIVE_FILES" ]; then
+            echo "❌ Found sensitive files in repository:"
+            echo "$SENSITIVE_FILES"
+            exit 1
+          fi
+          echo "✅ No sensitive files found"
+
+  summary:
+    name: CI Summary
+    runs-on: ubuntu-latest
+    needs: [lint, format-check, build, security-scan]
+    if: always()
+    timeout-minutes: 5
+
+    steps:
+      - name: Check results
+        run: |
+          if [ "${{ needs.lint.result }}" != "success" ]; then
+            echo "❌ Linting failed"
+            exit 1
+          fi
+          if [ "${{ needs.format-check.result }}" != "success" ]; then
+            echo "❌ Format check failed"
+            exit 1
+          fi
+          if [ "${{ needs.build.result }}" != "success" ]; then
+            echo "❌ Build/Tests failed"
+            exit 1
+          fi
+          if [ "${{ needs.security-scan.result }}" != "success" ]; then
+            echo "❌ Security scan failed"
+            exit 1
+          fi
+          echo "✅ All CI checks passed!"

@@ -9,6 +9,7 @@ This directory contains research outputs for Phase 0 (Cryptographic Architecture
 **[e2ee-sharing-patterns-research.md](e2ee-sharing-patterns-research.md)** - Comprehensive research summary
 
 This document covers:
+
 - Signal Protocol & Double Ratchet analysis
 - Symmetric key wrapping patterns
 - Public-key encryption for sharing
@@ -53,6 +54,7 @@ Three Swift proof-of-concept files demonstrating different sharing patterns:
 ### Next Steps
 
 This research informs the following ADRs:
+
 - **ADR-0002:** Key Hierarchy (use Curve25519 + per-family-member FMKs)
 - **ADR-0003:** Sharing Model (public-key encryption with TOFU)
 - **ADR-0004:** Sync Encryption (encrypted blobs + wrapped FMK sync)

@@ -16,6 +16,7 @@ ADRs document significant architectural decisions, their context, and consequenc
 ## Index
 
 ### Security & Cryptography
+
 - [ADR-0001: Cryptographic Architecture Must Be Designed Before Implementation](adr-0001-crypto-architecture-first.md) - **Accepted** (2025-12-19)
   - Establishes "crypto-first architecture" principle: design complete cryptographic architecture before any implementation
 - [ADR-0002: Key Hierarchy and Derivation](adr-0002-key-hierarchy.md) - **Proposed** (2025-12-19)
@@ -41,6 +42,7 @@ ADRs document significant architectural decisions, their context, and consequenc
   - Limitation: Historical data downloaded before revocation remains accessible (fundamental E2EE constraint)
 
 ### Data Storage & Sync
+
 - [ADR-0004: Sync Encryption and Multi-Device Support](adr-0004-sync-encryption.md) - **Proposed** (2025-12-20)
   - 24-word BIP39 recovery code for Master Key distribution across devices
   - Pull-based sync with Supabase Realtime notifications for instant updates

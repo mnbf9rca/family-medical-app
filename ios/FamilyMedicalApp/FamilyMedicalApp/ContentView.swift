@@ -1,10 +1,3 @@
-//
-//  ContentView.swift
-//  FamilyMedicalApp
-//
-//  Created by rob on 21/12/2025.
-//
-
 import SwiftUI
 
 struct ContentView: View {
