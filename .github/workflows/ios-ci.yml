@@ -128,13 +128,16 @@ jobs:
           THRESHOLD=90
           echo "Required minimum coverage: ${THRESHOLD}%"
 
-          # Convert coverage to an integer for comparison
-          COVERAGE_INT=$(printf '%.0f' "${COVERAGE}")
-          if (( COVERAGE_INT < THRESHOLD )); then
-            echo "❌ Coverage check failed: ${COVERAGE_INT}% is below the required ${THRESHOLD}%."
+          # Use floor division to avoid rounding up (89.6% should fail, not pass)
+          # Compare as integers by multiplying by 100: 89.6 * 100 = 8960, threshold * 100 = 9000
+          COVERAGE_SCALED=$(echo "$COVERAGE * 100" | bc | cut -d. -f1)
+          THRESHOLD_SCALED=$((THRESHOLD * 100))
+
+          if (( COVERAGE_SCALED < THRESHOLD_SCALED )); then
+            echo "❌ Coverage check failed: ${COVERAGE}% is below the required ${THRESHOLD}%."
             exit 1
           else
-            echo "✅ Coverage check passed: ${COVERAGE_INT}% meets or exceeds ${THRESHOLD}%."
+            echo "✅ Coverage check passed: ${COVERAGE}% meets or exceeds ${THRESHOLD}%."
           fi
 
       - name: Upload coverage reports
@@ -164,7 +167,7 @@ jobs:
           SECURITY_ISSUES=$(cat swiftlint-results.json | python3 -c "
           import sys, json
           results = json.load(sys.stdin)
-          security_rules = ['force_try_crypto', 'password_in_code', 'master_key_logging']
+          security_rules = ['no_force_try_crypto', 'password_in_code', 'master_key_logging']
           count = sum(1 for r in results if r.get('rule_id') in security_rules)
           print(count)
           ")
@@ -174,7 +177,7 @@ jobs:
             cat swiftlint-results.json | python3 -c "
             import sys, json
             results = json.load(sys.stdin)
-            security_rules = ['force_try_crypto', 'password_in_code', 'master_key_logging']
+            security_rules = ['no_force_try_crypto', 'password_in_code', 'master_key_logging']
             for r in results:
               if r.get('rule_id') in security_rules:
                 print(f\"⚠️  {r['file']}:{r['line']} - {r['reason']}\")
