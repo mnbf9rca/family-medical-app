@@ -58,7 +58,13 @@ jobs:
   build:
     name: Build & Test
     runs-on: macos-26
-    timeout-minutes: 30  # Build + tests should complete quickly
+    timeout-minutes: 45  # Increased for CodeQL analysis
+
+    permissions:
+      # Required for CodeQL to upload results to Security tab
+      security-events: write
+      contents: read
+      actions: read
 
     strategy:
       matrix:
@@ -82,8 +88,19 @@ jobs:
       - name: Install xcpretty
         run: gem install xcpretty
 
-      - name: Cache derived data
-        uses: actions/cache@v4
+      - name: Initialize CodeQL
+        if: matrix.destination == 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.2'
+        uses: github/codeql-action/init@v4
+        with:
+          languages: swift
+          queries: +security-extended,security-and-quality
+          config: |
+            paths-ignore:
+              - 'docs/research/**'
+              - 'docs/adr/examples/**'
+
+      - name: Restore DerivedData cache
+        uses: actions/cache/restore@v4
         with:
           path: ~/Library/Developer/Xcode/DerivedData
           key: ${{ runner.os }}-deriveddata-${{ hashFiles('ios/**/*.swift') }}
@@ -92,6 +109,9 @@ jobs:
 
       - name: Build
         run: |
+          # Tell Xcode to respect cached DerivedData (50% faster builds)
+          defaults write com.apple.dt.Xcode IgnoreFileSystemDeviceInodeChanges -bool YES
+
           cd ios/FamilyMedicalApp
           xcodebuild clean build \
             -project FamilyMedicalApp.xcodeproj \
@@ -100,6 +120,13 @@ jobs:
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             | xcpretty
+
+      - name: Save DerivedData cache
+        uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: ~/Library/Developer/Xcode/DerivedData
+          key: ${{ runner.os }}-deriveddata-${{ hashFiles('ios/**/*.swift') }}
 
       - name: Run Unit Tests
         run: |
@@ -147,6 +174,12 @@ jobs:
           name: coverage-report
           path: ios/FamilyMedicalApp/coverage.json
           retention-days: 30
+
+      - name: Perform CodeQL Analysis
+        if: matrix.destination == 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.2'
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:swift"
 
   security-scan:
     name: Security Scan
