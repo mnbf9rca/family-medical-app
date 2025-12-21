@@ -24,7 +24,7 @@ concurrency:
 jobs:
   lint:
     name: Lint
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 10  # Prevent runaway costs
 
     steps:
@@ -41,7 +41,7 @@ jobs:
 
   format-check:
     name: Format Check
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 10
 
     steps:
@@ -57,7 +57,7 @@ jobs:
 
   build:
     name: Build & Test
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 30  # Build + tests should complete quickly
 
     strategy:
@@ -131,7 +131,7 @@ jobs:
 
   security-scan:
     name: Security Scan
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 15
 
     steps:
