@@ -3,8 +3,10 @@
 ## Tech Stack
 
 ### iOS
-- **Swift**: 5.9+
-- **iOS Target**: 16.0+
+- **Xcode**: 26.2+ (December 2025)
+- **Swift**: 6.2.3+ (ships with Xcode 26.2)
+- **iOS Deployment Target**: 16.0+ (supports 93.9% of devices, good balance of reach and modern APIs)
+- **iOS SDK**: 26.2+ (build with latest SDK, but deploy to older iOS versions)
 - **UI**: SwiftUI only
 - **Crypto**: CryptoKit (Apple's framework) + CommonCrypto (PBKDF2 only)
 - **Auth**: LocalAuthentication framework
