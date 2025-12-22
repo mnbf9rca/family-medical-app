@@ -1,16 +1,25 @@
 # Access Revocation: Privacy Policy and User Disclosures
 
-This document outlines the privacy implications of the access revocation mechanism and required user disclosures.
+This document provides ready-to-use privacy policy text and user disclosure wording for the access revocation mechanism. Copy-paste into your app's Privacy Policy and UI.
 
 ## Overview
 
-The access revocation mechanism uses full FMK re-encryption to cryptographically prevent revoked users from decrypting new records. However, there are fundamental limitations due to the nature of end-to-end encryption that must be disclosed to users.
+The revocation mechanism includes **cryptographic remote erasure** (~95% success rate) but cannot guarantee deletion in all cases due to fundamental E2EE limitations.
+
+## Core Privacy Principles
+
+1. **Future access is cryptographically prevented** (100% effective)
+2. **Historical data deletion is best-effort** (~95% success if device online)
+3. **Users must be informed** before sharing that revocation has limitations
+4. **Clear disclosure** of what works and what doesn't
 
 ## Required User Disclosures
 
-### 1. Historical Data Retention After Revocation
+### 1. Sharing Flow Disclosure
 
-**Privacy Notice** (displayed during sharing setup):
+**When shown**: Before user shares medical records (sharing confirmation screen)
+
+**Text**:
 
 ```
 When you share medical records with another user, they will be able
@@ -29,15 +38,28 @@ However, we cannot guarantee deletion if:
 It goes without saying that you should only share medical records with people you trust.
 ```
 
-**Disclosure Timing**:
+### 2. Revocation Flow Disclosure
 
-- Initial sharing flow (when granting access)
-- Revocation flow (reminder when revoking)
-- Privacy Policy (legal document)
+**When shown**: When user initiates revocation (revocation confirmation dialog)
 
-### 2. Ownership Transfer Snapshot
+**Text**:
 
-**Privacy Notice** (displayed during ownership transfer):
+```
+This will:
+✅ Block [User] from NEW records
+✅ Send secure deletion to their device
+✅ Cryptographically destroy cached data (if device online: ~95% success)
+
+This will re-encrypt [N] records (~2 seconds)
+
+Cannot guarantee deletion if their device is offline or backed up.
+```
+
+### 3. Ownership Transfer Disclosure
+
+**When shown**: During ownership transfer flow (both parent and child see this)
+
+**Text**:
 
 ```
 When you transfer ownership of medical records to [Child Name], you
@@ -48,33 +70,11 @@ If [Child Name] later revokes your access, you will not be able to
 view new records created after the transfer.
 ```
 
-**Disclosure Timing**:
+### 4. Metadata Exposure Disclosure
 
-- Ownership transfer flow (both parent and child see this)
-- Transfer confirmation screen
-- Privacy Policy
+**When shown**: Privacy Policy, first-time setup flow
 
-### 3. Audit Trail Collection
-
-**Privacy Notice**:
-
-```
-We maintain an encrypted audit log of who accessed your medical records
-and when access was granted or revoked. This log is encrypted with your
-Master Key and can only be viewed by you.
-
-Audit logs are retained for [1 year / indefinitely / user-configurable]
-and can be exported for legal or compliance purposes.
-```
-
-**Disclosure Timing**:
-
-- Privacy Policy
-- Settings > Privacy & Security > Audit Log
-
-### 4. Server Metadata Exposure
-
-**Privacy Notice**:
+**Text**:
 
 ```
 While your medical records are end-to-end encrypted (we cannot read them), our servers can see:
@@ -90,80 +90,9 @@ We cannot see:
 - Record types or categories (encrypted)
 ```
 
-**Disclosure Timing**:
+## Privacy Policy Sections
 
-- Privacy Policy
-- First-time setup flow
-
-## GDPR Compliance Considerations
-
-### Right to be Forgotten (Article 17)
-
-**Server-side**: User can request deletion of all data from server (encrypted blobs deleted) ✅
-
-**Limitation**: Cannot delete data from other users' devices (e.g., revoked user's cached records) ⚠️
-
-**Required Disclosure**:
-
-```
-"We will delete all your data from our servers, but other users who you previously shared with may retain copies of shared records on their devices."
-```
-
-### Data Portability (Article 20)
-
-**Export functionality**: User can export medical records (JSON, PDF, CSV) ✅
-**Audit log export**: User can export audit trail (encrypted or plaintext) ✅
-**Key export**: User can export recovery code (for migration to other device) ✅
-
-### Data Minimization (Article 5)
-
-**Plaintext metadata**: Only expose what's necessary for sync coordination
-
-- Record IDs (required for routing) ✅
-- Timestamps (required for last-write-wins) ✅
-- User IDs (required for access control) ✅
-
-**Encrypted everything else**: Content, filenames, MIME types, family member names ✅
-
-### Consent (Article 7)
-
-**Explicit consent** required for:
-
-- Creating account (Master Key derivation from password)
-- Sharing records with other users (ECDH key wrapping)
-- Transferring ownership (child gains independent control)
-
-**Withdrawal of consent**: Revocation mechanism (this ADR) enables withdrawal ✅
-
-## HIPAA Compliance Considerations (if applicable)
-
-### Personal Health Information (PHI) Protection
-
-- **Encryption at rest**: All medical records encrypted with AES-256-GCM ✅
-- **Encryption in transit**: HTTPS/TLS for all server communication ✅
-- **Access controls**: Server-side access grants enforce authorization ✅
-- **Audit trail**: All access/revocation events logged (encrypted) ✅
-
-### Business Associate Agreement (BAA)
-
-- **Server provider**: If using Supabase/AWS, must sign BAA (they are Business Associate)
-- **Zero-knowledge architecture**: Even with BAA, server cannot access PHI (encrypted)
-
-### Revocation Limitations
-
-**HIPAA allows**: PHI that was legitimately accessed before revocation can be retained
-
-**Required Disclosure**:
-
-```
-"Healthcare providers who received your medical records before revocation may retain copies per HIPAA record retention requirements"
-```
-
-**Our app**: Same principle applies to family members (legitimate access before revocation)
-
-## Recommended Privacy Policy Sections
-
-### Section 1: How We Protect Your Data
+### Data Protection (How We Protect Your Data)
 
 ```
 Your medical records are protected with end-to-end encryption. This means:
@@ -177,7 +106,7 @@ your password using PBKDF2 (100,000 iterations). Your encryption keys
 never leave your device unencrypted.
 ```
 
-### Section 2: Sharing and Access Control
+### Access Control (Sharing and Revocation)
 
 ```
 When you share medical records:
@@ -198,23 +127,7 @@ protects your data from server breaches also limits our ability to
 remotely delete data from devices.
 ```
 
-### Section 3: What We Can and Cannot See
-
-```
-We can see (metadata):
-- Who you shared records with
-- When you access the app
-- How many records you have
-- File sizes
-
-We cannot see (encrypted):
-- Medical record content
-- Family member names
-- Your encryption keys
-- Record types or categories
-```
-
-### Section 4: Your Rights
+### User Rights
 
 ```
 You have the right to:
@@ -227,98 +140,33 @@ Note: Deleting your account removes data from our servers, but users
 you previously shared with may retain copies on their devices.
 ```
 
-## UI Disclosure Examples
+## Compliance
 
-### Sharing Flow
+### GDPR
 
-```
-┌─────────────────────────────────────────┐
-│ Share Emma's Records with Adult B       │
-├─────────────────────────────────────────┤
-│                                          │
-│ ⚠️ Important: Understand Access Control │
-│                                          │
-│ When you share records, Adult B will:   │
-│ ✅ Download encrypted records            │
-│ ✅ Decrypt them on their device          │
-│ ✅ View them even when offline           │
-│                                          │
-│ If you later revoke access:             │
-│ ✅ Adult B can't access NEW records      │
-│ ⚠️ Adult B keeps OLD records (cached)   │
-│                                          │
-│ This is a fundamental limit of E2EE.    │
-│ Only share with people you trust.       │
-│                                          │
-│ [Cancel] [I Understand, Share]          │
-└─────────────────────────────────────────┘
-```
+**Article 17 (Right to be Forgotten)**:
 
-### Revocation Flow
+- Server-side deletion: ✅ Supported
+- Device-side deletion: ⚠️ Best-effort (~95% via cryptographic erasure)
+- Required disclosure: "We will delete all your data from our servers, but other users who you previously shared with may retain copies of shared records on their devices."
 
-```
-┌─────────────────────────────────────────┐
-│ Revoke Adult C's Access to Emma?        │
-├─────────────────────────────────────────┤
-│                                          │
-│ This will:                              │
-│ ✅ Block Adult C from NEW records        │
-│ ✅ Send secure deletion to their device  │
-│ ✅ Cryptographically destroy cached data │
-│    (if device online: ~95% success)     │
-│                                          │
-│ This will re-encrypt 500 records        │
-│ (~2 seconds)                            │
-│                                          │
-│ Cannot guarantee deletion if their      │
-│ device is offline or backed up.         │
-│                                          │
-│ [Cancel] [Revoke Access]                │
-└─────────────────────────────────────────┘
-```
+**Article 20 (Data Portability)**: Export in JSON, PDF, CSV formats ✅
 
-### Ownership Transfer Flow
+**Article 7 (Consent)**: Explicit consent required for sharing; withdrawal via revocation ✅
 
-```
-┌─────────────────────────────────────────┐
-│ Transfer Emma's Records to Emma?        │
-├─────────────────────────────────────────┤
-│                                          │
-│ ⚠️ Important: Permanent Snapshot         │
-│                                          │
-│ You will retain access to:              │
-│ ✅ All records created before transfer   │
-│                                          │
-│ Emma can later revoke your access:      │
-│ ✅ You won't see NEW records             │
-│ ⚠️ You keep OLD records (permanent)     │
-│                                          │
-│ This cannot be undone. Emma will have   │
-│ full control and can revoke your access.│
-│                                          │
-│ [Cancel] [Transfer Ownership]           │
-└─────────────────────────────────────────┘
-```
+### HIPAA (if applicable)
 
-## Implementation Checklist
+**PHI Protection**: Encryption at rest and in transit ✅
 
-- [ ] Add privacy notices to sharing flow UI (Phase 3)
-- [ ] Add privacy notices to revocation flow UI (Phase 3)
-- [ ] Add privacy notices to ownership transfer flow UI (Phase 4)
-- [ ] Create comprehensive Privacy Policy document (Phase 3)
-- [ ] Add "Privacy & Security" section to Settings (Phase 3)
-- [ ] Implement audit log export (Phase 3)
-- [ ] Implement data export (Phase 3)
-- [ ] Implement account deletion (Phase 3)
-- [ ] GDPR compliance review (Phase 3, if serving EU users)
-- [ ] HIPAA compliance review (Phase 4, if targeting healthcare use)
-- [ ] Legal review of privacy disclosures (before public release)
+**Revocation Limitations**: HIPAA allows retention of legitimately accessed PHI. Our app applies same principle.
 
-## Frequently Asked Questions
+**Required Disclosure**: "Healthcare providers who received your medical records before revocation may retain copies per HIPAA record retention requirements"
 
-### Q: How does secure deletion work?
+## FAQ
 
-**A**: When you revoke access, we send a cryptographic deletion request to the revoked user's device. If their device is online, it:
+**Q: How does secure deletion work?**
+
+A: When you revoke access, we send a cryptographic deletion request to the revoked user's device. If their device is online, it:
 
 1. Re-encrypts all cached medical records with a random key
 2. Immediately discards that random key (never stores it)
@@ -326,9 +174,11 @@ you previously shared with may retain copies on their devices.
 
 This works in ~95% of typical cases (family disputes, custody changes). It won't work if their device is offline, they backed up their device, or they extracted encryption keys beforehand.
 
-### Q: Is this a security flaw?
+---
 
-**A**: Our cryptographic deletion mechanism provides strong protection in most cases (~95% success rate). The small percentage of failures occur in edge cases:
+**Q: Is this a security flaw?**
+
+A: Our cryptographic deletion mechanism provides strong protection in most cases (~95% success rate). The small percentage of failures occur in edge cases:
 
 - Device offline when revocation happens
 - Device backed up before revocation (can restore from backup)
@@ -336,9 +186,11 @@ This works in ~95% of typical cases (family disputes, custody changes). It won't
 
 These edge cases are inherent to end-to-end encryption. The alternative would be server-side encryption, where the server can guarantee deletion - but this would also mean the server (and anyone who breaches it) can read your medical records. We prioritize privacy over guaranteed remote control.
 
-### Q: What should I do if I shared with someone I no longer trust?
+---
 
-**A**:
+**Q: What should I do if I shared with someone I no longer trust?**
+
+A:
 
 1. Revoke their access immediately
    - Prevents future access to new records (100% effective)
@@ -347,13 +199,46 @@ These edge cases are inherent to end-to-end encryption. The alternative would be
 3. For critical situations (abuse, stalking), contact support for guidance
 4. Going forward, only share with people you trust long-term
 
-### Q: Does this comply with GDPR's "Right to be Forgotten"?
+---
 
-**A**: Yes. GDPR allows for technical limitations where erasure is impossible or disproportionately difficult. We disclose this limitation clearly to users before sharing. Additionally, the "Right to be Forgotten" applies to the data controller (us), not to recipients with whom users voluntarily shared data.
+**Q: Does this comply with GDPR's "Right to be Forgotten"?**
 
-### Q: What about HIPAA?
+A: Yes. GDPR allows for technical limitations where erasure is impossible or disproportionately difficult. We disclose this limitation clearly to users before sharing. Additionally, the "Right to be Forgotten" applies to the data controller (us), not to recipients with whom users voluntarily shared data.
 
-**A**: HIPAA allows healthcare providers to retain PHI they legitimately accessed. Our app applies the same principle: users who legitimately had access can retain historical data. We provide cryptographic enforcement for future data (which exceeds HIPAA's minimum requirements).
+---
+
+**Q: What about HIPAA?**
+
+A: HIPAA allows healthcare providers to retain PHI they legitimately accessed. Our app applies the same principle: users who legitimately had access can retain historical data. We provide cryptographic enforcement for future data (which exceeds HIPAA's minimum requirements).
+
+## Implementation Checklist
+
+**Phase 3 (Before Launch)**:
+
+- [ ] Add sharing flow disclosure to UI
+- [ ] Add revocation flow disclosure to confirmation dialog
+- [ ] Create Privacy Policy with sections above
+- [ ] Implement audit log with export capability
+- [ ] Implement data export (JSON, PDF, CSV)
+- [ ] Implement account deletion
+
+**Phase 4 (Enhanced Revocation)**:
+
+- [ ] Update disclosures with cryptographic erasure language
+- [ ] Add FAQ section to support site
+- [ ] Legal review of all privacy disclosures
+
+**If Targeting EU Users**:
+
+- [ ] GDPR compliance review
+- [ ] Cookie consent (if applicable)
+- [ ] Data processing agreement
+
+**If Targeting Healthcare Use**:
+
+- [ ] HIPAA compliance review
+- [ ] Business Associate Agreements with vendors
+- [ ] Audit trail retention policy
 
 ## Related Documents
 
