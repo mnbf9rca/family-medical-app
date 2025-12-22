@@ -296,6 +296,61 @@ func syncWithS3() async throws {
 - ✅ Simple conflict resolution (merge + sort)
 - ⚠️ Multiple manifest downloads (acceptable, small files)
 
+## Conflict Resolution Algorithm
+
+For detailed conflict resolution design, see **[Wiki-Style Versioning](./wiki-style-versioning.md)**.
+
+### Summary: Immutable Version History
+
+Instead of "last-write-wins" conflict detection, the application uses **wiki-style immutable versioning**:
+
+1. **Every edit creates a new version** (never modifies existing versions)
+2. **All versions stored permanently** (append-only)
+3. **Users can view history** and restore previous versions (like Wikipedia)
+4. **Concurrent edits both succeed** - no conflicts, just history
+
+### S3 Manifest Merge with Versioning
+
+When merging manifests from multiple devices:
+
+```swift
+func mergeManifests(_ local: Manifest, _ remote: Manifest) -> Manifest {
+    var merged = Manifest()
+
+    // Union all record IDs
+    let allRecordIds = Set(local.records.keys).union(remote.records.keys)
+
+    for recordId in allRecordIds {
+        let localVersion = local.records[recordId]?.currentVersion ?? 0
+        let remoteVersion = remote.records[recordId]?.currentVersion ?? 0
+
+        // Latest version wins as "current"
+        let currentVersion = max(localVersion, remoteVersion)
+
+        // Preserve all versions from both manifests
+        let localVersions = local.records[recordId]?.allVersions ?? []
+        let remoteVersions = remote.records[recordId]?.allVersions ?? []
+        let allVersions = Set(localVersions).union(remoteVersions).sorted()
+
+        merged.records[recordId] = RecordEntry(
+            currentVersion: currentVersion,
+            allVersions: allVersions
+        )
+    }
+
+    return merged
+}
+```
+
+### Benefits for S3 Backend
+
+- ✅ **No data loss** - all versions from both devices preserved
+- ✅ **Deterministic** - max(version) always wins as current
+- ✅ **No tie-breaking needed** - version numbers are sequential
+- ✅ **Audit trail** - full history stored in S3 objects
+
+See [wiki-style-versioning.md](./wiki-style-versioning.md) for complete algorithm specification.
+
 ## Access Control
 
 **Option 1: S3 IAM Policies (Complex)**
@@ -326,15 +381,26 @@ Lightweight auth server (no database, stateless):
 // Auth server (stateless)
 POST /auth/login
   → Validate password (check Supabase or Auth0)
-  → Return JWT token
+  → Return JWT token (includes userId claim)
 
-GET /presigned-url/{object-key}
+GET /presigned-url/manifest
+GET /presigned-url/records/{recordId}
+GET /presigned-url/attachments/{attachmentId}
   → Validate JWT token
-  → Generate presigned S3 URL (expires in 1 hour)
+  → Extract userId from JWT claims
+  → Derive object key from userId and resource type (server-side)
+  → Generate presigned S3 URL for the derived key (expires in 1 hour)
   → Return URL to client
 
-// Client
-let url = try await authServer.getPresignedURL(key: "/users/\(userId)/manifest.json")
+// Example: Manifest URL
+GET /presigned-url/manifest
+  → JWT contains: {"userId": "user-uuid-123"}
+  → Server derives objectKey = "users/user-uuid-123/manifest.json"
+  → Generates presigned URL for that specific object
+  → Returns URL to client
+
+// Client (userId is in JWT, not supplied by client)
+let url = try await authServer.getPresignedURL(for: .manifest)
 let manifest = try await URLSession.shared.data(from: url) // Direct S3 access
 ```
 
@@ -342,6 +408,7 @@ let manifest = try await URLSession.shared.data(from: url) // Direct S3 access
 
 - ✅ Simple (auth server has no storage logic, just generates URLs)
 - ✅ Secure (presigned URLs expire, scoped to specific objects)
+- ✅ Tenant isolation (server derives object keys from JWT, prevents cross-user access)
 - ✅ Works with any S3-compatible storage (MinIO, R2, S3)
 
 ## Self-Hosted Setup (MinIO)

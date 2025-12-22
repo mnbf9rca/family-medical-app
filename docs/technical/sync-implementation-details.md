@@ -477,7 +477,7 @@ CREATE TABLE attachments (
     tag_metadata BYTEA NOT NULL,
 
     -- Content-addressed deduplication
-    content_hash TEXT NOT NULL,  -- SHA256 of plaintext (before encryption)
+    content_hmac TEXT NOT NULL,  -- HMAC-SHA256(attachment, FMK)
 
     -- Sync metadata (plaintext, minimal)
     encrypted_size_bytes INTEGER NOT NULL,  -- Size of encrypted blob (for storage allocation)
@@ -485,7 +485,7 @@ CREATE TABLE attachments (
     uploaded_by_device_id UUID NOT NULL,
 
     -- Index for deduplication
-    UNIQUE(family_member_id, content_hash)
+    UNIQUE(family_member_id, content_hmac)
 );
 
 -- Attachment references (many-to-many: records can share attachments)
@@ -506,8 +506,8 @@ CREATE TABLE record_attachments (
 
 2. **Content Deduplication**: Same photo in multiple records → stored once
    - Example: "Vaccine card for Emma" scanned twice by accident
-   - `content_hash` = SHA256(plaintext photo)
-   - If same hash exists → reuse existing attachment (no upload) ✅
+   - `content_hmac` = HMAC-SHA256(plaintext photo, FMK_Emma)
+   - If same HMAC exists → reuse existing attachment (no upload) ✅
 
 3. **Many-to-Many Relationships**: One attachment can belong to multiple records
    - Example: Insurance card photo attached to multiple visit records
@@ -523,10 +523,10 @@ iPhone (offline):
 ├─ User attaches photo (vaccine_card.jpg, 2.3 MB)
 ├─ App encrypts photo with FMK_Emma
 │  └─ AES-256-GCM(photo, FMK_Emma) → encrypted_photo
-├─ App computes content hash: SHA256(plaintext photo) → "a3f2b9..."
+├─ App computes content HMAC: HMAC-SHA256(plaintext photo, FMK_Emma) → "a3f2b9..."
 ├─ App creates record:
 │  ├─ Medical record (encrypted: date, provider, notes)
-│  └─ Attachment (encrypted photo, content_hash, size_bytes)
+│  └─ Attachment (encrypted photo, content_hmac, size_bytes)
 ├─ Queues for sync:
 │  ├─ PendingSyncOperation(type: "insert", table: "medical_records")
 │  └─ PendingSyncOperation(type: "insert", table: "attachments")
@@ -534,7 +534,7 @@ iPhone (offline):
 
 iPhone comes online:
 ├─ Syncs medical record (uploads ~500 bytes encrypted metadata)
-├─ Checks if attachment exists: Query attachments WHERE content_hash = "a3f2b9..."
+├─ Checks if attachment exists: Query attachments WHERE content_hmac = "a3f2b9..."
 │  └─ Not found → Upload attachment (2.3 MB)
 ├─ Creates record_attachment link
 └─ Deletes PendingSyncOperation entries
@@ -569,29 +569,30 @@ iPad:
 Scenario: User accidentally attaches same photo twice
 
 iPhone:
-├─ Record 1: Attach vaccine_card.jpg → content_hash = "a3f2b9..."
+├─ Record 1: Attach vaccine_card.jpg → content_hmac = "a3f2b9..."
 │  └─ Uploads attachment (att-uuid-123)
-├─ Record 2: Attach same vaccine_card.jpg → content_hash = "a3f2b9..."
-│  └─ Checks: SELECT * FROM attachments WHERE content_hash = "a3f2b9..." AND family_member_id = emma_id
+├─ Record 2: Attach same vaccine_card.jpg → content_hmac = "a3f2b9..."
+│  └─ Checks: SELECT * FROM attachments WHERE content_hmac = "a3f2b9..." AND family_member_id = emma_id
 │  └─ Found! → Reuse att-uuid-123 (no upload) ✅
 └─ Both records reference same attachment (stored once, 2.3 MB saved)
 ```
 
 **Security Considerations**:
 
-**Q: Does `content_hash` leak information?**
+**Q: Does `content_hmac` leak information?**
 
-A: Limited privacy trade-off:
+A: Minimal privacy impact due to HMAC:
 
 - ✅ **Server cannot see photo content** (encrypted with FMK)
-- ⚠️ **Server can detect duplicate photos** (same hash → same image)
+- ✅ **Server cannot identify specific photos** (HMAC is keyed, prevents rainbow tables)
+- ⚠️ **Server can detect duplicate photos within same patient** (same HMAC → same image for that patient)
 - ⚠️ **Server can infer relationships** ("Record A and Record B have same attachment")
 
-**Mitigation**: Hash is scoped to `family_member_id`
+**Why HMAC is better than plain hashing**: HMAC is keyed by the FMK, so:
 
-- Deduplication only within same patient's records (Emma's photos)
-- Not across family members (Emma's photo ≠ Liam's photo, even if identical)
-- Reduces privacy leak (server can't correlate across patients)
+- Deduplication works within same patient's records (Emma's photos)
+- Different patients have different HMACs even for identical photos (Emma's vaccine card ≠ Liam's vaccine card HMAC)
+- Server cannot pre-compute known medical document HMACs (rainbow table resistance)
 
 **Alternatives Considered:**
 
@@ -790,7 +791,7 @@ func decryptAttachment(encrypted: EncryptedAttachment, fmk: SymmetricKey) throws
 | Decision | Trade-off | Justification |
 |----------|-----------|---------------|
 | **Separate attachment storage** | More complex schema (3 tables vs 1) | Massive bandwidth savings, essential for photos/PDFs |
-| **Plaintext content_hash** | Server can detect duplicate photos | Enables efficient deduplication, scoped to family member |
+| **HMAC-based content_hmac** | Server can detect duplicate photos within same patient | Enables efficient deduplication with rainbow table resistance |
 | **Encrypted metadata separately** | Two encryption operations per attachment | Allows lazy loading (metadata without full binary download) |
 | **No chunking** | Can't resume interrupted uploads | Photos are small (<5 MB), chunking is overkill |
 
@@ -909,10 +910,16 @@ func generateRecoveryCode() -> [String] {
 }
 
 // Encrypt Master Key with recovery code
-func encryptMasterKey(masterKey: SymmetricKey, recoveryCode: [String]) throws -> Data {
+func encryptMasterKey(masterKey: SymmetricKey, recoveryCode: [String], userId: UUID) throws -> (encryptedMasterKey: Data, salt: Data) {
     // Derive recovery key from 24-word code
     let recoveryPhrase = recoveryCode.joined(separator: " ")
-    let salt = Data("recovery-key-salt".utf8)  // Or random salt
+
+    // Generate random salt per user (prevents precomputation attacks)
+    var salt = Data(count: 32)
+    let result = salt.withUnsafeMutableBytes { saltBytes in
+        SecRandomCopyBytes(kSecRandomDefault, 32, saltBytes.baseAddress!)
+    }
+    guard result == errSecSuccess else { throw CryptoError.randomGenerationFailed }
 
     var recoveryKeyData = Data(count: 32)
     let status = recoveryKeyData.withUnsafeMutableBytes { derivedKeyBytes in
@@ -942,18 +949,35 @@ func encryptMasterKey(masterKey: SymmetricKey, recoveryCode: [String]) throws ->
                                       using: recoveryKey,
                                       nonce: nonce)
 
-    // Return: nonce + ciphertext + tag
-    return sealedBox.combined!
+    // Return: encrypted master key and salt
+    // Salt must be stored alongside encrypted_master_key on server
+    // Server stores: { encrypted_master_key: Data, recovery_salt: Data }
+    return (encryptedMasterKey: sealedBox.combined!, salt: salt)
 }
 
 // Decrypt Master Key on new device
-func decryptMasterKey(encryptedBlob: Data, recoveryCode: [String]) throws -> SymmetricKey {
-    // Derive same recovery key
+func decryptMasterKey(encryptedBlob: Data, recoveryCode: [String], salt: Data) throws -> SymmetricKey {
+    // Derive same recovery key using the stored salt
+    // Client fetches salt from server: GET /auth/recovery-salt?userId={userId}
     let recoveryPhrase = recoveryCode.joined(separator: " ")
-    let salt = Data("recovery-key-salt".utf8)
 
     var recoveryKeyData = Data(count: 32)
-    // ... same PBKDF2 as above ...
+    let status = recoveryKeyData.withUnsafeMutableBytes { derivedKeyBytes in
+        recoveryPhrase.data(using: .utf8)!.withUnsafeBytes { phraseBytes in
+            salt.withUnsafeBytes { saltBytes in
+                CCKeyDerivationPBKDF(
+                    CCPBKDFAlgorithm(kCCPBKDF2),
+                    phraseBytes.baseAddress, phraseBytes.count,
+                    saltBytes.baseAddress, saltBytes.count,
+                    CCPseudoRandomAlgorithm(kCCPRFHmacAlgSHA256),
+                    100_000,  // Same iterations as encryption
+                    derivedKeyBytes.baseAddress, 32
+                )
+            }
+        }
+    }
+    guard status == kCCSuccess else { throw CryptoError.keyDerivationFailed }
+
     let recoveryKey = SymmetricKey(data: recoveryKeyData)
 
     // Decrypt Master Key
@@ -1111,9 +1135,9 @@ func decryptRecord(encrypted: EncryptedRecord, fmk: SymmetricKey) throws -> Medi
    - Settings UI: List devices, revoke device
 6. **Attachment Sync**:
    - Create `attachments` and `record_attachments` tables in database schema
-   - Implement `encryptAttachment()` and `decryptAttachment()` with content hashing
+   - Implement `encryptAttachment()` and `decryptAttachment()` with HMAC-based content addressing
    - Sync attachments separately from medical records
-   - Check for duplicate attachments using `content_hash` before uploading
+   - Check for duplicate attachments using `content_hmac` before uploading
    - Download attachments on-demand (lazy loading for large photo libraries)
 
 ### Phase 3: Family Sharing
