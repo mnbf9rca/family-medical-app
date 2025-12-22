@@ -415,3 +415,145 @@ let s3Config = S3Config(
 **Target**: Phase 4 (self-hosted option)
 **Author**: Claude Code
 **Date**: 2025-12-21
+
+---
+
+## UPDATED: Proxied Architecture (Recommended for Commercial Service)
+
+### Architecture Decision: Cloudflare Worker Proxy
+
+**Problem**: Public S3 buckets leak metadata (who has how much data, upload patterns) and enable offline attacks.
+
+**Solution**: Proxy all access through Cloudflare Worker.
+
+```
+┌─────────────┐          ┌──────────────────┐          ┌─────────┐
+│ iOS Client  │          │ Cloudflare Worker│          │   R2    │
+│             │          │  (Auth + Proxy)  │          │  (or S3)│
+└─────────────┘          └──────────────────┘          └─────────┘
+      │                            │                          │
+      │ GET /api/manifest.json     │                          │
+      │ (Authorization: Bearer JWT)│                          │
+      ├───────────────────────────>│ Validate JWT             │
+      │                            │ Verify user can access   │
+      │                            │ GET from R2              │
+      │                            ├─────────────────────────>│
+      │                            │ Encrypted blob           │
+      │                            │<─────────────────────────┤
+      │ Encrypted blob             │                          │
+      │<───────────────────────────┤                          │
+```
+
+### Why Proxied > Presigned URLs?
+
+| Benefit | Proxied | Presigned URLs |
+|---------|---------|----------------|
+| Backend migration | ✅ Change R2→S3, no app update | ❌ Requires app update |
+| Client simplicity | ✅ Talks to `api.example.com` | ⚠️ Talks to `s3.amazonaws.com` |
+| Caching | ✅ Worker caches manifests | ❌ No caching |
+| Rate limiting | ✅ Built-in | ❌ Complex |
+| Latency | ⚠️ +10-50ms (edge routing) | ✅ Direct S3 |
+
+**Decision**: Proxied (flexibility > 10ms latency)
+
+### Cloudflare Worker Code
+
+```typescript
+// ~150 lines, runs globally at edge
+export default {
+  async fetch(request: Request, env: Env): Promise<Response> {
+    const url = new URL(request.url);
+    
+    if (url.pathname === '/auth/login') {
+      return handleLogin(request, env);
+    }
+    
+    if (url.pathname.startsWith('/api/')) {
+      return proxyToStorage(request, env);
+    }
+    
+    return new Response('Not Found', { status: 404 });
+  }
+};
+
+async function proxyToStorage(request: Request, env: Env): Promise<Response> {
+  // Validate JWT
+  const jwt = request.headers.get('Authorization')?.substring(7);
+  const user = await validateJWT(jwt, env);
+  if (!user) return new Response('Unauthorized', { status: 401 });
+  
+  // Extract path: /api/manifest.json → users/{user-id}/manifest.json
+  const path = request.url.substring(5);  // Remove '/api/'
+  const key = `users/${user.id}/${path}`;
+  
+  // Security: User can only access own data
+  if (!key.startsWith(`users/${user.id}/`)) {
+    return new Response('Forbidden', { status: 403 });
+  }
+  
+  // Proxy to R2 (or switch to S3 here without client changes!)
+  if (request.method === 'GET') {
+    const object = await env.R2_BUCKET.get(key);
+    return object ? new Response(object.body) : new Response('Not Found', { status: 404 });
+  }
+  
+  if (request.method === 'PUT') {
+    await env.R2_BUCKET.put(key, request.body);
+    return new Response('Created', { status: 201 });
+  }
+  
+  if (request.method === 'HEAD') {
+    const object = await env.R2_BUCKET.head(key);
+    return new Response(null, { status: object ? 200 : 404 });
+  }
+  
+  return new Response('Method Not Allowed', { status: 405 });
+}
+```
+
+### Costs (Commercial Service, 1000 users, 100GB)
+
+- **Cloudflare Workers**: Free tier (100k requests/day) or $5/month (10M requests)
+- **Cloudflare R2**: $1.50/month (100GB × $0.015/GB)
+- **Total**: ~$2-7/month
+
+Compare:
+
+- Supabase Pro: $25/month
+- AWS S3 + Lambda: ~$15/month
+
+### Backend Migration Example
+
+**Scenario**: Switch from R2 to Backblaze B2 (cheaper for bandwidth)
+
+```typescript
+// Before (R2)
+const object = await env.R2_BUCKET.get(key);
+
+// After (B2) - ONE LINE CHANGE
+const object = await env.B2_CLIENT.downloadFileByName(key);
+
+// Client code: UNCHANGED ✅
+```
+
+No app update needed. Users don't notice anything.
+
+### Async Backup (YAGNI)
+
+**Not implementing now**, but architecture supports it:
+
+```typescript
+// Write to primary
+await env.R2_BUCKET.put(key, body);
+
+// Async backup to S3 (don't block response)
+env.waitUntil(backupToS3(key, body));
+```
+
+Separate backup worker replicates R2 → S3 asynchronously (eventual consistency).
+
+---
+
+**Status**: Proxied architecture is recommended for commercial deployment
+**Date**: 2025-12-21
+**Rationale**: Backend flexibility > 10ms latency cost
