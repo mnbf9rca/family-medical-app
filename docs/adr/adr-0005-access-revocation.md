@@ -106,7 +106,9 @@ When a child turns 16 and gains control:
 1. Child creates independent account (own Master Key, separate from parent)
 2. Parent grants child access (standard ECDH sharing)
 3. Child becomes owner (re-wraps FMK with own Master Key)
-4. Child revokes parent (standard revocation flow)
+4. Child revokes parent (standard revocation flow) - or child can chose to continue to grant access to Adult(s) who already have access
+
+Note: Some scenarios this is not possible. For example, when a person lacks capacity to look after their own medical decisions, under court order etc. The app cannot enforce this behaviour one way or the other.
 
 **Trade-off**: Parent retains snapshot of pre-transfer records (cannot be avoided).
 
@@ -114,7 +116,7 @@ When a child turns 16 and gains control:
 
 ### Performance
 
-**Benchmarks** (iPhone 12 Pro):
+**Benchmarks** (goals):
 
 - 100 records: ~100ms
 - 500 records: ~500ms
@@ -175,7 +177,7 @@ When a child turns 16 and gains control:
 
 ## Implementation Notes
 
-### Phase 3: Family Sharing (Required)
+### Phase 3: Group Sharing (Required)
 
 Implement:
 
@@ -196,6 +198,7 @@ Implement:
 - Ownership transfer UI (age-based control)
 - Export audit log (PDF for legal purposes)
 - Digital signatures on audit entries (non-repudiation)
+- Log securely shared between all sharing participants so there's a single log
 
 ## Related Decisions
 
