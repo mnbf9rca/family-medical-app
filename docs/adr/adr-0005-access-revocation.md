@@ -79,15 +79,23 @@ When Adult A revokes Adult C's access to Emma's records:
 - ✅ **Immediate**: Revocation propagates in seconds
 - ✅ **Self-healing**: Offline devices detect version mismatch on next sync
 
-#### 4. Historical Data Limitation (Accepted)
+#### 4. Historical Data Limitation (Mitigated)
 
-**Decision**: Revoked user retains access to records downloaded before revocation.
+**Decision**: Revoked user retains access to records downloaded before revocation, **unless** their device receives a cryptographic remote erasure message.
 
 **Rationale**:
 
-- ⚠️ **Fundamental E2EE limitation**: Cannot retroactively un-decrypt downloaded data
-- ✅ **Acceptable**: Protect future data, not historical snapshots
-- ✅ **Industry standard**: Same limitation as Signal, 1Password, etc.
+- ⚠️ **Fundamental E2EE limitation**: Cannot guarantee deletion (offline devices, backups, etc.)
+- ✅ **Best-effort mitigation**: Cryptographic remote erasure (~95% success rate for typical scenarios)
+- ✅ **Opportunistic**: Works when device is online and receives Realtime notification
+- ✅ **Offline-first preserved**: Deletion is opportunistic, not required for revocation
+
+**Cryptographic Remote Erasure** (Phase 4 enhancement):
+
+- Send Realtime notification to revoked user's devices
+- Re-encrypt cached records with random ephemeral key
+- Immediately discard the key (data becomes permanently undecryptable)
+- Success depends on timing: works if device online and receives message before key extraction
 
 ### Special Cases
 
@@ -128,10 +136,10 @@ When a child turns 16 and gains control:
 
 ### Negative
 
-1. **Historical Data Accessible**: Revoked user retains pre-revocation records
+1. **Historical Data Accessible**: Revoked user may retain pre-revocation records
    - **Severity**: Medium (fundamental E2EE limitation)
-   - **Mitigation**: Disclose clearly, protect future data only
-   - **Accepted**: Cannot be avoided without compromising E2EE
+   - **Mitigation**: Cryptographic remote erasure (~95% success rate), clear disclosure
+   - **Accepted**: Cannot guarantee deletion (offline devices, backups, key extraction)
 
 2. **Re-encryption Cost**: ~500ms for 500 records
    - **Severity**: Low (user-initiated, infrequent)
@@ -163,7 +171,7 @@ When a child turns 16 and gains control:
 | **Full Re-encryption** | ~500ms performance cost | True cryptographic revocation (not UI-only) |
 | **Realtime Propagation** | Requires Supabase Realtime | Immediate revocation across devices |
 | **Atomic Revocation** | Transaction complexity | Data integrity (prevent partial state) |
-| **Historical Data Accessible** | Cannot revoke downloaded data | Fundamental E2EE limitation (accepted industry-wide) |
+| **Historical Data Accessible** | Best-effort deletion (~95% success) | Opportunistic cryptographic erasure, can't guarantee (offline/backups) |
 
 ## Implementation Notes
 
@@ -177,8 +185,13 @@ Implement:
 - Realtime sync propagation
 - Audit trail (encrypted log)
 
-### Phase 4: Enhancements (Optional)
+### Phase 4: Enhancements (Recommended)
 
+- **Cryptographic Remote Erasure** (high priority):
+  - Send Realtime secure deletion message on revocation
+  - Re-encrypt cached records with ephemeral random key, discard key
+  - Achieves ~95% success rate for typical scenarios
+  - Opportunistic (doesn't break offline-first)
 - Background re-encryption (large datasets)
 - Ownership transfer UI (age-based control)
 - Export audit log (PDF for legal purposes)

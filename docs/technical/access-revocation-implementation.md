@@ -18,6 +18,68 @@ When Adult A revokes Adult C's access to Emma's records:
 
 ## CryptoKit Implementation
 
+### Cryptographic Remote Erasure (Phase 4)
+
+```swift
+import CryptoKit
+
+func handleSecureDeletionMessage(familyMemberId: UUID) async throws {
+    // Step 1: Get current FMK (to decrypt cached records)
+    guard let currentFMK = try? getKeychainFMK(for: familyMemberId) else {
+        // Already deleted, nothing to do
+        return
+    }
+
+    // Step 2: Generate ephemeral poison FMK (random, never stored)
+    let ephemeralKey = SymmetricKey(size: .bits256)
+
+    // Step 3: Re-encrypt all cached records with ephemeral key
+    let cachedRecords = try await fetchLocalRecords(for: familyMemberId)
+
+    for record in cachedRecords {
+        // Decrypt with current FMK
+        let sealedBox = try AES.GCM.SealedBox(
+            nonce: AES.GCM.Nonce(data: record.nonce),
+            ciphertext: record.encryptedData,
+            tag: record.tag
+        )
+        let plaintext = try AES.GCM.open(sealedBox, using: currentFMK)
+
+        // Re-encrypt with ephemeral key
+        let newNonce = AES.GCM.Nonce()
+        let poisonedBox = try AES.GCM.seal(plaintext, using: ephemeralKey, nonce: newNonce)
+
+        // Overwrite local record
+        try await saveLocalRecord(
+            id: record.id,
+            encryptedData: poisonedBox.ciphertext,
+            nonce: newNonce.withUnsafeBytes { Data($0) },
+            tag: poisonedBox.tag
+        )
+    }
+
+    // Step 4: Delete all keys
+    try deleteWrappedFMK(for: familyMemberId)  // Core Data
+    try deleteKeychainFMK(for: familyMemberId) // Keychain
+
+    // Step 5: Ephemeral key goes out of scope → garbage collected
+    // Data is now PERMANENTLY undecryptable (no key exists anywhere)
+
+    // Step 6: Mark as revoked, hide from UI
+    try await markAsRevoked(familyMemberId)
+
+    // Step 7: Log to audit trail
+    try await logSecureDeletion(familyMemberId: familyMemberId)
+}
+```
+
+**Security Properties**:
+
+- ✅ **Cryptographic deletion**: Data re-encrypted with ephemeral key that's never stored
+- ✅ **Permanent**: Undecryptable even with full device forensics (key doesn't exist)
+- ✅ **No data loss for authorized users**: Only affects revoked user's cached copy
+- ⚠️ **Best-effort**: Requires device online, can't prevent backups or key extraction
+
 ### FMK Rotation
 
 ```swift
@@ -186,6 +248,23 @@ CREATE TABLE audit_log (
 
 ## Sync Strategy
 
+### Realtime Message Types
+
+```swift
+enum RevocationMessageType: String, Codable {
+    case fmkRotation = "fmk_rotation"          // Standard revocation (new FMK)
+    case secureDeletion = "secure_deletion"     // Cryptographic remote erasure
+}
+
+struct RevocationMessage: Codable {
+    let messageType: RevocationMessageType
+    let familyMemberId: UUID
+    let revokedUserId: UUID?  // Null for broadcasts
+    let newFMKVersion: Int?
+    let timestamp: Date
+}
+```
+
 ### Realtime Propagation
 
 ```
@@ -212,9 +291,14 @@ Adult B's iPhone (subscribed to Realtime):
 
 Adult C's iPhone (subscribed to Realtime):
 ├─ Receives notification: "Revocation event for Emma"
+├─ Message type: secure_deletion ⚠️
+├─ Executes cryptographic remote erasure:
+│   ├─ Re-encrypts all cached records with ephemeral key
+│   ├─ Deletes FMK from Keychain
+│   └─ Discards ephemeral key (data now undecryptable)
 ├─ Attempts to download new wrapped FMK → 403 Forbidden ❌
 ├─ Shows notification: "Access to Emma's records has been revoked"
-└─ App removes Emma's profile from UI (cannot decrypt) ✅
+└─ App removes Emma's profile from UI ✅
 ```
 
 ### Offline Device Handling
@@ -404,6 +488,8 @@ Settings > Emma's Profile > Access Log:
 
 ## Implementation Checklist
 
+### Phase 3 (Required)
+
 - [ ] Implement FMK rotation (CryptoKit)
 - [ ] Implement atomic transaction flow
 - [ ] Create revocation_events table
@@ -418,6 +504,16 @@ Settings > Emma's Profile > Access Log:
 - [ ] Write integration tests
 - [ ] Benchmark performance on real device
 - [ ] Document privacy limitations in UI
+
+### Phase 4 (Recommended - High Priority)
+
+- [ ] Implement cryptographic remote erasure
+- [ ] Add secure_deletion message type to Realtime handler
+- [ ] Implement ephemeral key generation and immediate discard
+- [ ] Test erasure success rate (online vs. offline scenarios)
+- [ ] Update privacy disclosures with improved revocation
+- [ ] Add audit logging for secure deletion events
+- [ ] Test timing attack resistance (extraction vs. erasure race)
 
 ## Related Documents
 
