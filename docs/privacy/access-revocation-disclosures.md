@@ -100,7 +100,7 @@ Technical details: We use AES-256-GCM encryption with keys derived from your pas
 
 When you share medical records:
 
-- You control who has access (granular per-family-member sharing)
+- You control who has access (granular per-person sharing)
 - Shared users can download and decrypt records on their devices
 - You can revoke access at any time
 
@@ -115,16 +115,14 @@ We prioritize privacy over remote control: the same encryption that protects you
 
 ### User Rights
 
-```
 You have the right to:
+
 - Export your data (JSON, PDF, CSV formats)
 - Delete your account (removes all data from our servers)
 - Revoke access from shared users (prevents future access)
 - View audit log (see who accessed your records and when)
 
-Note: Deleting your account removes data from our servers, but users
-you previously shared with may retain copies on their devices.
-```
+Note: Deleting your account removes data from our servers, but users you previously shared with may retain copies on their devices.
 
 ## Compliance
 

@@ -8,10 +8,10 @@
 
 The Family Medical App must support **cryptographic access revocation** - the ability to permanently remove a user's access to medical records, even if they've already downloaded encrypted data. This is critical for:
 
-- **Custody disputes**: Parent loses custody, must lose access to child's records
+- **Custody disputes**: Adult loses custody, must lose access to records
 - **Trust violations**: Previously authorized user becomes malicious
 - **Device theft**: Compromised device must be locked out
-- **Age-based control**: Child turns 16, revokes parent's access
+- **Age-based control**: Individual reaches age of majority, revokes access
 
 ### The Core Problem
 
@@ -86,7 +86,7 @@ When Adult A revokes Adult C's access to Emma's records:
 **Rationale**:
 
 - ⚠️ **Fundamental E2EE limitation**: Cannot guarantee deletion (offline devices, backups, etc.)
-- ✅ **Best-effort mitigation**: Cryptographic remote erasure (~95% success rate for typical scenarios)
+- ✅ **Best-effort mitigation**: Cryptographic remote erasure (works in most typical scenarios)
 - ✅ **Opportunistic**: Works when device is online and receives Realtime notification
 - ✅ **Offline-first preserved**: Deletion is opportunistic, not required for revocation
 
@@ -96,23 +96,24 @@ When Adult A revokes Adult C's access to Emma's records:
 - Re-encrypt cached records with random ephemeral key
 - Immediately discard the key (data becomes permanently undecryptable)
 - Success depends on timing: works if device online and receives message before key extraction
+- Works in most typical scenarios when device is online
 
 ### Special Cases
 
 #### Ownership Transfer (Age-Based Access Control)
 
-When a child turns 16 and gains control:
+When an individual reaches age of majority and gains control (or when transferring records for a vulnerable adult):
 
-1. Child creates independent account (own Master Key, separate from parent)
-2. Parent grants child access (standard ECDH sharing)
-3. Child becomes owner (re-wraps FMK with own Master Key)
-4. Child revokes parent (standard revocation flow) - or child can chose to continue to grant access to Adult(s) who already have access
+1. New owner creates independent account (own Master Key, separate from previous owner)
+2. Previous owner grants new owner access (standard ECDH sharing)
+3. New owner becomes owner (re-wraps FMK with own Master Key)
+4. New owner can revoke previous owner (standard revocation flow) - or can choose to continue granting access to previously authorized users
 
-Note: Some scenarios this is not possible. For example, when a person lacks capacity to look after their own medical decisions, under court order etc. The app cannot enforce this behaviour one way or the other.
+Note: The app will not automatically trigger or enforce age-based ownership transfers. The app may suggest ownership transfer at certain milestones, or require periodic access reviews and reconsent, but will never force a transfer. This respects diverse family situations including vulnerable adults, guardianship arrangements, court orders, and other circumstances where ongoing access is appropriate.
 
-**Trade-off**: Parent retains snapshot of pre-transfer records (cannot be avoided).
+**Trade-off**: Previous owner retains snapshot of pre-transfer records (cannot be avoided).
 
-**Disclosure**: Clearly communicate to both parent and child during transfer.
+**Disclosure**: Clearly communicate to both parties during transfer.
 
 ### Performance
 
@@ -140,7 +141,7 @@ Note: Some scenarios this is not possible. For example, when a person lacks capa
 
 1. **Historical Data Accessible**: Revoked user may retain pre-revocation records
    - **Severity**: Medium (fundamental E2EE limitation)
-   - **Mitigation**: Cryptographic remote erasure (~95% success rate), clear disclosure
+   - **Mitigation**: Cryptographic remote erasure (works in most typical scenarios), clear disclosure
    - **Accepted**: Cannot guarantee deletion (offline devices, backups, key extraction)
 
 2. **Re-encryption Cost**: ~500ms for 500 records
@@ -173,7 +174,7 @@ Note: Some scenarios this is not possible. For example, when a person lacks capa
 | **Full Re-encryption** | ~500ms performance cost | True cryptographic revocation (not UI-only) |
 | **Realtime Propagation** | Requires Supabase Realtime | Immediate revocation across devices |
 | **Atomic Revocation** | Transaction complexity | Data integrity (prevent partial state) |
-| **Historical Data Accessible** | Best-effort deletion (~95% success) | Opportunistic cryptographic erasure, can't guarantee (offline/backups) |
+| **Historical Data Accessible** | Best-effort deletion (works if device online) | Opportunistic cryptographic erasure, can't guarantee (offline/backups) |
 
 ## Implementation Notes
 
@@ -192,7 +193,7 @@ Implement:
 - **Cryptographic Remote Erasure** (high priority):
   - Send Realtime secure deletion message on revocation
   - Re-encrypt cached records with ephemeral random key, discard key
-  - Achieves ~95% success rate for typical scenarios
+  - Works in most typical scenarios when device is online
   - Opportunistic (doesn't break offline-first)
 - Background re-encryption (large datasets)
 - Ownership transfer UI (age-based control)

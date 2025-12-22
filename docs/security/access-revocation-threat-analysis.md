@@ -15,7 +15,7 @@ The revocation mechanism uses **full FMK re-encryption** to cryptographically pr
 | **Revoked User Decrypts New Records** | Adult C is revoked but attempts to decrypt records created after revocation | FMK rotation ensures new records encrypted with FMK_v2 (Adult C only has FMK_v1) ❌ Cannot decrypt |
 | **Revoked User Downloads New Records** | Adult C attempts to sync/download records after revocation | Server-side access control: `403 Forbidden` when Adult C queries for Emma's records (access grant deleted) |
 | **Revoked User Re-Uses Cached Keys** | Adult C has wrapped FMK_v1 cached locally, attempts to unwrap and decrypt | Unwrapping succeeds (Adult C has private key), but decryption fails (old FMK doesn't match new records encrypted with FMK_v2) |
-| **Revoked User Accesses Cached Records** | Adult C attempts to decrypt cached records downloaded before revocation | **Cryptographic Remote Erasure**: Device receives secure deletion message, re-encrypts cached data with ephemeral key, discards key → data permanently undecryptable (~95% success if device online) |
+| **Revoked User Accesses Cached Records** | Adult C attempts to decrypt cached records downloaded before revocation | **Cryptographic Remote Erasure**: Device receives secure deletion message, re-encrypts cached data with ephemeral key, discards key → data permanently undecryptable (works in most cases if device online) |
 | **Server MITM Prevents Revocation** | Malicious server intercepts revocation event, doesn't propagate | Devices detect version mismatch on next sync (local FMK_v1, server records use FMK_v2), self-heal by downloading new FMK |
 | **Partial Revocation** | Network failure during re-encryption leaves some records with old FMK | Atomic transactions: All-or-nothing re-encryption (rollback on failure) |
 | **Authorized User Loses Access** | Re-encryption accidentally revokes Adult B (authorized user) | New wrapped FMK_v2 generated for all authorized users (Adult A, Adult B), only Adult C excluded |
@@ -28,8 +28,8 @@ The revocation mechanism uses **full FMK re-encryption** to cryptographically pr
 | **Historical Data Access** | Adult C retains access to records downloaded before revocation | Adult C can decrypt old records with cached FMK_v1 | **Fundamental E2EE limitation**: Cannot retroactively un-decrypt downloaded data. Mitigation: Future records protected, grant access cautiously |
 | **Key Extraction Before Revocation** | Adult C extracts FMK_v1 from Keychain before revocation, stores externally | Adult C can decrypt historical records indefinitely | **Device security limitation**: iOS Keychain is secure, but determined attacker with device access can extract. Mitigation: Rely on iOS security, document limitation |
 | **Malicious Server Withholds Revocation** | Server doesn't send Realtime notification to Adult C's device | Adult C's app doesn't know access was revoked (still shows UI) | **UX issue, not cryptographic**: Adult C can't download new data (403), but UI may be stale. Mitigation: Pull-based sync eventually updates UI |
-| **Revoked Device Still Has Local Copy** | Adult C's device has full local Core Data database with all records | Adult C can continue viewing old records if offline during revocation | **Mitigated by cryptographic remote erasure**: If device online, cached data is re-encrypted with ephemeral key and made permanently undecryptable (~95% success rate) |
-| **Ownership Transfer Snapshot** | Adult A retains access to Emma's records from before age-16 transfer | Adult A has permanent snapshot (pre-transfer records) | **Legitimate owner limitation**: Adult A was legal owner during childhood. Mitigation: Disclose to Emma, matches real-world expectation |
+| **Revoked Device Still Has Local Copy** | Adult C's device has full local Core Data database with all records | Adult C can continue viewing old records if offline during revocation | **Mitigated by cryptographic remote erasure**: If device online, cached data is re-encrypted with ephemeral key and made permanently undecryptable (works in most typical scenarios) |
+| **Ownership Transfer Snapshot** | Previous owner retains access to records from before transfer | Previous owner has permanent snapshot (pre-transfer records) | **Legitimate owner limitation**: Previous owner had legal access during ownership period. Mitigation: Disclose to both parties, matches real-world expectation |
 
 ## Cryptographic Remote Erasure (Phase 4)
 
@@ -39,15 +39,15 @@ The revocation mechanism uses **full FMK re-encryption** to cryptographically pr
 
 | Scenario | Success Rate | Reasoning |
 |----------|-------------|-----------|
-| **Normal family member** (divorce, custody) | ~95% | Won't anticipate revocation, device likely online |
-| **Tech-savvy user** | ~70% | May understand E2EE, but timing matters |
-| **Sophisticated attacker** (premeditated) | ~30% | Can extract keys prophylactically |
-| **Offline device** | 0% (deferred) | Message queued, delivered when online |
-| **Device backed up before revocation** | 0% | Restore from backup bypasses erasure |
+| **Normal family member** (divorce, custody) | High | Won't anticipate revocation, device likely online |
+| **Tech-savvy user** | Moderate | May understand E2EE, but timing matters |
+| **Sophisticated attacker** (premeditated) | Low | Can extract keys prophylactically |
+| **Offline device** | Deferred | Message queued, delivered when online |
+| **Device backed up before revocation** | None | Restore from backup bypasses erasure |
 
 **Timing Attack**: There's a race between defender sending erasure message (~1 second via Realtime) and attacker extracting FMK from Keychain (~30-60 seconds). Most casual users won't extract keys, so success rate is high for typical scenarios.
 
-**Result**: Significant improvement over no erasure (0% → 95% for typical cases), but cannot guarantee deletion.
+**Result**: Significant improvement over no erasure for typical cases, but cannot guarantee deletion.
 
 ## Attacker Model
 
@@ -146,7 +146,7 @@ The following threats are **not** addressed by this design (out of scope for Pha
 2. **Historical data access acceptable**:
    - Fundamental E2EE limitation (industry-wide)
    - Cannot retroactively un-decrypt downloaded data
-   - Matches real-world expectation (parent had legitimate access during childhood)
+   - Matches real-world expectation (previous owner had legitimate access during ownership period)
 
 3. **Encryption protects against**:
    - ✅ Server breaches (zero-knowledge)
