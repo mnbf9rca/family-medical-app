@@ -169,7 +169,7 @@ We will implement a **recovery code-based multi-device system** with **last-writ
 
 3. **Encrypted Master Key on Server**: Server breach + recovery code leak = full data access
    - **Risk**: Requires both server compromise AND recovery code compromise
-   - **Mitigation**: 256-bit recovery code (strong), PBKDF2 100k iterations
+   - **Mitigation**: 256-bit recovery code (strong), Argon2id memory-hard derivation
    - **Trade-off**: Necessary for multi-device without iCloud Keychain
 
 4. **Device Revocation Not Cryptographic**: Revoked device can still decrypt local data

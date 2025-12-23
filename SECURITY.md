@@ -27,7 +27,7 @@ Results visible in the [Security tab](https://github.com/mnbf9rca/family-medical
 
 This app uses end-to-end encryption for medical data. See architectural decision records:
 
-- [ADR-0001: Crypto Architecture](docs/adr/adr-0001-crypto-architecture-first.md) - AES-256-GCM, PBKDF2
+- [ADR-0001: Crypto Architecture](docs/adr/adr-0001-crypto-architecture-first.md) - AES-256-GCM, Argon2id
 - [ADR-0002: Key Hierarchy](docs/adr/adr-0002-key-hierarchy.md) - Key management
 - [ADR-0005: Access Revocation](docs/adr/adr-0005-access-revocation.md) - Security model
 

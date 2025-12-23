@@ -80,6 +80,30 @@ func handleSecureDeletionMessage(familyMemberId: UUID) async throws {
 - ✅ **No data loss for authorized users**: Only affects revoked user's cached copy
 - ⚠️ **Best-effort**: Requires device online, can't prevent backups or key extraction
 
+### Security Note: Ephemeral Key Deallocation (Issue #46 Verification)
+
+**Verified**: Memory security for ephemeral keys is guaranteed through two mechanisms:
+
+1. **CryptoKit's `SymmetricKey`**: Automatically zeroes memory on ARC deallocation
+2. **libsodium (Swift-Sodium)**: Explicit `sodium_memzero()` for all sensitive data
+
+**Research Sources**:
+
+- [CryptoKit memory handling](https://medium.com/swlh/common-cryptographic-operations-in-swift-with-cryptokit-b30a4becc895) confirms automatic secure zeroing
+- [Ente CRYPTO_SPEC: "Key Zeroization: libsodium handles secure key deletion"](https://github.com/ente-io/ente/blob/main/mobile/native/ios/Packages/EnteCrypto/CRYPTO_SPEC.md)
+
+**Defense-in-depth recommendation**: Use explicit scope to ensure timely deallocation:
+
+```swift
+do {
+    let ephemeralKey = SymmetricKey(size: .bits256)
+    // Re-encrypt cached records
+    for record in cachedRecords {
+        // ... encryption with ephemeralKey
+    }
+} // ephemeralKey goes out of scope and is securely zeroed here
+```
+
 ### FMK Rotation
 
 ```swift
@@ -412,7 +436,7 @@ Adult A re-grants access to Adult C:
 Emma turns 16, wants control of her medical records:
 ├─ Step 1: Emma creates her own account
 │   ├─ Emma enters new password
-│   ├─ Derive Master Key_Emma (PBKDF2, independent from Adult A)
+│   ├─ Derive Master Key_Emma (Argon2id, independent from Adult A)
 │   ├─ Generate Curve25519 keypair_Emma
 │   └─ Store Master Key_Emma + Private Key_Emma in Emma's device Keychain
 │

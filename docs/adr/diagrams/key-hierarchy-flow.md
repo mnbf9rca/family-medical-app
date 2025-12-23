@@ -21,7 +21,7 @@ This diagram illustrates the complete key hierarchy from ADR-0002.
 ┌──────────────────────────────────────────────────────────────────────────┐
 │ TIER 1: MASTER KEY (password-derived)                                    │
 │                                                                           │
-│            PBKDF2-HMAC-SHA256 (100,000 iterations)                       │
+│            Argon2id (64 MB memory, 3 iterations)                          │
 │                        │                                                 │
 │                        ▼                                                 │
 │              ┌────────────────────┐                                      │

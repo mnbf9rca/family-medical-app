@@ -94,7 +94,7 @@ Your medical records are protected with end-to-end encryption. This means:
 - Only people you explicitly share with can decrypt your records
 - Even if our servers are breached, your data remains encrypted
 
-Technical details: We use AES-256-GCM encryption with keys derived from your password using PBKDF2 (100,000 iterations). Your encryption keys never leave your device unencrypted.
+Technical details: We use AES-256-GCM encryption with keys derived from your password using Argon2id (memory-hard key derivation). Your encryption keys never leave your device unencrypted.
 
 ### Access Control (Sharing and Revocation)
 
