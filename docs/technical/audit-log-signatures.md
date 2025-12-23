@@ -68,7 +68,7 @@ CREATE TABLE audit_log (
     occurred_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
     -- Tamper detection (Phase 4)
-    signature BYTEA NOT NULL,           -- HMAC-SHA256(log_id || occurred_at || encrypted_details)
+    signature BYTEA NOT NULL,           -- HMAC-SHA256 over ALL fields (see computeSignatureInput)
     previous_log_id UUID,               -- Points to previous entry (blockchain-style)
     previous_signature BYTEA            -- Signature of previous entry (chain integrity)
 );
@@ -125,18 +125,24 @@ func createAuditLogEntry(
     // 3. Derive signing key
     let signingKey = deriveAuditSigningKey(from: masterKey)
 
-    // 4. Compute HMAC signature over (id + timestamp + ciphertext)
-    var signatureInput = Data()
-    signatureInput.append(logId.uuidString.data(using: .utf8)!)
-    signatureInput.append(withUnsafeBytes(of: occurredAt.timeIntervalSince1970) { Data($0) })
-    signatureInput.append(sealedBox.ciphertext)
-    signatureInput.append(sealedBox.tag)
+    // 4. Get previous entry for chaining (blockchain-style)
+    let previousEntry = try await fetchLatestAuditLogEntry(familyMemberId: familyMemberId)
+
+    // 5. Compute HMAC signature over ALL security-critical fields
+    let signatureInput = computeSignatureInput(
+        logId: logId,
+        familyMemberId: familyMemberId,
+        eventType: eventType,
+        actorUserId: actorUserId,
+        targetUserId: targetUserId,
+        occurredAt: occurredAt,
+        encryptedDetails: sealedBox.combined,
+        previousLogId: previousEntry?.logId,
+        previousSignature: previousEntry?.signature
+    )
 
     let hmac = HMAC<SHA256>.authenticationCode(for: signatureInput, using: signingKey)
     let signature = Data(hmac)
-
-    // 5. Get previous entry for chaining (blockchain-style)
-    let previousEntry = try await fetchLatestAuditLogEntry(familyMemberId: familyMemberId)
 
     // 6. Create entry
     return AuditLogEntry(
@@ -145,7 +151,7 @@ func createAuditLogEntry(
         eventType: eventType,
         actorUserId: actorUserId,
         targetUserId: targetUserId,
-        encryptedDetails: sealedBox.ciphertext + sealedBox.tag,
+        encryptedDetails: sealedBox.combined,
         occurredAt: occurredAt,
         signature: signature,
         previousLogId: previousEntry?.logId,
@@ -154,7 +160,87 @@ func createAuditLogEntry(
 }
 ```
 
-#### 3. Verifying Audit Log Integrity
+#### 3. Canonical Signature Input Computation
+
+**Critical**: All security-relevant fields must be included in the HMAC to prevent tampering.
+
+```swift
+/// Compute canonical signature input for HMAC
+/// - Note: Covers ALL security-critical fields to prevent metadata tampering
+/// - Returns: Deterministic byte representation for signing
+func computeSignatureInput(
+    logId: UUID,
+    familyMemberId: UUID,
+    eventType: String,
+    actorUserId: UUID,
+    targetUserId: UUID?,
+    occurredAt: Date,
+    encryptedDetails: Data,
+    previousLogId: UUID?,
+    previousSignature: Data?
+) -> Data {
+    var input = Data()
+
+    // UUID fields: Use canonical string representation (uppercase, hyphenated)
+    input.append(logId.uuidString.uppercased().data(using: .utf8)!)
+    input.append(familyMemberId.uuidString.uppercased().data(using: .utf8)!)
+    input.append(actorUserId.uuidString.uppercased().data(using: .utf8)!)
+
+    // Optional UUID: Use empty string if nil
+    if let targetUserId = targetUserId {
+        input.append(targetUserId.uuidString.uppercased().data(using: .utf8)!)
+    } else {
+        input.append(Data())
+    }
+
+    // String fields: UTF-8 encoding
+    input.append(eventType.data(using: .utf8)!)
+
+    // Timestamp: ISO8601 string (millisecond precision, UTC)
+    // This ensures DB round-trip stability (TIMESTAMPTZ has microsecond precision)
+    let formatter = ISO8601DateFormatter()
+    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    let timestampString = formatter.string(from: occurredAt)
+    input.append(timestampString.data(using: .utf8)!)
+
+    // Binary fields: Append directly
+    input.append(encryptedDetails)
+
+    // Chain pointers (optional)
+    if let previousLogId = previousLogId {
+        input.append(previousLogId.uuidString.uppercased().data(using: .utf8)!)
+    } else {
+        input.append(Data())
+    }
+
+    if let previousSignature = previousSignature {
+        input.append(previousSignature)
+    } else {
+        input.append(Data())
+    }
+
+    return input
+}
+```
+
+**Design Decisions**:
+
+1. **UUID Format**: Uppercase hyphenated strings (e.g., "550E8400-E29B-41D4-A716-446655440000")
+   - Ensures consistency across platforms (PostgreSQL returns lowercase, Swift uses uppercase)
+
+2. **Timestamp Format**: ISO8601 with fractional seconds
+   - Database-independent (survives TIMESTAMPTZ round-trip)
+   - Human-readable for debugging
+   - Millisecond precision (truncates microseconds to avoid floating-point variance)
+
+3. **Optional Fields**: Empty Data() for nil values
+   - Prevents ambiguity (nil vs empty string)
+   - Preserves signature validity when fields are NULL
+
+4. **Field Order**: Fixed order prevents reordering attacks
+   - logId → familyMemberId → actorUserId → targetUserId → eventType → timestamp → encryptedDetails → previousLogId → previousSignature
+
+#### 4. Verifying Audit Log Integrity
 
 ```swift
 /// Verify entire audit log chain for tampering
@@ -169,10 +255,17 @@ func verifyAuditLogIntegrity(
 
     // Verify each entry's signature
     for entry in entries {
-        var signatureInput = Data()
-        signatureInput.append(entry.logId.uuidString.data(using: .utf8)!)
-        signatureInput.append(withUnsafeBytes(of: entry.occurredAt.timeIntervalSince1970) { Data($0) })
-        signatureInput.append(entry.encryptedDetails)
+        let signatureInput = computeSignatureInput(
+            logId: entry.logId,
+            familyMemberId: entry.familyMemberId,
+            eventType: entry.eventType,
+            actorUserId: entry.actorUserId,
+            targetUserId: entry.targetUserId,
+            occurredAt: entry.occurredAt,
+            encryptedDetails: entry.encryptedDetails,
+            previousLogId: entry.previousLogId,
+            previousSignature: entry.previousSignature
+        )
 
         let computedHMAC = HMAC<SHA256>.authenticationCode(for: signatureInput, using: signingKey)
 
@@ -317,11 +410,18 @@ func migrateAuditLogToSigned(masterKey: SymmetricKey) async throws {
     var previousEntry: AuditLogEntry? = nil
 
     for entry in existingEntries {
-        // Compute signature for existing entry
-        var signatureInput = Data()
-        signatureInput.append(entry.logId.uuidString.data(using: .utf8)!)
-        signatureInput.append(withUnsafeBytes(of: entry.occurredAt.timeIntervalSince1970) { Data($0) })
-        signatureInput.append(entry.encryptedDetails)
+        // Compute signature for existing entry using canonical input
+        let signatureInput = computeSignatureInput(
+            logId: entry.logId,
+            familyMemberId: entry.familyMemberId,
+            eventType: entry.eventType,
+            actorUserId: entry.actorUserId,
+            targetUserId: entry.targetUserId,
+            occurredAt: entry.occurredAt,
+            encryptedDetails: entry.encryptedDetails,
+            previousLogId: previousEntry?.logId,
+            previousSignature: previousEntry?.signature
+        )
 
         let signature = HMAC<SHA256>.authenticationCode(for: signatureInput, using: signingKey)
 

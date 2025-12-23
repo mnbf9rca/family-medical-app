@@ -922,7 +922,7 @@ func encryptMasterKey(masterKey: SymmetricKey, recoveryCode: [String], userId: U
     // Derive recovery key using Argon2id
     guard let recoveryKey = sodium.pwHash.hash(
         outputLength: 32,
-        passwd: recoveryPhrase.bytes,
+        passwd: Array(recoveryPhrase.utf8),
         salt: salt,
         opsLimit: sodium.pwHash.OpsLimitModerate,    // ~3 iterations
         memLimit: sodium.pwHash.MemLimitModerate,    // ~64 MB
@@ -955,8 +955,8 @@ func decryptMasterKey(encryptedBlob: Data, recoveryCode: [String], salt: Data) t
     // Client fetches salt from server: GET /auth/recovery-salt?userId={userId}
     guard let recoveryKey = sodium.pwHash.hash(
         outputLength: 32,
-        passwd: recoveryPhrase.bytes,
-        salt: salt.bytes,
+        passwd: Array(recoveryPhrase.utf8),
+        salt: [UInt8](salt),
         opsLimit: sodium.pwHash.OpsLimitModerate,    // Same as encryption
         memLimit: sodium.pwHash.MemLimitModerate,    // Same as encryption
         alg: .Argon2ID13

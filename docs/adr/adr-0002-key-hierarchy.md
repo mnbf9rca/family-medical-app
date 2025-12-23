@@ -115,8 +115,8 @@ func deriveMasterKey(from password: String, salt: Data) -> SymmetricKey? {
     // Derive key using Argon2id
     guard let derivedKey = sodium.pwHash.hash(
         outputLength: 32,
-        passwd: password.bytes,
-        salt: salt.bytes,
+        passwd: Array(password.utf8),
+        salt: [UInt8](salt),
         opsLimit: sodium.pwHash.OpsLimitModerate,    // ~3 iterations
         memLimit: sodium.pwHash.MemLimitModerate,    // ~64 MB
         alg: .Argon2ID13
@@ -127,6 +127,24 @@ func deriveMasterKey(from password: String, salt: Data) -> SymmetricKey? {
     return SymmetricKey(data: Data(derivedKey))
 }
 ```
+
+**Parameter Mapping**:
+
+The `OpsLimitModerate` and `MemLimitModerate` constants map to specific Argon2id parameters:
+
+- `OpsLimitModerate` = 3 iterations (time cost)
+- `MemLimitModerate` = 67,108,864 bytes = 64 MB (memory cost)
+- Algorithm: `Argon2ID13` (Argon2id version 1.3)
+
+**Important**: These constants are defined by libsodium and are stable across versions. However, if libsodium updates these defaults in a future release, the code above should be updated to use explicit numeric values to maintain consistent KDF strength:
+
+```swift
+// Alternative: Explicit parameters (not dependent on libsodium defaults)
+opsLimit: 3,              // Explicit iteration count
+memLimit: 67_108_864,     // Explicit 64 MB
+```
+
+For Phase 1 implementation, consider adding a compile-time assertion to detect if libsodium changes these constants.
 
 **Salt Generation**:
 

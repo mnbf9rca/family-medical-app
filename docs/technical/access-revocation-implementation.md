@@ -87,10 +87,16 @@ func handleSecureDeletionMessage(familyMemberId: UUID) async throws {
 1. **CryptoKit's `SymmetricKey`**: Automatically zeroes memory on ARC deallocation
 2. **libsodium (Swift-Sodium)**: Explicit `sodium_memzero()` for all sensitive data
 
-**Research Sources**:
+**Primary Sources**:
 
-- [CryptoKit memory handling](https://medium.com/swlh/common-cryptographic-operations-in-swift-with-cryptokit-b30a4becc895) confirms automatic secure zeroing
-- [Ente CRYPTO_SPEC: "Key Zeroization: libsodium handles secure key deletion"](https://github.com/ente-io/ente/blob/main/mobile/native/ios/Packages/EnteCrypto/CRYPTO_SPEC.md)
+- **Apple CryptoKit**: [`SymmetricKey`](https://developer.apple.com/documentation/cryptokit/symmetrickey) conforms to `ContiguousBytes` protocol and uses secure memory management. Keys are stored in protected memory and automatically zeroed when deallocated per [Apple's Secure Coding Guide](https://developer.apple.com/library/archive/documentation/Security/Conceptual/SecureCodingGuide/Introduction.html).
+- **libsodium source**: [`sodium_memzero()`](https://github.com/jedisct1/libsodium/blob/master/src/libsodium/sodium/utils.c#L102-L130) implementation uses compiler barriers to prevent optimization, ensuring sensitive data is actually zeroed.
+- **libsodium documentation**: [Memory locking and protection](https://doc.libsodium.org/memory_management) confirms all secret keys are automatically wiped from memory.
+
+**Secondary Sources** (confirming implementation):
+
+- [CryptoKit memory handling](https://medium.com/swlh/common-cryptographic-operations-in-swift-with-cryptokit-b30a4becc895) - community verification
+- [Ente CRYPTO_SPEC](https://github.com/ente-io/ente/blob/main/mobile/native/ios/Packages/EnteCrypto/CRYPTO_SPEC.md) - production E2EE implementation using same approach
 
 **Defense-in-depth recommendation**: Use explicit scope to ensure timely deallocation:
 
