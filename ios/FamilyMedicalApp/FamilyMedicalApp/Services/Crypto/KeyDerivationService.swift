@@ -36,8 +36,8 @@ final class KeyDerivationService: KeyDerivationServiceProtocol {
     private let outputLength = 32 // 256-bit key
 
     func derivePrimaryKey(from password: String, salt: Data) throws -> SymmetricKey {
-        guard salt.count == 32 else {
-            throw CryptoError.invalidSalt("Salt must be 32 bytes, got \(salt.count)")
+        guard salt.count == 16 else {
+            throw CryptoError.invalidSalt("Salt must be 16 bytes, got \(salt.count)")
         }
 
         let passwordData = Data(password.utf8)
@@ -64,9 +64,9 @@ final class KeyDerivationService: KeyDerivationServiceProtocol {
     }
 
     func generateSalt() -> Data {
-        // Generate 32 bytes of cryptographically secure random data
-        var salt = [UInt8](repeating: 0, count: 32)
-        _ = SecRandomCopyBytes(kSecRandomDefault, 32, &salt)
+        // Generate 16 bytes of cryptographically secure random data (Argon2id salt size)
+        var salt = [UInt8](repeating: 0, count: 16)
+        _ = SecRandomCopyBytes(kSecRandomDefault, 16, &salt)
         return Data(salt)
     }
 

@@ -62,7 +62,7 @@ struct KeyDerivationServiceTests {
         let password = "password"
         let shortSalt = Data([0x01, 0x02, 0x03]) // Only 3 bytes
 
-        #expect(throws: CryptoError.invalidSalt("Salt must be 32 bytes, got 3")) {
+        #expect(throws: CryptoError.invalidSalt("Salt must be 16 bytes, got 3")) {
             _ = try service.derivePrimaryKey(from: password, salt: shortSalt)
         }
     }
@@ -81,11 +81,11 @@ struct KeyDerivationServiceTests {
         #expect(keyData.count == 32)
     }
 
-    /// Test salt generation produces 32 bytes
+    /// Test salt generation produces 16 bytes (Argon2id requirement)
     @Test
     func generateSalt_correctSize() {
         let salt = service.generateSalt()
-        #expect(salt.count == 32)
+        #expect(salt.count == 16)
     }
 
     /// Test salt generation produces unique values
