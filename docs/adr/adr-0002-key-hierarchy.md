@@ -241,26 +241,23 @@ com.family-medical-app.fmk.<familyMemberID>
 
 ##### Scenario C: Periodic Rotation (Preventive)
 
-**Recommendation**: Not required for hobby app scope.
+**Decision**: No periodic rotation.
 
-**Rationale**:
+**Rationale**: Medical records are archives (like password vaults), not ephemeral communications. Users must be able to access records years later. NIST's 2024 guidance favors event-driven rotation over time-based for scenarios without mature automation infrastructure. Periodic rotation with full re-encryption doesn't provide forward secrecy (historical records re-encrypted with current key).
 
-- Medical records are static (not high-value real-time communications)
-- Rotation cost (re-encryption) outweighs benefit for small dataset
-- Can be added in Phase 4 if needed
+**If compromised**: User triggers event-driven rotation (Scenario B above).
+
+**Detailed analysis**: See `docs/security/key-rotation-strategy.md`. Resolves Issue #50.
 
 #### 6. Forward Secrecy Considerations
 
-**Decision**: User identity keypair is NOT rotated (no perfect forward secrecy).
+**Decision**: No forward secrecy (keys are long-lived).
 
-**Rationale**:
+**Rationale**: Medical records are archives requiring long-term access. Forward secrecy (like Signal) prioritizes ephemeral communications over historical access - the wrong trade-off for medical records. Aligns with password manager industry standard (1Password, Bitwarden).
 
-- ⚠️ **Trade-off**: If User Private Key is compromised, past shared FMKs can be unwrapped
-- ✅ **Acceptable**: Medical records are not time-sensitive communications
-- ✅ **KISS**: Rotating identity keys breaks all sharing relationships
-- ✅ **Mitigation**: FMK rotation (Scenario B) provides limited forward secrecy
+**Mitigation**: Event-driven rotation on compromise (Scenario B), iOS Keychain security.
 
-**Future Enhancement**: Could implement key rotation for User Identity in Phase 4.
+**See**: `docs/security/key-rotation-strategy.md` for detailed analysis.
 
 ### Key Derivation Flow Examples
 
@@ -405,11 +402,22 @@ Add:
 
 ## References
 
+### Design Documents
+
 - Issue #36: Research E2EE Sharing Patterns
+- Issue #50: Design periodic key rotation strategy
 - `docs/research/e2ee-sharing-patterns-research.md`
 - `docs/research/poc-hybrid-family-keys.swift`
+- `docs/security/key-rotation-strategy.md` - Forward secrecy vs emergency access analysis
+
+### Configuration
+
 - AGENTS.md: Cryptography specifications
+
+### Standards
+
 - [NIST SP 800-132](https://csrc.nist.gov/publications/detail/sp/800-132/final): Password-Based Key Derivation
+- [NIST SP 800-57](https://csrc.nist.gov/publications/detail/sp/800-57-part-1/rev-5/final): Key Management (Section 8.2.4: Periodic Key Rotation)
 - [RFC 7748](https://datatracker.ietf.org/doc/html/rfc7748): Elliptic Curves for Security (X25519)
 - [NIST SP 800-38F](https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-38F.pdf): AES Key Wrapping
 

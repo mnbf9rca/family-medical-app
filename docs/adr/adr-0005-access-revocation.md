@@ -195,10 +195,14 @@ Implement:
   - Re-encrypt cached records with ephemeral random key, discard key
   - Works in most typical scenarios when device is online
   - Opportunistic (doesn't break offline-first)
+- **HMAC Signatures on Audit Entries** (tamper detection):
+  - Add cryptographic signatures to audit log entries
+  - Blockchain-style chaining prevents modification/deletion/reordering
+  - See `docs/technical/audit-log-signatures.md` for complete design
+  - Resolves Issue #47
 - Background re-encryption (large datasets)
 - Ownership transfer UI (age-based control)
 - Export audit log (PDF for legal purposes)
-- Digital signatures on audit entries (non-repudiation)
 - Log securely shared between all sharing participants so there's a single log
 
 ## Related Decisions
@@ -220,6 +224,7 @@ Implement:
 For implementation details, see:
 
 - `/docs/technical/access-revocation-implementation.md` - Code examples, CryptoKit usage
+- `/docs/technical/audit-log-signatures.md` - Audit log tamper detection (Phase 4)
 - `/docs/security/access-revocation-threat-analysis.md` - Comprehensive threat model
 - `/docs/privacy/access-revocation-disclosures.md` - Privacy policy implications, GDPR/HIPAA
 
