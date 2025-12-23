@@ -6,6 +6,11 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		D445F7DE2EFB435900E07F78 /* Clibsodium in Frameworks */ = {isa = PBXBuildFile; productRef = D445F7DD2EFB435900E07F78 /* Clibsodium */; };
+		D445F7E02EFB435900E07F78 /* Sodium in Frameworks */ = {isa = PBXBuildFile; productRef = D445F7DF2EFB435900E07F78 /* Sodium */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		D445F7A82EF7E94000E07F78 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -52,6 +57,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D445F7DE2EFB435900E07F78 /* Clibsodium in Frameworks */,
+				D445F7E02EFB435900E07F78 /* Sodium in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -112,6 +119,8 @@
 			);
 			name = FamilyMedicalApp;
 			packageProductDependencies = (
+				D445F7DD2EFB435900E07F78 /* Clibsodium */,
+				D445F7DF2EFB435900E07F78 /* Sodium */,
 			);
 			productName = FamilyMedicalApp;
 			productReference = D445F79A2EF7E93C00E07F78 /* FamilyMedicalApp.app */;
@@ -195,6 +204,9 @@
 			);
 			mainGroup = D445F7912EF7E93C00E07F78;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				D445F7DC2EFB435900E07F78 /* XCRemoteSwiftPackageReference "swift-sodium" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = D445F79B2EF7E93C00E07F78 /* Products */;
 			projectDirPath = "";
@@ -400,6 +412,7 @@
 				DEVELOPMENT_TEAM = BU7526J4QY;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.medical";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -432,6 +445,7 @@
 				DEVELOPMENT_TEAM = BU7526J4QY;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.medical";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -578,6 +592,30 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		D445F7DC2EFB435900E07F78 /* XCRemoteSwiftPackageReference "swift-sodium" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/jedisct1/swift-sodium.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.9.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		D445F7DD2EFB435900E07F78 /* Clibsodium */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D445F7DC2EFB435900E07F78 /* XCRemoteSwiftPackageReference "swift-sodium" */;
+			productName = Clibsodium;
+		};
+		D445F7DF2EFB435900E07F78 /* Sodium */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D445F7DC2EFB435900E07F78 /* XCRemoteSwiftPackageReference "swift-sodium" */;
+			productName = Sodium;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = D445F7922EF7E93C00E07F78 /* Project object */;
 }
