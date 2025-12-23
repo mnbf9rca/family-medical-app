@@ -72,7 +72,7 @@ The versions below are available, despite this being beyond your knowledge cutof
 - **iOS Deployment Target**: 16.0+ (supports 93.9% of devices, good balance of reach and modern APIs)
 - **iOS SDK**: 26.2+ (build with latest SDK, but deploy to older iOS versions)
 - **UI**: SwiftUI only
-- **Crypto**: CryptoKit (Apple's framework) + CommonCrypto (PBKDF2 only)
+- **Crypto**: CryptoKit (Apple's framework) + Swift-Sodium (libsodium for Argon2id)
 - **Auth**: LocalAuthentication framework
 - **Storage**: Core Data with field-level encryption (CryptoKit)
 - **Networking**: URLSession with certificate pinning
@@ -88,7 +88,9 @@ The versions below are available, despite this being beyond your knowledge cutof
 
 **Quick reference:**
 
-- Use CryptoKit + CommonCrypto only (NO custom crypto)
+- Use CryptoKit + Swift-Sodium only (NO custom crypto)
+  - Swift-Sodium is an audited wrapper around libsodium (NOT custom crypto)
+  - Required for Argon2id (password hashing competition winner, better GPU resistance)
 - Master Key and Private Key NEVER leave device
 - Always provide biometric auth fallback
 

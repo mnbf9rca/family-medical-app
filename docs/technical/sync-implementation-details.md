@@ -70,7 +70,7 @@ We will implement a **recovery code-based multi-device system** with **last-writ
 Setup: Adult A's iPhone (Primary Device)
 ────────────────────────────────────────
 1. User creates account with password
-2. App derives Master Key (PBKDF2)
+2. App derives Master Key (Argon2id via Swift-Sodium)
 3. App generates Curve25519 keypair
 4. App generates random Recovery Code (256-bit)
 5. App encrypts Master Key with Recovery Code
@@ -122,7 +122,7 @@ Conflict: Simultaneous Edits
 ```
 Account Creation (iPhone):
 ├─ Generate recovery code: 24 random words from BIP39 wordlist
-├─ Derive recovery key: PBKDF2(recovery code, salt, 100k iterations)
+├─ Derive recovery key: Argon2id(recovery code, salt, 64MB memory, 3 iterations)
 ├─ Encrypt Master Key: AES-256-GCM(Master Key, recovery key)
 ├─ Upload to server: { user_id, encrypted_master_key, salt }
 ├─ Show recovery code to user: "Write this down! Store securely!"
@@ -132,7 +132,7 @@ New Device Setup (iPad):
 ├─ User signs in (Supabase auth)
 ├─ App prompts: "Enter Recovery Code"
 ├─ User enters 24 words
-├─ App derives recovery key: PBKDF2(recovery code, salt, 100k iterations)
+├─ App derives recovery key: Argon2id(recovery code, salt, 64MB memory, 3 iterations)
 ├─ App downloads encrypted Master Key from server
 ├─ App decrypts: Master Key = AES-256-GCM Decrypt(encrypted blob, recovery key)
 ├─ App stores Master Key in Keychain (device-only)
@@ -911,78 +911,63 @@ func generateRecoveryCode() -> [String] {
 
 // Encrypt Master Key with recovery code
 func encryptMasterKey(masterKey: SymmetricKey, recoveryCode: [String], userId: UUID) throws -> (encryptedMasterKey: Data, salt: Data) {
-    // Derive recovery key from 24-word code
+    let sodium = Sodium()
     let recoveryPhrase = recoveryCode.joined(separator: " ")
 
     // Generate random salt per user (prevents precomputation attacks)
-    var salt = Data(count: 32)
-    let result = salt.withUnsafeMutableBytes { saltBytes in
-        SecRandomCopyBytes(kSecRandomDefault, 32, saltBytes.baseAddress!)
-    }
-    guard result == errSecSuccess else { throw CryptoError.randomGenerationFailed }
-
-    var recoveryKeyData = Data(count: 32)
-    let status = recoveryKeyData.withUnsafeMutableBytes { derivedKeyBytes in
-        recoveryPhrase.data(using: .utf8)!.withUnsafeBytes { phraseBytes in
-            salt.withUnsafeBytes { saltBytes in
-                CCKeyDerivationPBKDF(
-                    CCPBKDFAlgorithm(kCCPBKDF2),
-                    phraseBytes.baseAddress, phraseBytes.count,
-                    saltBytes.baseAddress, saltBytes.count,
-                    CCPseudoRandomAlgorithm(kCCPRFHmacAlgSHA256),
-                    100_000,  // iterations
-                    derivedKeyBytes.baseAddress, 32
-                )
-            }
-        }
+    guard let salt = sodium.randomBytes.buf(length: 32) else {
+        throw CryptoError.randomGenerationFailed
     }
 
-    guard status == kCCSuccess else {
+    // Derive recovery key using Argon2id
+    guard let recoveryKey = sodium.pwHash.hash(
+        outputLength: 32,
+        passwd: Array(recoveryPhrase.utf8),
+        salt: salt,
+        opsLimit: sodium.pwHash.OpsLimitModerate,    // ~3 iterations
+        memLimit: sodium.pwHash.MemLimitModerate,    // ~64 MB
+        alg: .Argon2ID13
+    ) else {
         throw CryptoError.keyDerivationFailed
     }
 
-    let recoveryKey = SymmetricKey(data: recoveryKeyData)
-
-    // Encrypt Master Key with recovery key
+    // Encrypt Master Key with AES-GCM using the derived recovery key
+    let symmetricKey = SymmetricKey(data: Data(recoveryKey))
     let nonce = AES.GCM.Nonce()
-    let sealedBox = try AES.GCM.seal(masterKey.withUnsafeBytes { Data($0) },
-                                      using: recoveryKey,
-                                      nonce: nonce)
+    let sealedBox = try AES.GCM.seal(
+        masterKey.withUnsafeBytes { Data($0) },
+        using: symmetricKey,
+        nonce: nonce
+    )
 
     // Return: encrypted master key and salt
     // Salt must be stored alongside encrypted_master_key on server
     // Server stores: { encrypted_master_key: Data, recovery_salt: Data }
-    return (encryptedMasterKey: sealedBox.combined!, salt: salt)
+    return (encryptedMasterKey: sealedBox.combined!, salt: Data(salt))
 }
 
 // Decrypt Master Key on new device
 func decryptMasterKey(encryptedBlob: Data, recoveryCode: [String], salt: Data) throws -> SymmetricKey {
-    // Derive same recovery key using the stored salt
-    // Client fetches salt from server: GET /auth/recovery-salt?userId={userId}
+    let sodium = Sodium()
     let recoveryPhrase = recoveryCode.joined(separator: " ")
 
-    var recoveryKeyData = Data(count: 32)
-    let status = recoveryKeyData.withUnsafeMutableBytes { derivedKeyBytes in
-        recoveryPhrase.data(using: .utf8)!.withUnsafeBytes { phraseBytes in
-            salt.withUnsafeBytes { saltBytes in
-                CCKeyDerivationPBKDF(
-                    CCPBKDFAlgorithm(kCCPBKDF2),
-                    phraseBytes.baseAddress, phraseBytes.count,
-                    saltBytes.baseAddress, saltBytes.count,
-                    CCPseudoRandomAlgorithm(kCCPRFHmacAlgSHA256),
-                    100_000,  // Same iterations as encryption
-                    derivedKeyBytes.baseAddress, 32
-                )
-            }
-        }
+    // Derive same recovery key using the stored salt
+    // Client fetches salt from server: GET /auth/recovery-salt?userId={userId}
+    guard let recoveryKey = sodium.pwHash.hash(
+        outputLength: 32,
+        passwd: Array(recoveryPhrase.utf8),
+        salt: [UInt8](salt),
+        opsLimit: sodium.pwHash.OpsLimitModerate,    // Same as encryption
+        memLimit: sodium.pwHash.MemLimitModerate,    // Same as encryption
+        alg: .Argon2ID13
+    ) else {
+        throw CryptoError.keyDerivationFailed
     }
-    guard status == kCCSuccess else { throw CryptoError.keyDerivationFailed }
 
-    let recoveryKey = SymmetricKey(data: recoveryKeyData)
-
-    // Decrypt Master Key
+    // Decrypt Master Key using AES-GCM
+    let symmetricKey = SymmetricKey(data: Data(recoveryKey))
     let sealedBox = try AES.GCM.SealedBox(combined: encryptedBlob)
-    let masterKeyData = try AES.GCM.open(sealedBox, using: recoveryKey)
+    let masterKeyData = try AES.GCM.open(sealedBox, using: symmetricKey)
 
     return SymmetricKey(data: masterKeyData)
 }
@@ -1052,7 +1037,7 @@ func decryptRecord(encrypted: EncryptedRecord, fmk: SymmetricKey) throws -> Medi
 
 3. **Master Key on Server (Encrypted)**: Encrypted Master Key stored on server
    - **Risk**: If recovery code is weak/leaked + server breached → data decryptable
-   - **Mitigation**: 256-bit recovery code (strong), PBKDF2 100k iterations
+   - **Mitigation**: 256-bit recovery code (strong), Argon2id memory-hard derivation
    - **Accepted Trade-off**: Necessary for multi-device without iCloud Keychain
 
 4. **Device Revocation Not Cryptographic**: Revoked device can still decrypt local data

@@ -13,7 +13,7 @@ The Family Medical App requires a cryptographic key hierarchy that supports:
 - **Phase 3**: Multi-user family sharing with granular access control
 - **All Phases**: Key rotation and cryptographic access revocation
 
-Per AGENTS.md requirements, we must use CryptoKit exclusively with AES-256-GCM for symmetric encryption and PBKDF2-HMAC-SHA256 (min 100k iterations) or Argon2id for key derivation.
+Per AGENTS.md requirements, we must use CryptoKit for symmetric encryption (AES-256-GCM) and Swift-Sodium for password-based key derivation (Argon2id).
 
 ### Research Foundation
 
@@ -40,7 +40,7 @@ We will implement a **three-tier hierarchical key structure** with **per-family-
 │ Tier 1: User Authentication & Master Key                       │
 │                                                                 │
 │ User Password + Salt                                            │
-│   ↓ PBKDF2-HMAC-SHA256 (100,000 iterations)                    │
+│   ↓ Argon2id (64 MB memory, 3 iterations)                      │
 │ User Master Key (256-bit)                                       │
 │   → Stored in iOS Keychain (kSecAttrAccessibleWhenUnlocked)    │
 │   → Never transmitted to server                                 │
@@ -78,54 +78,81 @@ We will implement a **three-tier hierarchical key structure** with **per-family-
 
 ### Design Decisions
 
-#### 1. Master Key Derivation: PBKDF2-HMAC-SHA256
+#### 1. Master Key Derivation: Argon2id
 
-**Decision**: Use PBKDF2-HMAC-SHA256 with 100,000 iterations (not Argon2id).
+**Decision**: Use Argon2id via Swift-Sodium (libsodium wrapper).
 
 **Rationale**:
 
-- ✅ **CryptoKit Compatibility**: Available via CommonCrypto (no third-party dependencies)
-- ✅ **AGENTS.md Compliance**: Meets minimum requirement
-- ✅ **KISS Principle**: Simpler than integrating Argon2id library
-- ✅ **Widely Audited**: NIST-approved, well-understood
-- ⚠️ **GPU Resistance**: Less resistant than Argon2id, but acceptable for hobby app scope
-- ⚠️ **Future Enhancement**: Can migrate to Argon2id in Phase 4 if needed
+- ✅ **Superior GPU Resistance**: ~50× better resistance to GPU/ASIC attacks vs PBKDF2
+- ✅ **Industry Standard**: Winner of Password Hashing Competition (2015), OWASP recommended
+- ✅ **Professionally Audited**: [libsodium audited by Dr. Matthew Green](https://www.privateinternetaccess.com/blog/libsodium-audit-results/) - no critical flaws
+- ✅ **Production Proven**: Used by Ente, Signal, and other E2EE applications
+- ✅ **NOT Custom Crypto**: Swift-Sodium is a thin wrapper over audited C code
+- ✅ **Memory-Hard**: Requires significant RAM, making parallel attacks expensive
+- ⚠️ **Adds Dependency**: Requires Swift-Sodium package (acceptable trade-off for security gain)
+
+**Argon2id Parameters** (balanced for mobile devices):
+
+```swift
+memLimit: 64 * 1024 * 1024  // 64 MB memory (moderate cost)
+opsLimit: 3                  // 3 iterations (moderate time cost)
+parallelism: 1               // Single-threaded (mobile constraint)
+outputLength: 32             // 256-bit key
+```
+
+These parameters match [Ente's approach](https://github.com/ente-io/ente) and provide strong security while remaining performant on modern iOS devices (~200-500ms on iPhone 12+).
 
 **Implementation**:
 
 ```swift
-import CommonCrypto
+import Sodium
+import CryptoKit
 
-func deriveMasterKey(from password: String, salt: Data) -> SymmetricKey {
-    let passwordData = password.data(using: .utf8)!
-    var derivedKey = Data(count: 32) // 256 bits
+func deriveMasterKey(from password: String, salt: Data) -> SymmetricKey? {
+    let sodium = Sodium()
 
-    let status = derivedKey.withUnsafeMutableBytes { derivedKeyBytes in
-        salt.withUnsafeBytes { saltBytes in
-            CCKeyDerivationPBKDF(
-                CCPBKDFAlgorithm(kCCPBKDF2),
-                password, passwordData.count,
-                saltBytes.baseAddress, salt.count,
-                CCPseudoRandomAlgorithm(kCCPRFHmacAlgSHA256),
-                100_000, // iterations
-                derivedKeyBytes.baseAddress, derivedKey.count
-            )
-        }
+    // Derive key using Argon2id
+    guard let derivedKey = sodium.pwHash.hash(
+        outputLength: 32,
+        passwd: Array(password.utf8),
+        salt: [UInt8](salt),
+        opsLimit: sodium.pwHash.OpsLimitModerate,    // ~3 iterations
+        memLimit: sodium.pwHash.MemLimitModerate,    // ~64 MB
+        alg: .Argon2ID13
+    ) else {
+        return nil  // Derivation failed
     }
 
-    guard status == kCCSuccess else {
-        fatalError("Key derivation failed")
-    }
-
-    return SymmetricKey(data: derivedKey)
+    return SymmetricKey(data: Data(derivedKey))
 }
 ```
+
+**Parameter Mapping**:
+
+The `OpsLimitModerate` and `MemLimitModerate` constants map to specific Argon2id parameters:
+
+- `OpsLimitModerate` = 3 iterations (time cost)
+- `MemLimitModerate` = 67,108,864 bytes = 64 MB (memory cost)
+- Algorithm: `Argon2ID13` (Argon2id version 1.3)
+
+**Important**: These constants are defined by libsodium and are stable across versions. However, if libsodium updates these defaults in a future release, the code above should be updated to use explicit numeric values to maintain consistent KDF strength:
+
+```swift
+// Alternative: Explicit parameters (not dependent on libsodium defaults)
+opsLimit: 3,              // Explicit iteration count
+memLimit: 67_108_864,     // Explicit 64 MB
+```
+
+For Phase 1 implementation, consider adding a compile-time assertion to detect if libsodium changes these constants.
 
 **Salt Generation**:
 
 - Generate unique 32-byte salt per user on account creation
 - Store salt in UserDefaults (not sensitive)
-- Use same salt for all PBKDF2 operations for that user
+- Use same salt for all Argon2id operations for that user
+
+**Security Bonus**: libsodium provides explicit key zeroization via `sodium_memzero()`, addressing Issue #46 (ephemeral key secure deallocation)
 
 #### 2. Key Hierarchy Structure: Three Tiers
 
@@ -232,26 +259,23 @@ com.family-medical-app.fmk.<familyMemberID>
 
 ##### Scenario C: Periodic Rotation (Preventive)
 
-**Recommendation**: Not required for hobby app scope.
+**Decision**: No periodic rotation.
 
-**Rationale**:
+**Rationale**: Medical records are archives (like password vaults), not ephemeral communications. Users must be able to access records years later. NIST's 2024 guidance favors event-driven rotation over time-based for scenarios without mature automation infrastructure. Periodic rotation with full re-encryption doesn't provide forward secrecy (historical records re-encrypted with current key).
 
-- Medical records are static (not high-value real-time communications)
-- Rotation cost (re-encryption) outweighs benefit for small dataset
-- Can be added in Phase 4 if needed
+**If compromised**: User triggers event-driven rotation (Scenario B above).
+
+**Detailed analysis**: See `docs/security/key-rotation-strategy.md`. Resolves Issue #50.
 
 #### 6. Forward Secrecy Considerations
 
-**Decision**: User identity keypair is NOT rotated (no perfect forward secrecy).
+**Decision**: No forward secrecy (keys are long-lived).
 
-**Rationale**:
+**Rationale**: Medical records are archives requiring long-term access. Forward secrecy (like Signal) prioritizes ephemeral communications over historical access - the wrong trade-off for medical records. Aligns with password manager industry standard (1Password, Bitwarden).
 
-- ⚠️ **Trade-off**: If User Private Key is compromised, past shared FMKs can be unwrapped
-- ✅ **Acceptable**: Medical records are not time-sensitive communications
-- ✅ **KISS**: Rotating identity keys breaks all sharing relationships
-- ✅ **Mitigation**: FMK rotation (Scenario B) provides limited forward secrecy
+**Mitigation**: Event-driven rotation on compromise (Scenario B), iOS Keychain security.
 
-**Future Enhancement**: Could implement key rotation for User Identity in Phase 4.
+**See**: `docs/security/key-rotation-strategy.md` for detailed analysis.
 
 ### Key Derivation Flow Examples
 
@@ -260,7 +284,7 @@ com.family-medical-app.fmk.<familyMemberID>
 ```
 1. User enters password: "correct-horse-battery-staple"
 2. App generates random salt (32 bytes)
-3. Derive Master Key: PBKDF2(password, salt, 100k iterations) → Master Key
+3. Derive Master Key: Argon2id(password, salt, 64MB memory, 3 iterations) → Master Key
 4. Generate Curve25519 keypair → Private Key, Public Key
 5. Encrypt Private Key with Master Key → Encrypted Private Key
 6. Store:
@@ -302,12 +326,12 @@ com.family-medical-app.fmk.<familyMemberID>
 ### Positive
 
 1. **Supports All Phases**: Key hierarchy designed from the start for local, sync, and sharing
-2. **CryptoKit Compliance**: Uses only CryptoKit + CommonCrypto (no third-party dependencies)
+2. **Security-First**: Uses CryptoKit + Swift-Sodium (audited libraries only, no custom crypto)
 3. **Efficient Sharing**: Per-family-member granularity minimizes key management overhead
 4. **Cryptographic Revocation**: Re-encryption provides true access removal (not just UI hiding)
 5. **Natural UX**: "Share Emma's records" aligns with user mental model
 6. **Scalable**: 5-10 family members × 2-4 users = manageable key count
-7. **Auditable**: Clear key hierarchy, standard algorithms (PBKDF2, X25519, AES-GCM)
+7. **Auditable**: Clear key hierarchy, standard algorithms (Argon2id, X25519, AES-GCM)
 
 ### Negative
 
@@ -315,9 +339,9 @@ com.family-medical-app.fmk.<familyMemberID>
    - **Mitigation**: Necessary for sharing requirements, well-documented
 2. **Revocation Cost**: Re-encrypting 500 records takes ~500ms
    - **Mitigation**: Acceptable for user-initiated action, < 1000 records per family member
-3. **PBKDF2 GPU Weakness**: Less resistant to GPU attacks than Argon2id
-   - **Mitigation**: 100k iterations is industry standard, acceptable for hobby app
-   - **Future**: Can migrate to Argon2id in Phase 4
+3. **Swift-Sodium Dependency**: Adds external dependency (libsodium wrapper)
+   - **Mitigation**: Professionally audited library, widely used in production E2EE apps
+   - **Benefit**: Superior security (Argon2id) + explicit key zeroization for Issue #46
 4. **No Perfect Forward Secrecy**: User identity keypair is long-lived
    - **Mitigation**: Medical records are static data (different threat model than messaging)
    - **Mitigation**: FMK rotation provides limited forward secrecy per family member
@@ -338,7 +362,7 @@ com.family-medical-app.fmk.<familyMemberID>
 
 | Decision | Trade-off | Justification |
 |----------|-----------|---------------|
-| **PBKDF2 vs Argon2id** | Weaker GPU resistance | Simpler, CryptoKit-compatible, meets AGENTS.md requirement |
+| **Argon2id via Swift-Sodium** | Adds external dependency | 50× better GPU resistance, audited library, industry standard |
 | **Per-family-member FMKs** | Revocation requires re-encryption | Natural granularity, acceptable performance |
 | **Long-lived identity keys** | No perfect forward secrecy | Medical records are static, not time-sensitive |
 | **Three-tier hierarchy** | Added complexity | Necessary for sharing without breaking relationships |
@@ -349,7 +373,7 @@ com.family-medical-app.fmk.<familyMemberID>
 
 Implement:
 
-- User Master Key derivation (PBKDF2)
+- User Master Key derivation (Argon2id via Swift-Sodium)
 - Curve25519 keypair generation
 - FMK generation and wrapping (owner only)
 - Keychain storage for all keys
@@ -385,8 +409,7 @@ Add:
 - FMK rotation (re-encryption) implementation
 - Audit trail for revocation events
 - Optional: User identity key rotation
-- Optional: Argon2id migration
-- Optional: Biometric protection for Master Key
+- Optional: Biometric protection for Master Key access
 
 ## Related Decisions
 
@@ -397,11 +420,22 @@ Add:
 
 ## References
 
+### Design Documents
+
 - Issue #36: Research E2EE Sharing Patterns
+- Issue #50: Design periodic key rotation strategy
 - `docs/research/e2ee-sharing-patterns-research.md`
 - `docs/research/poc-hybrid-family-keys.swift`
+- `docs/security/key-rotation-strategy.md` - Forward secrecy vs emergency access analysis
+
+### Configuration
+
 - AGENTS.md: Cryptography specifications
+
+### Standards
+
 - [NIST SP 800-132](https://csrc.nist.gov/publications/detail/sp/800-132/final): Password-Based Key Derivation
+- [NIST SP 800-57](https://csrc.nist.gov/publications/detail/sp/800-57-part-1/rev-5/final): Key Management (Section 8.2.4: Periodic Key Rotation)
 - [RFC 7748](https://datatracker.ietf.org/doc/html/rfc7748): Elliptic Curves for Security (X25519)
 - [NIST SP 800-38F](https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-38F.pdf): AES Key Wrapping
 

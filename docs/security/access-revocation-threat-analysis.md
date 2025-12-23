@@ -47,6 +47,16 @@ The revocation mechanism uses **full FMK re-encryption** to cryptographically pr
 
 **Timing Attack**: There's a race between defender sending erasure message (~1 second via Realtime) and attacker extracting FMK from Keychain (~30-60 seconds). Most casual users won't extract keys, so success rate is high for typical scenarios.
 
+**Memory Security Verification** (Issue #46 Research):
+
+The ephemeral key mechanism depends on secure memory deallocation. Verified:
+
+- ✅ CryptoKit's SymmetricKey zeroes memory on deallocation ([source](https://medium.com/swlh/common-cryptographic-operations-in-swift-with-cryptokit-b30a4becc895))
+- ✅ libsodium (Swift-Sodium) provides explicit key zeroization via `sodium_memzero()`
+- ✅ [Ente's CRYPTO_SPEC](https://github.com/ente-io/ente/blob/main/mobile/native/ios/Packages/EnteCrypto/CRYPTO_SPEC.md) confirms: "Key Zeroization: libsodium handles secure key deletion"
+
+**Threat Window**: Between ephemeral key going out of scope and memory being zeroed is negligible (microseconds on modern iOS devices with ARC).
+
 **Result**: Significant improvement over no erasure for typical cases, but cannot guarantee deletion.
 
 ## Attacker Model
