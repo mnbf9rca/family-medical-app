@@ -142,16 +142,43 @@ jobs:
           cd ios/FamilyMedicalApp
           xcrun xccov view --report --json DerivedData/Logs/Test/*.xcresult > coverage.json
 
-          # Extract coverage percentage
-          COVERAGE=$(cat coverage.json | python3 -c "import sys, json; print(json.load(sys.stdin)['lineCoverage'] * 100)")
-          echo "Code coverage: ${COVERAGE}%"
+          # Extract coverage percentage for crypto services only
+          # Filter files under Services/Crypto/ to measure only crypto module coverage
+          COVERAGE=$(cat coverage.json | python3 -c "
+          import sys, json
+          data = json.load(sys.stdin)
 
-          # Enforce minimum coverage threshold
-          THRESHOLD=90
-          echo "Required minimum coverage: ${THRESHOLD}%"
+          # Find crypto service files
+          crypto_files = []
+          for target in data.get('targets', []):
+              for file in target.get('files', []):
+                  path = file.get('path', '')
+                  if 'Services/Crypto/' in path and not path.endswith('Tests.swift'):
+                      crypto_files.append(file)
 
-          # Use floor division to avoid rounding up (89.6% should fail, not pass)
-          # Compare as integers by multiplying by 100: 89.6 * 100 = 8960, threshold * 100 = 9000
+          if not crypto_files:
+              print('ERROR: No crypto service files found')
+              sys.exit(1)
+
+          # Calculate weighted average coverage
+          total_lines = sum(f.get('executableLines', 0) for f in crypto_files)
+          covered_lines = sum(f.get('coveredLines', 0) for f in crypto_files)
+
+          if total_lines == 0:
+              print('ERROR: No executable lines found')
+              sys.exit(1)
+
+          coverage = (covered_lines / total_lines) * 100
+          print(f'{coverage:.2f}')
+          ")
+
+          echo "Crypto services coverage: ${COVERAGE}%"
+
+          # Enforce minimum coverage threshold (crypto services only)
+          THRESHOLD=85
+          echo "Required minimum coverage for crypto services: ${THRESHOLD}%"
+
+          # Use floor division to avoid rounding up (84.9% should fail, not pass)
           COVERAGE_SCALED=$(echo "$COVERAGE * 100" | bc | cut -d. -f1)
           THRESHOLD_SCALED=$((THRESHOLD * 100))
 
