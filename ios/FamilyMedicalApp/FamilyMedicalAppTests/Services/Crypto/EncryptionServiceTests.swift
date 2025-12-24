@@ -122,6 +122,23 @@ struct EncryptionServiceTests {
         }
     }
 
+    /// Test payload construction with invalid tag fails
+    @Test
+    func encryptedPayload_invalidTag() throws {
+        let validNonce = Data(count: 12) // 12 bytes
+        let ciphertext = Data("ciphertext".utf8)
+        let invalidTag = Data([0x01, 0x02, 0x03]) // Only 3 bytes instead of 16
+
+        // Should fail at payload construction due to invalid tag length
+        #expect(throws: CryptoError.self) {
+            _ = try EncryptedPayload(
+                nonce: validNonce,
+                ciphertext: ciphertext,
+                tag: invalidTag
+            )
+        }
+    }
+
     /// Test nonce generation produces unique values
     @Test
     func generateNonce_uniqueness() {
