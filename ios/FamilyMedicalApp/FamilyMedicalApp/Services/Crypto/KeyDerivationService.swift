@@ -32,13 +32,14 @@ final class KeyDerivationService: KeyDerivationServiceProtocol {
 
     // Argon2id parameters from ADR-0002
     // These provide strong security while remaining performant on iOS devices
+    private let saltLength = 16 // crypto_pwhash_SALTBYTES (libsodium constant)
     private let opsLimit = 3 // 3 iterations
     private let memLimit = 64 * 1_024 * 1_024 // 64 MB memory
     private let outputLength = 32 // 256-bit key
 
     func derivePrimaryKey(from password: String, salt: Data) throws -> SymmetricKey {
-        guard salt.count == 16 else {
-            throw CryptoError.invalidSalt("Salt must be 16 bytes, got \(salt.count)")
+        guard salt.count == saltLength else {
+            throw CryptoError.invalidSalt("Salt must be \(saltLength) bytes, got \(salt.count)")
         }
 
         let passwordData = Data(password.utf8)
@@ -51,23 +52,29 @@ final class KeyDerivationService: KeyDerivationServiceProtocol {
             memLimit: memLimit,
             alg: .Argon2ID13
         ) else {
+            // Securely clear password data before throwing
+            var passwordBytes = [UInt8](passwordData)
+            sodium.utils.zero(&passwordBytes)
             throw CryptoError.keyDerivationFailed("Argon2id derivation failed")
         }
 
         // Convert to CryptoKit SymmetricKey
         let key = SymmetricKey(data: Data(derivedKey))
 
-        // Securely clear the intermediate array
+        // Securely clear the intermediate arrays
         var mutableDerivedKey = derivedKey
         sodium.utils.zero(&mutableDerivedKey)
+
+        var passwordBytes = [UInt8](passwordData)
+        sodium.utils.zero(&passwordBytes)
 
         return key
     }
 
     func generateSalt() throws -> Data {
-        // Generate 16 bytes of cryptographically secure random data (Argon2id salt size)
-        var salt = [UInt8](repeating: 0, count: 16)
-        let status = SecRandomCopyBytes(kSecRandomDefault, 16, &salt)
+        // Generate cryptographically secure random data (Argon2id salt size)
+        var salt = [UInt8](repeating: 0, count: saltLength)
+        let status = SecRandomCopyBytes(kSecRandomDefault, saltLength, &salt)
 
         guard status == errSecSuccess else {
             throw CryptoError.keyDerivationFailed("Salt generation failed")
@@ -77,7 +84,7 @@ final class KeyDerivationService: KeyDerivationServiceProtocol {
     }
 
     func secureZero(_ data: inout Data) {
-        data.withUnsafeMutableBytes { ptr in
+        data.withUnsafeMutableBytes { (ptr: UnsafeMutableRawBufferPointer) in
             if let baseAddress = ptr.baseAddress {
                 _ = memset_s(baseAddress, ptr.count, 0, ptr.count)
             }

@@ -7,6 +7,11 @@ import Foundation
 /// - Variable-length ciphertext
 /// - 128-bit (16 bytes) authentication tag
 struct EncryptedPayload: Codable, Equatable {
+    // AES-GCM standard sizes
+    static let nonceLength = 12 // 96-bit nonce
+    static let tagLength = 16 // 128-bit authentication tag
+    static let minimumCombinedLength = nonceLength + tagLength // 28 bytes minimum (empty ciphertext)
+
     /// 96-bit (12 bytes) random nonce/IV
     let nonce: Data
 
@@ -33,12 +38,12 @@ struct EncryptedPayload: Codable, Equatable {
     ///   - tag: 16-byte authentication tag
     /// - Throws: CryptoError.invalidPayload if nonce or tag have invalid length
     init(nonce: Data, ciphertext: Data, tag: Data) throws {
-        guard nonce.count == 12 else {
-            throw CryptoError.invalidPayload("Nonce must be 12 bytes (got \(nonce.count))")
+        guard nonce.count == Self.nonceLength else {
+            throw CryptoError.invalidPayload("Nonce must be \(Self.nonceLength) bytes (got \(nonce.count))")
         }
 
-        guard tag.count == 16 else {
-            throw CryptoError.invalidPayload("Authentication tag must be 16 bytes (got \(tag.count))")
+        guard tag.count == Self.tagLength else {
+            throw CryptoError.invalidPayload("Authentication tag must be \(Self.tagLength) bytes (got \(tag.count))")
         }
 
         self.nonce = nonce
@@ -51,12 +56,12 @@ struct EncryptedPayload: Codable, Equatable {
     /// - Parameter combined: Combined data with minimum 28 bytes (12 + 0 + 16)
     /// - Throws: CryptoError.invalidPayload if data is too short
     init(combined: Data) throws {
-        guard combined.count >= 28 else {
-            throw CryptoError.invalidPayload("Combined data too short (min 28 bytes)")
+        guard combined.count >= Self.minimumCombinedLength else {
+            throw CryptoError.invalidPayload("Combined data too short (min \(Self.minimumCombinedLength) bytes)")
         }
 
-        nonce = combined.prefix(12)
-        tag = combined.suffix(16)
-        ciphertext = combined.dropFirst(12).dropLast(16)
+        nonce = combined.prefix(Self.nonceLength)
+        tag = combined.suffix(Self.tagLength)
+        ciphertext = combined.dropFirst(Self.nonceLength).dropLast(Self.tagLength)
     }
 }

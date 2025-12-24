@@ -148,7 +148,7 @@ For Phase 1 implementation, consider adding a compile-time assertion to detect i
 
 **Salt Generation**:
 
-- Generate unique 32-byte salt per user on account creation
+- Generate unique 16-byte salt per user on account creation (libsodium `crypto_pwhash_SALTBYTES`)
 - Store salt in UserDefaults (not sensitive)
 - Use same salt for all Argon2id operations for that user
 
@@ -283,7 +283,7 @@ com.family-medical-app.fmk.<familyMemberID>
 
 ```
 1. User enters password: "correct-horse-battery-staple"
-2. App generates random salt (32 bytes)
+2. App generates random salt (16 bytes - libsodium crypto_pwhash_SALTBYTES)
 3. Derive Master Key: Argon2id(password, salt, 64MB memory, 3 iterations) → Master Key
 4. Generate Curve25519 keypair → Private Key, Public Key
 5. Encrypt Private Key with Master Key → Encrypted Private Key
