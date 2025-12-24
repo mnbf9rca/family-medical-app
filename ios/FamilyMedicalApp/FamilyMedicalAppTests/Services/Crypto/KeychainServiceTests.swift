@@ -29,7 +29,7 @@ struct KeychainServiceTests {
 
     /// Test deleting a key
     @Test
-    func testDeleteKey() throws {
+    func deleteKey() throws {
         let testKey = SymmetricKey(size: .bits256)
         let identifier = "test-delete-\(UUID().uuidString)"
 
@@ -58,7 +58,7 @@ struct KeychainServiceTests {
 
     /// Test keyExists returns correct value
     @Test
-    func testKeyExists() throws {
+    func keyExists() throws {
         let testKey = SymmetricKey(size: .bits256)
         let identifier = "test-exists-\(UUID().uuidString)"
 

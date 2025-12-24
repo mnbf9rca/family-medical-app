@@ -33,7 +33,7 @@ final class EncryptionService: EncryptionServiceProtocol {
             let sealedBox = try AES.GCM.seal(data, using: key, nonce: nonce)
 
             // Extract components from sealed box
-            return EncryptedPayload(
+            return try EncryptedPayload(
                 nonce: Data(nonce),
                 ciphertext: sealedBox.ciphertext,
                 tag: Data(sealedBox.tag)

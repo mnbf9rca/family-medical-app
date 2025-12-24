@@ -26,7 +26,21 @@ struct EncryptedPayload: Codable, Equatable {
     }
 
     /// Initialize from individual components
-    init(nonce: Data, ciphertext: Data, tag: Data) {
+    ///
+    /// - Parameters:
+    ///   - nonce: 12-byte nonce
+    ///   - ciphertext: Encrypted payload bytes
+    ///   - tag: 16-byte authentication tag
+    /// - Throws: CryptoError.invalidPayload if nonce or tag have invalid length
+    init(nonce: Data, ciphertext: Data, tag: Data) throws {
+        guard nonce.count == 12 else {
+            throw CryptoError.invalidPayload("Nonce must be 12 bytes (got \(nonce.count))")
+        }
+
+        guard tag.count == 16 else {
+            throw CryptoError.invalidPayload("Authentication tag must be 16 bytes (got \(tag.count))")
+        }
+
         self.nonce = nonce
         self.ciphertext = ciphertext
         self.tag = tag

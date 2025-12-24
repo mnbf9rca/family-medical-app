@@ -52,8 +52,12 @@ final class KeychainService: KeychainServiceProtocol {
     private let serviceName = "com.cynexia.FamilyMedicalApp"
 
     func storeKey(_ key: SymmetricKey, identifier: String, accessControl: KeychainAccessControl) throws {
-        // Delete existing key first (upsert pattern)
-        try? deleteKey(identifier: identifier)
+        // Delete existing key first (upsert pattern). Only ignore "not found" errors, propagate others.
+        do {
+            try deleteKey(identifier: identifier)
+        } catch KeychainError.keyNotFound {
+            // No existing key to delete – proceed with storing
+        }
 
         let keyData = key.withUnsafeBytes { Data($0) }
 

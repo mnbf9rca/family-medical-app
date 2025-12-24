@@ -70,7 +70,7 @@ struct EncryptionServiceTests {
             corruptedBytes[0] ^= 0xFF
         }
         let corruptedCiphertext = Data(corruptedBytes)
-        encrypted = EncryptedPayload(
+        encrypted = try EncryptedPayload(
             nonce: encrypted.nonce,
             ciphertext: corruptedCiphertext,
             tag: encrypted.tag
@@ -93,7 +93,7 @@ struct EncryptionServiceTests {
         var tamperedBytes = [UInt8](encrypted.tag)
         tamperedBytes[0] ^= 0xFF
         let tamperedTag = Data(tamperedBytes)
-        encrypted = EncryptedPayload(
+        encrypted = try EncryptedPayload(
             nonce: encrypted.nonce,
             ciphertext: encrypted.ciphertext,
             tag: tamperedTag
@@ -112,15 +112,13 @@ struct EncryptionServiceTests {
 
         let encrypted = try service.encrypt(plaintext, using: key)
 
-        // Use invalid nonce (wrong size)
-        let invalidPayload = EncryptedPayload(
-            nonce: Data([0x01, 0x02]), // Only 2 bytes instead of 12
-            ciphertext: encrypted.ciphertext,
-            tag: encrypted.tag
-        )
-
+        // Use invalid nonce (wrong size) - should fail at payload construction
         #expect(throws: CryptoError.self) {
-            _ = try service.decrypt(invalidPayload, using: key)
+            _ = try EncryptedPayload(
+                nonce: Data([0x01, 0x02]), // Only 2 bytes instead of 12
+                ciphertext: encrypted.ciphertext,
+                tag: encrypted.tag
+            )
         }
     }
 

@@ -11,7 +11,7 @@ struct KeyDerivationServiceTests {
     func derivePrimaryKey_consistency() throws {
         // swiftlint:disable:next password_in_code
         let password = "correct-horse-battery-staple"
-        let salt = service.generateSalt()
+        let salt = try service.generateSalt()
 
         let key1 = try service.derivePrimaryKey(from: password, salt: salt)
         let key2 = try service.derivePrimaryKey(from: password, salt: salt)
@@ -27,7 +27,7 @@ struct KeyDerivationServiceTests {
     func derivePrimaryKey_differentPassword() throws {
         let password1 = "password1"
         let password2 = "password2"
-        let salt = service.generateSalt()
+        let salt = try service.generateSalt()
 
         let key1 = try service.derivePrimaryKey(from: password1, salt: salt)
         let key2 = try service.derivePrimaryKey(from: password2, salt: salt)
@@ -43,8 +43,8 @@ struct KeyDerivationServiceTests {
     func derivePrimaryKey_differentSalt() throws {
         // swiftlint:disable:next password_in_code
         let password = "same-password"
-        let salt1 = service.generateSalt()
-        let salt2 = service.generateSalt()
+        let salt1 = try service.generateSalt()
+        let salt2 = try service.generateSalt()
 
         let key1 = try service.derivePrimaryKey(from: password, salt: salt1)
         let key2 = try service.derivePrimaryKey(from: password, salt: salt2)
@@ -71,7 +71,7 @@ struct KeyDerivationServiceTests {
     @Test
     func derivePrimaryKey_emptyPassword() throws {
         let password = ""
-        let salt = service.generateSalt()
+        let salt = try service.generateSalt()
 
         // Empty password should still derive a key
         let key = try service.derivePrimaryKey(from: password, salt: salt)
@@ -83,17 +83,17 @@ struct KeyDerivationServiceTests {
 
     /// Test salt generation produces 16 bytes (Argon2id requirement)
     @Test
-    func generateSalt_correctSize() {
-        let salt = service.generateSalt()
+    func generateSalt_correctSize() throws {
+        let salt = try service.generateSalt()
         #expect(salt.count == 16)
     }
 
     /// Test salt generation produces unique values
     @Test
-    func generateSalt_uniqueness() {
-        let salt1 = service.generateSalt()
-        let salt2 = service.generateSalt()
-        let salt3 = service.generateSalt()
+    func generateSalt_uniqueness() throws {
+        let salt1 = try service.generateSalt()
+        let salt2 = try service.generateSalt()
+        let salt3 = try service.generateSalt()
 
         // All salts should be different
         #expect(salt1 != salt2)
@@ -126,7 +126,7 @@ struct KeyDerivationServiceTests {
     func derivePrimaryKey_keySize() throws {
         // swiftlint:disable:next password_in_code
         let password = "test-password"
-        let salt = service.generateSalt()
+        let salt = try service.generateSalt()
 
         let key = try service.derivePrimaryKey(from: password, salt: salt)
 

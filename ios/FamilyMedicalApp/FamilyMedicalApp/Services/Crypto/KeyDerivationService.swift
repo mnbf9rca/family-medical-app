@@ -7,14 +7,15 @@ protocol KeyDerivationServiceProtocol {
     /// Derive a primary key from password using Argon2id
     /// - Parameters:
     ///   - password: User's password
-    ///   - salt: 32-byte salt (generate new for new users, retrieve for existing)
+    ///   - salt: 16-byte salt (generate new for new users, retrieve for existing)
     /// - Returns: 256-bit SymmetricKey
     /// - Throws: CryptoError on derivation failure
     func derivePrimaryKey(from password: String, salt: Data) throws -> SymmetricKey
 
-    /// Generate a cryptographically secure random salt (32 bytes)
-    /// - Returns: 32-byte salt
-    func generateSalt() -> Data
+    /// Generate a cryptographically secure random salt (16 bytes)
+    /// - Returns: 16-byte salt
+    /// - Throws: CryptoError on random generation failure
+    func generateSalt() throws -> Data
 
     /// Securely clear sensitive data from memory using libsodium's sodium_memzero
     /// - Parameter data: Data to securely zero
@@ -63,10 +64,15 @@ final class KeyDerivationService: KeyDerivationServiceProtocol {
         return key
     }
 
-    func generateSalt() -> Data {
+    func generateSalt() throws -> Data {
         // Generate 16 bytes of cryptographically secure random data (Argon2id salt size)
         var salt = [UInt8](repeating: 0, count: 16)
-        _ = SecRandomCopyBytes(kSecRandomDefault, 16, &salt)
+        let status = SecRandomCopyBytes(kSecRandomDefault, 16, &salt)
+
+        guard status == errSecSuccess else {
+            throw CryptoError.keyDerivationFailed("Salt generation failed")
+        }
+
         return Data(salt)
     }
 
