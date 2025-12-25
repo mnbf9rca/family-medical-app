@@ -86,7 +86,8 @@ final class KeyDerivationService: KeyDerivationServiceProtocol {
     func secureZero(_ data: inout Data) {
         data.withUnsafeMutableBytes { (ptr: UnsafeMutableRawBufferPointer) in
             if let baseAddress = ptr.baseAddress {
-                _ = memset_s(baseAddress, ptr.count, 0, ptr.count)
+                let result = memset_s(baseAddress, ptr.count, 0, ptr.count)
+                precondition(result == 0, "memset_s failed with error code \(result)")
             }
         }
     }

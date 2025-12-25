@@ -10,13 +10,13 @@ struct FamilyMedicalAppAppTests {
         #expect(app.body != nil)
     }
 
-    /// Test app body contains WindowGroup
+    /// Test app body is not empty
     @Test
-    func appContainsWindowGroup() {
+    func appBodyIsNotEmpty() {
         let app = FamilyMedicalAppApp()
         let mirror = Mirror(reflecting: app.body)
 
-        // Verify the app has a body (WindowGroup)
+        // Verify the app has a non-empty body
         #expect(!mirror.children.isEmpty)
     }
 }

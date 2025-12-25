@@ -23,7 +23,7 @@ struct EncryptedPayload: Codable, Equatable {
 
     /// Combined format: nonce || ciphertext || tag (for storage/transmission)
     var combined: Data {
-        var result = Data()
+        var result = Data(capacity: nonce.count + ciphertext.count + tag.count)
         result.append(nonce)
         result.append(ciphertext)
         result.append(tag)

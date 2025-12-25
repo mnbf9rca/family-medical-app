@@ -10,13 +10,13 @@ struct ContentViewTests {
         #expect(view.body != nil)
     }
 
-    /// Test ContentView contains expected elements
+    /// Test ContentView body is not empty
     @Test
-    func contentViewContainsElements() {
+    func contentViewBodyIsNotEmpty() {
         let view = ContentView()
         let mirror = Mirror(reflecting: view.body)
 
-        // Verify the view has a body (VStack)
+        // Verify the view has a non-empty body
         #expect(!mirror.children.isEmpty)
     }
 }

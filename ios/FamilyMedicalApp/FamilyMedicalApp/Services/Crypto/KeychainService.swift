@@ -109,7 +109,11 @@ final class KeychainService: KeychainServiceProtocol {
 
         let status = SecItemDelete(query as CFDictionary)
 
-        guard status == errSecSuccess || status == errSecItemNotFound else {
+        if status == errSecItemNotFound {
+            throw KeychainError.keyNotFound(identifier)
+        }
+
+        guard status == errSecSuccess else {
             throw KeychainError.deleteFailed(status)
         }
     }

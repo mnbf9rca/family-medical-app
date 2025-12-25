@@ -6,7 +6,7 @@ cd ios/FamilyMedicalApp
 xcrun xccov view --report --json test-results/TestResults.xcresult > test-results/coverage.json
 
 # Extract coverage percentage
-COVERAGE=$(cat test-results/coverage.json | python3 -c "import sys, json; print(json.load(sys.stdin)['lineCoverage'] * 100)")
+COVERAGE=$(python3 -c "import sys, json; print(json.load(sys.stdin)['lineCoverage'] * 100)" < test-results/coverage.json)
 echo "Code coverage: ${COVERAGE}%"
 
 # Enforce minimum coverage threshold
