@@ -132,42 +132,21 @@ jobs:
             -destination "${{ matrix.destination }}" \
             -enableCodeCoverage YES \
             -derivedDataPath DerivedData \
+            -resultBundlePath test-results/TestResults.xcresult \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             | xcpretty
 
       - name: Generate code coverage report
         if: matrix.destination == 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.2'
-        run: |
-          cd ios/FamilyMedicalApp
-          xcrun xccov view --report --json DerivedData/Logs/Test/*.xcresult > coverage.json
-
-          # Extract coverage percentage
-          COVERAGE=$(cat coverage.json | python3 -c "import sys, json; print(json.load(sys.stdin)['lineCoverage'] * 100)")
-          echo "Code coverage: ${COVERAGE}%"
-
-          # Enforce minimum coverage threshold
-          THRESHOLD=90
-          echo "Required minimum coverage: ${THRESHOLD}%"
-
-          # Use floor division to avoid rounding up (89.6% should fail, not pass)
-          # Compare as integers by multiplying by 100: 89.6 * 100 = 8960, threshold * 100 = 9000
-          COVERAGE_SCALED=$(echo "$COVERAGE * 100" | bc | cut -d. -f1)
-          THRESHOLD_SCALED=$((THRESHOLD * 100))
-
-          if (( COVERAGE_SCALED < THRESHOLD_SCALED )); then
-            echo "❌ Coverage check failed: ${COVERAGE}% is below the required ${THRESHOLD}%."
-            exit 1
-          else
-            echo "✅ Coverage check passed: ${COVERAGE}% meets or exceeds ${THRESHOLD}%."
-          fi
+        run: ./scripts/check-coverage.sh
 
       - name: Upload coverage reports
         if: matrix.destination == 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.2'
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
-          path: ios/FamilyMedicalApp/coverage.json
+          path: ios/FamilyMedicalApp/test-results/coverage.json
           retention-days: 30
 
   security-scan:
