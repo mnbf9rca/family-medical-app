@@ -1,0 +1,140 @@
+import SwiftUI
+
+struct UnlockView: View {
+    @Bindable var viewModel: AuthenticationViewModel
+
+    var body: some View {
+        VStack(spacing: 32) {
+            Spacer()
+
+            // App icon/branding
+            Image(systemName: "heart.text.square.fill")
+                .font(.system(size: 80))
+                .foregroundColor(.blue)
+
+            Text("Family Medical App")
+                .font(.title)
+                .fontWeight(.bold)
+
+            Spacer()
+
+            // Biometric or password input
+            VStack(spacing: 20) {
+                if viewModel.showBiometricPrompt {
+                    // Biometric button
+                    Button(action: {
+                        Task {
+                            await viewModel.unlockWithBiometric()
+                        }
+                    }, label: {
+                        VStack(spacing: 12) {
+                            Image(systemName: BiometricService().biometryType == .faceID ? "faceid" : "touchid")
+                                .font(.system(size: 50))
+
+                            Text("Unlock with \(BiometricService().biometryType == .faceID ? "Face ID" : "Touch ID")")
+                                .font(.headline)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 24)
+                        .background(Color.blue.opacity(0.1))
+                        .foregroundColor(.blue)
+                        .cornerRadius(12)
+                    })
+                    .disabled(viewModel.isLoading)
+
+                    Button("Use Password") {
+                        viewModel.showBiometricPrompt = false
+                    }
+                    .font(.subheadline)
+                } else {
+                    // Password field
+                    VStack(spacing: 16) {
+                        SecureField("Enter password", text: $viewModel.unlockPassword)
+                            .textFieldStyle(.roundedBorder)
+                            .textContentType(.password)
+                            .autocorrectionDisabled()
+                            .disabled(viewModel.isLockedOut)
+
+                        Button(action: {
+                            Task {
+                                await viewModel.unlockWithPassword()
+                            }
+                        }, label: {
+                            if viewModel.isLoading {
+                                ProgressView()
+                                    .progressViewStyle(.circular)
+                                    .tint(.white)
+                            } else {
+                                Text("Unlock")
+                                    .fontWeight(.semibold)
+                            }
+                        })
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(viewModel.unlockPassword.isEmpty || viewModel.isLockedOut ? Color.gray : Color.blue)
+                        .foregroundColor(.white)
+                        .cornerRadius(12)
+                        .disabled(viewModel.unlockPassword.isEmpty || viewModel.isLockedOut || viewModel.isLoading)
+                    }
+
+                    // Switch back to biometric if available
+                    if AuthenticationService().isBiometricEnabled, !viewModel.showBiometricPrompt {
+                        Button("Use \(BiometricService().biometryType == .faceID ? "Face ID" : "Touch ID")") {
+                            viewModel.showBiometricPrompt = true
+                        }
+                        .font(.subheadline)
+                    }
+                }
+
+                // Failed attempts indicator
+                if viewModel.failedAttempts > 0, !viewModel.isLockedOut {
+                    Text("\(viewModel.failedAttempts) failed attempt\(viewModel.failedAttempts == 1 ? "" : "s")")
+                        .font(.caption)
+                        .foregroundColor(.orange)
+                }
+
+                // Lockout message
+                if viewModel.isLockedOut {
+                    Text("Too many failed attempts. Try again in \(formattedLockoutTime)")
+                        .font(.callout)
+                        .foregroundColor(.red)
+                        .multilineTextAlignment(.center)
+                        .padding()
+                        .background(Color.red.opacity(0.1))
+                        .cornerRadius(8)
+                }
+
+                // Error message
+                if let errorMessage = viewModel.errorMessage, !viewModel.isLockedOut {
+                    Text(errorMessage)
+                        .font(.callout)
+                        .foregroundColor(.red)
+                        .multilineTextAlignment(.center)
+                }
+            }
+            .padding()
+
+            Spacer()
+        }
+        .padding()
+        .task {
+            await viewModel.attemptBiometricOnAppear()
+        }
+    }
+
+    private var formattedLockoutTime: String {
+        let seconds = viewModel.lockoutTimeRemaining
+        let minutes = seconds / 60
+        let remainingSeconds = seconds % 60
+
+        if minutes > 0 {
+            return "\(minutes)m \(remainingSeconds)s"
+        } else {
+            return "\(remainingSeconds)s"
+        }
+    }
+}
+
+#Preview {
+    UnlockView(viewModel: AuthenticationViewModel())
+}

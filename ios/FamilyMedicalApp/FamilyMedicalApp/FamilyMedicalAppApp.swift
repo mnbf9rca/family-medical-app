@@ -4,7 +4,7 @@ import SwiftUI
 struct FamilyMedicalAppApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            AuthenticationCoordinatorView()
         }
     }
 }
