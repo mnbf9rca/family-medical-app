@@ -26,6 +26,12 @@
 --commas inline
 --semicolons inline
 
+# Number formatting (align with SwiftLint number_separator rule)
+--decimalgrouping 3
+--binarygrouping 4
+--octalgrouping 4
+--hexgrouping 4
+
 # Line breaks
 --linebreaks lf
 --elseposition same-line

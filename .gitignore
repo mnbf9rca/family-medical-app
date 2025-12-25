@@ -54,3 +54,4 @@ htmlcov/
 # Logs
 *.log
 logs/
+test-results/
