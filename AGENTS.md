@@ -15,7 +15,7 @@
   - **NEVER** use `sed` or `awk` - they corrupt complex files
 - ⚠️ **NEVER** skip or override pre-commit hooks
   - The hooks are there for a reason - fix the issues instead
-- ⚠️ **ALWAYS** achieve at least 85% code coverage on new **and changed** code
+- ⚠️ **ALWAYS** achieve at least 90% code coverage on new **and changed** code
 
 ## Principles
 
