@@ -28,10 +28,10 @@ struct UnlockView: View {
                         }
                     }, label: {
                         VStack(spacing: 12) {
-                            Image(systemName: BiometricService().biometryType == .faceID ? "faceid" : "touchid")
+                            Image(systemName: viewModel.biometryType == .faceID ? "faceid" : "touchid")
                                 .font(.system(size: 50))
 
-                            Text("Unlock with \(BiometricService().biometryType == .faceID ? "Face ID" : "Touch ID")")
+                            Text("Unlock with \(viewModel.biometryType == .faceID ? "Face ID" : "Touch ID")")
                                 .font(.headline)
                         }
                         .frame(maxWidth: .infinity)
@@ -78,8 +78,8 @@ struct UnlockView: View {
                     }
 
                     // Switch back to biometric if available
-                    if AuthenticationService().isBiometricEnabled, !viewModel.showBiometricPrompt {
-                        Button("Use \(BiometricService().biometryType == .faceID ? "Face ID" : "Touch ID")") {
+                    if viewModel.isBiometricEnabled, !viewModel.showBiometricPrompt {
+                        Button("Use \(viewModel.biometryType == .faceID ? "Face ID" : "Touch ID")") {
                             viewModel.showBiometricPrompt = true
                         }
                         .font(.subheadline)

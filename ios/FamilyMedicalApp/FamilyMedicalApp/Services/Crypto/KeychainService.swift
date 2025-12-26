@@ -64,6 +64,11 @@ protocol KeychainServiceProtocol {
     /// - Parameter identifier: Data identifier
     /// - Throws: KeychainError on failure
     func deleteData(identifier: String) throws
+
+    /// Check if data exists in Keychain
+    /// - Parameter identifier: Data identifier
+    /// - Returns: true if data exists, false otherwise
+    func dataExists(identifier: String) -> Bool
 }
 
 /// iOS Keychain wrapper for secure key storage
@@ -212,5 +217,17 @@ final class KeychainService: KeychainServiceProtocol {
         guard status == errSecSuccess else {
             throw KeychainError.deleteFailed(status)
         }
+    }
+
+    func dataExists(identifier: String) -> Bool {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: serviceName,
+            kSecAttrAccount as String: identifier,
+            kSecMatchLimit as String: kSecMatchLimitOne
+        ]
+
+        let status = SecItemCopyMatching(query as CFDictionary, nil)
+        return status == errSecSuccess
     }
 }

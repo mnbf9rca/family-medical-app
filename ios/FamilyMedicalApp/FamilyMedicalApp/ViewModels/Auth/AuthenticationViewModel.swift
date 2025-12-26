@@ -46,6 +46,20 @@ final class AuthenticationViewModel {
         authService.lockoutRemainingSeconds
     }
 
+    // MARK: - Biometric Properties
+
+    var biometryType: BiometryType {
+        biometricService.biometryType
+    }
+
+    var isBiometricAvailable: Bool {
+        biometricService.isBiometricAvailable
+    }
+
+    var isBiometricEnabled: Bool {
+        authService.isBiometricEnabled
+    }
+
     // MARK: - UI State
 
     var errorMessage: String?
@@ -57,7 +71,7 @@ final class AuthenticationViewModel {
     private let authService: AuthenticationServiceProtocol
     private let biometricService: BiometricServiceProtocol
     private let passwordValidator: PasswordValidationServiceProtocol
-    private let lockStateService: LockStateServiceProtocol
+    let lockStateService: LockStateServiceProtocol
 
     // MARK: - Initialization
 

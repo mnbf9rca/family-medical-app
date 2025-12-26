@@ -75,11 +75,11 @@ struct PasswordSetupView: View {
                 }
 
                 // Biometric toggle
-                if BiometricService().isBiometricAvailable {
+                if viewModel.isBiometricAvailable {
                     Toggle(isOn: $viewModel.enableBiometric) {
                         HStack {
-                            Image(systemName: BiometricService().biometryType == .faceID ? "faceid" : "touchid")
-                            Text("Enable \(BiometricService().biometryType == .faceID ? "Face ID" : "Touch ID")")
+                            Image(systemName: viewModel.biometryType == .faceID ? "faceid" : "touchid")
+                            Text("Enable \(viewModel.biometryType == .faceID ? "Face ID" : "Touch ID")")
                         }
                     }
                     .padding()

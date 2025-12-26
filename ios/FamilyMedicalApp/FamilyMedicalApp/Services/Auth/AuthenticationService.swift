@@ -198,6 +198,12 @@ final class AuthenticationService: AuthenticationServiceProtocol {
             throw AuthenticationError.notSetUp
         }
 
+        // Prepare password bytes and ensure they're wiped after key derivation
+        var passwordBytes = Array(password.utf8)
+        defer {
+            keyDerivationService.secureZero(&passwordBytes)
+        }
+
         // Derive key from password
         let candidateKey = try keyDerivationService.derivePrimaryKey(from: password, salt: salt)
 
@@ -220,10 +226,6 @@ final class AuthenticationService: AuthenticationServiceProtocol {
             // Success - reset failed attempts
             userDefaults.removeObject(forKey: Self.failedAttemptsKey)
             userDefaults.removeObject(forKey: Self.lockoutEndTimeKey)
-
-            // Securely zero password from memory
-            var passwordBytes = Array(password.utf8)
-            keyDerivationService.secureZero(&passwordBytes)
         } catch is CryptoError {
             // Decryption failed = wrong password
             try handleFailedAttempt()
