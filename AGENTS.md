@@ -8,14 +8,14 @@
   - No `nohup`, no `&`, no daemon mode
   - If needed, use background bash processes
   - Use foreground processes in background shells for proper log access
-- ⚠️ **NEVER** use `# noqa` to suppress linting errors or warnings
+- ⚠️ **NEVER** use ignores to suppress linting errors or warnings
   - Refactor the code instead, especially for complexity warnings
   - Use pure functions to reduce complexity
 - ⚠️ Use `ast-grep` for code modifications
   - **NEVER** use `sed` or `awk` - they corrupt complex files
 - ⚠️ **NEVER** skip or override pre-commit hooks
   - The hooks are there for a reason - fix the issues instead
-- ⚠️ **ALWAYS** achieve at least 90% code coverage on new **and changed** code
+- ⚠️ **ALWAYS** achieve at least 90% code coverage on code. This is across the project, including existing, new **and changed** code.
 
 ## Principles
 
