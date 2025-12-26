@@ -55,7 +55,6 @@ struct PasswordValidationServiceTests {
     // MARK: - Strength Calculation Tests
 
     @Test
-    @MainActor
     func strongPasswordHasStrongStrength() {
         let password = "Unique-Very-Long-Passphrase-2024!" // 33 chars with all variety
         let strength = service.passwordStrength(password)
@@ -104,7 +103,6 @@ struct PasswordValidationServiceTests {
     // MARK: - PasswordStrength Comparability Tests
 
     @Test
-    @MainActor
     func strengthLevelsAreComparable() {
         #expect(PasswordStrength.weak < PasswordStrength.fair)
         #expect(PasswordStrength.fair < PasswordStrength.good)
@@ -112,7 +110,6 @@ struct PasswordValidationServiceTests {
     }
 
     @Test
-    @MainActor
     func strengthDisplayNamesAreCorrect() {
         #expect(PasswordStrength.weak.displayName == "Weak")
         #expect(PasswordStrength.fair.displayName == "Fair")

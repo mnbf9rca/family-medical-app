@@ -159,7 +159,7 @@ final class KeychainService: KeychainServiceProtocol {
         do {
             try deleteData(identifier: identifier)
         } catch KeychainError.keyNotFound {
-            // No existing data to delete – proceed with storing
+            // No existing data to delete - proceed with storing
         }
 
         let query: [String: Any] = [
