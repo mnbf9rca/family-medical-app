@@ -96,6 +96,69 @@ struct BiometricServiceTests {
             try await service.authenticate(reason: "Test")
         }
     }
+
+    @Test
+    func biometryTypeReturnsNoneForUnknownType() {
+        let context = MockLAContext(canEvaluate: true, biometryType: LABiometryType(rawValue: 999) ?? .none)
+        let service = BiometricService(context: context)
+
+        #expect(service.biometryType == .none)
+    }
+
+    @Test
+    func authenticateThrowsWhenAuthenticationFails() async {
+        let error = LAError(.authenticationFailed)
+        let context = MockLAContext(canEvaluate: true, biometryType: .faceID, authenticationResult: .failure(error))
+        let service = BiometricService(context: context)
+
+        await #expect(throws: AuthenticationError.self) {
+            try await service.authenticate(reason: "Test")
+        }
+    }
+
+    @Test
+    func authenticateThrowsWhenSystemCancels() async {
+        let error = LAError(.systemCancel)
+        let context = MockLAContext(canEvaluate: true, biometryType: .faceID, authenticationResult: .failure(error))
+        let service = BiometricService(context: context)
+
+        await #expect(throws: AuthenticationError.biometricCancelled) {
+            try await service.authenticate(reason: "Test")
+        }
+    }
+
+    @Test
+    func authenticateThrowsWhenAppCancels() async {
+        let error = LAError(.appCancel)
+        let context = MockLAContext(canEvaluate: true, biometryType: .faceID, authenticationResult: .failure(error))
+        let service = BiometricService(context: context)
+
+        await #expect(throws: AuthenticationError.biometricCancelled) {
+            try await service.authenticate(reason: "Test")
+        }
+    }
+
+    @Test
+    func authenticateThrowsNotAvailableWhenBiometryNotAvailableError() async {
+        let error = LAError(.biometryNotAvailable)
+        let context = MockLAContext(canEvaluate: true, biometryType: .faceID, authenticationResult: .failure(error))
+        let service = BiometricService(context: context)
+
+        await #expect(throws: AuthenticationError.biometricNotAvailable) {
+            try await service.authenticate(reason: "Test")
+        }
+    }
+
+    @Test
+    func authenticateThrowsNotEnrolledFromAuthenticationError() async {
+        let error = LAError(.biometryNotEnrolled)
+        let context = MockLAContext(canEvaluate: true, biometryType: .faceID, authenticationResult: .failure(error))
+        let service = BiometricService(context: context)
+
+        await #expect(throws: AuthenticationError.biometricNotEnrolled) {
+            try await service.authenticate(reason: "Test")
+        }
+    }
 }
 
 // MARK: - Mock LAContext

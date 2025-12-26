@@ -15,7 +15,9 @@
   - **NEVER** use `sed` or `awk` - they corrupt complex files
 - ⚠️ **NEVER** skip or override pre-commit hooks
   - The hooks are there for a reason - fix the issues instead
-- ⚠️ **ALWAYS** achieve at least 90% code coverage on code. This is across the project, including existing, new **and changed** code.
+- ⚠️ **ALWAYS** achieve at least 90% code coverage on code
+  - Both individual files **and** across the project, including existing, new **and changed** code.
+  - use `{projectRoot}/scripts/check-coverage.sh` to validate - this is the same script used in CI.
 
 ## Principles
 
