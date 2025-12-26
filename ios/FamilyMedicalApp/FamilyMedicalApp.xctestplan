@@ -1,0 +1,24 @@
+{
+  "configurations" : [
+    {
+      "id" : "79E5A931-642D-402B-B97E-79FD038702A1",
+      "name" : "Configuration 1",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "testTimeoutsEnabled" : true
+  },
+  "testTargets" : [
+    {
+      "target" : {
+        "containerPath" : "container:FamilyMedicalApp.xcodeproj",
+        "identifier" : "D445F7A62EF7E94000E07F78",
+        "name" : "FamilyMedicalAppTests"
+      }
+    }
+  ],
+  "version" : 1
+}

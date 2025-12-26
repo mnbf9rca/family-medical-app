@@ -42,31 +42,10 @@ struct AuthenticationErrorsTests {
     }
 
     @Test
-    func passwordMissingUppercaseHasDescription() {
-        let error = AuthenticationError.passwordMissingUppercase
+    func passwordTooCommonHasDescription() {
+        let error = AuthenticationError.passwordTooCommon
         #expect(error.errorDescription?.isEmpty == false)
-        #expect(error.errorDescription?.contains("uppercase") == true)
-    }
-
-    @Test
-    func passwordMissingLowercaseHasDescription() {
-        let error = AuthenticationError.passwordMissingLowercase
-        #expect(error.errorDescription?.isEmpty == false)
-        #expect(error.errorDescription?.contains("lowercase") == true)
-    }
-
-    @Test
-    func passwordMissingDigitHasDescription() {
-        let error = AuthenticationError.passwordMissingDigit
-        #expect(error.errorDescription?.isEmpty == false)
-        #expect(error.errorDescription?.contains("digit") == true)
-    }
-
-    @Test
-    func passwordMissingSpecialCharacterHasDescription() {
-        let error = AuthenticationError.passwordMissingSpecialCharacter
-        #expect(error.errorDescription?.isEmpty == false)
-        #expect(error.errorDescription?.contains("special character") == true)
+        #expect(error.errorDescription?.contains("common") == true)
     }
 
     @Test

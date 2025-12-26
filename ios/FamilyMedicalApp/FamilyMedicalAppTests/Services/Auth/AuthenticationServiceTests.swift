@@ -1,5 +1,6 @@
 // swiftlint:disable password_in_code force_unwrapping
 import CryptoKit
+import Foundation
 import Testing
 @testable import FamilyMedicalApp
 
@@ -132,8 +133,15 @@ struct AuthenticationServiceTests {
         }
 
         // Third failure locks
-        await #expect(throws: AuthenticationError.accountLocked) {
+        do {
             try await service.unlockWithPassword("WrongPassword123!")
+            Issue.record("Expected accountLocked error")
+        } catch let error as AuthenticationError {
+            if case .accountLocked = error {
+                // Expected
+            } else {
+                Issue.record("Expected accountLocked, got \(error)")
+            }
         }
 
         #expect(service.isLockedOut == true)
@@ -159,8 +167,15 @@ struct AuthenticationServiceTests {
         #expect(service.isLockedOut == true)
 
         // Correct password should still be blocked during lockout
-        await #expect(throws: AuthenticationError.accountLocked) {
+        do {
             try await service.unlockWithPassword(password)
+            Issue.record("Expected accountLocked error")
+        } catch let error as AuthenticationError {
+            if case .accountLocked = error {
+                // Expected
+            } else {
+                Issue.record("Expected accountLocked, got \(error)")
+            }
         }
     }
 

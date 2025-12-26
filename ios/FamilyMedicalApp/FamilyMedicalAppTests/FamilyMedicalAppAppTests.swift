@@ -7,7 +7,8 @@ struct FamilyMedicalAppAppTests {
     @Test
     func appInitializes() {
         let app = FamilyMedicalAppApp()
-        #expect(app.body != nil)
+        // App body is always non-nil for SwiftUI apps
+        _ = app.body
     }
 
     /// Test app body is not empty

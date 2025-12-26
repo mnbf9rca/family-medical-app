@@ -47,6 +47,8 @@ final class BiometricService: BiometricServiceProtocol {
             return .faceID
         case .touchID:
             return .touchID
+        case .opticID:
+            return .faceID // Treat Optic ID like Face ID
         case .none:
             return .none
         @unknown default:

@@ -1,6 +1,7 @@
 import Foundation
 
 /// Password strength levels
+@MainActor
 enum PasswordStrength: Int, Comparable, CaseIterable {
     case weak = 1
     case fair = 2
