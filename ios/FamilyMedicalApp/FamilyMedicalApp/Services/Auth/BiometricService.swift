@@ -2,6 +2,7 @@ import Foundation
 import LocalAuthentication
 
 /// Type of biometric authentication available
+@MainActor
 enum BiometryType {
     case none
     case touchID
@@ -23,6 +24,7 @@ protocol BiometricServiceProtocol {
 }
 
 /// Service for managing biometric authentication
+@MainActor
 final class BiometricService: BiometricServiceProtocol {
     // MARK: - Properties
 
@@ -30,7 +32,7 @@ final class BiometricService: BiometricServiceProtocol {
 
     // MARK: - Initialization
 
-    init(context: LAContext = LAContext()) {
+    nonisolated init(context: LAContext = LAContext()) {
         self.context = context
     }
 

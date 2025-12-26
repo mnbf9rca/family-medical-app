@@ -2,6 +2,7 @@ import LocalAuthentication
 import Testing
 @testable import FamilyMedicalApp
 
+@MainActor
 struct BiometricServiceTests {
     // MARK: - Biometry Type Tests
 

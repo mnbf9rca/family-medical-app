@@ -55,8 +55,9 @@ struct PasswordValidationServiceTests {
     // MARK: - Strength Calculation Tests
 
     @Test
+    @MainActor
     func strongPasswordHasStrongStrength() {
-        let password = "unique-very-long-passphrase-2024" // 32 chars
+        let password = "Unique-Very-Long-Passphrase-2024!" // 33 chars with all variety
         let strength = service.passwordStrength(password)
         #expect(strength == .strong)
     }

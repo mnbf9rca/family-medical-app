@@ -4,6 +4,7 @@ import Foundation
 import Testing
 @testable import FamilyMedicalApp
 
+@MainActor
 struct AuthenticationServiceTests {
     // MARK: - Setup Tests
 

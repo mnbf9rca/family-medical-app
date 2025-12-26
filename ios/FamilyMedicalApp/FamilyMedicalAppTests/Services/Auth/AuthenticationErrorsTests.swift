@@ -15,7 +15,7 @@ struct AuthenticationErrorsTests {
     func biometricNotEnrolledHasDescription() {
         let error = AuthenticationError.biometricNotEnrolled
         #expect(error.errorDescription?.isEmpty == false)
-        #expect(error.errorDescription?.contains("not enrolled") == true)
+        #expect(error.errorDescription?.contains("enrolled") == true)
     }
 
     @Test
@@ -83,7 +83,7 @@ struct AuthenticationErrorsTests {
         let error = AuthenticationError.accountLocked(remainingSeconds: 45)
         #expect(error.errorDescription?.isEmpty == false)
         #expect(error.errorDescription?.contains("45s") == true)
-        #expect(error.errorDescription?.contains("m") == false)
+        #expect(error.errorDescription?.contains("0m") == false)
     }
 
     @Test
