@@ -48,11 +48,11 @@ final class AuthenticationViewModel {
 
     // MARK: - Biometric Properties
 
-    var biometryType: BiometryType {
+    @MainActor var biometryType: BiometryType {
         biometricService.biometryType
     }
 
-    var isBiometricAvailable: Bool {
+    @MainActor var isBiometricAvailable: Bool {
         biometricService.isBiometricAvailable
     }
 

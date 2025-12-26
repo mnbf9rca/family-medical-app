@@ -2,7 +2,6 @@ import Foundation
 import LocalAuthentication
 
 /// Type of biometric authentication available
-@MainActor
 enum BiometryType {
     case none
     case touchID
@@ -28,7 +27,8 @@ protocol BiometricServiceProtocol {
 final class BiometricService: BiometricServiceProtocol {
     // MARK: - Properties
 
-    private let context: LAContext
+    // swiftlint:disable:next modifier_order
+    private nonisolated(unsafe) let context: LAContext
 
     // MARK: - Initialization
 
