@@ -33,7 +33,7 @@ final class SecuritySettingsViewModel {
 
     private let authService: AuthenticationServiceProtocol
     private let biometricService: BiometricServiceProtocol
-    private let lockStateService: LockStateServiceProtocol
+    private var lockStateService: LockStateServiceProtocol
 
     // MARK: - Initialization
 

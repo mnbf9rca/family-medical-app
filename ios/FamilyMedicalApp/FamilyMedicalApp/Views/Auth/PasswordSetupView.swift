@@ -23,6 +23,18 @@ struct PasswordSetupView: View {
                 }
                 .padding(.top, 40)
 
+                // Username field (required for iOS Password AutoFill)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Username")
+                        .font(.headline)
+
+                    TextField("Choose a username", text: $viewModel.username)
+                        .textFieldStyle(.roundedBorder)
+                        .textContentType(.username)
+                        .autocorrectionDisabled()
+                        .textInputAutocapitalization(.never)
+                }
+
                 // Password fields
                 VStack(alignment: .leading, spacing: 16) {
                     VStack(alignment: .leading, spacing: 8) {
@@ -49,10 +61,10 @@ struct PasswordSetupView: View {
                             .autocorrectionDisabled()
                     }
 
-                    // Validation errors
-                    if !viewModel.passwordValidationErrors.isEmpty {
+                    // Validation errors (only shown after user attempts setup)
+                    if !viewModel.displayedValidationErrors.isEmpty {
                         VStack(alignment: .leading, spacing: 4) {
-                            ForEach(viewModel.passwordValidationErrors, id: \.self) { error in
+                            ForEach(viewModel.displayedValidationErrors, id: \.self) { error in
                                 Label(error.errorDescription ?? "", systemImage: "xmark.circle.fill")
                                     .font(.caption)
                                     .foregroundColor(.red)
@@ -114,7 +126,8 @@ struct PasswordSetupView: View {
     }
 
     private var canContinue: Bool {
-        !viewModel.password.isEmpty &&
+        !viewModel.username.trimmingCharacters(in: .whitespaces).isEmpty &&
+            !viewModel.password.isEmpty &&
             !viewModel.confirmPassword.isEmpty &&
             viewModel.password == viewModel.confirmPassword &&
             viewModel.passwordValidationErrors.isEmpty

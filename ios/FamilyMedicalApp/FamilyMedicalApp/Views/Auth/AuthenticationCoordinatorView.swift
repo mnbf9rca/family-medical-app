@@ -1,12 +1,12 @@
 import SwiftUI
 
 struct AuthenticationCoordinatorView: View {
-    @State private var viewModel: AuthenticationViewModel
+    @Bindable var viewModel: AuthenticationViewModel
     @Environment(\.scenePhase)
     private var scenePhase
 
     init(viewModel: AuthenticationViewModel = AuthenticationViewModel()) {
-        _viewModel = State(initialValue: viewModel)
+        self.viewModel = viewModel
     }
 
     var body: some View {

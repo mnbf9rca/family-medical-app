@@ -1,7 +1,7 @@
 import Foundation
 
 /// Errors that can occur during authentication operations
-enum AuthenticationError: LocalizedError, Equatable {
+enum AuthenticationError: LocalizedError, Equatable, Hashable {
     // Biometric errors
     case biometricNotAvailable
     case biometricNotEnrolled
@@ -10,10 +10,7 @@ enum AuthenticationError: LocalizedError, Equatable {
 
     // Password validation errors
     case passwordTooShort
-    case passwordMissingUppercase
-    case passwordMissingLowercase
-    case passwordMissingDigit
-    case passwordMissingSpecialCharacter
+    case passwordTooCommon
     case passwordMismatch
 
     // Authentication errors
@@ -37,14 +34,8 @@ enum AuthenticationError: LocalizedError, Equatable {
         // Password validation errors
         case .passwordTooShort:
             return "Password must be at least 12 characters long"
-        case .passwordMissingUppercase:
-            return "Password must contain at least one uppercase letter"
-        case .passwordMissingLowercase:
-            return "Password must contain at least one lowercase letter"
-        case .passwordMissingDigit:
-            return "Password must contain at least one digit"
-        case .passwordMissingSpecialCharacter:
-            return "Password must contain at least one special character (!@#$%^&*(),.?\":{}|<>)"
+        case .passwordTooCommon:
+            return "This password is too common. Please choose a more unique password"
         case .passwordMismatch:
             return "Passwords do not match"
         // Authentication errors

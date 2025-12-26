@@ -34,41 +34,54 @@ protocol PasswordValidationServiceProtocol {
     func passwordStrength(_ password: String) -> PasswordStrength
 }
 
-/// Service for validating password complexity and calculating strength
+/// Service for validating passwords following NIST SP 800-63B guidelines
 final class PasswordValidationService: PasswordValidationServiceProtocol {
     // MARK: - Constants
 
     private static let minimumLength = 12
-    private static let specialCharacters = "!@#$%^&*(),.?\":{}|<>"
+
+    // Common passwords loaded from SecLists (10,000 most common)
+    // Source: https://github.com/danielmiessler/SecLists/blob/master/Passwords/Common-Credentials/10k-most-common.txt
+    private static let commonPasswords: Set<String> = {
+        guard let fileURL = Bundle.main.url(forResource: "common-passwords", withExtension: "txt"),
+              let contents = try? String(contentsOf: fileURL, encoding: .utf8)
+        else {
+            // Fallback to basic list if file not found
+            return [
+                "password", "123456", "123456789", "12345678", "12345", "1234567",
+                "qwerty", "abc123", "password1", "111111", "123123", "admin"
+            ]
+        }
+
+        return Set(contents.split(separator: "\n").map { String($0).lowercased() })
+    }()
 
     // MARK: - Public Methods
 
     func validate(_ password: String) -> [AuthenticationError] {
         var errors: [AuthenticationError] = []
 
-        // Check minimum length
+        // NIST Rule 1: Minimum length (12 chars is good)
         if password.count < Self.minimumLength {
             errors.append(.passwordTooShort)
         }
 
-        // Check for uppercase letter
-        if !password.contains(where: \.isUppercase) {
-            errors.append(.passwordMissingUppercase)
+        // NIST Rule 2: Check against common passwords (case-insensitive)
+        let lowercasePassword = password.lowercased()
+        if Self.commonPasswords.contains(lowercasePassword) {
+            errors.append(.passwordTooCommon)
         }
 
-        // Check for lowercase letter
-        if !password.contains(where: \.isLowercase) {
-            errors.append(.passwordMissingLowercase)
+        // Also check for common patterns with numbers appended (password1, password123, etc.)
+        let basePassword = lowercasePassword.trimmingCharacters(in: .decimalDigits)
+        if basePassword != lowercasePassword, Self.commonPasswords.contains(basePassword) {
+            errors.append(.passwordTooCommon)
         }
 
-        // Check for digit
-        if !password.contains(where: \.isNumber) {
-            errors.append(.passwordMissingDigit)
-        }
-
-        // Check for special character
-        if !password.contains(where: { Self.specialCharacters.contains($0) }) {
-            errors.append(.passwordMissingSpecialCharacter)
+        // Also check for common patterns with special chars (password!, password!!, etc.)
+        let alphanumericPassword = String(lowercasePassword.filter { $0.isLetter || $0.isNumber })
+        if alphanumericPassword != lowercasePassword, Self.commonPasswords.contains(alphanumericPassword) {
+            errors.append(.passwordTooCommon)
         }
 
         return errors
@@ -77,40 +90,83 @@ final class PasswordValidationService: PasswordValidationServiceProtocol {
     func passwordStrength(_ password: String) -> PasswordStrength {
         var score = 0
 
-        // Length contribution (max 2 points)
-        if password.count >= 12 {
-            score += 1
+        // Length-based scoring (NIST emphasizes length over complexity)
+        switch password.count {
+        case 0 ..< 12:
+            score += 0 // Too short
+        case 12 ..< 16:
+            score += 1 // Minimum acceptable
+        case 16 ..< 20:
+            score += 2 // Good length
+        case 20...:
+            score += 3 // Excellent length
+        default:
+            score += 0
         }
-        if password.count >= 16 {
+
+        // Character variety bonus (not required, but helps)
+        var varietyScore = 0
+        if password.contains(where: \.isUppercase) {
+            varietyScore += 1
+        }
+        if password.contains(where: \.isLowercase) {
+            varietyScore += 1
+        }
+        if password.contains(where: \.isNumber) {
+            varietyScore += 1
+        }
+        if password.contains(where: { !$0.isLetter && !$0.isNumber }) {
+            varietyScore += 1
+        }
+
+        // Add variety bonus (max 2 points)
+        if varietyScore >= 4 {
+            score += 2
+        } else if varietyScore >= 3 {
             score += 1
         }
 
-        // Character variety (max 4 points)
-        if password.contains(where: \.isUppercase) {
-            score += 1
+        // Check for repetitive patterns (penalty)
+        if hasRepetitivePatterns(password) {
+            score -= 1
         }
-        if password.contains(where: \.isLowercase) {
-            score += 1
-        }
-        if password.contains(where: \.isNumber) {
-            score += 1
-        }
-        if password.contains(where: { Self.specialCharacters.contains($0) }) {
-            score += 1
+
+        // Check if it's a common password (penalty)
+        if Self.commonPasswords.contains(password.lowercased()) {
+            score -= 2
         }
 
         // Map score to strength
-        switch score {
-        case 0 ... 2:
+        switch max(0, score) {
+        case 0 ... 1:
             return .weak
-        case 3 ... 4:
+        case 2:
             return .fair
-        case 5:
+        case 3 ... 4:
             return .good
-        case 6...:
+        case 5...:
             return .strong
         default:
             return .weak
         }
+    }
+
+    // MARK: - Private Methods
+
+    private func hasRepetitivePatterns(_ password: String) -> Bool {
+        // Check for simple repetition like "aaaa", "1111", "abcabc"
+        if password.count >= 4 {
+            let chars = Array(password)
+            // Check for 4+ repeated characters
+            for index in 0 ..< chars.count - 3 {
+                let allMatch = chars[index] == chars[index + 1] &&
+                    chars[index] == chars[index + 2] &&
+                    chars[index] == chars[index + 3]
+                if allMatch {
+                    return true
+                }
+            }
+        }
+        return false
     }
 }

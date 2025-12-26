@@ -7,20 +7,26 @@ final class AuthenticationViewModel {
     // MARK: - Authentication State
 
     var isAuthenticated = false
-    var isSetUp: Bool {
-        authService.isSetUp
-    }
+    var isSetUp = false
 
     // MARK: - Password Setup State
 
+    var username = ""
     var password = ""
     var confirmPassword = ""
+    var hasAttemptedSetup = false // Track if user has tried to submit
+
     var passwordStrength: PasswordStrength {
         passwordValidator.passwordStrength(password)
     }
 
     var passwordValidationErrors: [AuthenticationError] {
         passwordValidator.validate(password)
+    }
+
+    // Only show validation errors after user attempts setup
+    var displayedValidationErrors: [AuthenticationError] {
+        hasAttemptedSetup ? passwordValidationErrors : []
     }
 
     var enableBiometric = false
@@ -66,6 +72,9 @@ final class AuthenticationViewModel {
         self.passwordValidator = passwordValidator
         self.lockStateService = lockStateService
 
+        // Initialize setup state from authService
+        isSetUp = authService.isSetUp
+
         // Show biometric prompt on launch if enabled
         showBiometricPrompt = authService.isSetUp && authService.isBiometricEnabled
     }
@@ -74,12 +83,22 @@ final class AuthenticationViewModel {
 
     @MainActor
     func setUp() async {
-        // Validate passwords
-        guard !passwordValidationErrors.isEmpty == false else {
+        // Mark that user has attempted setup (enables error display)
+        hasAttemptedSetup = true
+
+        // Validate username
+        guard !username.trimmingCharacters(in: .whitespaces).isEmpty else {
+            errorMessage = "Please enter a username"
+            return
+        }
+
+        // Validate passwords - check for validation errors
+        if !passwordValidationErrors.isEmpty {
             errorMessage = passwordValidationErrors.first?.errorDescription
             return
         }
 
+        // Ensure passwords match
         guard password == confirmPassword else {
             errorMessage = AuthenticationError.passwordMismatch.errorDescription
             return
@@ -90,11 +109,14 @@ final class AuthenticationViewModel {
 
         do {
             try await authService.setUp(password: password, enableBiometric: enableBiometric)
+            isSetUp = true // Update stored property to trigger view update
             isAuthenticated = true
 
-            // Clear password fields
+            // Clear fields
+            username = ""
             password = ""
             confirmPassword = ""
+            hasAttemptedSetup = false
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -184,6 +206,7 @@ final class AuthenticationViewModel {
     func logout() async {
         do {
             try authService.logout()
+            isSetUp = false // Update stored property
             isAuthenticated = false
             lockStateService.unlock()
             errorMessage = nil

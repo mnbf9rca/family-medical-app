@@ -38,10 +38,10 @@ final class LockStateService: LockStateServiceProtocol {
 
     var lockTimeoutSeconds: Int {
         get {
-            UserDefaults.standard.integer(forKey: Self.lockTimeoutKey).takeIf { $0 > 0 } ?? Self.defaultTimeout
+            userDefaults.integer(forKey: Self.lockTimeoutKey).takeIf { $0 > 0 } ?? Self.defaultTimeout
         }
         set {
-            UserDefaults.standard.set(newValue, forKey: Self.lockTimeoutKey)
+            userDefaults.set(newValue, forKey: Self.lockTimeoutKey)
         }
     }
 
