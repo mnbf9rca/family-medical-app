@@ -53,6 +53,12 @@ struct UnlockView: View {
                             .textFieldStyle(.roundedBorder)
                             .textContentType(.password)
                             .autocorrectionDisabled()
+                            .submitLabel(.done)
+                            .onSubmit {
+                                Task {
+                                    await viewModel.unlockWithPassword()
+                                }
+                            }
                             .disabled(viewModel.isLockedOut)
 
                         Button(action: {

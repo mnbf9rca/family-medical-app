@@ -45,6 +45,7 @@ struct PasswordSetupView: View {
                             .textFieldStyle(.roundedBorder)
                             .textContentType(.newPassword)
                             .autocorrectionDisabled()
+                            .submitLabel(.next)
 
                         if !viewModel.password.isEmpty {
                             PasswordStrengthIndicator(strength: viewModel.passwordStrength)
@@ -59,6 +60,12 @@ struct PasswordSetupView: View {
                             .textFieldStyle(.roundedBorder)
                             .textContentType(.newPassword)
                             .autocorrectionDisabled()
+                            .submitLabel(.done)
+                            .onSubmit {
+                                Task {
+                                    await viewModel.setUp()
+                                }
+                            }
                     }
 
                     // Validation errors (only shown after user attempts setup)
