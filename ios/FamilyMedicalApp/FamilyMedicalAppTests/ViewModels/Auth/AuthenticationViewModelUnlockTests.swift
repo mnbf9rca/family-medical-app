@@ -8,7 +8,7 @@ struct AuthenticationViewModelUnlockTests {
 
     private let correctTestCredential = "correct-credential"
     private let wrongTestCredential = "wrong-credential"
-    private let attemptTestCredential = attemptTestCredential
+    private let attemptTestCredential = "attempt-credential"
 
     // MARK: - Password Unlock Tests
 
