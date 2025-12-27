@@ -19,6 +19,13 @@
         "identifier" : "D445F7A62EF7E94000E07F78",
         "name" : "FamilyMedicalAppTests"
       }
+    },
+    {
+      "target" : {
+        "containerPath" : "container:FamilyMedicalApp.xcodeproj",
+        "identifier" : "D445F7B02EF7E94000E07F78",
+        "name" : "FamilyMedicalAppUITests"
+      }
     }
   ],
   "version" : 1

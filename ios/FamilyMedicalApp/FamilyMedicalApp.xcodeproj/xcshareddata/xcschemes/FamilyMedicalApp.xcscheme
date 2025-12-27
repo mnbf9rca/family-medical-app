@@ -34,6 +34,18 @@
             default = "YES">
          </TestPlanReference>
       </TestPlans>
+      <Testables>
+         <TestableReference
+            skipped = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "D445F7B02EF7E94000E07F78"
+               BuildableName = "FamilyMedicalAppUITests.xctest"
+               BlueprintName = "FamilyMedicalAppUITests"
+               ReferencedContainer = "container:FamilyMedicalApp.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
+      </Testables>
    </TestAction>
    <LaunchAction
       buildConfiguration = "Debug"
