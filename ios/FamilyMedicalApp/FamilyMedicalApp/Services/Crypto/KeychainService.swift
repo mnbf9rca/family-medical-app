@@ -74,8 +74,15 @@ protocol KeychainServiceProtocol {
 /// iOS Keychain wrapper for secure key storage
 final class KeychainService: KeychainServiceProtocol {
     private let serviceName = "com.cynexia.FamilyMedicalApp"
+    private let logger: CategoryLoggerProtocol
+
+    init(logger: CategoryLoggerProtocol? = nil) {
+        self.logger = logger ?? LoggingService.shared.logger(category: .crypto)
+    }
 
     func storeKey(_ key: SymmetricKey, identifier: String, accessControl: KeychainAccessControl) throws {
+        logger.debug("Storing key with identifier: \(identifier)", privacy: .private)
+
         // Delete existing key first (upsert pattern). Only ignore "not found" errors, propagate others.
         do {
             try deleteKey(identifier: identifier)
@@ -96,11 +103,16 @@ final class KeychainService: KeychainServiceProtocol {
         let status = SecItemAdd(query as CFDictionary, nil)
 
         guard status == errSecSuccess else {
+            logger.error("Failed to store key: \(identifier), status: \(status)", privacy: .private)
             throw KeychainError.storeFailed(status)
         }
+
+        logger.debug("Successfully stored key: \(identifier)", privacy: .private)
     }
 
     func retrieveKey(identifier: String) throws -> SymmetricKey {
+        logger.debug("Retrieving key with identifier: \(identifier)", privacy: .private)
+
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: serviceName,
@@ -116,15 +128,20 @@ final class KeychainService: KeychainServiceProtocol {
               let keyData = result as? Data
         else {
             if status == errSecItemNotFound {
+                logger.error("Key not found: \(identifier)", privacy: .private)
                 throw KeychainError.keyNotFound(identifier)
             }
+            logger.error("Failed to retrieve key: \(identifier), status: \(status)", privacy: .private)
             throw KeychainError.retrieveFailed(status)
         }
 
+        logger.debug("Successfully retrieved key: \(identifier)", privacy: .private)
         return SymmetricKey(data: keyData)
     }
 
     func deleteKey(identifier: String) throws {
+        logger.debug("Deleting key with identifier: \(identifier)", privacy: .private)
+
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: serviceName,
@@ -134,12 +151,16 @@ final class KeychainService: KeychainServiceProtocol {
         let status = SecItemDelete(query as CFDictionary)
 
         if status == errSecItemNotFound {
+            logger.error("Cannot delete key not found: \(identifier)", privacy: .private)
             throw KeychainError.keyNotFound(identifier)
         }
 
         guard status == errSecSuccess else {
+            logger.error("Failed to delete key: \(identifier), status: \(status)", privacy: .private)
             throw KeychainError.deleteFailed(status)
         }
+
+        logger.debug("Successfully deleted key: \(identifier)", privacy: .private)
     }
 
     func keyExists(identifier: String) -> Bool {
@@ -155,6 +176,8 @@ final class KeychainService: KeychainServiceProtocol {
     }
 
     func storeData(_ data: Data, identifier: String, accessControl: KeychainAccessControl) throws {
+        logger.debug("Storing data with identifier: \(identifier)", privacy: .private)
+
         // Delete existing data first (upsert pattern)
         do {
             try deleteData(identifier: identifier)
@@ -180,11 +203,15 @@ final class KeychainService: KeychainServiceProtocol {
         let status = SecItemAdd(query as CFDictionary, nil)
 
         guard status == errSecSuccess else {
+            logger.error("Failed to store data: \(identifier), status: \(status)", privacy: .private)
             throw KeychainError.storeFailed(status)
         }
+
+        logger.debug("Successfully stored data: \(identifier)", privacy: .private)
     }
 
     func retrieveData(identifier: String) throws -> Data {
+        logger.debug("Retrieving data with identifier: \(identifier)", privacy: .private)
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: serviceName,
@@ -200,15 +227,19 @@ final class KeychainService: KeychainServiceProtocol {
               let data = result as? Data
         else {
             if status == errSecItemNotFound {
+                logger.error("Data not found: \(identifier)", privacy: .private)
                 throw KeychainError.keyNotFound(identifier)
             }
+            logger.error("Failed to retrieve data: \(identifier), status: \(status)", privacy: .private)
             throw KeychainError.retrieveFailed(status)
         }
 
+        logger.debug("Successfully retrieved data: \(identifier)", privacy: .private)
         return data
     }
 
     func deleteData(identifier: String) throws {
+        logger.debug("Deleting data with identifier: \(identifier)", privacy: .private)
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: serviceName,
@@ -218,12 +249,16 @@ final class KeychainService: KeychainServiceProtocol {
         let status = SecItemDelete(query as CFDictionary)
 
         if status == errSecItemNotFound {
+            logger.error("Cannot delete data not found: \(identifier)", privacy: .private)
             throw KeychainError.keyNotFound(identifier)
         }
 
         guard status == errSecSuccess else {
+            logger.error("Failed to delete data: \(identifier), status: \(status)", privacy: .private)
             throw KeychainError.deleteFailed(status)
         }
+
+        logger.debug("Successfully deleted data: \(identifier)", privacy: .private)
     }
 
     func dataExists(identifier: String) -> Bool {
