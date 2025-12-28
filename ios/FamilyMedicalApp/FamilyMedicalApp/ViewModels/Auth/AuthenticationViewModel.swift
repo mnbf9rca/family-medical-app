@@ -231,7 +231,9 @@ final class AuthenticationViewModel {
             unlockPassword = ""
             showBiometricPrompt = false
         } catch {
-            errorMessage = "Failed to logout: \(error.localizedDescription)"
+            // Don't expose technical error details to users
+            // TODO: Add proper logging when logging infrastructure is available
+            errorMessage = "Unable to logout. Please try again or restart the app."
         }
     }
 

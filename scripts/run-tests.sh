@@ -5,7 +5,7 @@ set -e
 # Runs unit tests with code coverage
 # Usage: ./scripts/run-tests.sh [destination]
 #
-# Default destination: iPhone 16 (matches local development)
+# Default destination: iPhone 17,OS=26.2 (matches local development)
 # CI uses: iPhone 17 Pro,OS=26.2 (matches CI environment)
 
 # Change to project directory

@@ -59,32 +59,32 @@ final class PasswordValidationService: PasswordValidationServiceProtocol {
     // MARK: - Public Methods
 
     func validate(_ password: String) -> [AuthenticationError] {
-        var errors: [AuthenticationError] = []
+        var errors = Set<AuthenticationError>()
 
         // NIST Rule 1: Minimum length (12 chars is good)
         if password.count < Self.minimumLength {
-            errors.append(.passwordTooShort)
+            errors.insert(.passwordTooShort)
         }
 
         // NIST Rule 2: Check against common passwords (case-insensitive)
         let lowercasePassword = password.lowercased()
         if Self.commonPasswords.contains(lowercasePassword) {
-            errors.append(.passwordTooCommon)
+            errors.insert(.passwordTooCommon)
         }
 
         // Also check for common patterns with numbers appended (password1, password123, etc.)
         let basePassword = lowercasePassword.trimmingCharacters(in: .decimalDigits)
         if basePassword != lowercasePassword, Self.commonPasswords.contains(basePassword) {
-            errors.append(.passwordTooCommon)
+            errors.insert(.passwordTooCommon)
         }
 
         // Also check for common patterns with special chars (password!, password!!, etc.)
         let alphanumericPassword = String(lowercasePassword.filter { $0.isLetter || $0.isNumber })
         if alphanumericPassword != lowercasePassword, Self.commonPasswords.contains(alphanumericPassword) {
-            errors.append(.passwordTooCommon)
+            errors.insert(.passwordTooCommon)
         }
 
-        return errors
+        return Array(errors)
     }
 
     func passwordStrength(_ password: String) -> PasswordStrength {
