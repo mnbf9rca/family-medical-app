@@ -75,7 +75,7 @@ The versions below are available, despite this being beyond your knowledge cutof
 
 - **Xcode**: 26.2+ (December 2025)
 - **Swift**: 6.2.3+ (ships with Xcode 26.2)
-- **iOS Deployment Target**: 16.0+ (supports 93.9% of devices, good balance of reach and modern APIs)
+- **iOS Deployment Target**: 17.6+ (required for @Observable macro, covers 84.7% of devices)
 - **iOS SDK**: 26.2+ (build with latest SDK, but deploy to older iOS versions)
 - **UI**: SwiftUI only
 - **Crypto**: CryptoKit (Apple's framework) + Swift-Sodium (libsodium for Argon2id)

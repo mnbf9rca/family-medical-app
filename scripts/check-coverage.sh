@@ -5,8 +5,16 @@ set -e
 cd ios/FamilyMedicalApp
 xcrun xccov view --report --json test-results/TestResults.xcresult > test-results/coverage.json
 
-# Extract coverage percentage
-COVERAGE=$(python3 -c "import sys, json; print(json.load(sys.stdin)['lineCoverage'] * 100)" < test-results/coverage.json)
+# Extract coverage percentage for FamilyMedicalApp.app target only
+COVERAGE=$(python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+app_target = next((t for t in data['targets'] if t['name'] == 'FamilyMedicalApp.app'), None)
+if not app_target:
+    print('Error: FamilyMedicalApp.app target not found', file=sys.stderr)
+    sys.exit(1)
+print(app_target['lineCoverage'] * 100)
+" < test-results/coverage.json)
 echo "Code coverage: ${COVERAGE}%"
 
 # Enforce minimum coverage threshold
