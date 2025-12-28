@@ -128,12 +128,16 @@ final class MockLockStateService: LockStateServiceProtocol {
     var isLocked: Bool = false
     var lockTimeoutSeconds: Int = 300
 
+    // Tracking properties for testing
+    var recordBackgroundTimeCalled = false
+    var shouldLockOnForegroundReturnValue = false
+
     func recordBackgroundTime() {
-        // No-op for mock
+        recordBackgroundTimeCalled = true
     }
 
     func shouldLockOnForeground() -> Bool {
-        false
+        shouldLockOnForegroundReturnValue
     }
 
     func lock() {
