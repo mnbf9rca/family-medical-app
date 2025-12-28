@@ -2,7 +2,7 @@
 # Code formatting rules for consistent Swift style
 
 # File options
---exclude ios/FamilyMedicalApp/FamilyMedicalApp.xcodeproj,Pods,.build,ios/FamilyMedicalApp/FamilyMedicalAppUITests,docs/research,docs/adr/examples
+--exclude ios/FamilyMedicalApp/FamilyMedicalApp.xcodeproj,Pods,.build,ios/FamilyMedicalApp/FamilyMedicalAppUITests,docs/research,docs/adr/examples,ios/FamilyMedicalApp/DerivedData,ios/FamilyMedicalApp/SourcePackages,.swiftpm
 
 # Format options
 --swiftversion 6.2
@@ -55,7 +55,6 @@
 # Enabled rules
 --enable isEmpty
 --enable redundantReturn
---enable redundantSelf
 --enable sortImports  # Was sortedImports (deprecated)
 --enable sortSwitchCases  # Was sortedSwitchCases (deprecated)
 --enable trailingCommas
@@ -68,3 +67,4 @@
 --disable blankLinesAroundMark
 --disable redundantNilInit  # Explicit nil initialization OK in crypto code
 --disable redundantOptionalBinding  # Explicit checks OK in crypto code
+--disable redundantSelf  # Swift 6 concurrency requires explicit self in closures

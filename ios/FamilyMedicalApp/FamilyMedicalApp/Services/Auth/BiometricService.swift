@@ -29,11 +29,14 @@ final class BiometricService: BiometricServiceProtocol {
 
     // swiftlint:disable:next modifier_order
     private nonisolated(unsafe) let context: LAContext
+    // swiftlint:disable:next modifier_order
+    private nonisolated(unsafe) let logger: CategoryLoggerProtocol
 
     // MARK: - Initialization
 
-    nonisolated init(context: LAContext = LAContext()) {
+    nonisolated init(context: LAContext = LAContext(), logger: CategoryLoggerProtocol? = nil) {
         self.context = context
+        self.logger = logger ?? LoggingService.shared.logger(category: .auth)
     }
 
     // MARK: - BiometricServiceProtocol
@@ -64,10 +67,13 @@ final class BiometricService: BiometricServiceProtocol {
     }
 
     func authenticate(reason: String) async throws {
+        logger.logOperation("authenticate", state: "started")
+
         var error: NSError?
 
         // Check if biometric authentication is available
         guard context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error) else {
+            logger.error("Biometric authentication not available")
             if let error = error {
                 switch error.code {
                 case LAError.biometryNotAvailable.rawValue:
@@ -89,9 +95,13 @@ final class BiometricService: BiometricServiceProtocol {
             )
 
             if !success {
+                logger.notice("Biometric authentication failed")
                 throw AuthenticationError.biometricFailed("Authentication failed")
             }
+
+            logger.logOperation("authenticate", state: "success")
         } catch let error as LAError {
+            logger.notice("Biometric authentication error: \(error.code.rawValue)")
             switch error.code {
             case .appCancel, .systemCancel, .userCancel:
                 throw AuthenticationError.biometricCancelled

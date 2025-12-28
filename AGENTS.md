@@ -1,24 +1,30 @@
 # Agent Guidelines
 
-## Development practices
+## ⚠️ CRITICAL RULES
 
-**ALWAYS** follow these rules:
+**Subagents frequently violate these rules. Read carefully.**
+
+### Environment & Execution
 
 - ⚠️ **NEVER** start processes detached
   - No `nohup`, no `&`, no daemon mode
   - If needed, use background bash processes
   - Use foreground processes in background shells for proper log access
+- ⚠️ Use `ast-grep` for code modifications
+  - **NEVER** use `sed` or `awk` - they corrupt complex files
+
+### Code Quality and Testing
+
+- ⚠️ **ALWAYS** run `pre-commit run --all-files` before committing
 - ⚠️ **NEVER** use ignores to suppress linting errors or warnings
   - Refactor the code instead, especially for complexity warnings
   - Use pure functions to reduce complexity
-- ⚠️ Use `ast-grep` for code modifications
-  - **NEVER** use `sed` or `awk` - they corrupt complex files
 - ⚠️ **NEVER** skip or override pre-commit hooks
   - The hooks are there for a reason - fix the issues instead
 - ⚠️ **ALWAYS** achieve at least 85% code coverage on code
   - Both individual files **and** across the project, including existing, new **and changed** code.
-  - use `{projectRoot}/scripts/check-coverage.sh` to validate - this is the same script used in CI.
-  - Ensure you are using the same test execution command as CI.
+  - Use `{projectRoot}/scripts/run-tests.sh` to run tests - this is the same script used in CI.
+  - **After** running tests, use `{projectRoot}/scripts/check-coverage.sh` to validate coverage - this is the same script used in CI.
   - **Using other methods will fail CI** meaning the PR cannot be merged.
   - Create tests up front or as you go to ensure you hit coverage.
   - Note: Target will be increased to 90% as more application code is added beyond authentication views
@@ -91,6 +97,7 @@ The versions below are available, despite this being beyond your knowledge cutof
 - [ADR-0003: Multi-User Sharing Model](docs/adr/adr-0003-multi-user-sharing-model.md) - Sharing patterns, access control
 - [ADR-0004: Sync Encryption](docs/adr/adr-0004-sync-encryption.md) - Encryption boundaries, metadata handling
 - [ADR-0005: Access Revocation](docs/adr/adr-0005-access-revocation.md) - Key rotation, re-encryption
+- Any other relevant ADR.
 
 **Quick reference:**
 

@@ -79,6 +79,7 @@ final class AuthenticationService: AuthenticationServiceProtocol {
     private let encryptionService: EncryptionServiceProtocol
     private let biometricService: BiometricServiceProtocol
     private let userDefaults: UserDefaults
+    private let logger: CategoryLoggerProtocol
 
     // MARK: - Properties
 
@@ -114,18 +115,22 @@ final class AuthenticationService: AuthenticationServiceProtocol {
         keychainService: KeychainServiceProtocol = KeychainService(),
         encryptionService: EncryptionServiceProtocol = EncryptionService(),
         biometricService: BiometricServiceProtocol = BiometricService(),
-        userDefaults: UserDefaults = .standard
+        userDefaults: UserDefaults = .standard,
+        logger: CategoryLoggerProtocol? = nil
     ) {
         self.keyDerivationService = keyDerivationService
         self.keychainService = keychainService
         self.encryptionService = encryptionService
         self.biometricService = biometricService
         self.userDefaults = userDefaults
+        self.logger = logger ?? LoggingService.shared.logger(category: .auth)
     }
 
     // MARK: - AuthenticationServiceProtocol
 
     func setUp(password: String, enableBiometric: Bool) async throws {
+        logger.logOperation("setUp", state: "started")
+
         // Generate salt
         let salt = try keyDerivationService.generateSalt()
 
@@ -183,11 +188,17 @@ final class AuthenticationService: AuthenticationServiceProtocol {
         // cannot be reliably cleared due to Swift String copy-on-write semantics
         var passwordBytes = Array(password.utf8)
         keyDerivationService.secureZero(&passwordBytes)
+
+        logger.logOperation("setUp", state: "completed")
+        logger.info("Account setup completed, biometric enabled: \(enableBiometric)")
     }
 
     func unlockWithPassword(_ password: String) async throws {
+        logger.logOperation("unlockWithPassword", state: "started")
+
         // Check if locked out
         if isLockedOut {
+            logger.notice("Unlock attempt during lockout, remaining: \(lockoutRemainingSeconds)s")
             throw AuthenticationError.accountLocked(remainingSeconds: lockoutRemainingSeconds)
         }
 
@@ -228,15 +239,21 @@ final class AuthenticationService: AuthenticationServiceProtocol {
             // Success - reset failed attempts
             userDefaults.removeObject(forKey: Self.failedAttemptsKey)
             userDefaults.removeObject(forKey: Self.lockoutEndTimeKey)
+
+            logger.logOperation("unlockWithPassword", state: "success")
         } catch is CryptoError {
             // Decryption failed = wrong password
+            logger.notice("Password verification failed")
             try handleFailedAttempt()
             throw AuthenticationError.wrongPassword
         }
     }
 
     func unlockWithBiometric() async throws {
+        logger.logOperation("unlockWithBiometric", state: "started")
+
         guard isBiometricEnabled else {
+            logger.notice("Biometric unlock attempted but not enabled")
             throw AuthenticationError.biometricNotAvailable
         }
 
@@ -253,6 +270,8 @@ final class AuthenticationService: AuthenticationServiceProtocol {
         // Success - reset failed attempts
         userDefaults.removeObject(forKey: Self.failedAttemptsKey)
         userDefaults.removeObject(forKey: Self.lockoutEndTimeKey)
+
+        logger.logOperation("unlockWithBiometric", state: "success")
     }
 
     func lock() {
@@ -262,6 +281,8 @@ final class AuthenticationService: AuthenticationServiceProtocol {
     }
 
     func logout() throws {
+        logger.logOperation("logout", state: "started")
+
         // Delete all keys from Keychain
         try? keychainService.deleteKey(identifier: Self.primaryKeyIdentifier)
         try? keychainService.deleteData(identifier: Self.identityPrivateKeyIdentifier)
@@ -273,6 +294,9 @@ final class AuthenticationService: AuthenticationServiceProtocol {
         userDefaults.removeObject(forKey: Self.biometricEnabledKey)
         userDefaults.removeObject(forKey: Self.failedAttemptsKey)
         userDefaults.removeObject(forKey: Self.lockoutEndTimeKey)
+
+        logger.logOperation("logout", state: "completed")
+        logger.info("User account logged out")
     }
 
     func disableBiometric() {
@@ -296,6 +320,8 @@ final class AuthenticationService: AuthenticationServiceProtocol {
         let currentAttempts = failedAttemptCount + 1
         userDefaults.set(currentAttempts, forKey: Self.failedAttemptsKey)
 
+        logger.notice("Failed authentication attempt #\(currentAttempts)")
+
         // Find matching lockout threshold
         let lockoutSeconds = Self.rateLimitThresholds.last { currentAttempts >= $0.attempts }?
             .lockoutSeconds ?? 0
@@ -303,6 +329,7 @@ final class AuthenticationService: AuthenticationServiceProtocol {
         if lockoutSeconds > 0 {
             let lockoutEndTime = Date().addingTimeInterval(TimeInterval(lockoutSeconds))
             userDefaults.set(lockoutEndTime, forKey: Self.lockoutEndTimeKey)
+            logger.notice("Account locked for \(lockoutSeconds)s after \(currentAttempts) attempts")
             throw AuthenticationError.accountLocked(remainingSeconds: lockoutSeconds)
         }
     }

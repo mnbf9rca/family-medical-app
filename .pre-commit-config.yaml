@@ -51,7 +51,7 @@ repos:
     hooks:
       - id: markdownlint
         args: ['--fix', '--config', '.markdownlint.json']
-        exclude: '^docs/adr/adr-template\.md$'
+        exclude: '^(docs/adr/adr-template\.md|CLAUDE\.md)$'
 
 # Global settings
 default_language_version:
