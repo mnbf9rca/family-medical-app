@@ -12,7 +12,7 @@ enum LogPrivacyLevel {
 
     /// Value is private and will be redacted in production builds
     ///
-    /// Use for: user IDs (UUIDs), email addresses, error messages with potential PII
+    /// Use for: email addresses, error messages with potential PII
     case `private`
 
     /// Value is sensitive and should NEVER be logged (placeholder logged instead)

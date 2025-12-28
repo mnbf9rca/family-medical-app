@@ -23,7 +23,8 @@
   - The hooks are there for a reason - fix the issues instead
 - ⚠️ **ALWAYS** achieve at least 85% code coverage on code
   - Both individual files **and** across the project, including existing, new **and changed** code.
-  - Use `{projectRoot}/scripts/run-tests.sh` to run tests and `{projectRoot}/scripts/check-coverage.sh` to validate - this is the same script used in CI.
+  - Use `{projectRoot}/scripts/run-tests.sh` to run tests - this is the same script used in CI.
+  - **After** running tests, use `{projectRoot}/scripts/check-coverage.sh` to validate coverage - this is the same script used in CI.
   - **Using other methods will fail CI** meaning the PR cannot be merged.
   - Create tests up front or as you go to ensure you hit coverage.
   - Note: Target will be increased to 90% as more application code is added beyond authentication views

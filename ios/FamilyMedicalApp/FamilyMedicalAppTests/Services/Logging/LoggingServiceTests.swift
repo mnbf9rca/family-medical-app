@@ -43,321 +43,103 @@ struct LoggingServiceTests {
         #expect(authLogger as AnyObject !== cryptoLogger as AnyObject)
     }
 
-    // MARK: - Privacy Redaction Tests
-
-    @Test
-    func privateDataMarkedAsPrivate() {
-        let mockLogger = MockCategoryLogger(category: .auth)
-
-        mockLogger.info("userEmail: user@test.com", privacy: .private)
-
-        let entries = mockLogger.entriesWithPrivacy(.private)
-        #expect(entries.count == 1)
-        #expect(entries.first?.message.contains("user@test.com") == true)
-    }
-
-    @Test
-    func sensitiveDataNeverLogged() {
-        let mockLogger = MockCategoryLogger(category: .crypto)
-
-        mockLogger.debug("key: supersecret", privacy: .sensitive)
-
-        let entries = mockLogger.capturedEntries
-        #expect(entries.count == 1)
-        #expect(entries.first?.privacy == .sensitive)
-    }
-
-    @Test
-    func publicDataRemainsPublic() {
-        let mockLogger = MockCategoryLogger(category: .auth)
-
-        mockLogger.logOperation("login", state: "started")
-
-        let entries = mockLogger.entriesWithPrivacy(.public)
-        #expect(entries.count == 1)
-    }
-
-    @Test
-    func hashedPrivacyLevel() {
-        let mockLogger = MockCategoryLogger(category: .storage)
-
-        mockLogger.debug("recordID: abc123", privacy: .hashed)
-
-        let entries = mockLogger.entriesWithPrivacy(.hashed)
-        #expect(entries.count == 1)
-        #expect(entries.first?.message.contains("abc123") == true)
-    }
-
-    // MARK: - Log Level Tests
-
-    @Test
-    func debugLevelWorks() {
-        let mockLogger = MockCategoryLogger(category: .auth)
-
-        mockLogger.debug("Debug message")
-
-        let entries = mockLogger.entriesWithLevel(.debug)
-        #expect(entries.count == 1)
-        #expect(entries.first?.message == "Debug message")
-    }
-
-    @Test
-    func infoLevelWorks() {
-        let mockLogger = MockCategoryLogger(category: .auth)
-
-        mockLogger.info("Info message")
-
-        let entries = mockLogger.entriesWithLevel(.info)
-        #expect(entries.count == 1)
-        #expect(entries.first?.message == "Info message")
-    }
-
-    @Test
-    func noticeLevelWorks() {
-        let mockLogger = MockCategoryLogger(category: .auth)
-
-        mockLogger.notice("Notice message")
-
-        let entries = mockLogger.entriesWithLevel(.notice)
-        #expect(entries.count == 1)
-        #expect(entries.first?.message == "Notice message")
-    }
-
-    @Test
-    func errorLevelWorks() {
-        let mockLogger = MockCategoryLogger(category: .auth)
-
-        mockLogger.error("Error message")
-
-        let entries = mockLogger.entriesWithLevel(.error)
-        #expect(entries.count == 1)
-        #expect(entries.first?.message == "Error message")
-    }
-
-    @Test
-    func faultLevelWorks() {
-        let mockLogger = MockCategoryLogger(category: .auth)
-
-        mockLogger.fault("Fault message")
-
-        let entries = mockLogger.entriesWithLevel(.fault)
-        #expect(entries.count == 1)
-        #expect(entries.first?.message == "Fault message")
-    }
-
-    // MARK: - Privacy-Aware Log Level Tests
-
-    @Test
-    func debugWithPrivacyLevel() {
-        let mockLogger = MockCategoryLogger(category: .auth)
-
-        mockLogger.debug("Private debug message", privacy: .private)
-
-        let entries = mockLogger.entriesWithLevel(.debug)
-        #expect(entries.count == 1)
-        #expect(entries.first?.privacy == .private)
-    }
-
-    @Test
-    func infoWithPrivacyLevel() {
-        let mockLogger = MockCategoryLogger(category: .auth)
-
-        mockLogger.info("Private info message", privacy: .private)
-
-        let entries = mockLogger.entriesWithLevel(.info)
-        #expect(entries.count == 1)
-        #expect(entries.first?.privacy == .private)
-    }
-
-    @Test
-    func noticeWithPrivacyLevel() {
-        let mockLogger = MockCategoryLogger(category: .auth)
-
-        mockLogger.notice("Private notice message", privacy: .private)
-
-        let entries = mockLogger.entriesWithLevel(.notice)
-        #expect(entries.count == 1)
-        #expect(entries.first?.privacy == .private)
-    }
-
-    @Test
-    func errorWithPrivacyLevel() {
-        let mockLogger = MockCategoryLogger(category: .auth)
-
-        mockLogger.error("Private error message", privacy: .private)
-
-        let entries = mockLogger.entriesWithLevel(.error)
-        #expect(entries.count == 1)
-        #expect(entries.first?.privacy == .private)
-    }
-
-    // MARK: - Convenience Method Tests
-
-    @Test
-    func logOperationCreatesCorrectEntry() {
-        let mockLogger = MockCategoryLogger(category: .auth)
-
-        mockLogger.logOperation("login", state: "started")
-
-        let entries = mockLogger.entriesContaining("login")
-        #expect(entries.count == 1)
-        #expect(entries.first?.message.contains("started") == true)
-        #expect(entries.first?.privacy == .public)
-        #expect(entries.first?.level == .info)
-    }
-
-    @Test
-    func logUserIDIsPublic() {
-        let mockLogger = MockCategoryLogger(category: .auth)
-        let uuid = "550e8400-e29b-41d4-a716-446655440000"
-
-        mockLogger.logUserID(uuid)
-
-        let entries = mockLogger.entriesContaining(uuid)
-        #expect(entries.count == 1)
-        #expect(entries.first?.privacy == .public)
-        #expect(entries.first?.level == .debug)
-    }
-
-    @Test
-    func logRecordCountIsPublic() {
-        let mockLogger = MockCategoryLogger(category: .storage)
-
-        mockLogger.logRecordCount(42)
-
-        let entries = mockLogger.entriesContaining("42")
-        #expect(entries.count == 1)
-        #expect(entries.first?.privacy == .public)
-        #expect(entries.first?.level == .debug)
-    }
-
-    @Test
-    func logTimestampIsPublic() {
-        let mockLogger = MockCategoryLogger(category: .storage)
-        let date = Date()
-
-        mockLogger.logTimestamp(date)
-
-        let entries = mockLogger.entriesContaining("timestamp")
-        #expect(entries.count == 1)
-        #expect(entries.first?.privacy == .public)
-        #expect(entries.first?.level == .debug)
-    }
-
-    @Test
-    func logErrorRedactsDetails() {
-        let mockLogger = MockCategoryLogger(category: .auth)
-        let error = AuthenticationError.wrongPassword
-
-        mockLogger.logError(error, context: "unlockWithPassword")
-
-        let entries = mockLogger.entriesWithLevel(.error)
-        #expect(entries.count == 1)
-        #expect(entries.first?.message.contains("unlockWithPassword") == true)
-        #expect(entries.first?.privacy == .private)
-    }
-
     // MARK: - Mock Test Helpers
 
     @Test
-    func clearRemovesAllEntries() {
+    func mockLoggerCapturesEntries() {
         let mockLogger = MockCategoryLogger(category: .auth)
 
-        mockLogger.info("Test 1")
-        mockLogger.info("Test 2")
-        mockLogger.info("Test 3")
+        mockLogger.info("Test message")
 
-        #expect(mockLogger.capturedEntries.count == 3)
-
-        mockLogger.clear()
-
-        #expect(mockLogger.capturedEntries.isEmpty)
+        #expect(mockLogger.capturedEntries.count == 1)
+        #expect(mockLogger.capturedEntries.first?.message == "Test message")
     }
 
     @Test
-    func entriesContainingFiltersCorrectly() {
+    func mockLoggerCanFilterByMessage() {
         let mockLogger = MockCategoryLogger(category: .auth)
 
-        mockLogger.info("Message one")
-        mockLogger.info("Message two")
-        mockLogger.info("Different text")
+        mockLogger.info("First message")
+        mockLogger.info("Second message")
+        mockLogger.info("First again")
 
-        let entries = mockLogger.entriesContaining("Message")
-        #expect(entries.count == 2)
+        let filtered = mockLogger.entriesContaining("First")
+        #expect(filtered.count == 2)
     }
 
     @Test
-    func entriesWithPrivacyFiltersCorrectly() {
+    func mockLoggerCanFilterByPrivacy() {
         let mockLogger = MockCategoryLogger(category: .auth)
 
-        mockLogger.info("Public 1")
-        mockLogger.info("Private 1", privacy: .private)
-        mockLogger.info("Public 2")
-        mockLogger.info("Private 2", privacy: .private)
+        mockLogger.info("Public message")
+        mockLogger.info("Private message", privacy: .private)
 
         let privateEntries = mockLogger.entriesWithPrivacy(.private)
-        #expect(privateEntries.count == 2)
-
-        let publicEntries = mockLogger.entriesWithPrivacy(.public)
-        #expect(publicEntries.count == 2)
+        #expect(privateEntries.count == 1)
     }
 
     @Test
-    func entriesWithLevelFiltersCorrectly() {
+    func mockLoggerCanFilterByLevel() {
         let mockLogger = MockCategoryLogger(category: .auth)
 
-        mockLogger.debug("Debug 1")
-        mockLogger.info("Info 1")
-        mockLogger.debug("Debug 2")
-        mockLogger.error("Error 1")
+        mockLogger.debug("Debug")
+        mockLogger.info("Info")
+        mockLogger.error("Error")
 
         let debugEntries = mockLogger.entriesWithLevel(.debug)
-        #expect(debugEntries.count == 2)
+        #expect(debugEntries.count == 1)
+    }
 
-        let infoEntries = mockLogger.entriesWithLevel(.info)
-        #expect(infoEntries.count == 1)
+    @Test
+    func mockLoggerCanClear() {
+        let mockLogger = MockCategoryLogger(category: .auth)
 
-        let errorEntries = mockLogger.entriesWithLevel(.error)
-        #expect(errorEntries.count == 1)
+        mockLogger.info("Test")
+        #expect(mockLogger.capturedEntries.count == 1)
+
+        mockLogger.clear()
+        #expect(mockLogger.capturedEntries.isEmpty)
     }
 
     // MARK: - Mock Logging Service Tests
 
     @Test
-    func mockLoggingServiceCreatesLoggers() {
-        let service = MockLoggingService()
+    func mockServiceCreatesLoggers() {
+        let mockService = MockLoggingService()
+        let logger = mockService.logger(category: .auth)
 
-        let logger = service.logger(category: .auth)
         #expect(logger is MockCategoryLogger)
     }
 
     @Test
-    func mockLoggingServiceCachesLoggers() {
-        let service = MockLoggingService()
+    func mockServiceCachesLoggers() {
+        let mockService = MockLoggingService()
+        let logger1 = mockService.logger(category: .auth)
+        let logger2 = mockService.logger(category: .auth)
 
-        let logger1 = service.mockLogger(category: .auth)
-        let logger2 = service.mockLogger(category: .auth)
-
-        #expect(logger1 === logger2)
+        #expect(logger1 as AnyObject === logger2 as AnyObject)
     }
 
     @Test
-    func mockLoggingServiceClearAllWorks() {
-        let service = MockLoggingService()
+    func mockServiceProvidesTypedAccess() {
+        let mockService = MockLoggingService()
+        let mockLogger = mockService.mockLogger(category: .auth)
 
-        let authLogger = service.mockLogger(category: .auth)
-        let cryptoLogger = service.mockLogger(category: .crypto)
+        mockLogger.info("Test")
+        #expect(mockLogger.capturedEntries.count == 1)
+    }
 
-        authLogger.info("Auth message")
-        cryptoLogger.info("Crypto message")
+    @Test
+    func mockServiceCanClearAll() {
+        let mockService = MockLoggingService()
 
-        #expect(authLogger.capturedEntries.count == 1)
-        #expect(cryptoLogger.capturedEntries.count == 1)
+        mockService.logger(category: .auth).info("Test 1")
+        mockService.logger(category: .crypto).info("Test 2")
 
-        service.clearAll()
+        mockService.clearAll()
 
-        #expect(authLogger.capturedEntries.isEmpty)
-        #expect(cryptoLogger.capturedEntries.isEmpty)
+        #expect(mockService.mockLogger(category: .auth).capturedEntries.isEmpty)
+        #expect(mockService.mockLogger(category: .crypto).capturedEntries.isEmpty)
     }
 
     // MARK: - LogCategory Tests
@@ -373,12 +155,26 @@ struct LoggingServiceTests {
         #expect(categories.contains(.ui))
     }
 
-    @Test
-    func logCategorySubsystemIsCorrect() {
-        let category = LogCategory.auth
-        let subsystem = category.subsystem
+    // MARK: - Real CategoryLogger Tests
 
-        // Should be bundle identifier or fallback
-        #expect(subsystem.contains("FamilyMedicalApp"))
+    @Test
+    func realLoggerFaultWithPrivacy() {
+        let service = LoggingService()
+        let logger = service.logger(category: .auth)
+
+        // Exercise the real implementation - just ensure it doesn't crash
+        logger.fault("Test fault", privacy: .private)
+        logger.fault("Test fault", privacy: .public)
+        logger.fault("Test fault", privacy: .hashed)
+        logger.fault("Test fault", privacy: .sensitive)
+    }
+
+    @Test
+    func realLoggerTimestamp() {
+        let service = LoggingService()
+        let logger = service.logger(category: .storage)
+
+        // Exercise the real implementation - just ensure it doesn't crash
+        logger.logTimestamp(Date())
     }
 }

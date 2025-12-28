@@ -121,6 +121,16 @@ final class MockCategoryLogger: CategoryLoggerProtocol {
         ))
     }
 
+    func fault(_ message: String, privacy: LogPrivacyLevel) {
+        capturedEntries.append(CapturedLogEntry(
+            level: .fault,
+            message: message,
+            privacy: privacy,
+            category: category,
+            timestamp: Date()
+        ))
+    }
+
     // MARK: - Convenience Methods
 
     func logOperation(_ operation: String, state: String) {
@@ -154,9 +164,12 @@ final class MockCategoryLogger: CategoryLoggerProtocol {
     }
 
     func logTimestamp(_ date: Date) {
+        let isoFormatter = ISO8601DateFormatter()
+        isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let timestamp = isoFormatter.string(from: date)
         capturedEntries.append(CapturedLogEntry(
             level: .debug,
-            message: "timestamp: \(date.description)",
+            message: "timestamp: \(timestamp)",
             privacy: .public,
             category: category,
             timestamp: Date()

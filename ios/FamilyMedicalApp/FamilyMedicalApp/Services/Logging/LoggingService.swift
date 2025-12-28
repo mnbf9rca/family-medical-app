@@ -44,6 +44,9 @@ protocol CategoryLoggerProtocol {
     /// Log an error message with explicit privacy level
     func error(_ message: String, privacy: LogPrivacyLevel)
 
+    /// Log a fault message with explicit privacy level
+    func fault(_ message: String, privacy: LogPrivacyLevel)
+
     // MARK: - Convenience Methods (Safe Patterns)
 
     /// Log an operation with state (both public, safe to log)
@@ -160,6 +163,10 @@ final class CategoryLogger: CategoryLoggerProtocol {
         logWithPrivacy(level: .error, message: message, privacy: privacy)
     }
 
+    func fault(_ message: String, privacy: LogPrivacyLevel) {
+        logWithPrivacy(level: .fault, message: message, privacy: privacy)
+    }
+
     // MARK: - Private Helpers
 
     private enum LogLevel {
@@ -234,7 +241,10 @@ final class CategoryLogger: CategoryLoggerProtocol {
     }
 
     func logTimestamp(_ date: Date) {
-        osLogger.debug("timestamp: \(date.description, privacy: .public)")
+        let isoFormatter = ISO8601DateFormatter()
+        isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let timestamp = isoFormatter.string(from: date)
+        osLogger.debug("timestamp: \(timestamp, privacy: .public)")
     }
 
     func logError(_ error: Error, context: String) {

@@ -19,9 +19,4 @@ enum LogCategory: String, CaseIterable {
 
     /// User interface and view operations
     case ui
-
-    /// Full subsystem identifier for os.Logger
-    var subsystem: String {
-        Bundle.main.bundleIdentifier ?? "com.cynexia.FamilyMedicalApp"
-    }
 }
