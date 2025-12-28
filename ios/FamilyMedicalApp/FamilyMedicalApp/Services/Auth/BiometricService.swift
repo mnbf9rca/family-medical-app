@@ -29,7 +29,8 @@ final class BiometricService: BiometricServiceProtocol {
 
     // swiftlint:disable:next modifier_order
     private nonisolated(unsafe) let context: LAContext
-    private let logger: CategoryLoggerProtocol
+    // swiftlint:disable:next modifier_order
+    private nonisolated(unsafe) let logger: CategoryLoggerProtocol
 
     // MARK: - Initialization
 
