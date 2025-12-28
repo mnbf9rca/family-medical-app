@@ -178,7 +178,9 @@ final class AuthenticationService: AuthenticationServiceProtocol {
         userDefaults.removeObject(forKey: Self.failedAttemptsKey)
         userDefaults.removeObject(forKey: Self.lockoutEndTimeKey)
 
-        // Securely zero password from memory
+        // Best-effort: zero out this local copy of the password bytes
+        // Note: The original String instance may still remain in memory and
+        // cannot be reliably cleared due to Swift String copy-on-write semantics
         var passwordBytes = Array(password.utf8)
         keyDerivationService.secureZero(&passwordBytes)
     }
@@ -254,7 +256,9 @@ final class AuthenticationService: AuthenticationServiceProtocol {
     }
 
     func lock() {
-        // Lock is handled by UI state - no action needed here
+        // No-op: Lock state is managed by AuthenticationViewModel.isAuthenticated
+        // This service only manages persistent authentication state (Keychain),
+        // not transient lock state which is handled at the UI layer
     }
 
     func logout() throws {

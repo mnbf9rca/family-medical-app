@@ -158,8 +158,15 @@ final class KeychainService: KeychainServiceProtocol {
         // Delete existing data first (upsert pattern)
         do {
             try deleteData(identifier: identifier)
-        } catch KeychainError.keyNotFound {
-            // No existing data to delete - proceed with storing
+        } catch let error as KeychainError {
+            switch error {
+            case .keyNotFound:
+                // No existing data to delete - proceed with storing
+                break
+            default:
+                // Propagate other keychain errors to the caller
+                throw error
+            }
         }
 
         let query: [String: Any] = [

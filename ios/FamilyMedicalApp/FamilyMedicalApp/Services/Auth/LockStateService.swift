@@ -97,6 +97,8 @@ final class LockStateService: LockStateServiceProtocol {
 // MARK: - Helper Extension
 
 private extension Int {
+    /// Returns this Int if it satisfies the given predicate, otherwise returns nil.
+    /// Kotlin-inspired utility for conditional value selection.
     func takeIf(_ predicate: (Int) -> Bool) -> Int? {
         predicate(self) ? self : nil
     }
