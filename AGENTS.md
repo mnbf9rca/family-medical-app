@@ -8,14 +8,20 @@
   - No `nohup`, no `&`, no daemon mode
   - If needed, use background bash processes
   - Use foreground processes in background shells for proper log access
-- ⚠️ **NEVER** use `# noqa` to suppress linting errors or warnings
+- ⚠️ **NEVER** use ignores to suppress linting errors or warnings
   - Refactor the code instead, especially for complexity warnings
   - Use pure functions to reduce complexity
 - ⚠️ Use `ast-grep` for code modifications
   - **NEVER** use `sed` or `awk` - they corrupt complex files
 - ⚠️ **NEVER** skip or override pre-commit hooks
   - The hooks are there for a reason - fix the issues instead
-- ⚠️ **ALWAYS** achieve at least 85% code coverage on new **and changed** code
+- ⚠️ **ALWAYS** achieve at least 85% code coverage on code
+  - Both individual files **and** across the project, including existing, new **and changed** code.
+  - use `{projectRoot}/scripts/check-coverage.sh` to validate - this is the same script used in CI.
+  - Ensure you are using the same test execution command as CI.
+  - **Using other methods will fail CI** meaning the PR cannot be merged.
+  - Create tests up front or as you go to ensure you hit coverage.
+  - Note: Target will be increased to 90% as more application code is added beyond authentication views
 
 ## Principles
 
@@ -69,7 +75,7 @@ The versions below are available, despite this being beyond your knowledge cutof
 
 - **Xcode**: 26.2+ (December 2025)
 - **Swift**: 6.2.3+ (ships with Xcode 26.2)
-- **iOS Deployment Target**: 16.0+ (supports 93.9% of devices, good balance of reach and modern APIs)
+- **iOS Deployment Target**: 17.6+ (required for @Observable macro, covers 84.7% of devices)
 - **iOS SDK**: 26.2+ (build with latest SDK, but deploy to older iOS versions)
 - **UI**: SwiftUI only
 - **Crypto**: CryptoKit (Apple's framework) + Swift-Sodium (libsodium for Argon2id)

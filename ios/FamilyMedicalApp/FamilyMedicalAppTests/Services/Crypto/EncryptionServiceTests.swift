@@ -190,4 +190,41 @@ struct EncryptionServiceTests {
         // Ciphertext should match plaintext length
         #expect(encrypted.ciphertext.count == plaintext.count)
     }
+
+    /// Test decrypt with corrupted nonce data throws
+    @Test
+    func decrypt_corruptedNonce() throws {
+        let key = SymmetricKey(size: .bits256)
+        let plaintext = Data("Test data".utf8)
+        let encrypted = try service.encrypt(plaintext, using: key)
+
+        // Create payload with zero nonce (valid length but invalid data)
+        let zeroNonce = Data(count: 12)
+        let corruptedPayload = try EncryptedPayload(
+            nonce: zeroNonce,
+            ciphertext: encrypted.ciphertext,
+            tag: encrypted.tag
+        )
+
+        #expect(throws: CryptoError.self) {
+            _ = try service.decrypt(corruptedPayload, using: key)
+        }
+    }
+
+    /// Test payload combined format round-trip
+    @Test
+    func encryptedPayload_combinedFormat() throws {
+        let key = SymmetricKey(size: .bits256)
+        let plaintext = Data("Combined format test".utf8)
+
+        let encrypted = try service.encrypt(plaintext, using: key)
+        let combined = encrypted.combined
+
+        // Recreate from combined
+        let recreated = try EncryptedPayload(combined: combined)
+
+        // Should decrypt successfully
+        let decrypted = try service.decrypt(recreated, using: key)
+        #expect(decrypted == plaintext)
+    }
 }

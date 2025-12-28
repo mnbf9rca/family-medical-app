@@ -7,7 +7,8 @@ struct ContentViewTests {
     @Test
     func contentViewRenders() {
         let view = ContentView()
-        #expect(view.body != nil)
+        // View body is always non-nil for SwiftUI views
+        _ = view.body
     }
 
     /// Test ContentView body is not empty

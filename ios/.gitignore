@@ -83,7 +83,8 @@ fastlane/screenshots/**/*.png
 fastlane/test_output
 
 # Test results
-*/test-results/
+# Match both test-results/ directories and test-results.xcresult bundles
+*/test-results*
 */coverage.json
 
 # Code Injection
