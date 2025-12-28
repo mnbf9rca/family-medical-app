@@ -13,23 +13,20 @@
 - ⚠️ Use `ast-grep` for code modifications
   - **NEVER** use `sed` or `awk` - they corrupt complex files
 
-### Code Quality
+### Code Quality and Testing
 
+- ⚠️ **ALWAYS** run `pre-commit run --all-files` before committing
 - ⚠️ **NEVER** use ignores to suppress linting errors or warnings
   - Refactor the code instead, especially for complexity warnings
   - Use pure functions to reduce complexity
 - ⚠️ **NEVER** skip or override pre-commit hooks
   - The hooks are there for a reason - fix the issues instead
-
-### Code Quality and testing
-
 - ⚠️ **ALWAYS** achieve at least 85% code coverage on code
   - Both individual files **and** across the project, including existing, new **and changed** code.
   - Use `{projectRoot}/scripts/run-tests.sh` to run tests and `{projectRoot}/scripts/check-coverage.sh` to validate - this is the same script used in CI.
   - **Using other methods will fail CI** meaning the PR cannot be merged.
   - Create tests up front or as you go to ensure you hit coverage.
   - Note: Target will be increased to 90% as more application code is added beyond authentication views
-- ⚠️ **ALWAYS** run `pre-commit run --all-files` before committing
 
 ## Principles
 
