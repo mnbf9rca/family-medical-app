@@ -126,7 +126,7 @@ Signal prioritizes forward secrecy over message history. Medical records priorit
 |------|------|--------|
 | **Periodic** (scheduled) | Every N months | ❌ Not implemented |
 | **Event-driven** (on-demand) | Device compromised, user revoked | ✅ Implemented (ADR-0005) |
-| **Master password change** | User changes password | ✅ Implemented (ADR-0002) |
+| **Primary password change** | User changes password | ✅ Implemented (ADR-0002) |
 
 ## Related
 

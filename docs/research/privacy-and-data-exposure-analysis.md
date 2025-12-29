@@ -16,7 +16,7 @@ This document provides a transparent analysis of **what data is exposed to whom*
 - Medical record **content** is end-to-end encrypted (server cannot read)
 - Family Member Keys (FMKs) are wrapped with user-specific keys (server cannot decrypt)
 - User passwords never transmitted to server
-- Master keys stored device-only (never synced)
+- Primary keys stored device-only (never synced)
 
 **⚠️ Metadata Exposure:**
 
@@ -60,7 +60,7 @@ The server (Supabase or equivalent backend) has access to certain metadata requi
 | **Display name** | ✅ Plaintext | UI display for sharing | Low (user-chosen) |
 | **Public key** | ✅ Plaintext | Key exchange (public by design) | None (public) |
 | **Password** | ❌ **Never transmitted** | Local authentication | N/A (client-only) |
-| **Master Key** | ❌ **Never transmitted** | Local encryption | N/A (device-only) |
+| **Primary Key** | ❌ **Never transmitted** | Local encryption | N/A (device-only) |
 | **Private key** | ❌ **Never transmitted** | Stored encrypted in Keychain | N/A (client-only) |
 
 **Example server view:**
@@ -250,8 +250,8 @@ Ciphertext (server sees):
 
 | Key Type | Server Visibility | Storage Location |
 |----------|------------------|------------------|
-| **User Master Key** | ❌ Never transmitted | iOS Keychain (device-only) |
-| **User Private Key (Curve25519)** | ❌ Never transmitted | iOS Keychain (encrypted with Master Key) |
+| **User Primary Key** | ❌ Never transmitted | iOS Keychain (device-only) |
+| **User Private Key (Curve25519)** | ❌ Never transmitted | iOS Keychain (encrypted with Primary Key) |
 | **Family Member Keys (FMKs)** | ❌ Never transmitted (only wrapped versions) | iOS Keychain (owner), Core Data (wrapped for others) |
 | **User Public Key** | ✅ Transmitted (public by design) | Server + Core Data |
 | **ECDH Shared Secrets** | ❌ Never transmitted (ephemeral, derived locally) | Computed in memory, never stored |
@@ -262,7 +262,7 @@ Ciphertext (server sees):
 ```
 User Password (known only to user)
    ↓ PBKDF2 (100k iterations, local)
-Master Key (Keychain, device-only)
+Primary Key (Keychain, device-only)
    ↓ AES encryption (local)
 Private Key (Keychain, encrypted)
    ↓ ECDH (local)
@@ -281,7 +281,7 @@ Wrapped FMK (uploaded to server as opaque blob)
 |------|------------------|-----|
 | **User password** | ❌ Never transmitted | Used only for local key derivation |
 | **Password hash** | ⚠️ Supabase stores (for authentication) | Supabase uses bcrypt, not accessible to app |
-| **Derived Master Key** | ❌ Never transmitted | Stored in Keychain, device-only |
+| **Derived Primary Key** | ❌ Never transmitted | Stored in Keychain, device-only |
 
 **Authentication flow:**
 
@@ -293,16 +293,16 @@ Traditional (NOT zero-knowledge):
 
 Our app (local key derivation):
 ├─ User enters password
-├─ App derives Master Key locally (PBKDF2)
-├─ Master Key used to decrypt Private Key
-└─ Master Key never sent to server
+├─ App derives Primary Key locally (PBKDF2)
+├─ Primary Key used to decrypt Private Key
+└─ Primary Key never sent to server
 
 Server authentication:
 ├─ Supabase handles login (separate password hash)
 └─ App never sees Supabase password hash
 ```
 
-**Important**: We use Supabase's built-in auth (email/password), which stores a password hash. This is separate from the Master Key derivation. If we wanted true zero-knowledge auth, we'd need a different approach (e.g., SRP protocol), but that's beyond hobby app scope.
+**Important**: We use Supabase's built-in auth (email/password), which stores a password hash. This is separate from the Primary Key derivation. If we wanted true zero-knowledge auth, we'd need a different approach (e.g., SRP protocol), but that's beyond hobby app scope.
 
 ### 2.4 Family Member Names
 
@@ -337,7 +337,7 @@ Server authentication:
 | **Emma's name, DOB** | ✅ Full access | Encrypted in profile, decrypted with FMK |
 | **Who else has access to Emma** | ❌ Cannot see | Access grants are user-specific |
 | **Adult A's other family members** | ❌ Cannot see | No access to other FMKs |
-| **Adult A's Master Key** | ❌ Cannot see | Never shared |
+| **Adult A's Primary Key** | ❌ Cannot see | Never shared |
 
 **Granularity**: Per-family-member. If Adult A shares Emma's records but not Liam's, Adult B sees:
 
@@ -448,8 +448,8 @@ USING (
 |--------|-----------|-----------|
 | **Medical records (device locked)** | ❌ Keychain protected | Requires device passcode/biometric |
 | **Medical records (device unlocked)** | ✅ **Full access** | Keychain accessible when unlocked |
-| **Master Key** | ✅ **Accessible** | Keychain protection only when locked |
-| **Private Key** | ✅ **Accessible** (encrypted in Keychain) | Requires Master Key (also in Keychain) |
+| **Primary Key** | ✅ **Accessible** | Keychain protection only when locked |
+| **Private Key** | ✅ **Accessible** (encrypted in Keychain) | Requires Primary Key (also in Keychain) |
 
 **Critical**: If device is unlocked, attacker has full access. This is fundamental to iOS security model.
 
@@ -466,7 +466,7 @@ USING (
 
 | Attack | Visibility | Protection |
 |--------|-----------|-----------|
-| **Download encrypted records** | ✅ Can download | But cannot decrypt (no Master Key) |
+| **Download encrypted records** | ✅ Can download | But cannot decrypt (no Primary Key) |
 | **Download wrapped FMKs** | ✅ Can download | But cannot unwrap (no private key) |
 | **Issue new invitations** | ✅ **Yes** | Can invite arbitrary users |
 | **Revoke access** | ✅ **Yes** | Can delete access grants |
@@ -502,7 +502,7 @@ USING (
    - Protection: E2EE with AES-256-GCM, FMKs never on server
 
 2. **User cryptographic keys**
-   - Master Key, Private Key, FMKs
+   - Primary Key, Private Key, FMKs
    - Protection: Device-only storage (Keychain), never transmitted
 
 3. **User passwords**
@@ -615,7 +615,7 @@ Goal: Access Emma's Medical Records
 
 1. ✅ **Per-Family-Member Granularity**: Share Emma's records, not "all my data"
 2. ✅ **Offline-First**: No server round-trips for decryption (privacy + performance)
-3. ✅ **Device-Only Master Key**: Cannot be extracted even with server breach
+3. ✅ **Device-Only Primary Key**: Cannot be extracted even with server breach
 4. ✅ **CryptoKit Hardware Backing**: Leverages Secure Enclave on modern iPhones
 5. ✅ **Minimal Data Collection**: No analytics by default (can be added opt-in)
 6. ✅ **Open Algorithm Disclosure**: Research docs transparently explain crypto (this document!)
@@ -945,7 +945,7 @@ Alice and Bob compare verification codes:
 Thief steals Alice's unlocked iPhone:
 ├─ Opens Family Medical App (already unlocked)
 ├─ iOS Keychain accessible (device unlocked)
-├─ App retrieves Master Key from Keychain
+├─ App retrieves Primary Key from Keychain
 ├─ App decrypts all medical records
 └─ Full access ⚠️
 ```
@@ -1071,7 +1071,7 @@ Hacker steals Alice's Supabase credentials:
 
 - ✅ Medical records encrypted (AES-256-GCM)
 - ✅ FMKs wrapped (ECDH + AES.KeyWrap)
-- ✅ Device-only master keys
+- ✅ Device-only primary keys
 - ⚠️ Metadata exposed (social graph, volume, timing)
 
 ### Phase 4a: Encrypted Metadata (Optional Hardening)
@@ -1147,7 +1147,7 @@ This document represents **honest disclosure** of privacy properties. We acknowl
 **Key claims to verify:**
 
 1. Server cannot decrypt medical record content (verify: no FMKs on server)
-2. Master Keys never transmitted (verify: Keychain-only storage)
+2. Primary Keys never transmitted (verify: Keychain-only storage)
 3. ECDH shared secrets ephemeral (verify: computed in-memory, not stored)
 4. AES-GCM authentication tags prevent tampering (verify: tag validation)
 5. TOFU vulnerability mitigated by verification codes (verify: out-of-band check)

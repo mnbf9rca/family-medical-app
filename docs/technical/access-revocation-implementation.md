@@ -308,7 +308,7 @@ Adult A's iPhone revokes Adult C:
 Adult A's iPad (subscribed to Realtime):
 ├─ Receives notification: "Revocation event for Emma"
 ├─ Downloads new wrapped FMK_Emma_v2
-├─ Unwraps with Master Key, stores in Keychain
+├─ Unwraps with Primary Key, stores in Keychain
 ├─ Downloads re-encrypted records (incremental sync)
 └─ Shows notification: "Emma's access updated on this device" ✅
 
@@ -442,14 +442,14 @@ Adult A re-grants access to Adult C:
 Emma turns 16, wants control of her medical records:
 ├─ Step 1: Emma creates her own account
 │   ├─ Emma enters new password
-│   ├─ Derive Master Key_Emma (Argon2id, independent from Adult A)
+│   ├─ Derive Primary Key_Emma (Argon2id, independent from Adult A)
 │   ├─ Generate Curve25519 keypair_Emma
-│   └─ Store Master Key_Emma + Private Key_Emma in Emma's device Keychain
+│   └─ Store Primary Key_Emma + Private Key_Emma in Emma's device Keychain
 │
 ├─ Step 2: Transfer ownership (initiated by Adult A)
 │   ├─ Adult A grants Emma access (standard ECDH sharing flow)
 │   ├─ Emma unwraps FMK_Emma_v1 (now has decryption capability)
-│   ├─ Emma re-wraps FMK_Emma_v1 with her own Master Key_Emma
+│   ├─ Emma re-wraps FMK_Emma_v1 with her own Primary Key_Emma
 │   └─ Emma stores wrapped FMK_Emma in her Keychain (becomes owner)
 │
 ├─ Step 3: Emma revokes Adult A's access (Emma's choice)
@@ -481,7 +481,7 @@ Emma turns 16, wants control of her medical records:
 }
 ```
 
-**Encryption**: Audit log encrypted with owner's Master Key (only owner can read).
+**Encryption**: Audit log encrypted with owner's Primary Key (only owner can read).
 
 ### UI Display
 

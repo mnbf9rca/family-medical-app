@@ -20,7 +20,7 @@ The application requires:
 
 These requirements demand design decisions about:
 
-- **Key hierarchy**: How user password → master key → data keys → sharing keys
+- **Key hierarchy**: How user password → primary key → data keys → sharing keys
 - **Sharing model**: Symmetric key wrapping vs public-key encryption vs hybrid
 - **Key distribution**: How authorized users receive decryption keys
 - **Access revocation**: Key rotation, re-encryption, or other mechanisms

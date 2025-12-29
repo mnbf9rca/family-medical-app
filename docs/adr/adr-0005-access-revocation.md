@@ -104,9 +104,9 @@ When Adult A revokes Adult C's access to Emma's records:
 
 When an individual reaches age of majority and gains control (or when transferring records for a vulnerable adult):
 
-1. New owner creates independent account (own Master Key, separate from previous owner)
+1. New owner creates independent account (own Primary Key, separate from previous owner)
 2. Previous owner grants new owner access (standard ECDH sharing)
-3. New owner becomes owner (re-wraps FMK with own Master Key)
+3. New owner becomes owner (re-wraps FMK with own Primary Key)
 4. New owner can revoke previous owner (standard revocation flow) - or can choose to continue granting access to previously authorized users
 
 Note: The app will not automatically trigger or enforce age-based ownership transfers. The app may suggest ownership transfer at certain milestones, or require periodic access reviews and reconsent, but will never force a transfer. This respects diverse family situations including vulnerable adults, guardianship arrangements, court orders, and other circumstances where ongoing access is appropriate.

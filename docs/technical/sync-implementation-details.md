@@ -12,17 +12,17 @@ The Family Medical App must support **multi-device synchronization** while maint
 
 This ADR builds on:
 
-- **ADR-0002**: Key Hierarchy → Established Master Key (device-only) and FMKs (per-family-member)
+- **ADR-0002**: Key Hierarchy → Established Primary Key (device-only) and FMKs (per-family-member)
 - **ADR-0003**: Multi-User Sharing Model → Server as persistent mailbox for async operations
 
 ### The Multi-Device Challenge
 
-**Core Problem**: How can Adult A access medical records on both iPhone and iPad when the Master Key is device-only (never transmitted to server)?
+**Core Problem**: How can Adult A access medical records on both iPhone and iPad when the Primary Key is device-only (never transmitted to server)?
 
 ```
 Adult A's iPhone                     Server                   Adult A's iPad
 ─────────────────                    ──────                   ──────────────
-Master Key ✅                     No Master Key ❌         Master Key ???
+Primary Key ✅                     No Primary Key ❌         Primary Key ???
 Private Key ✅                    No Private Key ❌        Private Key ???
 FMKs ✅                           Wrapped FMKs ✅          FMKs ???
 
@@ -32,9 +32,9 @@ Medical Records ✅                Encrypted Records ✅      Medical Records ??
 **The Dilemma**:
 
 - ✅ Server has encrypted records (can sync them)
-- ❌ Server doesn't have Master Key (can't decrypt)
-- ❌ iPad doesn't have Master Key (can't derive FMKs)
-- ❓ How does iPad get Master Key without server seeing it?
+- ❌ Server doesn't have Primary Key (can't decrypt)
+- ❌ iPad doesn't have Primary Key (can't derive FMKs)
+- ❓ How does iPad get Primary Key without server seeing it?
 
 ### Requirements
 
@@ -49,7 +49,7 @@ Medical Records ✅                Encrypted Records ✅      Medical Records ??
 
 ### Key Design Questions
 
-1. **Master Key Distribution**: How to get Master Key on new device without server?
+1. **Primary Key Distribution**: How to get Primary Key on new device without server?
 2. **Sync Protocol**: Real-time push vs. pull-based polling?
 3. **Conflict Resolution**: Last-write-wins, CRDTs, or manual merge?
 4. **Metadata for Sync**: What must be plaintext for sync coordination?
@@ -70,13 +70,13 @@ We will implement a **recovery code-based multi-device system** with **last-writ
 Setup: Adult A's iPhone (Primary Device)
 ────────────────────────────────────────
 1. User creates account with password
-2. App derives Master Key (Argon2id via Swift-Sodium)
+2. App derives Primary Key (Argon2id via Swift-Sodium)
 3. App generates Curve25519 keypair
 4. App generates random Recovery Code (256-bit)
-5. App encrypts Master Key with Recovery Code
+5. App encrypts Primary Key with Recovery Code
 6. App stores:
-   - Keychain: Master Key, Private Key (encrypted with Master Key)
-   - Server: Encrypted Master Key blob, Public Key
+   - Keychain: Primary Key, Private Key (encrypted with Primary Key)
+   - Server: Encrypted Primary Key blob, Public Key
    - User shown: Recovery Code (write it down!)
 
 Setup: Adult A's iPad (New Device)
@@ -84,9 +84,9 @@ Setup: Adult A's iPad (New Device)
 1. User installs app, signs in with password
 2. App prompts: "Enter Recovery Code to access encrypted data"
 3. User enters Recovery Code (from paper)
-4. App downloads encrypted Master Key blob from server
-5. App decrypts Master Key using Recovery Code
-6. App stores Master Key in Keychain (device-only)
+4. App downloads encrypted Primary Key blob from server
+5. App decrypts Primary Key using Recovery Code
+6. App stores Primary Key in Keychain (device-only)
 7. App can now decrypt FMKs and medical records ✅
 
 Sync: Changes on iPhone → iPad
@@ -113,9 +113,9 @@ Conflict: Simultaneous Edits
 
 ### Design Decisions
 
-#### 1. Master Key Distribution: Recovery Code
+#### 1. Primary Key Distribution: Recovery Code
 
-**Decision**: Use a **256-bit recovery code** (24-word mnemonic) to encrypt Master Key for server storage.
+**Decision**: Use a **256-bit recovery code** (24-word mnemonic) to encrypt Primary Key for server storage.
 
 **Flow**:
 
@@ -123,8 +123,8 @@ Conflict: Simultaneous Edits
 Account Creation (iPhone):
 ├─ Generate recovery code: 24 random words from BIP39 wordlist
 ├─ Derive recovery key: Argon2id(recovery code, salt, 64MB memory, 3 iterations)
-├─ Encrypt Master Key: AES-256-GCM(Master Key, recovery key)
-├─ Upload to server: { user_id, encrypted_master_key, salt }
+├─ Encrypt Primary Key: AES-256-GCM(Primary Key, recovery key)
+├─ Upload to server: { user_id, encrypted_primary_key, salt }
 ├─ Show recovery code to user: "Write this down! Store securely!"
 └─ User stores recovery code (paper, password manager, etc.)
 
@@ -133,9 +133,9 @@ New Device Setup (iPad):
 ├─ App prompts: "Enter Recovery Code"
 ├─ User enters 24 words
 ├─ App derives recovery key: Argon2id(recovery code, salt, 64MB memory, 3 iterations)
-├─ App downloads encrypted Master Key from server
-├─ App decrypts: Master Key = AES-256-GCM Decrypt(encrypted blob, recovery key)
-├─ App stores Master Key in Keychain (device-only)
+├─ App downloads encrypted Primary Key from server
+├─ App decrypts: Primary Key = AES-256-GCM Decrypt(encrypted blob, recovery key)
+├─ App stores Primary Key in Keychain (device-only)
 └─ App can now decrypt all FMKs and medical records ✅
 ```
 
@@ -156,7 +156,7 @@ acoustic acquire across act action actor actress actual
 
 **Rationale**:
 
-- ✅ **Zero-Knowledge Maintained**: Server has encrypted Master Key, but no recovery code
+- ✅ **Zero-Knowledge Maintained**: Server has encrypted Primary Key, but no recovery code
 - ✅ **User-Controlled**: Only user knows recovery code (written down)
 - ✅ **Industry Standard**: Same approach as 1Password, Bitwarden, crypto wallets
 - ✅ **Future-Proof**: Works even if all devices lost/destroyed
@@ -170,9 +170,9 @@ acoustic acquire across act action actor actress actual
 
 **Security Properties**:
 
-- If attacker steals server database: Has encrypted Master Key, but no recovery code (useless)
-- If attacker steals recovery code: Has recovery code, but no encrypted Master Key from server (useless)
-- If attacker steals BOTH: Can decrypt Master Key → Full access ⚠️ (same as stealing device password)
+- If attacker steals server database: Has encrypted Primary Key, but no recovery code (useless)
+- If attacker steals recovery code: Has recovery code, but no encrypted Primary Key from server (useless)
+- If attacker steals BOTH: Can decrypt Primary Key → Full access ⚠️ (same as stealing device password)
 
 #### 2. Sync Protocol: Pull-Based with Realtime Notifications
 
@@ -909,8 +909,8 @@ func generateRecoveryCode() -> [String] {
     return BIP39.encode(entropy: entropy)  // Use vetted BIP39 library
 }
 
-// Encrypt Master Key with recovery code
-func encryptMasterKey(masterKey: SymmetricKey, recoveryCode: [String], userId: UUID) throws -> (encryptedMasterKey: Data, salt: Data) {
+// Encrypt Primary Key with recovery code
+func encryptPrimaryKey(primaryKey: SymmetricKey, recoveryCode: [String], userId: UUID) throws -> (encryptedPrimaryKey: Data, salt: Data) {
     let sodium = Sodium()
     let recoveryPhrase = recoveryCode.joined(separator: " ")
 
@@ -931,23 +931,23 @@ func encryptMasterKey(masterKey: SymmetricKey, recoveryCode: [String], userId: U
         throw CryptoError.keyDerivationFailed
     }
 
-    // Encrypt Master Key with AES-GCM using the derived recovery key
+    // Encrypt Primary Key with AES-GCM using the derived recovery key
     let symmetricKey = SymmetricKey(data: Data(recoveryKey))
     let nonce = AES.GCM.Nonce()
     let sealedBox = try AES.GCM.seal(
-        masterKey.withUnsafeBytes { Data($0) },
+        primaryKey.withUnsafeBytes { Data($0) },
         using: symmetricKey,
         nonce: nonce
     )
 
-    // Return: encrypted master key and salt
-    // Salt must be stored alongside encrypted_master_key on server
-    // Server stores: { encrypted_master_key: Data, recovery_salt: Data }
-    return (encryptedMasterKey: sealedBox.combined!, salt: Data(salt))
+    // Return: encrypted primary key and salt
+    // Salt must be stored alongside encrypted_primary_key on server
+    // Server stores: { encrypted_primary_key: Data, recovery_salt: Data }
+    return (encryptedPrimaryKey: sealedBox.combined!, salt: Data(salt))
 }
 
-// Decrypt Master Key on new device
-func decryptMasterKey(encryptedBlob: Data, recoveryCode: [String], salt: Data) throws -> SymmetricKey {
+// Decrypt Primary Key on new device
+func decryptPrimaryKey(encryptedBlob: Data, recoveryCode: [String], salt: Data) throws -> SymmetricKey {
     let sodium = Sodium()
     let recoveryPhrase = recoveryCode.joined(separator: " ")
 
@@ -964,12 +964,12 @@ func decryptMasterKey(encryptedBlob: Data, recoveryCode: [String], salt: Data) t
         throw CryptoError.keyDerivationFailed
     }
 
-    // Decrypt Master Key using AES-GCM
+    // Decrypt Primary Key using AES-GCM
     let symmetricKey = SymmetricKey(data: Data(recoveryKey))
     let sealedBox = try AES.GCM.SealedBox(combined: encryptedBlob)
-    let masterKeyData = try AES.GCM.open(sealedBox, using: symmetricKey)
+    let primaryKeyData = try AES.GCM.open(sealedBox, using: symmetricKey)
 
-    return SymmetricKey(data: masterKeyData)
+    return SymmetricKey(data: primaryKeyData)
 }
 ```
 
@@ -1010,7 +1010,7 @@ func decryptRecord(encrypted: EncryptedRecord, fmk: SymmetricKey) throws -> Medi
 ### Positive
 
 1. **Multi-Device Support**: User can access data from iPhone, iPad, Mac seamlessly
-2. **Zero-Knowledge Maintained**: Server never sees Master Key (encrypted with recovery code)
+2. **Zero-Knowledge Maintained**: Server never sees Primary Key (encrypted with recovery code)
 3. **Offline-First**: Changes work offline, sync when network available
 4. **Simple Conflict Resolution**: Last-write-wins avoids complex merge logic
 5. **Industry-Standard Recovery**: 24-word recovery code (BIP39) is familiar to crypto users
@@ -1035,7 +1035,7 @@ func decryptRecord(encrypted: EncryptedRecord, fmk: SymmetricKey) throws -> Medi
    - **Mitigation**: Timestamp display ("Last edited on iPad 5 min ago")
    - **Accepted Trade-off**: Simplicity over complex conflict resolution
 
-3. **Master Key on Server (Encrypted)**: Encrypted Master Key stored on server
+3. **Primary Key on Server (Encrypted)**: Encrypted Primary Key stored on server
    - **Risk**: If recovery code is weak/leaked + server breached → data decryptable
    - **Mitigation**: 256-bit recovery code (strong), Argon2id memory-hard derivation
    - **Accepted Trade-off**: Necessary for multi-device without iCloud Keychain
@@ -1080,7 +1080,7 @@ func decryptRecord(encrypted: EncryptedRecord, fmk: SymmetricKey) throws -> Medi
 |----------|-----------|---------------|
 | **Recovery Code** | User responsibility for backup | Zero-knowledge requires user-controlled secrets |
 | **Last-Write-Wins** | Rare data loss on conflicts | Medical records are mostly append-only |
-| **Encrypted Master Key on Server** | Server breach + recovery leak = access | Enables multi-device without iCloud |
+| **Encrypted Primary Key on Server** | Server breach + recovery leak = access | Enables multi-device without iCloud |
 | **Plaintext Sync Metadata** | Server sees structure | Efficient sync requires coordination |
 | **Device Revocation** | Local data persists | Acceptable (old data, not new syncs) |
 | **Separate Attachment Storage** | More complex schema (3 tables) | 99.975% bandwidth savings justifies complexity |
@@ -1098,14 +1098,14 @@ func decryptRecord(encrypted: EncryptedRecord, fmk: SymmetricKey) throws -> Medi
 
 1. **Recovery Code System**:
    - Generate 24-word BIP39 mnemonic
-   - Encrypt Master Key with recovery code
-   - Upload encrypted Master Key to server
+   - Encrypt Primary Key with recovery code
+   - Upload encrypted Primary Key to server
    - Show recovery code to user (with backup instructions)
 2. **New Device Setup**:
    - Prompt for recovery code on sign-in
-   - Download encrypted Master Key from server
+   - Download encrypted Primary Key from server
    - Decrypt with recovery code
-   - Store Master Key in Keychain
+   - Store Primary Key in Keychain
 3. **Sync Protocol**:
    - Implement pull-based sync (on launch, foreground)
    - Supabase Realtime for push notifications
@@ -1135,7 +1135,7 @@ func decryptRecord(encrypted: EncryptedRecord, fmk: SymmetricKey) throws -> Medi
 - **Audit Trail**: Show edit history, conflicting versions
 - **Per-Device Keys**: Cryptographic device revocation (rotate FMKs)
 - **Device-to-Device Transfer**: iOS 12.4+ Quick Start (in-person QR code)
-- **Recovery Code Rotation**: Change recovery code (re-encrypt Master Key)
+- **Recovery Code Rotation**: Change recovery code (re-encrypt Primary Key)
 - **Conflict Log**: Let user review overwritten edits
 - **Attachment Enhancements**:
   - Thumbnail generation (encrypted thumbnails for list views)
@@ -1146,7 +1146,7 @@ func decryptRecord(encrypted: EncryptedRecord, fmk: SymmetricKey) throws -> Medi
 ## Related Decisions
 
 - **ADR-0001**: Crypto Architecture First (establishes zero-knowledge requirement)
-- **ADR-0002**: Key Hierarchy (defines Master Key, FMKs)
+- **ADR-0002**: Key Hierarchy (defines Primary Key, FMKs)
 - **ADR-0003**: Multi-User Sharing Model (server as mailbox)
 - **ADR-0005**: Access Revocation (syncs revocation across devices)
 

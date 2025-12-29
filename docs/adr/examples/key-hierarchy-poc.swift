@@ -6,16 +6,16 @@ import Foundation
 // Demonstrates ADR-0002 (Key Hierarchy and Derivation)
 //
 // This PoC shows all four tiers working together:
-// Tier 1: User Master Key (password-derived)
+// Tier 1: User Primary Key (password-derived)
 // Tier 2: User Identity (Curve25519 keypair)
 // Tier 3: Family Member Keys (per-patient)
 // Tier 4: Medical Records (encrypted with FMKs)
 
-// MARK: - Tier 1: Master Key Derivation
+// MARK: - Tier 1: Primary Key Derivation
 
-/// Derives a master key from user password using PBKDF2-HMAC-SHA256
+/// Derives a primary key from user password using PBKDF2-HMAC-SHA256
 /// Per ADR-0002: 100,000 iterations minimum
-func deriveMasterKey(from password: String, salt: Data) -> SymmetricKey? {
+func derivePrimaryKey(from password: String, salt: Data) -> SymmetricKey? {
     let passwordData = password.data(using: .utf8)!
     var derivedKey = Data(count: 32) // 256 bits
 
@@ -70,19 +70,19 @@ struct UserIdentity {
         try Curve25519.KeyAgreement.PublicKey(rawRepresentation: data)
     }
 
-    /// Encrypt private key with master key for Keychain storage
-    func encryptPrivateKey(using masterKey: SymmetricKey) throws -> Data {
+    /// Encrypt private key with primary key for Keychain storage
+    func encryptPrivateKey(using primaryKey: SymmetricKey) throws -> Data {
         let privateKeyData = privateKey.rawRepresentation
         let nonce = AES.GCM.Nonce()
-        let sealedBox = try AES.GCM.seal(privateKeyData, using: masterKey, nonce: nonce)
+        let sealedBox = try AES.GCM.seal(privateKeyData, using: primaryKey, nonce: nonce)
         return sealedBox.combined!
     }
 
     /// Decrypt private key from Keychain storage
-    static func decryptPrivateKey(encryptedData: Data, using masterKey: SymmetricKey) throws -> Curve25519.KeyAgreement
+    static func decryptPrivateKey(encryptedData: Data, using primaryKey: SymmetricKey) throws -> Curve25519.KeyAgreement
     .PrivateKey {
         let sealedBox = try AES.GCM.SealedBox(combined: encryptedData)
-        let privateKeyData = try AES.GCM.open(sealedBox, using: masterKey)
+        let privateKeyData = try AES.GCM.open(sealedBox, using: primaryKey)
         return try Curve25519.KeyAgreement.PrivateKey(rawRepresentation: privateKeyData)
     }
 }
@@ -102,14 +102,14 @@ struct FamilyMember {
     }
 }
 
-/// Wrap FMK with owner's Master Key (for Keychain storage)
-func wrapFMK(_ fmk: SymmetricKey, withMasterKey masterKey: SymmetricKey) throws -> Data {
-    try AES.KeyWrap.wrap(fmk, using: masterKey)
+/// Wrap FMK with owner's Primary Key (for Keychain storage)
+func wrapFMK(_ fmk: SymmetricKey, withPrimaryKey primaryKey: SymmetricKey) throws -> Data {
+    try AES.KeyWrap.wrap(fmk, using: primaryKey)
 }
 
 /// Unwrap FMK from Keychain
-func unwrapFMK(wrappedData: Data, withMasterKey masterKey: SymmetricKey) throws -> SymmetricKey {
-    try AES.KeyWrap.unwrap(wrappedData, using: masterKey)
+func unwrapFMK(wrappedData: Data, withPrimaryKey primaryKey: SymmetricKey) throws -> SymmetricKey {
+    try AES.KeyWrap.unwrap(wrappedData, using: primaryKey)
 }
 
 /// Wrap FMK for sharing with another user (ECDH)
@@ -210,26 +210,26 @@ func demonstrateKeyHierarchy() {
     print("=== ADR-0002 Key Hierarchy Demonstration ===\n")
 
     // ============================================
-    // TIER 1: Master Key Derivation
+    // TIER 1: Primary Key Derivation
     // ============================================
-    print("--- TIER 1: Master Key Derivation ---\n")
+    print("--- TIER 1: Primary Key Derivation ---\n")
 
     let adultA_password = "correct-horse-battery-staple"
     let adultA_salt = generateSalt()
-    guard let adultA_masterKey = deriveMasterKey(from: adultA_password, salt: adultA_salt) else {
-        fatalError("Failed to derive master key")
+    guard let adultA_primaryKey = derivePrimaryKey(from: adultA_password, salt: adultA_salt) else {
+        fatalError("Failed to derive primary key")
     }
-    print("✅ Adult A: Derived Master Key from password")
+    print("✅ Adult A: Derived Primary Key from password")
     print("   Salt: \(adultA_salt.base64EncodedString().prefix(20))...")
-    print("   Master Key: [256-bit SymmetricKey] (never displayed)\n")
+    print("   Primary Key: [256-bit SymmetricKey] (never displayed)\n")
 
     // Second user for sharing demonstration
     let adultB_password = "another-secure-password-123"
     let adultB_salt = generateSalt()
-    guard let adultB_masterKey = deriveMasterKey(from: adultB_password, salt: adultB_salt) else {
-        fatalError("Failed to derive master key")
+    guard let adultB_primaryKey = derivePrimaryKey(from: adultB_password, salt: adultB_salt) else {
+        fatalError("Failed to derive primary key")
     }
-    print("✅ Adult B: Derived Master Key from password\n")
+    print("✅ Adult B: Derived Primary Key from password\n")
 
     // ============================================
     // TIER 2: User Identity (Curve25519)
@@ -242,8 +242,8 @@ func demonstrateKeyHierarchy() {
 
     // Encrypt private key for Keychain storage
     do {
-        let encryptedPrivateKey = try adultA.encryptPrivateKey(using: adultA_masterKey)
-        print("✅ Adult A: Encrypted private key with Master Key")
+        let encryptedPrivateKey = try adultA.encryptPrivateKey(using: adultA_primaryKey)
+        print("✅ Adult A: Encrypted private key with Primary Key")
         print("   → Stored in Keychain: kSecAttrAccessibleWhenUnlockedThisDeviceOnly\n")
     } catch {
         print("❌ Failed to encrypt private key: \(error)\n")
@@ -266,13 +266,13 @@ func demonstrateKeyHierarchy() {
 
     // Adult A wraps Emma's FMK for themselves (owner's copy → Keychain)
     do {
-        let wrappedFMK_forOwner = try wrapFMK(emma.fmk, withMasterKey: adultA_masterKey)
-        print("✅ Adult A: Wrapped Emma's FMK with Master Key")
+        let wrappedFMK_forOwner = try wrapFMK(emma.fmk, withPrimaryKey: adultA_primaryKey)
+        print("✅ Adult A: Wrapped Emma's FMK with Primary Key")
         print("   → Stored in Keychain as owner's copy")
         print("   Wrapped FMK size: \(wrappedFMK_forOwner.count) bytes\n")
 
         // Verify unwrapping works
-        let unwrappedFMK = try unwrapFMK(wrappedData: wrappedFMK_forOwner, withMasterKey: adultA_masterKey)
+        let unwrappedFMK = try unwrapFMK(wrappedData: wrappedFMK_forOwner, withPrimaryKey: adultA_primaryKey)
         print("✅ Verified: Can unwrap Emma's FMK from Keychain\n")
     } catch {
         print("❌ Failed to wrap/unwrap FMK: \(error)\n")
@@ -405,7 +405,7 @@ func demonstrateKeyHierarchy() {
         print("✅ Step 2: Re-encrypted \(reencryptedRecords.count) records in \(String(format: "%.2f", elapsedTime))ms")
 
         // Step 3: Re-wrap new FMK for Adult A only (not Adult B)
-        let newWrappedFMK_forOwner = try wrapFMK(newEmmaFMK, withMasterKey: adultA_masterKey)
+        let newWrappedFMK_forOwner = try wrapFMK(newEmmaFMK, withPrimaryKey: adultA_primaryKey)
         print("✅ Step 3: Re-wrapped new FMK for Adult A")
         print("   ❌ Did NOT wrap for Adult B (access revoked)")
 
@@ -429,10 +429,10 @@ func demonstrateKeyHierarchy() {
     // SUMMARY
     // ============================================
     print("=== Summary ===\n")
-    print("✅ Tier 1: Master Key derived from password (PBKDF2 100k iterations)")
-    print("✅ Tier 2: User Identity (Curve25519) encrypted with Master Key")
+    print("✅ Tier 1: Primary Key derived from password (PBKDF2 100k iterations)")
+    print("✅ Tier 2: User Identity (Curve25519) encrypted with Primary Key")
     print("✅ Tier 3: Family Member Keys (per-patient)")
-    print("   - Owner's copy: Wrapped with Master Key → Keychain")
+    print("   - Owner's copy: Wrapped with Primary Key → Keychain")
     print("   - Shared copies: Wrapped with ECDH → Core Data")
     print("✅ Tier 4: Medical Records encrypted with FMK (AES-256-GCM)")
     print("✅ Sharing: ECDH key agreement for insecure channel (email)")

@@ -34,7 +34,7 @@ enum LogPrivacyLevel: Sendable {
 ///
 /// **CRITICAL**: Per ADR-0002 and privacy analysis, these must NEVER appear in logs:
 enum SensitiveDataType {
-    /// User Master Key (Primary Key) - device-only, never transmitted
+    /// User Primary Key (Primary Key) - device-only, never transmitted
     case primaryKey
 
     /// Family Member Keys (FMKs) - encrypt medical records

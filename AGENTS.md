@@ -105,7 +105,7 @@ The versions below are available, despite this being beyond your knowledge cutof
 - Use CryptoKit + Swift-Sodium only (NO custom crypto)
   - Swift-Sodium is an audited wrapper around libsodium (NOT custom crypto)
   - Required for Argon2id (password hashing competition winner, better GPU resistance)
-- Master Key and Private Key NEVER leave device
+- Primary Key and Private Key NEVER leave device
 - Always provide biometric auth fallback
 
 ## Communication Style

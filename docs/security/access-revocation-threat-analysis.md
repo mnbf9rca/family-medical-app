@@ -125,7 +125,7 @@ The following threats are **not** addressed by this design (out of scope for Pha
 
 **Property**: All revocation events are logged.
 
-**Mechanism**: Encrypted audit log (encrypted with owner's Master Key)
+**Mechanism**: Encrypted audit log (encrypted with owner's Primary Key)
 
 **Guarantee**: ✅ **Strong** - Tamper-evident append-only log
 
@@ -180,7 +180,7 @@ The following threats are **not** addressed by this design (out of scope for Pha
 
 1. **Rely on iOS Security**: Keychain is hardware-backed (Secure Enclave)
 2. **Document Limitation**: Privacy policy discloses risk
-3. **Future Enhancement**: Biometric protection for Master Key access (Phase 4)
+3. **Future Enhancement**: Biometric protection for Primary Key access (Phase 4)
 
 ### For Offline Revocation Delay
 
@@ -242,7 +242,7 @@ The following threats are **not** addressed by this design (out of scope for Pha
    - Implement audit trail (encrypted log)
 
 2. **Phase 4 (Enhancements)**:
-   - Add biometric protection for Master Key access
+   - Add biometric protection for Primary Key access
    - Implement remote wipe trigger (best-effort, not guaranteed)
    - Add digital signatures to audit log (non-repudiation)
 

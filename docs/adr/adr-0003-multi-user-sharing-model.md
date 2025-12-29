@@ -68,7 +68,7 @@ Step 2: Family Member Key Wrapping
 ──────────────────────────────────
 Adult A's Device:
    │
-   │  5. Unwrap FMK_Emma (from Keychain, using Master Key)
+   │  5. Unwrap FMK_Emma (from Keychain, using Primary Key)
    │  6. Perform ECDH Key Agreement:
    │     - Shared Secret = ECDH(Private Key A, Public Key B)
    │     - Wrapping Key = HKDF(Shared Secret, context: "FMK-Emma-<UUID>")
@@ -389,7 +389,7 @@ Medical records are **not time-critical** like messaging. Sharing Emma's vaccine
 
 1. ❌ **Medical Record Content**: Encrypted with FMKs (AES-256-GCM)
 2. ❌ **Family Member Keys**: Only wrapped versions (opaque to server)
-3. ❌ **User Master Keys**: Device-only, never transmitted
+3. ❌ **User Primary Keys**: Device-only, never transmitted
 4. ❌ **Private Keys**: Keychain-only, never transmitted
 5. ❌ **Family Member Names**: Encrypted in profile data
 6. ❌ **ECDH Shared Secrets**: Computed locally, ephemeral, never stored

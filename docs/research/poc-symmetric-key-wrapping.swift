@@ -6,13 +6,13 @@ import Foundation
 // to share encrypted medical records with multiple family members.
 
 // PATTERN: Each medical record is encrypted with a Data Encryption Key (DEK).
-// The DEK is then "wrapped" (encrypted) with each authorized user's master key.
+// The DEK is then "wrapped" (encrypted) with each authorized user's primary key.
 // This allows multiple users to decrypt the same record using their own keys.
 
 // Namespace enum for symmetric key wrapping example; not intended to be instantiated.
 enum SymmetricKeyWrappingExample {
-    // STEP 1: User derives their master key from password
-    static func deriveMasterKey(from password: String, salt: Data) -> SymmetricKey {
+    // STEP 1: User derives their primary key from password
+    static func derivePrimaryKey(from password: String, salt: Data) -> SymmetricKey {
         // Using PBKDF2-HMAC-SHA256 with 100k iterations (AGENTS.md requirement)
         let passwordData = password.data(using: .utf8)!
 
@@ -21,7 +21,7 @@ enum SymmetricKeyWrappingExample {
         // - Or use Argon2id via a vetted third-party wrapper
 
         // For this PoC, we'll generate a key directly
-        // In production: masterKey = PBKDF2(password, salt, iterations: 100_000)
+        // In production: primaryKey = PBKDF2(password, salt, iterations: 100_000)
         return SymmetricKey(size: .bits256)
     }
 
@@ -40,10 +40,10 @@ enum SymmetricKeyWrappingExample {
         return sealedBox.combined!
     }
 
-    // STEP 4: Wrap the DEK with each user's master key (AES Key Wrap)
-    static func wrapDataKey(_ dek: SymmetricKey, with masterKey: SymmetricKey) throws -> Data {
+    // STEP 4: Wrap the DEK with each user's primary key (AES Key Wrap)
+    static func wrapDataKey(_ dek: SymmetricKey, with primaryKey: SymmetricKey) throws -> Data {
         // CryptoKit's AES.KeyWrap implements RFC 3394
-        let wrappedKey = try AES.KeyWrap.wrap(dek, using: masterKey)
+        let wrappedKey = try AES.KeyWrap.wrap(dek, using: primaryKey)
         return wrappedKey
     }
 
@@ -60,9 +60,9 @@ enum SymmetricKeyWrappingExample {
     static func demonstrateSharing() throws {
         print("=== Symmetric Key Wrapping Demo ===\n")
 
-        // Adult A and Adult B each have their own master keys
-        let adultA_masterKey = deriveMasterKey(from: "AdultA_password", salt: Data())
-        let adultB_masterKey = deriveMasterKey(from: "AdultB_password", salt: Data())
+        // Adult A and Adult B each have their own primary keys
+        let adultA_primaryKey = derivePrimaryKey(from: "AdultA_password", salt: Data())
+        let adultB_primaryKey = derivePrimaryKey(from: "AdultB_password", salt: Data())
 
         // Adult A creates a vaccine record for Child 1
         let vaccineData = "Child 1: COVID-19 vaccine, Pfizer, 2025-01-15".data(using: .utf8)!
@@ -75,11 +75,11 @@ enum SymmetricKeyWrappingExample {
         print("✓ Encrypted vaccine record: \(encryptedRecord.count) bytes")
 
         // Wrap the DEK for Adult A (owner)
-        let wrappedKey_AdultA = try wrapDataKey(dek, with: adultA_masterKey)
+        let wrappedKey_AdultA = try wrapDataKey(dek, with: adultA_primaryKey)
         print("✓ Wrapped DEK for Adult A: \(wrappedKey_AdultA.count) bytes")
 
         // Wrap the DEK for Adult B (shared access)
-        let wrappedKey_AdultB = try wrapDataKey(dek, with: adultB_masterKey)
+        let wrappedKey_AdultB = try wrapDataKey(dek, with: adultB_primaryKey)
         print("✓ Wrapped DEK for Adult B: \(wrappedKey_AdultB.count) bytes")
 
         // Store the record with both wrapped keys
@@ -94,8 +94,8 @@ enum SymmetricKeyWrappingExample {
 
         print("\n--- Adult B Decrypts the Record ---")
 
-        // Adult B unwraps the DEK using their master key
-        let unwrappedDEK = try AES.KeyWrap.unwrap(wrappedKey_AdultB, using: adultB_masterKey)
+        // Adult B unwraps the DEK using their primary key
+        let unwrappedDEK = try AES.KeyWrap.unwrap(wrappedKey_AdultB, using: adultB_primaryKey)
         print("✓ Adult B unwrapped DEK")
 
         // Adult B decrypts the record
@@ -115,12 +115,12 @@ enum SymmetricKeyWrappingExample {
     // ✓ Simple pattern, well-understood
     // ✓ CryptoKit has native support (AES.KeyWrap)
     // ✓ Efficient: small wrapped keys (~40 bytes each)
-    // ✓ Easy to add new users (just wrap DEK with their master key)
+    // ✓ Easy to add new users (just wrap DEK with their primary key)
 
     // CONS:
     // ✗ Storage overhead: N wrapped keys per record (N = # authorized users)
     // ✗ Key rotation requires re-wrapping for all users
-    // ✗ No forward secrecy (if master key compromised, all records compromised)
+    // ✗ No forward secrecy (if primary key compromised, all records compromised)
 
     // SUITABILITY FOR MEDICAL RECORDS:
     // ✓ GOOD - Medical records are relatively static (not real-time messaging)

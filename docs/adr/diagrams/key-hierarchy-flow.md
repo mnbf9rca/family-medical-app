@@ -19,13 +19,13 @@ This diagram illustrates the complete key hierarchy from ADR-0002.
                          │
                          ▼
 ┌──────────────────────────────────────────────────────────────────────────┐
-│ TIER 1: MASTER KEY (password-derived)                                    │
+│ TIER 1: PRIMARY KEY (password-derived)                                    │
 │                                                                           │
 │            Argon2id (64 MB memory, 3 iterations)                          │
 │                        │                                                 │
 │                        ▼                                                 │
 │              ┌────────────────────┐                                      │
-│              │ User Master Key    │  ◄───── Stored in iOS Keychain      │
+│              │ User Primary Key    │  ◄───── Stored in iOS Keychain      │
 │              │ (256-bit, AES-256) │         kSecAttrAccessibleWhen      │
 │              └──────────┬─────────┘         UnlockedThisDeviceOnly      │
 │                         │                   Never synced / transmitted   │
@@ -51,7 +51,7 @@ This diagram illustrates the complete key hierarchy from ADR-0002.
 │  ┌─────────────────┐         ┌──────────────────┐                      │
 │  │ Private Key     │         │ Public Key       │                      │
 │  │ (encrypted      │         │ (shareable)      │                      │
-│  │  with Master    │         │                  │                      │
+│  │  with Primary   │         │                  │                      │
 │  │  Key)           │         │                  │                      │
 │  └────────┬────────┘         └──────────┬───────┘                      │
 │           │                             │                               │
@@ -91,7 +91,7 @@ This diagram illustrates the complete key hierarchy from ADR-0002.
 │       │               │                                                 │
 │       │               │                                                 │
 │  Wrapped with    Wrapped with ECDH-derived key:                        │
-│  Master Key      - ECDH(My Private Key, Their Public Key)              │
+│  Primary Key      - ECDH(My Private Key, Their Public Key)              │
 │       │          - HKDF(Shared Secret, context)                        │
 │       │          - AES.KeyWrap(FMK, wrapping key)                      │
 │       │               │                                                 │
@@ -153,7 +153,7 @@ Adult A shares Emma's records with Adult B:
 │                                      │
 │ 4. Retrieve Adult B's Public Key     │
 │ 5. Unwrap Emma's FMK (from Keychain) │
-│    using Master Key                  │
+│    using Primary Key                  │
 │ 6. Perform ECDH:                     │
 │    - Shared Secret =                 │
 │      KeyAgreement(My Private Key,    │
@@ -223,7 +223,7 @@ Adult A revokes Adult C's access to Emma's records:
 │ Step 3: Re-wrap new FMK for          │
 │         authorized users only        │
 │                                      │
-│ - Wrap for Adult A (Master Key)      │
+│ - Wrap for Adult A (Primary Key)      │
 │ - Wrap for Adult B (ECDH)            │
 │ - DELETE Adult C's wrapped FMK       │
 └──────────┬───────────────────────────┘
@@ -256,10 +256,10 @@ Adult A revokes Adult C's access to Emma's records:
 |----------|---------|------------|---------|
 | User Password | Never stored | N/A | Never |
 | Salt | UserDefaults | None (not secret) | No |
-| Master Key | Keychain | `kSecAttrAccessibleWhenUnlockedThisDeviceOnly` | Never |
+| Primary Key | Keychain | `kSecAttrAccessibleWhenUnlockedThisDeviceOnly` | Never |
 | User Private Key (encrypted) | Keychain | `kSecAttrAccessibleWhenUnlockedThisDeviceOnly` | Never |
 | User Public Key | Core Data + Server | None (public) | Yes |
-| FMK (owner's copy) | Keychain (wrapped with Master Key) | `kSecAttrAccessibleWhenUnlockedThisDeviceOnly` | No |
+| FMK (owner's copy) | Keychain (wrapped with Primary Key) | `kSecAttrAccessibleWhenUnlockedThisDeviceOnly` | No |
 | FMK (shared copies) | Core Data (wrapped with ECDH) | Encrypted | Yes |
 | Medical Records | Core Data (encrypted with FMK) | Encrypted with AES-256-GCM | Yes |
 
@@ -276,7 +276,7 @@ The server stores:
 The server does NOT have:
 
 - ❌ User passwords
-- ❌ Master Keys
+- ❌ Primary Keys
 - ❌ Private Keys
 - ❌ Unwrapped FMKs
 - ❌ Plaintext medical data

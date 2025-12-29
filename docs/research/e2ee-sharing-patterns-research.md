@@ -83,7 +83,7 @@ Double Ratchet is **overkill** for medical records because:
 
 ### Overview
 
-Pattern: Encrypt data with symmetric Data Encryption Key (DEK), then wrap DEK with each recipient's master key.
+Pattern: Encrypt data with symmetric Data Encryption Key (DEK), then wrap DEK with each recipient's primary key.
 
 See [PoC: Symmetric Key Wrapping](poc-symmetric-key-wrapping.swift)
 
@@ -91,8 +91,8 @@ See [PoC: Symmetric Key Wrapping](poc-symmetric-key-wrapping.swift)
 
 ```
 Medical Record → Encrypt with DEK → Encrypted Record
-DEK → Wrap with Adult A's Master Key → Wrapped DEK for A
-DEK → Wrap with Adult B's Master Key → Wrapped DEK for B
+DEK → Wrap with Adult A's Primary Key → Wrapped DEK for A
+DEK → Wrap with Adult B's Primary Key → Wrapped DEK for B
 ```
 
 ### CryptoKit Implementation
@@ -115,9 +115,9 @@ DEK → Wrap with Adult B's Master Key → Wrapped DEK for B
 
 ### **Challenges**
 
-1. **Key Distribution Problem**: How does Adult A securely share their master key with Adult B?
-   - ❌ Can't send master key over insecure channel (email)
-   - ❌ Can't store master key on server
+1. **Key Distribution Problem**: How does Adult A securely share their primary key with Adult B?
+   - ❌ Can't send primary key over insecure channel (email)
+   - ❌ Can't store primary key on server
    - ❌ Can't assume iCloud Keychain Family Sharing
 
 2. **Storage Overhead**: N wrapped keys per record (N = # authorized users)
@@ -355,7 +355,7 @@ This is the **best fit** for the family medical app because:
 **How it works:**
 
 - Items keys generated randomly (not password-derived)
-- Items keys encrypted with master key
+- Items keys encrypted with primary key
 - Server is "dumb data store"
 
 **Sharing limitations:**
@@ -563,7 +563,7 @@ let privateKey = try P256.KeyAgreement.PrivateKey(secureEnclaveKey: true)
 ```
 User Password
     ↓ (PBKDF2 100k+ iterations or Argon2id)
-User Master Key (stored in Keychain, never transmitted)
+User Primary Key (stored in Keychain, never transmitted)
     ↓ (Used to encrypt user's Curve25519 private key)
 User Identity Keypair (Curve25519)
     ↓ (ECDH with other user's public key + HKDF)
@@ -602,7 +602,7 @@ Medical Records (encrypted at rest)
 
 **For ADR-0002 (Key Hierarchy):**
 
-- User Master Key: PBKDF2-HMAC-SHA256 (100k+ iterations) or Argon2id
+- User Primary Key: PBKDF2-HMAC-SHA256 (100k+ iterations) or Argon2id
 - User Identity: Curve25519.KeyAgreement.PrivateKey (stored encrypted in Keychain)
 - Family Member Keys: Random SymmetricKey(size: .bits256)
 - Storage: iOS Keychain for user keys, Core Data for wrapped FMKs

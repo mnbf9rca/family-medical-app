@@ -24,7 +24,7 @@ This document covers:
 Three Swift proof-of-concept files demonstrating different sharing patterns:
 
 1. **[poc-symmetric-key-wrapping.swift](poc-symmetric-key-wrapping.swift)**
-   - Pattern: Wrap DEK with each user's master key
+   - Pattern: Wrap DEK with each user's primary key
    - Pros: Simple, NIST-approved
    - Cons: Requires secure key exchange channel
    - Verdict: Good foundation, but incomplete

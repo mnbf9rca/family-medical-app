@@ -20,7 +20,7 @@ ADRs document significant architectural decisions, their context, and consequenc
 - [ADR-0001: Cryptographic Architecture Must Be Designed Before Implementation](adr-0001-crypto-architecture-first.md) - **Accepted** (2025-12-19)
   - Establishes "crypto-first architecture" principle: design complete cryptographic architecture before any implementation
 - [ADR-0002: Key Hierarchy and Derivation](adr-0002-key-hierarchy.md) - **Proposed** (2025-12-19)
-  - Defines three-tier key hierarchy: Master Key → User Identity (Curve25519) → Family Member Keys → Medical Records
+  - Defines three-tier key hierarchy: Primary Key → User Identity (Curve25519) → Family Member Keys → Medical Records
   - Argon2id (via Swift-Sodium) for password-based key derivation
   - Per-family-member data encryption keys for granular access control
   - ECDH-based key wrapping for sharing over insecure channels
@@ -44,12 +44,12 @@ ADRs document significant architectural decisions, their context, and consequenc
 ### Data Storage & Sync
 
 - [ADR-0004: Sync Encryption and Multi-Device Support](adr-0004-sync-encryption.md) - **Proposed** (2025-12-20)
-  - 24-word BIP39 recovery code for Master Key distribution across devices
+  - 24-word BIP39 recovery code for Primary Key distribution across devices
   - Pull-based sync with Supabase Realtime notifications for instant updates
   - Last-write-wins conflict resolution (timestamp-based, KISS principle)
   - Offline-first: queue changes locally, sync when network available
   - Device management: audit trail and revocation
-  - Zero-knowledge maintained: encrypted Master Key on server (recovery code never transmitted)
+  - Zero-knowledge maintained: encrypted Primary Key on server (recovery code never transmitted)
 
 ### Build & Test Infrastructure
 

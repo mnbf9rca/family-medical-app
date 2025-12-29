@@ -153,7 +153,7 @@ func checkForDuplicate(data: Data, familyMemberId: UUID, fmk: SymmetricKey) asyn
 
 1. **Rainbow table resistance**: ✅
    - Attacker cannot pre-compute HMACs without FMK
-   - FMK is secret (stored in Keychain, encrypted with Master Key)
+   - FMK is secret (stored in Keychain, encrypted with Primary Key)
 
 2. **Deduplication still works**: ✅
    - Deterministic within family member (same data + FMK → same HMAC)

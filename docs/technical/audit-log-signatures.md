@@ -22,26 +22,26 @@ CREATE TABLE audit_log (
     event_type TEXT NOT NULL,
     actor_user_id UUID NOT NULL,
     target_user_id UUID,
-    encrypted_details BYTEA NOT NULL,  -- AES-GCM encrypted with Master Key
+    encrypted_details BYTEA NOT NULL,  -- AES-GCM encrypted with Primary Key
     occurred_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ```
 
 **Security properties**:
 
-- ✅ **Confidentiality**: Only owner with Master Key can read entries
+- ✅ **Confidentiality**: Only owner with Primary Key can read entries
 - ❌ **Integrity**: No detection if entries are modified
 - ❌ **Authenticity**: No proof of who created entry
 
 ### Threat Model
 
-**Scenario**: Attacker compromises device → gains Master Key (from Keychain while device unlocked)
+**Scenario**: Attacker compromises device → gains Primary Key (from Keychain while device unlocked)
 
 **Attack capabilities**:
 
-1. Decrypt existing audit entries (has Master Key)
+1. Decrypt existing audit entries (has Primary Key)
 2. Modify entries (e.g., change "Adult A revoked Adult C" to "Adult C revoked themselves")
-3. Re-encrypt with same Master Key
+3. Re-encrypt with same Primary Key
 4. Update database
 5. ❌ **No detection possible** (encrypted ciphertext looks valid)
 
@@ -78,17 +78,17 @@ CREATE TABLE audit_log (
 
 #### 1. Signing Key Derivation
 
-**Use HKDF to derive signing key from Master Key** (separate from encryption):
+**Use HKDF to derive signing key from Primary Key** (separate from encryption):
 
 ```swift
 import CryptoKit
 
-/// Derive audit log signing key from Master Key
-/// - Parameter masterKey: User's Master Key (256-bit)
+/// Derive audit log signing key from Primary Key
+/// - Parameter primaryKey: User's Primary Key (256-bit)
 /// - Returns: Dedicated signing key for HMAC
-func deriveAuditSigningKey(from masterKey: SymmetricKey) -> SymmetricKey {
+func deriveAuditSigningKey(from primaryKey: SymmetricKey) -> SymmetricKey {
     return HKDF<SHA256>.deriveKey(
-        inputKeyMaterial: masterKey,
+        inputKeyMaterial: primaryKey,
         salt: Data("audit-log-signing-v1".utf8),  // Fixed salt (domain separation)
         outputByteCount: 32
     )
@@ -99,7 +99,7 @@ func deriveAuditSigningKey(from masterKey: SymmetricKey) -> SymmetricKey {
 
 - ✅ **Domain separation**: Encryption key ≠ signing key (best practice)
 - ✅ **CryptoKit native**: Uses HKDF (standard key derivation)
-- ✅ **Deterministic**: Same Master Key always produces same signing key
+- ✅ **Deterministic**: Same Primary Key always produces same signing key
 
 #### 2. Creating Signed Audit Entry
 
@@ -111,19 +111,19 @@ func createAuditLogEntry(
     targetUserId: UUID?,
     details: AuditLogDetails,
     familyMemberId: UUID,
-    masterKey: SymmetricKey
+    primaryKey: SymmetricKey
 ) async throws -> AuditLogEntry {
-    // 1. Encrypt details with Master Key (existing behavior)
+    // 1. Encrypt details with Primary Key (existing behavior)
     let detailsJSON = try JSONEncoder().encode(details)
     let nonce = AES.GCM.Nonce()
-    let sealedBox = try AES.GCM.seal(detailsJSON, using: masterKey, nonce: nonce)
+    let sealedBox = try AES.GCM.seal(detailsJSON, using: primaryKey, nonce: nonce)
 
     // 2. Generate entry metadata
     let logId = UUID()
     let occurredAt = Date()
 
     // 3. Derive signing key
-    let signingKey = deriveAuditSigningKey(from: masterKey)
+    let signingKey = deriveAuditSigningKey(from: primaryKey)
 
     // 4. Get previous entry for chaining (blockchain-style)
     let previousEntry = try await fetchLatestAuditLogEntry(familyMemberId: familyMemberId)
@@ -247,11 +247,11 @@ func computeSignatureInput(
 /// - Returns: true if all entries valid, throws if tampering detected
 func verifyAuditLogIntegrity(
     entries: [AuditLogEntry],
-    masterKey: SymmetricKey
+    primaryKey: SymmetricKey
 ) throws -> Bool {
     guard !entries.isEmpty else { return true }
 
-    let signingKey = deriveAuditSigningKey(from: masterKey)
+    let signingKey = deriveAuditSigningKey(from: primaryKey)
 
     // Verify each entry's signature
     for entry in entries {
@@ -303,19 +303,19 @@ enum AuditLogError: Error {
 2. ✅ **Append-only**: Cannot insert entries in middle (breaks chain)
 3. ✅ **Deletion detection**: Cannot delete entries (breaks chain)
 4. ✅ **Reordering detection**: Cannot reorder entries (chain enforces order)
-5. ✅ **Non-repudiation**: Actor can't deny creating entry (signed with their Master Key derivative)
+5. ✅ **Non-repudiation**: Actor can't deny creating entry (signed with their Primary Key derivative)
 
 ### Attacker Capabilities After Compromise
 
-**If attacker gains Master Key** (e.g., unlocked device):
+**If attacker gains Primary Key** (e.g., unlocked device):
 
-- ✅ Can read all audit entries (decrypt with Master Key)
+- ✅ Can read all audit entries (decrypt with Primary Key)
 - ❌ Cannot modify past entries (breaks HMAC signature)
 - ❌ Cannot delete past entries (breaks chain)
 - ❌ Cannot insert backdated entries (breaks chain)
 - ⚠️ **CAN append new entries** (has signing key, can create valid signatures)
 
-**Limitation**: Attacker with Master Key can append new fake entries (same as creating real entries). However, they cannot modify or hide past actions.
+**Limitation**: Attacker with Primary Key can append new fake entries (same as creating real entries). However, they cannot modify or hide past actions.
 
 ## Comparison of Approaches
 
@@ -403,9 +403,9 @@ Recommendation:
 
 ```swift
 /// Migrate existing audit log entries to signed format
-func migrateAuditLogToSigned(masterKey: SymmetricKey) async throws {
+func migrateAuditLogToSigned(primaryKey: SymmetricKey) async throws {
     let existingEntries = try await fetchAllAuditLogEntries(ordered: .ascending)
-    let signingKey = deriveAuditSigningKey(from: masterKey)
+    let signingKey = deriveAuditSigningKey(from: primaryKey)
 
     var previousEntry: AuditLogEntry? = nil
 
@@ -475,7 +475,7 @@ func testSignatureDetectsModification() async throws {
     tamperedEntry.encryptedDetails[0] ^= 0xFF
 
     // Verification should fail
-    XCTAssertThrowsError(try verifyAuditLogIntegrity([tamperedEntry], masterKey: masterKey))
+    XCTAssertThrowsError(try verifyAuditLogIntegrity([tamperedEntry], primaryKey: primaryKey))
 }
 
 // Test: Verify chain breaks after deletion
@@ -487,7 +487,7 @@ func testChainDetectsDeletion() async throws {
     tamperedChain.remove(at: 2)
 
     // Chain verification should fail
-    XCTAssertThrowsError(try verifyAuditLogIntegrity(tamperedChain, masterKey: masterKey))
+    XCTAssertThrowsError(try verifyAuditLogIntegrity(tamperedChain, primaryKey: primaryKey))
 }
 
 // Test: Verify chain breaks after reordering
@@ -499,7 +499,7 @@ func testChainDetectsReordering() async throws {
     tamperedChain.swapAt(2, 3)
 
     // Chain verification should fail
-    XCTAssertThrowsError(try verifyAuditLogIntegrity(tamperedChain, masterKey: masterKey))
+    XCTAssertThrowsError(try verifyAuditLogIntegrity(tamperedChain, primaryKey: primaryKey))
 }
 ```
 
