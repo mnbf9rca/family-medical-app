@@ -195,7 +195,7 @@ struct AuthenticationCoordinatorViewTests {
     }
 
     @Test
-    func handleScenePhase_unknownDefault() {
+    func handleScenePhase_samePhaseTransitionIsNoOp() {
         let authService = MockAuthenticationService(isSetUp: true)
         let lockStateService = MockLockStateService()
         let viewModel = AuthenticationViewModel(
@@ -209,16 +209,15 @@ struct AuthenticationCoordinatorViewTests {
         // Access body to ensure view is rendered
         _ = view.body
 
-        // Note: We can't create an unknown ScenePhase case directly,
-        // but the @unknown default case exists for future Swift evolution.
-        // This test documents the expected behavior if a new case is added.
-        // The code path is present but cannot be exercised in current Swift.
-
-        // For coverage purposes, we verify the existing transitions work
+        // Test that transitioning to the same phase is a no-op
+        // This verifies the switch statement handles all cases correctly
         view.handleScenePhaseChange(oldPhase: .active, newPhase: .active)
 
-        // App should remain authenticated (no-op for same phase)
+        // App should remain authenticated (no state change)
         #expect(viewModel.isAuthenticated)
+
+        // Note: The @unknown default case in handleScenePhaseChange exists for
+        // future Swift evolution, but cannot be tested with current ScenePhase cases
     }
 
     // MARK: - MainAppView Tests

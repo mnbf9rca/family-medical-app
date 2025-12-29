@@ -3,17 +3,29 @@ set -e
 
 # Parse arguments
 DETAILED_MODE=false
-if [[ "$1" == "--detailed" ]]; then
-    DETAILED_MODE=true
-fi
+FUNCTION_LIMIT=10
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --detailed)
+            DETAILED_MODE=true
+            shift
+            ;;
+        --limit)
+            FUNCTION_LIMIT="$2"
+            shift 2
+            ;;
+        *)
+            echo "Unknown option: $1"
+            echo "Usage: $0 [--detailed] [--limit N]"
+            exit 1
+            ;;
+    esac
+done
 
 # Generate code coverage report from xcresult
 cd ios/FamilyMedicalApp
 xcrun xccov view --report --json test-results/TestResults.xcresult > test-results/coverage.json
-
-# Coverage thresholds
-THRESHOLD=85        # Individual file threshold
-OVERALL_THRESHOLD=90  # Overall project threshold
 
 # Extract and display coverage with per-file breakdown
 python3 << EOF
@@ -23,6 +35,7 @@ import json
 THRESHOLD = 85  # Individual file threshold
 OVERALL_THRESHOLD = 90  # Overall project threshold
 DETAILED_MODE = "${DETAILED_MODE}" == "true"
+FUNCTION_LIMIT = int("${FUNCTION_LIMIT}")
 
 # Per-file coverage exceptions
 # Files that have a practical limit below the standard threshold
@@ -112,10 +125,11 @@ if not overall_passes or not files_pass:
                         uncovered_lines.append(f"      Line {func['lineNumber']}: {func['name']}")
                 if uncovered_lines:
                     print(f"      Uncovered functions:")
-                    for line in uncovered_lines[:10]:  # Limit to first 10
+                    limit = len(uncovered_lines) if FUNCTION_LIMIT == 0 else FUNCTION_LIMIT
+                    for line in uncovered_lines[:limit]:
                         print(line)
-                    if len(uncovered_lines) > 10:
-                        print(f"      ... and {len(uncovered_lines) - 10} more")
+                    if len(uncovered_lines) > limit:
+                        print(f"      ⚠️ Showing {limit} of {len(uncovered_lines)} functions (use --limit N to see more)")
 
     if not DETAILED_MODE:
         print(f"\n💡 Tip: Run with --detailed flag for uncovered line information")
@@ -141,10 +155,11 @@ else:
 
                 if uncovered_funcs:
                     print(f"    Partially covered functions:")
-                    for line_num, func_name, func_cov in sorted(uncovered_funcs[:10]):
+                    limit = len(uncovered_funcs) if FUNCTION_LIMIT == 0 else FUNCTION_LIMIT
+                    for line_num, func_name, func_cov in sorted(uncovered_funcs, key=lambda x: x[2])[:limit]:
                         print(f"      Line {line_num}: {func_name} ({func_cov:.1f}%)")
-                    if len(uncovered_funcs) > 10:
-                        print(f"      ... and {len(uncovered_funcs) - 10} more")
+                    if len(uncovered_funcs) > limit:
+                        print(f"      ⚠️ Showing {limit} of {len(uncovered_funcs)} functions (use --limit N to see more)")
 
     if not DETAILED_MODE:
         print(f"\n💡 Tip: Run with --detailed flag for detailed coverage information")
