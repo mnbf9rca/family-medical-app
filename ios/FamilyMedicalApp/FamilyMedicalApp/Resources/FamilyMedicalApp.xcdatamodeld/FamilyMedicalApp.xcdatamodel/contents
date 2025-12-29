@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="23507" systemVersion="24C5079e" minimumToolsVersion="Automatic" sourceLanguage="Swift" usedWithSwiftData="YES" usedWithCloudKit="NO">
+    <entity name="AttachmentEntity" representedClassName="AttachmentEntity" syncable="YES">
+        <attribute name="contentHMAC" attributeType="Binary" allowsExternalBinaryDataStorage="NO"/>
+        <attribute name="encryptedMetadata" attributeType="Binary" allowsExternalBinaryDataStorage="NO"/>
+        <attribute name="encryptedSize" attributeType="Integer 64" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="id" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="uploadedAt" attributeType="Date" usesScalarValueType="NO"/>
+        <uniquenessConstraints>
+            <uniquenessConstraint>
+                <constraint value="id"/>
+            </uniquenessConstraint>
+        </uniquenessConstraints>
+    </entity>
+    <entity name="MedicalRecordEntity" representedClassName="MedicalRecordEntity" syncable="YES">
+        <attribute name="createdAt" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="encryptedContent" attributeType="Binary" allowsExternalBinaryDataStorage="NO"/>
+        <attribute name="id" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="personId" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="previousVersionId" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="updatedAt" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="version" attributeType="Integer 32" defaultValueString="1" usesScalarValueType="YES"/>
+        <uniquenessConstraints>
+            <uniquenessConstraint>
+                <constraint value="id"/>
+            </uniquenessConstraint>
+        </uniquenessConstraints>
+    </entity>
+    <entity name="PersonEntity" representedClassName="PersonEntity" syncable="YES">
+        <attribute name="createdAt" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="encryptedData" attributeType="Binary" allowsExternalBinaryDataStorage="NO"/>
+        <attribute name="id" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="updatedAt" attributeType="Date" usesScalarValueType="NO"/>
+        <uniquenessConstraints>
+            <uniquenessConstraint>
+                <constraint value="id"/>
+            </uniquenessConstraint>
+        </uniquenessConstraints>
+    </entity>
+    <entity name="RecordAttachmentEntity" representedClassName="RecordAttachmentEntity" syncable="YES">
+        <attribute name="attachmentId" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="recordId" attributeType="UUID" usesScalarValueType="NO"/>
+        <uniquenessConstraints>
+            <uniquenessConstraint>
+                <constraint value="recordId"/>
+                <constraint value="attachmentId"/>
+            </uniquenessConstraint>
+        </uniquenessConstraints>
+    </entity>
+</model>

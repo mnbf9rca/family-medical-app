@@ -138,6 +138,10 @@ type_name:
     warning: 50
     error: 60
 
+# Force try - strict for production (test code excluded via custom rule)
+force_try:
+  severity: error
+
 # Force unwrapping - strict for security code
 force_unwrapping:
   severity: error  # No force unwrapping in crypto/security code
@@ -174,6 +178,7 @@ custom_rules:
     regex: 'try!\s+(.*)(Encrypt|Decrypt|Derive|Key|Hash|Sign|Verify)'
     message: "Never use try! with cryptographic operations - handle errors explicitly"
     severity: error
+    excluded: ".*Tests/.*"  # Exclude test code - mocks use controlled values
 
   password_in_code:
     name: "No Hardcoded Passwords"
