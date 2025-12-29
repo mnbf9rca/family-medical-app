@@ -18,9 +18,9 @@ repos:
     hooks:
       - id: swiftlint
         args:
+          - --strict
           - --config
           - .swiftlint.yml
-          - --strict
 
   # GitHub Actions workflow linting
   - repo: https://github.com/rhysd/actionlint

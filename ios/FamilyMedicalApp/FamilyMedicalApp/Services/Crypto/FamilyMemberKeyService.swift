@@ -22,6 +22,22 @@ protocol FamilyMemberKeyServiceProtocol {
     /// - Returns: Unwrapped FMK
     /// - Throws: CryptoError on unwrapping failure
     func unwrapFMK(_ wrappedFMK: Data, with primaryKey: SymmetricKey) throws -> SymmetricKey
+
+    /// Store an FMK in Keychain (wrapped with primary key internally)
+    /// - Parameters:
+    ///   - fmk: Family Member Key to store
+    ///   - familyMemberID: Unique identifier for the family member
+    ///   - primaryKey: User's primary key for wrapping
+    /// - Throws: CryptoError or KeychainError on failure
+    func storeFMK(_ fmk: SymmetricKey, familyMemberID: String, primaryKey: SymmetricKey) throws
+
+    /// Retrieve an FMK from Keychain
+    /// - Parameters:
+    ///   - familyMemberID: Unique identifier for the family member
+    ///   - primaryKey: User's primary key for unwrapping
+    /// - Returns: Unwrapped FMK
+    /// - Throws: KeychainError or CryptoError on failure
+    func retrieveFMK(familyMemberID: String, primaryKey: SymmetricKey) throws -> SymmetricKey
 }
 
 /// Family Member Key management service
