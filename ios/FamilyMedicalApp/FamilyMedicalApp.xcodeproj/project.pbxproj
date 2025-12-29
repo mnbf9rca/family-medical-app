@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D40AC5A42F0332AD00564AAD /* ViewInspector in Frameworks */ = {isa = PBXBuildFile; productRef = D40AC5A32F0332AD00564AAD /* ViewInspector */; };
 		D445F7DE2EFB435900E07F78 /* Clibsodium in Frameworks */ = {isa = PBXBuildFile; productRef = D445F7DD2EFB435900E07F78 /* Clibsodium */; };
 		D445F7E02EFB435900E07F78 /* Sodium in Frameworks */ = {isa = PBXBuildFile; productRef = D445F7DF2EFB435900E07F78 /* Sodium */; };
 /* End PBXBuildFile section */
@@ -67,6 +68,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D40AC5A42F0332AD00564AAD /* ViewInspector in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -146,6 +148,7 @@
 			);
 			name = FamilyMedicalAppTests;
 			packageProductDependencies = (
+				D40AC5A32F0332AD00564AAD /* ViewInspector */,
 			);
 			productName = FamilyMedicalAppTests;
 			productReference = D445F7A72EF7E94000E07F78 /* FamilyMedicalAppTests.xctest */;
@@ -208,6 +211,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				D445F7DC2EFB435900E07F78 /* XCRemoteSwiftPackageReference "swift-sodium" */,
+				D40AC5A22F0332AD00564AAD /* XCRemoteSwiftPackageReference "ViewInspector" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = D445F79B2EF7E93C00E07F78 /* Products */;
@@ -598,6 +602,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		D40AC5A22F0332AD00564AAD /* XCRemoteSwiftPackageReference "ViewInspector" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/nalexn/ViewInspector";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.10.3;
+			};
+		};
 		D445F7DC2EFB435900E07F78 /* XCRemoteSwiftPackageReference "swift-sodium" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/jedisct1/swift-sodium.git";
@@ -609,6 +621,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		D40AC5A32F0332AD00564AAD /* ViewInspector */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D40AC5A22F0332AD00564AAD /* XCRemoteSwiftPackageReference "ViewInspector" */;
+			productName = ViewInspector;
+		};
 		D445F7DD2EFB435900E07F78 /* Clibsodium */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = D445F7DC2EFB435900E07F78 /* XCRemoteSwiftPackageReference "swift-sodium" */;
