@@ -9,7 +9,8 @@ struct CoreDataStackTests {
     func init_inMemory_loadsSuccessfully() {
         let stack = CoreDataStack(inMemory: true)
 
-        #expect(stack.viewContext != nil)
+        // viewContext should be initialized
+        #expect(stack.viewContext.persistentStoreCoordinator != nil)
     }
 
     @Test
@@ -35,8 +36,8 @@ struct CoreDataStackTests {
 
         let context = stack.newBackgroundContext()
 
-        #expect(context != nil)
-        #expect(context !== stack.viewContext) // Different instance
+        // Should return different instance from viewContext
+        #expect(context !== stack.viewContext)
     }
 
     @Test
@@ -55,9 +56,8 @@ struct CoreDataStackTests {
     func performBackgroundTask_executesBlock() async throws {
         let stack = CoreDataStack(inMemory: true)
 
-        let result = try await stack.performBackgroundTask { context in
-            #expect(context != nil)
-            return 42
+        let result = try await stack.performBackgroundTask { _ in
+            42
         }
 
         #expect(result == 42)

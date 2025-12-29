@@ -10,6 +10,11 @@ final class MockEncryptionService: EncryptionServiceProtocol, @unchecked Sendabl
     var shouldFailEncryption = false
     var shouldFailDecryption = false
 
+    // MARK: - Storage
+
+    /// Store encrypted data for proper decryption (ciphertext -> plaintext mapping)
+    private var storage: [Data: Data] = [:]
+
     // MARK: - Tracking
 
     private(set) var encryptCalls: [(data: Data, key: SymmetricKey)] = []
@@ -29,6 +34,9 @@ final class MockEncryptionService: EncryptionServiceProtocol, @unchecked Sendabl
         let ciphertext = Data(repeating: 0x02, count: data.count) // Same length as input
         let tag = Data(repeating: 0x03, count: 16) // 128-bit tag
 
+        // Store mapping for later decryption
+        storage[ciphertext] = data
+
         // swiftlint:disable:next force_try
         return try! EncryptedPayload(nonce: nonce, ciphertext: ciphertext, tag: tag)
     }
@@ -40,9 +48,12 @@ final class MockEncryptionService: EncryptionServiceProtocol, @unchecked Sendabl
             throw CryptoError.decryptionFailed("Mock decryption failure")
         }
 
-        // Return predictable mock decrypted data
-        // In tests, use payload.ciphertext.count to return data of same length
-        return Data(repeating: 0x04, count: payload.ciphertext.count)
+        // Return the original plaintext that was encrypted
+        guard let plaintext = storage[payload.ciphertext] else {
+            throw CryptoError.decryptionFailed("Mock: No stored plaintext for this ciphertext")
+        }
+
+        return plaintext
     }
 
     func generateNonce() -> AES.GCM.Nonce {
@@ -56,6 +67,7 @@ final class MockEncryptionService: EncryptionServiceProtocol, @unchecked Sendabl
     func reset() {
         encryptCalls.removeAll()
         decryptCalls.removeAll()
+        storage.removeAll()
         shouldFailEncryption = false
         shouldFailDecryption = false
     }

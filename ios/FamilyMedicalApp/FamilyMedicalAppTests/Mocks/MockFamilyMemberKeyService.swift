@@ -16,7 +16,7 @@ final class MockFamilyMemberKeyService: FamilyMemberKeyServiceProtocol, @uncheck
     // MARK: - Storage
 
     /// In-memory FMK storage (keyed by family member ID)
-    private(set) var storedFMKs: [String: SymmetricKey] = [:]
+    var storedFMKs: [String: SymmetricKey] = [:]
 
     // MARK: - Tracking
 
