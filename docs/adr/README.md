@@ -52,7 +52,12 @@ ADRs document significant architectural decisions, their context, and consequenc
   - Zero-knowledge maintained: encrypted Master Key on server (recovery code never transmitted)
 
 ### Build & Test Infrastructure
-<!-- Add ADRs related to CI/CD, testing strategy, build configuration -->
+
+- [ADR-0006: Test Coverage Requirements and Dual Threshold System](adr-0006-test-coverage-requirements.md) - **Accepted** (2025-12-28)
+  - 90% overall project coverage minimum, 85% per-file minimum
+  - Per-file exceptions for crypto code with unreachable defensive paths
+  - Detailed mode (`--detailed`) for function-level coverage analysis
+  - Security-critical code requires unit tests, failure cases, and edge case coverage
 
 ### UI/UX Architecture
 <!-- Add ADRs related to SwiftUI patterns, navigation, accessibility -->

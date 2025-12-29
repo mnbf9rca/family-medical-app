@@ -27,7 +27,7 @@ struct AuthenticationCoordinatorView: View {
         }
     }
 
-    private func handleScenePhaseChange(oldPhase: ScenePhase, newPhase: ScenePhase) {
+    func handleScenePhaseChange(oldPhase: ScenePhase, newPhase: ScenePhase) {
         switch newPhase {
         case .background, .inactive:
             // Record background time for lock timeout
@@ -48,7 +48,7 @@ struct AuthenticationCoordinatorView: View {
 }
 
 /// Main app view (placeholder - will be replaced with actual content)
-private struct MainAppView: View {
+struct MainAppView: View {
     @Bindable var viewModel: AuthenticationViewModel
 
     var body: some View {

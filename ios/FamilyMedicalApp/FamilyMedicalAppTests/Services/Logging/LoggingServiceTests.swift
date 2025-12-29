@@ -177,4 +177,132 @@ struct LoggingServiceTests {
         // Exercise the real implementation - just ensure it doesn't crash
         logger.logTimestamp(Date())
     }
+
+    // MARK: - Real CategoryLogger Standard Log Levels
+
+    @Test
+    func realLoggerDebug() {
+        let service = LoggingService()
+        let logger = service.logger(category: .auth)
+
+        // Exercise the real implementation - just ensure it doesn't crash
+        logger.debug("Test debug message")
+    }
+
+    @Test
+    func realLoggerInfo() {
+        let service = LoggingService()
+        let logger = service.logger(category: .crypto)
+
+        // Exercise the real implementation - just ensure it doesn't crash
+        logger.info("Test info message")
+    }
+
+    @Test
+    func realLoggerNotice() {
+        let service = LoggingService()
+        let logger = service.logger(category: .storage)
+
+        // Exercise the real implementation - just ensure it doesn't crash
+        logger.notice("Test notice message")
+    }
+
+    @Test
+    func realLoggerError() {
+        let service = LoggingService()
+        let logger = service.logger(category: .sync)
+
+        // Exercise the real implementation - just ensure it doesn't crash
+        logger.error("Test error message")
+    }
+
+    // MARK: - Real CategoryLogger Privacy-Aware Methods
+
+    @Test
+    func realLoggerDebugWithPrivacy() {
+        let service = LoggingService()
+        let logger = service.logger(category: .auth)
+
+        // Exercise all privacy levels
+        logger.debug("Public debug", privacy: .public)
+        logger.debug("Private debug", privacy: .private)
+        logger.debug("Sensitive debug", privacy: .sensitive)
+        logger.debug("Hashed debug", privacy: .hashed)
+    }
+
+    @Test
+    func realLoggerInfoWithPrivacy() {
+        let service = LoggingService()
+        let logger = service.logger(category: .crypto)
+
+        // Exercise all privacy levels
+        logger.info("Public info", privacy: .public)
+        logger.info("Private info", privacy: .private)
+        logger.info("Sensitive info", privacy: .sensitive)
+        logger.info("Hashed info", privacy: .hashed)
+    }
+
+    @Test
+    func realLoggerNoticeWithPrivacy() {
+        let service = LoggingService()
+        let logger = service.logger(category: .storage)
+
+        // Exercise all privacy levels
+        logger.notice("Public notice", privacy: .public)
+        logger.notice("Private notice", privacy: .private)
+        logger.notice("Sensitive notice", privacy: .sensitive)
+        logger.notice("Hashed notice", privacy: .hashed)
+    }
+
+    @Test
+    func realLoggerErrorWithPrivacy() {
+        let service = LoggingService()
+        let logger = service.logger(category: .sync)
+
+        // Exercise all privacy levels
+        logger.error("Public error", privacy: .public)
+        logger.error("Private error", privacy: .private)
+        logger.error("Sensitive error", privacy: .sensitive)
+        logger.error("Hashed error", privacy: .hashed)
+    }
+
+    // MARK: - Real CategoryLogger Convenience Methods
+
+    @Test
+    func realLoggerLogOperation() {
+        let service = LoggingService()
+        let logger = service.logger(category: .auth)
+
+        // Exercise the real implementation
+        logger.logOperation("testOperation", state: "started")
+        logger.logOperation("testOperation", state: "completed")
+    }
+
+    @Test
+    func realLoggerLogUserID() {
+        let service = LoggingService()
+        let logger = service.logger(category: .storage)
+
+        // Exercise the real implementation
+        logger.logUserID("user-123")
+    }
+
+    @Test
+    func realLoggerLogRecordCount() {
+        let service = LoggingService()
+        let logger = service.logger(category: .sync)
+
+        // Exercise the real implementation
+        logger.logRecordCount(42)
+    }
+
+    @Test
+    func realLoggerLogError() {
+        let service = LoggingService()
+        let logger = service.logger(category: .crypto)
+
+        // Exercise the real implementation
+        let testError = NSError(domain: "TestDomain", code: 123, userInfo: [NSLocalizedDescriptionKey: "Test error"])
+        logger.logError(testError, context: "Testing error logging")
+    }
 }
