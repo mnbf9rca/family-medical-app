@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 @testable import FamilyMedicalApp
 
@@ -150,5 +151,29 @@ final class MockLockStateService: LockStateServiceProtocol {
 
     func unlock() {
         isLocked = false
+    }
+}
+
+// MARK: - Mock Primary Key Provider
+
+final class MockPrimaryKeyProvider: PrimaryKeyProviderProtocol, @unchecked Sendable {
+    var primaryKey: SymmetricKey?
+    var shouldFail = false
+
+    init(primaryKey: SymmetricKey? = nil, shouldFail: Bool = false) {
+        self.primaryKey = primaryKey
+        self.shouldFail = shouldFail
+    }
+
+    func getPrimaryKey() throws -> SymmetricKey {
+        if shouldFail {
+            throw KeychainError.keyNotFound("com.family-medical-app.primary-key")
+        }
+
+        guard let key = primaryKey else {
+            throw KeychainError.keyNotFound("com.family-medical-app.primary-key")
+        }
+
+        return key
     }
 }
