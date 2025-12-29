@@ -73,6 +73,8 @@ struct Person: Codable, Equatable, Identifiable {
         }
 
         // Validate labels
+        var seenLabels = Set<String>()
+        var trimmedLabels: [String] = []
         for label in labels {
             let trimmedLabel = label.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !trimmedLabel.isEmpty else {
@@ -81,12 +83,19 @@ struct Person: Codable, Equatable, Identifiable {
             guard trimmedLabel.count <= Self.labelMaxLength else {
                 throw ModelError.labelTooLong(label: label, maxLength: Self.labelMaxLength)
             }
+            // Check for duplicates (case-insensitive)
+            let lowercased = trimmedLabel.lowercased()
+            if seenLabels.contains(lowercased) {
+                throw ModelError.labelTooLong(label: "Duplicate label: \(trimmedLabel)", maxLength: 0)
+            }
+            seenLabels.insert(lowercased)
+            trimmedLabels.append(trimmedLabel)
         }
 
         self.id = id
         self.name = trimmedName
         self.dateOfBirth = dateOfBirth
-        self.labels = labels.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+        self.labels = trimmedLabels
         self.notes = notes
         self.createdAt = createdAt
         self.updatedAt = updatedAt
@@ -126,8 +135,11 @@ struct Person: Codable, Equatable, Identifiable {
     ///
     /// - Parameter label: The label to remove (case-insensitive)
     mutating func removeLabel(_ label: String) {
+        let originalCount = labels.count
         labels.removeAll { $0.caseInsensitiveCompare(label) == .orderedSame }
-        updatedAt = Date()
+        if labels.count != originalCount {
+            updatedAt = Date()
+        }
     }
 
     // MARK: - Common Label Suggestions

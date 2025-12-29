@@ -26,9 +26,9 @@ Use a **schema-overlay architecture** where:
 
 Core models:
 
-- `MedicalRecord`: Container with `schemaId` and generic `content`
+- `MedicalRecord`: Container with encrypted `data` (opaque to server)
+- `RecordContent`: Decrypted payload with `schemaId` and type-safe field wrapper
 - `RecordSchema`: Template defining fields and validation
-- `RecordContent`: Type-safe wrapper for arbitrary fields
 - `FieldValue`: Enum for dynamic types (string, int, date, etc.)
 
 **Person labels** use flexible string arrays instead of fixed relationship enums to avoid encoding nuclear-family assumptions.

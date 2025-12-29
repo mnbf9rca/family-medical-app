@@ -83,19 +83,12 @@ struct RecordSchema: Codable, Equatable, Identifiable {
         }
 
         // Check for duplicate field IDs
-        let fieldIds = fields.map(\.id)
-        let uniqueFieldIds = Set(fieldIds)
-        guard fieldIds.count == uniqueFieldIds.count else {
-            // Find the duplicate
-            var seen = Set<String>()
-            for fieldId in fieldIds {
-                if seen.contains(fieldId) {
-                    throw ModelError.duplicateFieldId(fieldId: fieldId)
-                }
-                seen.insert(fieldId)
+        var seen = Set<String>()
+        for fieldId in fields.map(\.id) {
+            if seen.contains(fieldId) {
+                throw ModelError.duplicateFieldId(fieldId: fieldId)
             }
-            // Unreachable: loop above always throws on first duplicate
-            fatalError("Duplicate field ID detection failed - should never reach here")
+            seen.insert(fieldId)
         }
 
         self.id = trimmedId

@@ -88,7 +88,9 @@ struct Attachment: Codable, Equatable, Identifiable {
 
         // Validate mimeType
         let trimmedMimeType = mimeType.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard trimmedMimeType.count <= Self.mimeTypeMaxLength else {
+        // Default to application/octet-stream for unknown file types
+        let finalMimeType = trimmedMimeType.isEmpty ? "application/octet-stream" : trimmedMimeType
+        guard finalMimeType.count <= Self.mimeTypeMaxLength else {
             throw ModelError.mimeTypeTooLong(maxLength: Self.mimeTypeMaxLength)
         }
 
@@ -99,7 +101,7 @@ struct Attachment: Codable, Equatable, Identifiable {
 
         self.id = id
         self.fileName = trimmedFileName
-        self.mimeType = trimmedMimeType
+        self.mimeType = finalMimeType
         self.contentHMAC = contentHMAC
         self.encryptedSize = encryptedSize
         self.thumbnailData = thumbnailData

@@ -10,6 +10,7 @@ struct RecordContentTests {
         let content = RecordContent()
         #expect(content.allFields.isEmpty)
         #expect(content.fieldKeys.isEmpty)
+        #expect(content.schemaId == nil)
     }
 
     @Test
@@ -17,6 +18,21 @@ struct RecordContentTests {
         let content = RecordContent(fields: ["name": .string("test")])
         #expect(content.allFields.count == 1)
         #expect(content.getString("name") == "test")
+        #expect(content.schemaId == nil)
+    }
+
+    @Test
+    func init_withSchemaId_storesSchemaId() {
+        let content = RecordContent(schemaId: "vaccine")
+        #expect(content.schemaId == "vaccine")
+        #expect(content.allFields.isEmpty)
+    }
+
+    @Test
+    func init_withSchemaIdAndFields_storesBoth() {
+        let content = RecordContent(schemaId: "medication", fields: ["name": .string("Aspirin")])
+        #expect(content.schemaId == "medication")
+        #expect(content.getString("name") == "Aspirin")
     }
 
     // MARK: - Subscript Access
@@ -193,7 +209,7 @@ struct RecordContentTests {
 
     @Test
     func codable_roundTrip() throws {
-        var original = RecordContent()
+        var original = RecordContent(schemaId: "vaccine")
         original.setString("name", "John Doe")
         original.setInt("age", 42)
         original.setDate("created", Date(timeIntervalSince1970: 1_000_000))
@@ -202,6 +218,7 @@ struct RecordContentTests {
         let decoded = try JSONDecoder().decode(RecordContent.self, from: encoded)
 
         #expect(decoded == original)
+        #expect(decoded.schemaId == "vaccine")
         #expect(decoded.getString("name") == "John Doe")
         #expect(decoded.getInt("age") == 42)
     }
@@ -210,10 +227,10 @@ struct RecordContentTests {
 
     @Test
     func equatable_sameFields_equal() {
-        var content1 = RecordContent()
+        var content1 = RecordContent(schemaId: "test")
         content1.setString("name", "John")
 
-        var content2 = RecordContent()
+        var content2 = RecordContent(schemaId: "test")
         content2.setString("name", "John")
 
         #expect(content1 == content2)
@@ -226,6 +243,17 @@ struct RecordContentTests {
 
         var content2 = RecordContent()
         content2.setString("name", "Jane")
+
+        #expect(content1 != content2)
+    }
+
+    @Test
+    func equatable_differentSchemaId_notEqual() {
+        var content1 = RecordContent(schemaId: "vaccine")
+        content1.setString("name", "Test")
+
+        var content2 = RecordContent(schemaId: "medication")
+        content2.setString("name", "Test")
 
         #expect(content1 != content2)
     }

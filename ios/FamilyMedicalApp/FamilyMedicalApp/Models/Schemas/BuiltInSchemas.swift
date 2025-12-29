@@ -114,8 +114,6 @@ extension BuiltInSchemas {
             description: "Record of vaccinations received"
         )
     }
-
-    // MARK: - Medical Condition Schema
 }
 
 // MARK: - Condition Schema Extension
@@ -198,8 +196,6 @@ extension BuiltInSchemas {
             description: "Ongoing or past medical conditions"
         )
     }
-
-    // MARK: - Medication Schema
 }
 
 // MARK: - Medication Schema Extension
@@ -310,8 +306,6 @@ extension BuiltInSchemas {
             description: "Current and past medications"
         )
     }
-
-    // MARK: - Allergy Schema
 }
 
 // MARK: - Allergy Schema Extension
@@ -384,8 +378,6 @@ extension BuiltInSchemas {
             description: "Allergies and sensitivities"
         )
     }
-
-    // MARK: - Note Schema
 }
 
 // MARK: - Note Schema Extension
