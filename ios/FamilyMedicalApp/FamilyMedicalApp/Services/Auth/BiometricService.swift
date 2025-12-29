@@ -29,12 +29,11 @@ final class BiometricService: BiometricServiceProtocol {
 
     // swiftlint:disable:next modifier_order
     private nonisolated(unsafe) let context: LAContext
-    // swiftlint:disable:next modifier_order
-    private nonisolated(unsafe) let logger: CategoryLoggerProtocol
+    private let logger: CategoryLoggerProtocol
 
     // MARK: - Initialization
 
-    nonisolated init(context: LAContext = LAContext(), logger: CategoryLoggerProtocol? = nil) {
+    init(context: LAContext = LAContext(), logger: CategoryLoggerProtocol? = nil) {
         self.context = context
         self.logger = logger ?? LoggingService.shared.logger(category: .auth)
     }

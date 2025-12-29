@@ -335,7 +335,7 @@ struct AuthenticationServiceTests {
 
 // MARK: - Mock Services
 
-private final class MockKeychainService: KeychainServiceProtocol {
+private final class MockKeychainService: KeychainServiceProtocol, @unchecked Sendable {
     private var keys: [String: SymmetricKey] = [:]
     private var data: [String: Data] = [:]
 

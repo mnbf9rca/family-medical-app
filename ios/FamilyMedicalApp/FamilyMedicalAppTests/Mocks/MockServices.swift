@@ -97,8 +97,8 @@ final class MockViewModelBiometricService: BiometricServiceProtocol {
     var biometryType: BiometryType
     var isBiometricAvailable: Bool
 
-    var shouldFailAuthentication: Bool
-    var shouldCancelAuthentication: Bool
+    nonisolated(unsafe) var shouldFailAuthentication: Bool
+    nonisolated(unsafe) var shouldCancelAuthentication: Bool
 
     init(
         isAvailable: Bool = false,

@@ -4,7 +4,7 @@ import os
 // MARK: - Protocols
 
 /// Protocol for logging service - enables dependency injection and testing
-protocol LoggingServiceProtocol {
+protocol LoggingServiceProtocol: Sendable {
     /// Get a logger for a specific category
     /// - Parameter category: The log category (subsystem area)
     /// - Returns: A category-specific logger
@@ -12,7 +12,7 @@ protocol LoggingServiceProtocol {
 }
 
 /// Protocol for category-specific logging operations
-protocol CategoryLoggerProtocol {
+protocol CategoryLoggerProtocol: Sendable {
     // MARK: - Standard Log Levels (Public)
 
     /// Log a debug message (public, always visible)
@@ -77,7 +77,7 @@ protocol CategoryLoggerProtocol {
 // MARK: - Implementation
 
 /// Main logging service providing structured, privacy-aware logging
-final class LoggingService: LoggingServiceProtocol {
+final class LoggingService: LoggingServiceProtocol, @unchecked Sendable {
     /// Shared singleton instance
     static let shared = LoggingService()
 
@@ -114,7 +114,7 @@ final class LoggingService: LoggingServiceProtocol {
 // MARK: - Category Logger
 
 /// Category-specific logger with privacy-aware methods
-final class CategoryLogger: CategoryLoggerProtocol {
+final class CategoryLogger: CategoryLoggerProtocol, @unchecked Sendable {
     private let osLogger: Logger
     private let category: LogCategory
 

@@ -3,7 +3,7 @@ import Foundation
 import Sodium
 
 /// Protocol for password-based key derivation using Argon2id
-protocol KeyDerivationServiceProtocol {
+protocol KeyDerivationServiceProtocol: Sendable {
     /// Derive a primary key from password using Argon2id
     /// - Parameters:
     ///   - password: User's password
@@ -27,7 +27,7 @@ protocol KeyDerivationServiceProtocol {
 }
 
 /// Argon2id key derivation service using Swift-Sodium (libsodium wrapper)
-final class KeyDerivationService: KeyDerivationServiceProtocol {
+final class KeyDerivationService: KeyDerivationServiceProtocol, @unchecked Sendable {
     private let sodium = Sodium()
 
     // Argon2id parameters from ADR-0002

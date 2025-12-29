@@ -21,7 +21,7 @@ enum KeychainAccessControl {
 }
 
 /// Protocol for secure key storage in iOS Keychain
-protocol KeychainServiceProtocol {
+protocol KeychainServiceProtocol: Sendable {
     /// Store a symmetric key in Keychain
     /// - Parameters:
     ///   - key: SymmetricKey to store
@@ -72,7 +72,7 @@ protocol KeychainServiceProtocol {
 }
 
 /// iOS Keychain wrapper for secure key storage
-final class KeychainService: KeychainServiceProtocol {
+final class KeychainService: KeychainServiceProtocol, @unchecked Sendable {
     private let serviceName = "com.cynexia.FamilyMedicalApp"
     private let logger: CategoryLoggerProtocol
 
