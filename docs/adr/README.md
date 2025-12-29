@@ -51,6 +51,14 @@ ADRs document significant architectural decisions, their context, and consequenc
   - Device management: audit trail and revocation
   - Zero-knowledge maintained: encrypted Primary Key on server (recovery code never transmitted)
 
+### Data Models
+
+- [ADR-0007: Schema-Overlay Data Model](adr-0007-schema-overlay-data-model.md) - **Accepted** (2025-12-23)
+  - Type-safe field definitions with runtime validation
+  - Separation of schema definition (compile-time) from record storage (runtime)
+  - Built-in schema support for common medical record types
+  - Custom schema extensibility for user-defined record types
+
 ### Build & Test Infrastructure
 
 - [ADR-0006: Test Coverage Requirements and Dual Threshold System](adr-0006-test-coverage-requirements.md) - **Accepted** (2025-12-28)
@@ -58,6 +66,11 @@ ADRs document significant architectural decisions, their context, and consequenc
   - Per-file exceptions for crypto code with unreachable defensive paths
   - Detailed mode (`--detailed`) for function-level coverage analysis
   - Security-critical code requires unit tests, failure cases, and edge case coverage
+- [ADR-0008: Swift 6 Concurrency Patterns](adr-0008-swift-6-concurrency.md) - **Accepted** (2025-12-29)
+  - Optional parameters for `@MainActor` types (nil-coalescing pattern)
+  - `@unchecked Sendable` for manual thread safety (NSLock-based services)
+  - `@unchecked Sendable` for test mocks with protocol conformance constraints
+  - `nonisolated(unsafe)` for non-isolated protocol methods
 
 ### UI/UX Architecture
 <!-- Add ADRs related to SwiftUI patterns, navigation, accessibility -->
