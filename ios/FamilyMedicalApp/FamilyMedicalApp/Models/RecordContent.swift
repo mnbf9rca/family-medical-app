@@ -179,13 +179,11 @@ struct RecordContent: Codable, Equatable {
 extension RecordContent {
     /// Validate this record content against a schema
     ///
-    /// This is a forward declaration - the actual implementation will be in RecordSchema
-    /// to avoid circular dependencies. RecordSchema will provide this validation.
+    /// Convenience wrapper that delegates to `schema.validate(content:)`.
     ///
     /// - Parameter schema: The schema to validate against
     /// - Throws: ModelError if validation fails
     func validate(against schema: RecordSchema) throws {
-        // Implemented in RecordSchema to avoid circular dependency
         try schema.validate(content: self)
     }
 }

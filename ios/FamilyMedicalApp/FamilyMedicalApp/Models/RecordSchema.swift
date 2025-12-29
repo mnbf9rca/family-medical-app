@@ -79,7 +79,7 @@ struct RecordSchema: Codable, Equatable, Identifiable {
         // Validate schema ID
         let trimmedId = id.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedId.isEmpty else {
-            throw ModelError.invalidSchemaId("Schema ID cannot be empty")
+            throw ModelError.invalidSchemaId(id)
         }
 
         // Check for duplicate field IDs
@@ -94,7 +94,8 @@ struct RecordSchema: Codable, Equatable, Identifiable {
                 }
                 seen.insert(fieldId)
             }
-            throw ModelError.duplicateFieldId(fieldId: "unknown")
+            // Unreachable: loop above always throws on first duplicate
+            fatalError("Duplicate field ID detection failed - should never reach here")
         }
 
         self.id = trimmedId

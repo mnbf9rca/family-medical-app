@@ -87,7 +87,8 @@ struct Attachment: Codable, Equatable, Identifiable {
         }
 
         // Validate mimeType
-        guard mimeType.count <= Self.mimeTypeMaxLength else {
+        let trimmedMimeType = mimeType.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmedMimeType.count <= Self.mimeTypeMaxLength else {
             throw ModelError.mimeTypeTooLong(maxLength: Self.mimeTypeMaxLength)
         }
 
@@ -98,7 +99,7 @@ struct Attachment: Codable, Equatable, Identifiable {
 
         self.id = id
         self.fileName = trimmedFileName
-        self.mimeType = mimeType
+        self.mimeType = trimmedMimeType
         self.contentHMAC = contentHMAC
         self.encryptedSize = encryptedSize
         self.thumbnailData = thumbnailData

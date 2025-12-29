@@ -84,6 +84,17 @@ struct AttachmentTests {
         }
     }
 
+    @Test
+    func init_mimeTypeTrimsWhitespace() throws {
+        let attachment = try Attachment(
+            fileName: "test.jpg",
+            mimeType: "  image/jpeg  ",
+            contentHMAC: Data(),
+            encryptedSize: 100
+        )
+        #expect(attachment.mimeType == "image/jpeg")
+    }
+
     // MARK: - Size Validation
 
     @Test
