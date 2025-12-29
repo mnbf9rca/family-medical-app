@@ -183,7 +183,7 @@ custom_rules:
 
   primary_key_logging:
     name: "No Primary Key in Logs"
-    regex: '(print|NSLog|os_log|logger)\s*\([^)]*\b([Pp]rimary[Kk]ey|[Mm]aster[Kk]ey)\b[^)]*(?<!Identifier)[^)]*\)'
+    regex: '(print|NSLog|os_log|logger)\s*\([^)]*\b([Pp]rimary[Kk]ey|[Mm]aster[Kk]ey)(?!Identifier)\b[^)]*\)'
     message: "Never log primary keys or encryption keys (but identifiers like 'primaryKeyIdentifier' are OK)"
     severity: error
 
