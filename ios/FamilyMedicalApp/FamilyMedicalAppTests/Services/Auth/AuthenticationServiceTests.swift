@@ -335,6 +335,7 @@ struct AuthenticationServiceTests {
 
 // MARK: - Mock Services
 
+/// @unchecked Sendable: Safe for tests where mocks are only used from MainActor test contexts
 private final class MockKeychainService: KeychainServiceProtocol, @unchecked Sendable {
     private var keys: [String: SymmetricKey] = [:]
     private var data: [String: Data] = [:]

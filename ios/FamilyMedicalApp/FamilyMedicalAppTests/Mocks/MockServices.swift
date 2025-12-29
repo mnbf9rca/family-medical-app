@@ -97,6 +97,10 @@ final class MockViewModelBiometricService: BiometricServiceProtocol {
     var biometryType: BiometryType
     var isBiometricAvailable: Bool
 
+    // These simple boolean flags are safe as nonisolated(unsafe) because:
+    // 1. They're only used in tests (not production code)
+    // 2. They're typically set once during initialization
+    // 3. The protocol's authenticate method isn't @MainActor, so can't access MainActor properties
     nonisolated(unsafe) var shouldFailAuthentication: Bool
     nonisolated(unsafe) var shouldCancelAuthentication: Bool
 
