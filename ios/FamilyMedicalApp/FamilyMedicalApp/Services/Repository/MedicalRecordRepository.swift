@@ -76,7 +76,12 @@ final class MedicalRecordRepository: MedicalRecordRepositoryProtocol, @unchecked
             // Update entity properties
             entity.id = record.id
             entity.personId = record.personId
-            entity.createdAt = record.createdAt
+
+            // Preserve original creation time on updates; only set on insert
+            if existing == nil {
+                entity.createdAt = record.createdAt
+            }
+
             entity.updatedAt = record.updatedAt
             entity.version = Int32(record.version)
             entity.previousVersionId = record.previousVersionId

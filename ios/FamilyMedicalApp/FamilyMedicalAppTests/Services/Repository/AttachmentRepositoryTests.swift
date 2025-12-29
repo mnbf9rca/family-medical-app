@@ -1,3 +1,4 @@
+import CoreData
 import CryptoKit
 import Foundation
 import Testing
@@ -248,6 +249,38 @@ struct AttachmentRepositoryTests {
 
         let exists = try await repo.exists(id: attachment.id)
         #expect(!exists)
+    }
+
+    @Test
+    func delete_attachment_cleansUpJoinTableEntries() async throws {
+        let fixtures = makeRepositoryWithMocks()
+        let repo = fixtures.repository
+        let fmkService = fixtures.fmkService
+        let stack = fixtures.coreDataStack
+        let attachment = try makeTestAttachment()
+        let recordId = UUID()
+
+        // Store FMK
+        let fmk = SymmetricKey(size: .bits256)
+        fmkService.storedFMKs[testPersonId.uuidString] = fmk
+
+        // Save attachment and link to a record
+        try await repo.save(attachment, personId: testPersonId, primaryKey: testPrimaryKey)
+        try await repo.linkToRecord(attachmentId: attachment.id, recordId: recordId)
+
+        // Verify join table entry exists
+        let context = stack.viewContext
+        let joinRequest: NSFetchRequest<RecordAttachmentEntity> = RecordAttachmentEntity.fetchRequest()
+        joinRequest.predicate = NSPredicate(format: "attachmentId == %@", attachment.id as CVarArg)
+        let joinsBefore = try context.fetch(joinRequest)
+        #expect(joinsBefore.count == 1)
+
+        // Delete attachment
+        try await repo.delete(id: attachment.id)
+
+        // Verify join table entry was cleaned up
+        let joinsAfter = try context.fetch(joinRequest)
+        #expect(joinsAfter.isEmpty)
     }
 
     @Test

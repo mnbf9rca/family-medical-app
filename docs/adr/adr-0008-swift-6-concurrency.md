@@ -107,7 +107,7 @@ final class MockBiometricService: BiometricServiceProtocol {
 ### Negative
 
 - Optional parameter pattern appears to violate dependency injection best practices
-- `@unchecked Sendable` requires careful review - cannot be verified by compiler
+- `@unchecked Sendable` requires careful review - cannot be verified by the compiler
 - More verbose than Swift 5 code
 - AI code reviewers may incorrectly flag these patterns as issues
 

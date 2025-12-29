@@ -76,6 +76,40 @@ struct MedicalRecordRepositoryTests {
     }
 
     @Test
+    func save_existingRecord_preservesOriginalCreatedAt() async throws {
+        let repo = makeRepository()
+        let recordId = UUID()
+        let personId = UUID()
+        let originalCreatedAt = Date(timeIntervalSince1970: 1_000_000_000)
+
+        // Save initially
+        let record = makeTestRecord(
+            id: recordId,
+            personId: personId,
+            version: 1,
+            createdAt: originalCreatedAt
+        )
+        try await repo.save(record)
+
+        // Update the record with a different createdAt value
+        let differentCreatedAt = Date(timeIntervalSince1970: 1_500_000_000)
+        let updated = makeTestRecord(
+            id: recordId,
+            personId: personId,
+            version: 2,
+            createdAt: differentCreatedAt, // Try to change createdAt
+            updatedAt: Date(timeIntervalSince1970: 2_000_000_000)
+        )
+
+        try await repo.save(updated)
+
+        // Verify createdAt was preserved from original, not overwritten
+        let fetched = try await repo.fetch(id: recordId)
+        #expect(fetched?.createdAt == originalCreatedAt)
+        #expect(fetched?.createdAt != differentCreatedAt)
+    }
+
+    @Test
     func save_recordWithPreviousVersion_storesVersionId() async throws {
         let repo = makeRepository()
         let previousId = UUID()

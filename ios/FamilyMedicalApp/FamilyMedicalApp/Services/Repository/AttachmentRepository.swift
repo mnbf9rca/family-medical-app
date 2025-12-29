@@ -208,6 +208,13 @@ final class AttachmentRepository: AttachmentRepositoryProtocol, @unchecked Senda
                 throw RepositoryError.entityNotFound("Attachment with ID \(id)")
             }
 
+            // Delete related join table entries first to prevent orphaned references
+            let joinRequest: NSFetchRequest<RecordAttachmentEntity> = RecordAttachmentEntity.fetchRequest()
+            joinRequest.predicate = NSPredicate(format: "attachmentId == %@", id as CVarArg)
+            let joinEntities = try context.fetch(joinRequest)
+            joinEntities.forEach { context.delete($0) }
+
+            // Then delete the attachment
             context.delete(entity)
 
             do {

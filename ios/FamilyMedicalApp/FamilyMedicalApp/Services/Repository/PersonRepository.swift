@@ -185,8 +185,14 @@ final class PersonRepository: PersonRepositoryProtocol, @unchecked Sendable {
         // Encode to JSON
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
-        guard let json = try? encoder.encode(encryptedFields) else {
-            throw RepositoryError.serializationFailed("Failed to encode Person encrypted fields")
+
+        let json: Data
+        do {
+            json = try encoder.encode(encryptedFields)
+        } catch {
+            throw RepositoryError.serializationFailed(
+                "Failed to encode Person encrypted fields: \(error.localizedDescription)"
+            )
         }
 
         // Encrypt JSON

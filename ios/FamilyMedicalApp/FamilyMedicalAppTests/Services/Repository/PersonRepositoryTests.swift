@@ -73,8 +73,9 @@ struct PersonRepositoryTests {
 
     @Test
     func save_newPerson_encryptsData() async throws {
-        let fixtures = makeRepositoryWithMocks(); let repo = fixtures.repository; let encryption = fixtures
-            .encryptionService
+        let fixtures = makeRepositoryWithMocks()
+        let repo = fixtures.repository
+        let encryption = fixtures.encryptionService
         let person = try makeTestPerson()
 
         try await repo.save(person, primaryKey: testPrimaryKey)
@@ -116,8 +117,9 @@ struct PersonRepositoryTests {
 
     @Test
     func save_encryptionFails_throwsError() async throws {
-        let fixtures = makeRepositoryWithMocks(); let repo = fixtures.repository; let encryption = fixtures
-            .encryptionService
+        let fixtures = makeRepositoryWithMocks()
+        let repo = fixtures.repository
+        let encryption = fixtures.encryptionService
         let person = try makeTestPerson()
 
         encryption.shouldFailEncryption = true
@@ -170,8 +172,9 @@ struct PersonRepositoryTests {
 
     @Test
     func fetch_decryptionFails_throwsError() async throws {
-        let fixtures = makeRepositoryWithMocks(); let repo = fixtures.repository; let encryption = fixtures
-            .encryptionService
+        let fixtures = makeRepositoryWithMocks()
+        let repo = fixtures.repository
+        let encryption = fixtures.encryptionService
         let person = try makeTestPerson()
 
         try await repo.save(person, primaryKey: testPrimaryKey)
@@ -234,8 +237,9 @@ struct PersonRepositoryTests {
 
     @Test
     func fetchAll_decryptionFails_throwsError() async throws {
-        let fixtures = makeRepositoryWithMocks(); let repo = fixtures.repository; let encryption = fixtures
-            .encryptionService
+        let fixtures = makeRepositoryWithMocks()
+        let repo = fixtures.repository
+        let encryption = fixtures.encryptionService
         let person = try makeTestPerson()
 
         try await repo.save(person, primaryKey: testPrimaryKey)
