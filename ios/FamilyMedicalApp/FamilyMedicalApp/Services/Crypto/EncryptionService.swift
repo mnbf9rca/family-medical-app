@@ -2,7 +2,7 @@ import CryptoKit
 import Foundation
 
 /// Protocol for AES-256-GCM encryption operations
-protocol EncryptionServiceProtocol {
+protocol EncryptionServiceProtocol: Sendable {
     /// Encrypt data using AES-256-GCM
     /// - Parameters:
     ///   - data: Plaintext data to encrypt
@@ -25,7 +25,7 @@ protocol EncryptionServiceProtocol {
 }
 
 /// AES-256-GCM encryption service using CryptoKit
-final class EncryptionService: EncryptionServiceProtocol {
+final class EncryptionService: EncryptionServiceProtocol, @unchecked Sendable {
     private let logger: CategoryLoggerProtocol
 
     init(logger: CategoryLoggerProtocol? = nil) {

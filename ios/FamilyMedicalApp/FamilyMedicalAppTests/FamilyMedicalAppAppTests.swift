@@ -2,6 +2,7 @@ import SwiftUI
 import Testing
 @testable import FamilyMedicalApp
 
+@MainActor
 struct FamilyMedicalAppAppTests {
     /// Test app structure initializes
     @Test

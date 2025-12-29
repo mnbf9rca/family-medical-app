@@ -19,7 +19,8 @@ struct CapturedLogEntry: Equatable, Sendable {
 // MARK: - Mock Category Logger
 
 /// Mock logger for testing privacy and logging behavior
-final class MockCategoryLogger: CategoryLoggerProtocol {
+/// @unchecked Sendable: Safe for tests where mocks are only used from MainActor test contexts
+final class MockCategoryLogger: CategoryLoggerProtocol, @unchecked Sendable {
     private(set) var capturedEntries: [CapturedLogEntry] = []
     private let category: LogCategory
 
@@ -213,7 +214,8 @@ final class MockCategoryLogger: CategoryLoggerProtocol {
 // MARK: - Mock Logging Service
 
 /// Mock logging service for dependency injection in tests
-final class MockLoggingService: LoggingServiceProtocol {
+/// @unchecked Sendable: Safe for tests where mocks are only used from MainActor test contexts
+final class MockLoggingService: LoggingServiceProtocol, @unchecked Sendable {
     private var loggers: [LogCategory: MockCategoryLogger] = [:]
 
     func logger(category: LogCategory) -> CategoryLoggerProtocol {

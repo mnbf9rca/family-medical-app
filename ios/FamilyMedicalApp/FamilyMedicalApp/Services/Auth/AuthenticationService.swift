@@ -110,18 +110,19 @@ final class AuthenticationService: AuthenticationServiceProtocol {
 
     // MARK: - Initialization
 
+    @MainActor
     init(
         keyDerivationService: KeyDerivationServiceProtocol = KeyDerivationService(),
         keychainService: KeychainServiceProtocol = KeychainService(),
         encryptionService: EncryptionServiceProtocol = EncryptionService(),
-        biometricService: BiometricServiceProtocol = BiometricService(),
+        biometricService: BiometricServiceProtocol? = nil,
         userDefaults: UserDefaults = .standard,
         logger: CategoryLoggerProtocol? = nil
     ) {
         self.keyDerivationService = keyDerivationService
         self.keychainService = keychainService
         self.encryptionService = encryptionService
-        self.biometricService = biometricService
+        self.biometricService = biometricService ?? BiometricService()
         self.userDefaults = userDefaults
         self.logger = logger ?? LoggingService.shared.logger(category: .auth)
     }

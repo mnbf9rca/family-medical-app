@@ -2,6 +2,7 @@ import SwiftUI
 import Testing
 @testable import FamilyMedicalApp
 
+@MainActor
 struct ContentViewTests {
     /// Test ContentView renders without crashing
     @Test

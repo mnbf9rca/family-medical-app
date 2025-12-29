@@ -2,6 +2,7 @@ import Foundation
 import Observation
 
 /// ViewModel coordinating authentication UI state and actions
+@MainActor
 @Observable
 final class AuthenticationViewModel {
     // MARK: - Authentication State
@@ -76,21 +77,21 @@ final class AuthenticationViewModel {
     // MARK: - Initialization
 
     init(
-        authService: AuthenticationServiceProtocol = AuthenticationService(),
-        biometricService: BiometricServiceProtocol = BiometricService(),
+        authService: AuthenticationServiceProtocol? = nil,
+        biometricService: BiometricServiceProtocol? = nil,
         passwordValidator: PasswordValidationServiceProtocol = PasswordValidationService(),
         lockStateService: LockStateServiceProtocol = LockStateService()
     ) {
-        self.authService = authService
-        self.biometricService = biometricService
+        self.authService = authService ?? AuthenticationService()
+        self.biometricService = biometricService ?? BiometricService()
         self.passwordValidator = passwordValidator
         self.lockStateService = lockStateService
 
         // Initialize setup state from authService
-        isSetUp = authService.isSetUp
+        isSetUp = self.authService.isSetUp
 
         // Show biometric prompt on launch if enabled
-        showBiometricPrompt = authService.isSetUp && authService.isBiometricEnabled
+        showBiometricPrompt = self.authService.isSetUp && self.authService.isBiometricEnabled
     }
 
     // MARK: - Setup Actions
