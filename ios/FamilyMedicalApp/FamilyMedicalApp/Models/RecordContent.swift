@@ -4,8 +4,16 @@ import Foundation
 ///
 /// Wraps a dictionary of field values and provides validation against schemas.
 /// This is the "document" in the schema-overlay architecture - it can hold any fields.
+///
+/// **Encryption**: This entire struct is encrypted with the Family Member Key (FMK).
+/// The schemaId is kept inside the encrypted blob to maintain zero-knowledge privacy.
 struct RecordContent: Codable, Equatable {
     // MARK: - Properties
+
+    /// Optional schema identifier (encrypted with content)
+    ///
+    /// Examples: "vaccine", "medication", "my-custom-schema", or nil for freeform records
+    var schemaId: String?
 
     /// The actual field values stored as a dictionary
     private var fields: [String: FieldValue]
@@ -13,14 +21,18 @@ struct RecordContent: Codable, Equatable {
     // MARK: - Initialization
 
     /// Initialize with an empty field dictionary
-    init() {
+    init(schemaId: String? = nil) {
+        self.schemaId = schemaId
         fields = [:]
     }
 
     /// Initialize with a pre-populated field dictionary
     ///
-    /// - Parameter fields: Initial field values
-    init(fields: [String: FieldValue]) {
+    /// - Parameters:
+    ///   - schemaId: Optional schema identifier
+    ///   - fields: Initial field values
+    init(schemaId: String? = nil, fields: [String: FieldValue]) {
+        self.schemaId = schemaId
         self.fields = fields
     }
 
@@ -182,16 +194,19 @@ extension RecordContent {
 
 extension RecordContent {
     enum CodingKeys: String, CodingKey {
+        case schemaId
         case fields
     }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
+        schemaId = try container.decodeIfPresent(String.self, forKey: .schemaId)
         fields = try container.decode([String: FieldValue].self, forKey: .fields)
     }
 
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(schemaId, forKey: .schemaId)
         try container.encode(fields, forKey: .fields)
     }
 }

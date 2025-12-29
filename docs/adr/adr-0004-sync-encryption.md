@@ -106,6 +106,7 @@ We will implement a **recovery code-based multi-device system** with **last-writ
 **What server cannot see:**
 
 - ❌ Medical record content (encrypted with FMK)
+- ❌ Schema IDs (encrypted inside RecordContent to prevent health pattern inference)
 - ❌ Attachment file types (encrypted in metadata blob)
 - ❌ Attachment filenames (encrypted in metadata blob)
 - ❌ Family member names (encrypted in profiles)

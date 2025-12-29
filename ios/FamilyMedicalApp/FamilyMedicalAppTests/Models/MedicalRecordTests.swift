@@ -9,77 +9,39 @@ struct MedicalRecordTests {
     func init_validRecord_succeeds() {
         let record = MedicalRecord(
             personId: UUID(),
-            schemaId: "vaccine",
             encryptedContent: Data(repeating: 0x00, count: 100)
         )
 
-        #expect(record.schemaId == "vaccine")
         #expect(record.version == 1)
         #expect(record.previousVersionId == nil)
+        #expect(record.encryptedContent.count == 100)
     }
 
     @Test
-    func init_freeformRecord_succeeds() {
+    func init_withAllParameters_succeeds() {
+        let id = UUID()
+        let personId = UUID()
+        let previousId = UUID()
+        let created = Date(timeIntervalSince1970: 1_000_000)
+        let updated = Date(timeIntervalSince1970: 2_000_000)
+
         let record = MedicalRecord(
-            personId: UUID(),
-            schemaId: nil,
-            encryptedContent: Data()
+            id: id,
+            personId: personId,
+            encryptedContent: Data(repeating: 0x42, count: 50),
+            createdAt: created,
+            updatedAt: updated,
+            version: 3,
+            previousVersionId: previousId
         )
 
-        #expect(record.schemaId == nil)
-        #expect(record.isFreeform)
-    }
-
-    // MARK: - Helpers
-
-    @Test
-    func isBuiltInSchema_builtInType_returnsTrue() {
-        let record = MedicalRecord(
-            personId: UUID(),
-            schemaId: "vaccine",
-            encryptedContent: Data()
-        )
-        #expect(record.isBuiltInSchema)
-    }
-
-    @Test
-    func isBuiltInSchema_customType_returnsFalse() {
-        let record = MedicalRecord(
-            personId: UUID(),
-            schemaId: "my-custom-type",
-            encryptedContent: Data()
-        )
-        #expect(!record.isBuiltInSchema)
-    }
-
-    @Test
-    func isBuiltInSchema_nilSchemaId_returnsFalse() {
-        let record = MedicalRecord(
-            personId: UUID(),
-            schemaId: nil,
-            encryptedContent: Data()
-        )
-        #expect(!record.isBuiltInSchema)
-    }
-
-    @Test
-    func isFreeform_nilSchemaId_returnsTrue() {
-        let record = MedicalRecord(
-            personId: UUID(),
-            schemaId: nil,
-            encryptedContent: Data()
-        )
-        #expect(record.isFreeform)
-    }
-
-    @Test
-    func isFreeform_withSchemaId_returnsFalse() {
-        let record = MedicalRecord(
-            personId: UUID(),
-            schemaId: "vaccine",
-            encryptedContent: Data()
-        )
-        #expect(!record.isFreeform)
+        #expect(record.id == id)
+        #expect(record.personId == personId)
+        #expect(record.createdAt == created)
+        #expect(record.updatedAt == updated)
+        #expect(record.version == 3)
+        #expect(record.previousVersionId == previousId)
+        #expect(record.encryptedContent.count == 50)
     }
 
     // MARK: - Codable
@@ -89,7 +51,6 @@ struct MedicalRecordTests {
         let original = MedicalRecord(
             id: UUID(),
             personId: UUID(),
-            schemaId: "vaccine",
             encryptedContent: Data(repeating: 0x42, count: 100),
             createdAt: Date(timeIntervalSince1970: 1_000_000),
             updatedAt: Date(timeIntervalSince1970: 2_000_000),
@@ -101,8 +62,10 @@ struct MedicalRecordTests {
         let decoded = try JSONDecoder().decode(MedicalRecord.self, from: encoded)
 
         #expect(decoded == original)
-        #expect(decoded.schemaId == original.schemaId)
+        #expect(decoded.id == original.id)
+        #expect(decoded.personId == original.personId)
         #expect(decoded.version == original.version)
+        #expect(decoded.encryptedContent == original.encryptedContent)
     }
 
     // MARK: - Equatable
@@ -112,19 +75,19 @@ struct MedicalRecordTests {
         let id = UUID()
         let personId = UUID()
         let now = Date()
+        let content = Data(repeating: 0xAB, count: 10)
+
         let record1 = MedicalRecord(
             id: id,
             personId: personId,
-            schemaId: "vaccine",
-            encryptedContent: Data(),
+            encryptedContent: content,
             createdAt: now,
             updatedAt: now
         )
         let record2 = MedicalRecord(
             id: id,
             personId: personId,
-            schemaId: "vaccine",
-            encryptedContent: Data(),
+            encryptedContent: content,
             createdAt: now,
             updatedAt: now
         )
@@ -132,16 +95,31 @@ struct MedicalRecordTests {
     }
 
     @Test
-    func equatable_differentRecord_notEqual() {
+    func equatable_differentContent_notEqual() {
+        let personId = UUID()
+
+        let record1 = MedicalRecord(
+            personId: personId,
+            encryptedContent: Data(repeating: 0x01, count: 10)
+        )
+        let record2 = MedicalRecord(
+            personId: personId,
+            encryptedContent: Data(repeating: 0x02, count: 10)
+        )
+        #expect(record1 != record2)
+    }
+
+    @Test
+    func equatable_differentPersonId_notEqual() {
+        let content = Data(repeating: 0xAB, count: 10)
+
         let record1 = MedicalRecord(
             personId: UUID(),
-            schemaId: "vaccine",
-            encryptedContent: Data()
+            encryptedContent: content
         )
         let record2 = MedicalRecord(
             personId: UUID(),
-            schemaId: "medication",
-            encryptedContent: Data()
+            encryptedContent: content
         )
         #expect(record1 != record2)
     }

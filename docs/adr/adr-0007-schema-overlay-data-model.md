@@ -41,7 +41,6 @@ Core models:
 - Custom schemas enable domain-specific structures (sports medicine, chronic conditions, etc.)
 - Simpler codebase: one generic model instead of 5+ specific content structs
 - Forward-compatible with wiki-style versioning (already has `previousVersionId`)
-- Aligns with existing ADRs (ADR-0003 suggested plaintext `schemaId` for filtering)
 
 ### Negative
 
@@ -52,6 +51,6 @@ Core models:
 
 ### Neutral
 
-- Encryption boundaries unchanged from ADR-0004 (content encrypted, metadata plaintext)
-- Server remains zero-knowledge (sees `schemaId` but not field values)
+- Encryption boundaries enhanced from ADR-0004: schemaId encrypted inside RecordContent
+- Server remains zero-knowledge (sees only opaque blobs, personId for access control)
 - Built-in schemas provide sensible defaults while allowing flexibility
