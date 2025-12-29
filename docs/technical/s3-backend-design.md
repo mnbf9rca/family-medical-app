@@ -28,8 +28,8 @@ All data stored as blobs with deterministic keys:
 ```
 Bucket: family-medical-app
 
-/users/{user-id}/master-key.blob
-├─ Encrypted Master Key (encrypted with recovery code)
+/users/{user-id}/primary-key.blob
+├─ Encrypted Primary Key (encrypted with recovery code)
 
 /users/{user-id}/public-key.blob
 ├─ User's Curve25519 public key (plaintext, for key exchange)

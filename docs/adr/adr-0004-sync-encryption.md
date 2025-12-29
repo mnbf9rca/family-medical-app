@@ -6,14 +6,14 @@
 
 ## Context
 
-The Family Medical App must support multi-device synchronization (iPhone, iPad, Mac) while maintaining End-to-End Encryption (E2EE). The core challenge: **How can a user access encrypted medical records on a new device when the Master Key is device-only and never transmitted to the server?**
+The Family Medical App must support multi-device synchronization (iPhone, iPad, Mac) while maintaining End-to-End Encryption (E2EE). The core challenge: **How can a user access encrypted medical records on a new device when the Primary Key is device-only and never transmitted to the server?**
 
 ### Problem Statement
 
 ```
 User's iPhone                    Server (zero-knowledge)         User's iPad
 ────────────────                 ───────────────────             ───────────
-Master Key ✅                   No Master Key ❌               Master Key ???
+Primary Key ✅                   No Primary Key ❌               Primary Key ???
 Encrypted Records ✅            Encrypted Records ✅            How to decrypt?
 ```
 
@@ -32,19 +32,19 @@ We will implement a **recovery code-based multi-device system** with **last-writ
 
 ### Key Decisions
 
-#### 1. Master Key Distribution: 24-Word Recovery Code
+#### 1. Primary Key Distribution: 24-Word Recovery Code
 
-**Decision**: Use BIP39-style 24-word mnemonic to encrypt Master Key for server storage.
+**Decision**: Use BIP39-style 24-word mnemonic to encrypt Primary Key for server storage.
 
 **How it works:**
 
-- Account creation: Generate recovery code → encrypt Master Key with it → upload encrypted blob to server
-- New device: User enters recovery code → download encrypted blob → decrypt Master Key → store in Keychain
+- Account creation: Generate recovery code → encrypt Primary Key with it → upload encrypted blob to server
+- New device: User enters recovery code → download encrypted blob → decrypt Primary Key → store in Keychain
 - User responsibility: Write down recovery code (like hardware wallet seed phrase)
 
 **Rationale:**
 
-- ✅ Zero-knowledge maintained (server has encrypted Master Key, not recovery code)
+- ✅ Zero-knowledge maintained (server has encrypted Primary Key, not recovery code)
 - ✅ Works even if all devices lost/destroyed
 - ✅ Industry standard (1Password, Bitwarden, crypto wallets)
 - ⚠️ User must safeguard recovery code (if lost, data unrecoverable)
@@ -146,7 +146,7 @@ We will implement a **recovery code-based multi-device system** with **last-writ
 ### Positive
 
 1. **Multi-Device Support**: Seamless access from iPhone, iPad, Mac
-2. **Zero-Knowledge Maintained**: Server never sees Master Key or plaintext data
+2. **Zero-Knowledge Maintained**: Server never sees Primary Key or plaintext data
 3. **Offline-First**: Changes queue locally, sync when online
 4. **Simple Conflict Resolution**: Last-write-wins avoids complex merge logic
 5. **Efficient Attachment Sync**: 99.975% bandwidth savings when editing notes
@@ -168,7 +168,7 @@ We will implement a **recovery code-based multi-device system** with **last-writ
    - **Mitigation**: Timestamp display ("Last edited on iPad 5 min ago")
    - **Trade-off**: Simplicity over complex conflict resolution
 
-3. **Encrypted Master Key on Server**: Server breach + recovery code leak = full data access
+3. **Encrypted Primary Key on Server**: Server breach + recovery code leak = full data access
    - **Risk**: Requires both server compromise AND recovery code compromise
    - **Mitigation**: 256-bit recovery code (strong), Argon2id memory-hard derivation
    - **Trade-off**: Necessary for multi-device without iCloud Keychain
@@ -201,7 +201,7 @@ We will implement a **recovery code-based multi-device system** with **last-writ
 ## Related Decisions
 
 - **ADR-0001**: Crypto Architecture First (establishes zero-knowledge requirement)
-- **ADR-0002**: Key Hierarchy (defines Master Key, FMKs used for encryption)
+- **ADR-0002**: Key Hierarchy (defines Primary Key, FMKs used for encryption)
 - **ADR-0003**: Multi-User Sharing Model (server as mailbox for async operations)
 - **ADR-0005**: Access Revocation (syncs revocation events across devices)
 

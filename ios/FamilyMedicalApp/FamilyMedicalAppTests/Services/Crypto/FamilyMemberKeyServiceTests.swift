@@ -47,7 +47,7 @@ struct FamilyMemberKeyServiceTests {
         #expect(originalData == unwrappedData)
     }
 
-    /// Test unwrapping with wrong master key fails
+    /// Test unwrapping with wrong primary key fails
     @Test
     func unwrapFMK_wrongPrimaryKey() throws {
         let fmk = service.generateFMK()
@@ -79,7 +79,7 @@ struct FamilyMemberKeyServiceTests {
         try keychainService.deleteKey(identifier: identifier)
     }
 
-    /// Test retrieving FMK with correct master key
+    /// Test retrieving FMK with correct primary key
     @Test
     func retrieveFMK_withCorrectPrimaryKey() throws {
         let fmk = service.generateFMK()
@@ -102,7 +102,7 @@ struct FamilyMemberKeyServiceTests {
         try keychainService.deleteKey(identifier: identifier)
     }
 
-    /// Test retrieving FMK with wrong master key fails
+    /// Test retrieving FMK with wrong primary key fails
     @Test
     func retrieveFMK_wrongPrimaryKey() throws {
         let fmk = service.generateFMK()

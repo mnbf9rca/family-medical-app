@@ -159,7 +159,7 @@ jobs:
           SECURITY_ISSUES=$(cat swiftlint-results.json | python3 -c "
           import sys, json
           results = json.load(sys.stdin)
-          security_rules = ['no_force_try_crypto', 'password_in_code', 'master_key_logging']
+          security_rules = ['no_force_try_crypto', 'password_in_code', 'primary_key_logging']
           count = sum(1 for r in results if r.get('rule_id') in security_rules)
           print(count)
           ")
@@ -169,7 +169,7 @@ jobs:
             cat swiftlint-results.json | python3 -c "
             import sys, json
             results = json.load(sys.stdin)
-            security_rules = ['no_force_try_crypto', 'password_in_code', 'master_key_logging']
+            security_rules = ['no_force_try_crypto', 'password_in_code', 'primary_key_logging']
             for r in results:
               if r.get('rule_id') in security_rules:
                 print(f\"⚠️  {r['file']}:{r['line']} - {r['reason']}\")

@@ -25,7 +25,7 @@ See: `docs/research/e2ee-sharing-patterns-research.md`
 
 The key hierarchy must answer:
 
-1. **Master Key Derivation**: How to securely derive encryption keys from user password?
+1. **Primary Key Derivation**: How to securely derive encryption keys from user password?
 2. **Key Hierarchy Structure**: How many tiers of keys, and what does each tier protect?
 3. **DEK Granularity**: What is the scope of each Data Encryption Key?
 4. **Key Storage**: Where and how to store keys securely on iOS?
@@ -37,11 +37,11 @@ We will implement a **three-tier hierarchical key structure** with **per-family-
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│ Tier 1: User Authentication & Master Key                       │
+│ Tier 1: User Authentication & Primary Key                      │
 │                                                                 │
 │ User Password + Salt                                            │
 │   ↓ Argon2id (64 MB memory, 3 iterations)                      │
-│ User Master Key (256-bit)                                       │
+│ User Primary Key (256-bit)                                      │
 │   → Stored in iOS Keychain (kSecAttrAccessibleWhenUnlocked)    │
 │   → Never transmitted to server                                 │
 └─────────────────────────────────────────────────────────────────┘
@@ -50,7 +50,7 @@ We will implement a **three-tier hierarchical key structure** with **per-family-
 │ Tier 2: User Identity (for sharing)                            │
 │                                                                 │
 │ Curve25519 KeyPair (generated once, not derived from password) │
-│   - Private Key: Encrypted with Master Key, stored in Keychain │
+│   - Private Key: Encrypted with Primary Key, stored in Keychain│
 │   - Public Key: Shareable, stored on server + Core Data        │
 │   → Used for ECDH key agreement when sharing                   │
 └─────────────────────────────────────────────────────────────────┘
@@ -61,7 +61,7 @@ We will implement a **three-tier hierarchical key structure** with **per-family-
 │ Per-Family-Member Symmetric Key (256-bit)                      │
 │   - One FMK per family member (patient)                        │
 │   - Generated randomly (SymmetricKey.init(size: .bits256))     │
-│   - Wrapped using owner's Master Key → stored in Keychain      │
+│   - Wrapped using owner's Primary Key → stored in Keychain     │
 │   - Wrapped using authorized users' public keys (ECDH)         │
 │     → stored in Core Data                                       │
 └─────────────────────────────────────────────────────────────────┘
@@ -78,7 +78,7 @@ We will implement a **three-tier hierarchical key structure** with **per-family-
 
 ### Design Decisions
 
-#### 1. Master Key Derivation: Argon2id
+#### 1. Primary Key Derivation: Argon2id
 
 **Decision**: Use Argon2id via Swift-Sodium (libsodium wrapper).
 
@@ -109,7 +109,7 @@ These parameters match [Ente's approach](https://github.com/ente-io/ente) and pr
 import Sodium
 import CryptoKit
 
-func deriveMasterKey(from password: String, salt: Data) -> SymmetricKey? {
+func derivePrimaryKey(from password: String, salt: Data) -> SymmetricKey? {
     let sodium = Sodium()
 
     // Derive key using Argon2id
@@ -156,7 +156,7 @@ For Phase 1 implementation, consider adding a compile-time assertion to detect i
 
 #### 2. Key Hierarchy Structure: Three Tiers
 
-**Decision**: Use three tiers (Master Key → User Identity → Family Member Keys → Medical Records).
+**Decision**: Use three tiers (Primary Key → User Identity → Family Member Keys → Medical Records).
 
 **Rationale**:
 
@@ -198,40 +198,40 @@ For Phase 1 implementation, consider adding a compile-time assertion to detect i
 
 | Key Type | Storage Location | Protection Level | Synchronizable | Rationale |
 |----------|-----------------|------------------|----------------|-----------|
-| **User Master Key** | iOS Keychain | `kSecAttrAccessibleWhenUnlockedThisDeviceOnly` | No | Most sensitive, requires device unlock |
-| **User Private Key (Curve25519)** | iOS Keychain (encrypted with Master Key) | `kSecAttrAccessibleWhenUnlockedThisDeviceOnly` | No | Protected by Master Key + Keychain |
+| **User Primary Key** | iOS Keychain | `kSecAttrAccessibleWhenUnlockedThisDeviceOnly` | No | Most sensitive, requires device unlock |
+| **User Private Key (Curve25519)** | iOS Keychain (encrypted with Primary Key) | `kSecAttrAccessibleWhenUnlockedThisDeviceOnly` | No | Protected by Primary Key + Keychain |
 | **User Public Key** | Core Data + Server | Plaintext (it's public!) | Yes | Enables key exchange |
-| **FMK (owner)** | iOS Keychain (wrapped with Master Key) | `kSecAttrAccessibleWhenUnlockedThisDeviceOnly` | No | Owner's copy, most secure |
+| **FMK (owner)** | iOS Keychain (wrapped with Primary Key) | `kSecAttrAccessibleWhenUnlockedThisDeviceOnly` | No | Owner's copy, most secure |
 | **FMK (shared)** | Core Data (wrapped with ECDH-derived key) | N/A (encrypted at rest) | Yes | Shared copies, synced to other users |
 | **Encrypted Medical Records** | Core Data | N/A (encrypted with FMK) | Yes | Synced as encrypted blobs |
 
 **Keychain Organization**:
 
 ```
-com.family-medical-app.master-key.<userID>
+com.family-medical-app.primary-key.<userID>
 com.family-medical-app.identity-private-key.<userID>
 com.family-medical-app.fmk.<familyMemberID>
 ```
 
 **Rationale**:
 
-- ✅ **Master Key Never Syncs**: Device-only prevents cloud extraction
+- ✅ **Primary Key Never Syncs**: Device-only prevents cloud extraction
 - ✅ **FMKs Wrapped Multiple Ways**: Owner has Keychain copy (secure), shared users have Core Data copy (encrypted with ECDH)
 - ✅ **Public Keys on Server**: Enables key exchange without secure channel
 
 #### 5. Key Rotation Strategy
 
-**Decision**: Re-encrypt in place for FMK rotation (access revocation), lazy rotation for Master Key changes.
+**Decision**: Re-encrypt in place for FMK rotation (access revocation), lazy rotation for Primary Key changes.
 
 ##### Scenario A: User Changes Password
 
 **Flow**:
 
-1. Derive new Master Key from new password
-2. Re-encrypt User Private Key with new Master Key
-3. Re-wrap owner's FMKs with new Master Key
+1. Derive new Primary Key from new password
+2. Re-encrypt User Private Key with new Primary Key
+3. Re-wrap owner's FMKs with new Primary Key
 4. Update Keychain entries
-5. Old Master Key securely zeroed from memory
+5. Old Primary Key securely zeroed from memory
 
 **Performance**: < 100ms (only re-wrapping keys, not data)
 
@@ -284,11 +284,11 @@ com.family-medical-app.fmk.<familyMemberID>
 ```
 1. User enters password: "correct-horse-battery-staple"
 2. App generates random salt (16 bytes - libsodium crypto_pwhash_SALTBYTES)
-3. Derive Master Key: Argon2id(password, salt, 64MB memory, 3 iterations) → Master Key
+3. Derive Primary Key: Argon2id(password, salt, 64MB memory, 3 iterations) → Primary Key
 4. Generate Curve25519 keypair → Private Key, Public Key
-5. Encrypt Private Key with Master Key → Encrypted Private Key
+5. Encrypt Private Key with Primary Key → Encrypted Private Key
 6. Store:
-   - Keychain: Master Key, Encrypted Private Key
+   - Keychain: Primary Key, Encrypted Private Key
    - UserDefaults: salt
    - Server: Public Key
 ```
@@ -298,8 +298,8 @@ com.family-medical-app.fmk.<familyMemberID>
 ```
 1. User initiates "Add family member: Emma"
 2. App generates random FMK_Emma (256-bit SymmetricKey)
-3. Retrieve User Master Key from Keychain
-4. Wrap FMK_Emma with Master Key → Wrapped FMK_Emma
+3. Retrieve User Primary Key from Keychain
+4. Wrap FMK_Emma with Primary Key → Wrapped FMK_Emma
 5. Store:
    - Keychain: Wrapped FMK_Emma (tagged with Emma's ID)
    - Core Data: Emma's profile (name encrypted with FMK_Emma)
@@ -310,7 +310,7 @@ com.family-medical-app.fmk.<familyMemberID>
 ```
 1. Adult A initiates sharing with Adult B (email invitation)
 2. Adult B's Public Key retrieved from server
-3. Adult A unwraps FMK_Emma (from Keychain, using Master Key)
+3. Adult A unwraps FMK_Emma (from Keychain, using Primary Key)
 4. Perform ECDH:
    - Shared Secret = KeyAgreement(Adult A Private Key, Adult B Public Key)
    - Wrapping Key = HKDF(Shared Secret, context: "fmk_emma_<ID>")
@@ -345,7 +345,7 @@ com.family-medical-app.fmk.<familyMemberID>
 4. **No Perfect Forward Secrecy**: User identity keypair is long-lived
    - **Mitigation**: Medical records are static data (different threat model than messaging)
    - **Mitigation**: FMK rotation provides limited forward secrecy per family member
-5. **Master Key in Keychain**: If device is unlocked and compromised, Master Key is accessible
+5. **Primary Key in Keychain**: If device is unlocked and compromised, Primary Key is accessible
    - **Mitigation**: iOS Keychain is hardware-backed (Secure Enclave on modern devices)
    - **Mitigation**: User can enable biometric protection for additional security (Phase 4)
 
@@ -373,7 +373,7 @@ com.family-medical-app.fmk.<familyMemberID>
 
 Implement:
 
-- User Master Key derivation (Argon2id via Swift-Sodium)
+- User Primary Key derivation (Argon2id via Swift-Sodium)
 - Curve25519 keypair generation
 - FMK generation and wrapping (owner only)
 - Keychain storage for all keys
@@ -389,7 +389,7 @@ Add:
 - Sync user's Public Key to server
 - Sync user's wrapped FMKs (Core Data)
 
-**Challenge**: How to get Master Key on new device? → See ADR-0004 (Sync Encryption)
+**Challenge**: How to get Primary Key on new device? → See ADR-0004 (Sync Encryption)
 
 ### Phase 3: Family Sharing
 
@@ -409,7 +409,7 @@ Add:
 - FMK rotation (re-encryption) implementation
 - Audit trail for revocation events
 - Optional: User identity key rotation
-- Optional: Biometric protection for Master Key access
+- Optional: Biometric protection for Primary Key access
 
 ## Related Decisions
 
