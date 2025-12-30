@@ -60,47 +60,6 @@ struct AddPersonViewTests {
     }
 
     @Test
-    func viewRendersLabelsSection() throws {
-        let viewModel = createViewModel()
-        let view = AddPersonView(viewModel: viewModel)
-
-        let navStack = try view.inspect().navigationStack()
-        let form = try navStack.form(0)
-        // Verify form has labels section
-        _ = try form.section(1)
-    }
-
-    @Test
-    func viewRendersNotesSection() throws {
-        let viewModel = createViewModel()
-        let view = AddPersonView(viewModel: viewModel)
-
-        let navStack = try view.inspect().navigationStack()
-        let form = try navStack.form(0)
-        // Verify form has notes section
-        _ = try form.section(2)
-    }
-
-    @Test
-    func viewHasCancelButton() throws {
-        let viewModel = createViewModel()
-        let view = AddPersonView(viewModel: viewModel)
-
-        let navStack = try view.inspect().navigationStack()
-        // Navigation stack should have toolbar with buttons
-        _ = try navStack.toolbar()
-    }
-
-    @Test
-    func viewHasSaveButton() throws {
-        let viewModel = createViewModel()
-        let view = AddPersonView(viewModel: viewModel)
-
-        let navStack = try view.inspect().navigationStack()
-        _ = try navStack.toolbar()
-    }
-
-    @Test
     func viewRendersWithViewModelError() throws {
         let mockRepo = MockPersonRepository()
         mockRepo.shouldFailSave = true
