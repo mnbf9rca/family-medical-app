@@ -70,7 +70,7 @@ struct HomeView: View {
         }
     }
 
-    private func deletePerson(at offsets: IndexSet) {
+    func deletePerson(at offsets: IndexSet) {
         for index in offsets {
             let person = viewModel.persons[index]
             Task {

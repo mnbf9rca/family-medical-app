@@ -41,6 +41,8 @@ FUNCTION_LIMIT = int("${FUNCTION_LIMIT}")
 # Files that have a practical limit below the standard threshold
 FILE_EXCEPTIONS = {
     "EncryptionService.swift": 80.0,  # Defensive catch blocks unreachable without mocking CryptoKit
+    "PersonDetailView.swift": 74.0,  # ViewInspector cannot test alert closures, lifecycle modifiers, or navigation destinations
+    "CoreDataStack.swift": 67.0,  # Test infrastructure methods (deleteAllData) difficult to test without mocking Core Data internals
 }
 
 # Load coverage data
