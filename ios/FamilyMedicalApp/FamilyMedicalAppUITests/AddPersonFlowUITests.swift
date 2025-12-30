@@ -39,23 +39,28 @@ final class AddPersonFlowUITests: XCTestCase {
 
         // Add UI interruption monitor to handle password autofill prompts
         addUIInterruptionMonitor(withDescription: "Password Autofill") { alert in
-            if alert.buttons["Not Now"].exists {
-                alert.buttons["Not Now"].tap()
-                return true
+            return MainActor.assumeIsolated {
+                if alert.buttons["Not Now"].exists {
+                    alert.buttons["Not Now"].tap()
+                    return true
+                }
+                if alert.buttons["Cancel"].exists {
+                    alert.buttons["Cancel"].tap()
+                    return true
+                }
+                return false
             }
-            if alert.buttons["Cancel"].exists {
-                alert.buttons["Cancel"].tap()
-                return true
-            }
-            return false
         }
 
         // Navigate back to home view if not already there
-        let navTitle = app.navigationBars["Members"]
-        if !navTitle.exists {
-            // Dismiss any open sheets
-            if app.buttons["Cancel"].exists {
-                app.buttons["Cancel"].tap()
+        // Access sharedApp directly to avoid capturing self in MainActor.assumeIsolated
+        MainActor.assumeIsolated {
+            let navTitle = Self.sharedApp.navigationBars["Members"]
+            if !navTitle.exists {
+                // Dismiss any open sheets
+                if Self.sharedApp.buttons["Cancel"].exists {
+                    Self.sharedApp.buttons["Cancel"].tap()
+                }
             }
         }
     }
