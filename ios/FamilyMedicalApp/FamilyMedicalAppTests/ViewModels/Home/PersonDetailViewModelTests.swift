@@ -209,7 +209,7 @@ struct PersonDetailViewModelTests {
 
         #expect(viewModel.recordCounts.isEmpty)
         #expect(viewModel.errorMessage != nil)
-        #expect(viewModel.errorMessage?.contains("Failed to load") == true)
+        #expect(viewModel.errorMessage?.contains("Unable to load") == true)
         #expect(viewModel.isLoading == false)
     }
 

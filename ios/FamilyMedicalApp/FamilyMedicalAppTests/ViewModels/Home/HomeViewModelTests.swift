@@ -76,7 +76,7 @@ struct HomeViewModelTests {
 
         #expect(viewModel.persons.isEmpty)
         #expect(viewModel.errorMessage != nil)
-        #expect(viewModel.errorMessage?.contains("Failed to load") == true)
+        #expect(viewModel.errorMessage?.contains("Unable to load") == true)
         #expect(viewModel.isLoading == false)
     }
 
@@ -158,7 +158,7 @@ struct HomeViewModelTests {
         await viewModel.createPerson(newPerson)
 
         #expect(viewModel.errorMessage != nil)
-        #expect(viewModel.errorMessage?.contains("Failed to create") == true)
+        #expect(viewModel.errorMessage?.contains("Unable to save") == true)
         #expect(viewModel.isLoading == false)
     }
 
@@ -222,7 +222,7 @@ struct HomeViewModelTests {
         await viewModel.deletePerson(id: person.id)
 
         #expect(viewModel.errorMessage != nil)
-        #expect(viewModel.errorMessage?.contains("Failed to delete") == true)
+        #expect(viewModel.errorMessage?.contains("Unable to remove") == true)
         #expect(viewModel.isLoading == false)
     }
 
