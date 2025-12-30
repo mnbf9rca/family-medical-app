@@ -19,6 +19,7 @@ final class PersonDetailViewModel {
     private let recordContentService: RecordContentServiceProtocol
     private let primaryKeyProvider: PrimaryKeyProviderProtocol
     private let fmkService: FamilyMemberKeyServiceProtocol
+    private let logger = LoggingService.shared.logger(category: .storage)
 
     // MARK: - Initialization
 
@@ -70,7 +71,8 @@ final class PersonDetailViewModel {
 
             recordCounts = counts
         } catch {
-            errorMessage = "Failed to load records: \(error.localizedDescription)"
+            errorMessage = "Unable to load records. Please try again."
+            logger.logError(error, context: "PersonDetailViewModel.loadRecordCounts")
         }
 
         isLoading = false

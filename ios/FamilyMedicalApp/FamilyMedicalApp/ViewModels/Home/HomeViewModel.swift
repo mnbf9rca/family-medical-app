@@ -16,6 +16,7 @@ final class HomeViewModel {
 
     private let personRepository: PersonRepositoryProtocol
     private let primaryKeyProvider: PrimaryKeyProviderProtocol
+    private let logger = LoggingService.shared.logger(category: .ui)
 
     // MARK: - Initialization
 
@@ -43,7 +44,8 @@ final class HomeViewModel {
             let primaryKey = try primaryKeyProvider.getPrimaryKey()
             persons = try await personRepository.fetchAll(primaryKey: primaryKey)
         } catch {
-            errorMessage = "Failed to load members: \(error.localizedDescription)"
+            errorMessage = "Unable to load members. Please try again."
+            logger.logError(error, context: "HomeViewModel.loadPersons")
         }
 
         isLoading = false
@@ -61,7 +63,8 @@ final class HomeViewModel {
             // Reload the list after successful save
             await loadPersons()
         } catch {
-            errorMessage = "Failed to create person: \(error.localizedDescription)"
+            errorMessage = "Unable to save this member. Please try again."
+            logger.logError(error, context: "HomeViewModel.createPerson")
             isLoading = false
         }
     }
@@ -77,7 +80,8 @@ final class HomeViewModel {
             // Reload the list after successful delete
             await loadPersons()
         } catch {
-            errorMessage = "Failed to delete person: \(error.localizedDescription)"
+            errorMessage = "Unable to remove this member. Please try again."
+            logger.logError(error, context: "HomeViewModel.deletePerson")
             isLoading = false
         }
     }

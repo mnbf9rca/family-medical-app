@@ -104,9 +104,6 @@ extension XCUIApplication {
         // This ensures SwiftUI reactive bindings update properly
         staticTexts["Secure Your Medical Records"].tap()
 
-        // Wait briefly for bindings to update
-        sleep(1)
-
         // Disable biometric (toggle is ON by default if biometric available)
         let biometricToggle = switches.firstMatch
         if biometricToggle.exists {
@@ -126,10 +123,8 @@ extension XCUIApplication {
 
         continueButton.tap()
 
-        // Check for error alerts before waiting for navigation
-        sleep(2) // Give time for any errors to appear
-
-        // Dismiss any error alerts if they appear
+        // Check for error alerts - if one appears, the navigation won't succeed
+        // and the test will fail with a more specific message
         if alerts.count > 0 {
             let alert = alerts.firstMatch
             if alert.exists {

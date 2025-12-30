@@ -127,9 +127,6 @@ final class ExistingUserFlowUITests: XCTestCase {
         passwordField.typeText("Wrong1")
         app.buttons["Unlock"].tap()
 
-        // Wait briefly for error
-        sleep(1)
-
         // Check counter shows "1 failed attempt"
         let failedAttempt1 = app.staticTexts["1 failed attempt"]
         XCTAssertTrue(failedAttempt1.waitForExistence(timeout: 2), "Should show 1 failed attempt")
@@ -139,9 +136,6 @@ final class ExistingUserFlowUITests: XCTestCase {
         passwordField.clearText()
         passwordField.typeText("Wrong2")
         app.buttons["Unlock"].tap()
-
-        // Wait briefly
-        sleep(1)
 
         // Check counter shows "2 failed attempts"
         let failedAttempt2 = app.staticTexts["2 failed attempts"]

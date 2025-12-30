@@ -33,8 +33,10 @@
 ## Principles
 
 - This is a hobby project - prefer KISS, DRY, YAGNI over enterprise patterns
-- **Read relevant ADRs before starting work:**
-  - Start with `docs/adr/README.md` for the full index
+- **Before starting work, always read:**
+  - [ADRs](docs/adr/README.md) - Architecture decisions and rationale
+  - [Coding Practices](docs/coding-practices.md) - Standards and patterns
+  - [SwiftUI XCUITest Gotchas](docs/swiftui-xcuitest-gotchas.md) - UI testing guidance
 - Consider whether your changes warrant updating the ADRs; include this as a task if needed
 
 ## Testing Requirements

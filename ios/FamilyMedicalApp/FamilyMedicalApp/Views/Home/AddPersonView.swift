@@ -105,7 +105,8 @@ struct AddPersonView: View {
                 await viewModel.createPerson(person)
             }
         } catch {
-            validationErrorMessage = error.localizedDescription
+            validationErrorMessage = "Unable to save this member. Please try again."
+            LoggingService.shared.logger(category: .ui).logError(error, context: "AddPersonView.savePerson")
             showValidationError = true
         }
     }
