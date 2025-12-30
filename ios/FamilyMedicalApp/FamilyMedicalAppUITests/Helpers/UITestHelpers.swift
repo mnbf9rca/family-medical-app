@@ -12,6 +12,7 @@ extension XCTestCase {
     /// Turn a SwiftUI Toggle on
     /// - Parameter toggle: The toggle element to turn on
     /// - Note: SwiftUI Toggle tap() doesn't work - must tap inner switch coordinate
+    @MainActor
     func turnSwitchOn(_ toggle: XCUIElement) {
         // Find the inner UISwitch descendant
         let innerSwitch = toggle.descendants(matching: .switch).firstMatch
@@ -28,6 +29,7 @@ extension XCTestCase {
 
     /// Turn a SwiftUI Toggle off
     /// - Parameter toggle: The toggle element to turn off
+    @MainActor
     func turnSwitchOff(_ toggle: XCUIElement) {
         let innerSwitch = toggle.descendants(matching: .switch).firstMatch
         let center = innerSwitch.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
@@ -209,7 +211,7 @@ extension XCUIApplication {
         nameField.typeText(name)
 
         // Handle date of birth if provided
-        if let dateOfBirth {
+        if dateOfBirth != nil {
             let dobToggle = switches["includeDateOfBirthToggle"]
             XCTAssertTrue(dobToggle.exists)
 

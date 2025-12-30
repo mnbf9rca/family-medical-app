@@ -10,6 +10,7 @@ import XCTest
 /// Tests for existing user login/unlock flow
 /// - Note: Ensure hardware keyboard is disabled in simulator: I/O → Keyboard → Connect Hardware Keyboard (unchecked)
 ///   This prevents password autofill prompts from interfering with UI tests
+@MainActor
 final class ExistingUserFlowUITests: XCTestCase {
     var app: XCUIApplication!
     let testPassword = "unique-horse-battery-staple-2024"
@@ -38,7 +39,6 @@ final class ExistingUserFlowUITests: XCTestCase {
 
     // MARK: - Unlock Tests
 
-    @MainActor
     func testUnlockWithCorrectPassword() throws {
         // Setup: Create account first
         app.launchForUITesting(resetState: true)
@@ -60,7 +60,6 @@ final class ExistingUserFlowUITests: XCTestCase {
         XCTAssertTrue(navTitle.exists, "Should be on main app after unlock")
     }
 
-    @MainActor
     func testUnlockWithIncorrectPassword() throws {
         // Setup: Create account first
         app.launchForUITesting(resetState: true)
@@ -97,7 +96,6 @@ final class ExistingUserFlowUITests: XCTestCase {
         )
     }
 
-    @MainActor
     func testFailedAttemptsCounterIncreases() throws {
         // Setup: Create account first
         app.launchForUITesting(resetState: true)
@@ -144,7 +142,6 @@ final class ExistingUserFlowUITests: XCTestCase {
         XCTAssertTrue(failedAttempt2.waitForExistence(timeout: 2), "Should show 2 failed attempts")
     }
 
-    @MainActor
     func testUnlockViewElements() throws {
         // Setup: Create account first
         app.launchForUITesting(resetState: true)
@@ -167,7 +164,6 @@ final class ExistingUserFlowUITests: XCTestCase {
         )
     }
 
-    @MainActor
     func testSwitchFromBiometricToPassword() throws {
         // Setup: Create account first
         app.launchForUITesting(resetState: true)

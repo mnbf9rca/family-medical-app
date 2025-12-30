@@ -10,12 +10,32 @@ import XCTest
 /// Tests for adding person/member flow
 /// - Note: Ensure hardware keyboard is disabled in simulator: I/O → Keyboard → Connect Hardware Keyboard (unchecked)
 ///   This prevents password autofill prompts from interfering with UI tests
+@MainActor
 final class AddPersonFlowUITests: XCTestCase {
-    var app: XCUIApplication!
+    nonisolated(unsafe) static var sharedApp: XCUIApplication!
+    var app: XCUIApplication { Self.sharedApp }
+
+    nonisolated override class func setUp() {
+        super.setUp()
+
+        // One-time setup for entire test suite
+        MainActor.assumeIsolated {
+            sharedApp = XCUIApplication()
+            sharedApp.launchForUITesting(resetState: true)
+            sharedApp.createAccount()
+        }
+    }
+
+    nonisolated override class func tearDown() {
+        MainActor.assumeIsolated {
+            sharedApp.terminate()
+            sharedApp = nil
+        }
+        super.tearDown()
+    }
 
     override func setUpWithError() throws {
         continueAfterFailure = false
-        app = XCUIApplication()
 
         // Add UI interruption monitor to handle password autofill prompts
         addUIInterruptionMonitor(withDescription: "Password Autofill") { alert in
@@ -30,38 +50,34 @@ final class AddPersonFlowUITests: XCTestCase {
             return false
         }
 
-        // Start each test with authenticated user
-        app.launchForUITesting(resetState: true)
-        app.createAccount()
+        // Navigate back to home view if not already there
+        let navTitle = app.navigationBars["Members"]
+        if !navTitle.exists {
+            // Dismiss any open sheets
+            if app.buttons["Cancel"].exists {
+                app.buttons["Cancel"].tap()
+            }
+        }
     }
 
     override func tearDownWithError() throws {
-        app = nil
+        // No per-test teardown needed - shared app instance
     }
 
     // MARK: - Basic Add Person Tests
 
-    @MainActor
     func testAddPersonWithNameOnly() throws {
-        // Verify we're on empty home view
-        let emptyStateText = app.staticTexts["No Members"]
-        XCTAssertTrue(emptyStateText.exists, "Should start with empty state")
-
         // Add person with just name
-        let personName = "Alice Smith"
+        let personName = "TestNameOnly User"
         app.addPerson(name: personName)
 
         // Verify person appears in list
         XCTAssertTrue(app.verifyPersonExists(name: personName), "Person should appear in list after adding")
-
-        // Empty state should be gone
-        XCTAssertFalse(emptyStateText.exists, "Empty state should disappear after adding person")
     }
 
-    @MainActor
     func testAddPersonWithDateOfBirth() throws {
         // Add person
-        let personName = "Bob Johnson"
+        let personName = "TestDateOfBirth User"
         let addButton = app.buttons["toolbarAddMember"]
         addButton.tap()
 
@@ -93,10 +109,9 @@ final class AddPersonFlowUITests: XCTestCase {
         XCTAssertTrue(app.verifyPersonExists(name: personName))
     }
 
-    @MainActor
     func testAddPersonWithNotes() throws {
         // Add person
-        let personName = "Carol Williams"
+        let personName = "TestNotes User"
         let notes = "Test notes for this person"
 
         let addButton = app.buttons["toolbarAddMember"]
@@ -124,11 +139,10 @@ final class AddPersonFlowUITests: XCTestCase {
         XCTAssertTrue(app.verifyPersonExists(name: personName))
     }
 
-    @MainActor
     func testAddMultiplePersons() throws {
-        let person1 = "Alice Smith"
-        let person2 = "Bob Johnson"
-        let person3 = "Carol Williams"
+        let person1 = "TestMultiple User1"
+        let person2 = "TestMultiple User2"
+        let person3 = "TestMultiple User3"
 
         // Add first person
         app.addPerson(name: person1)
@@ -150,7 +164,6 @@ final class AddPersonFlowUITests: XCTestCase {
 
     // MARK: - Validation Tests
 
-    @MainActor
     func testAddPersonWithEmptyNameShowsError() throws {
         // Tap Add Member
         let addButton = app.buttons["toolbarAddMember"]
@@ -178,7 +191,6 @@ final class AddPersonFlowUITests: XCTestCase {
         XCTAssertTrue(navTitle.exists, "Sheet should remain after validation error")
     }
 
-    @MainActor
     func testAddPersonWithWhitespaceOnlyNameShowsError() throws {
         // Tap Add Member
         let addButton = app.buttons["toolbarAddMember"]
@@ -202,7 +214,6 @@ final class AddPersonFlowUITests: XCTestCase {
         XCTAssertTrue(alert.waitForExistence(timeout: 2), "Validation error alert should appear for whitespace-only name")
     }
 
-    @MainActor
     func testAddPersonWithTooLongNameShowsError() throws {
         // Tap Add Member
         let addButton = app.buttons["toolbarAddMember"]
@@ -232,7 +243,6 @@ final class AddPersonFlowUITests: XCTestCase {
 
     // MARK: - UI Interaction Tests
 
-    @MainActor
     func testCancelAddPersonDismissesSheet() throws {
         // Tap Add Member
         let addButton = app.buttons["toolbarAddMember"]
@@ -255,7 +265,6 @@ final class AddPersonFlowUITests: XCTestCase {
         XCTAssertTrue(homeNavTitle.exists)
     }
 
-    @MainActor
     func testDateOfBirthToggleShowsHidesPicker() throws {
         // Tap Add Member
         let addButton = app.buttons["toolbarAddMember"]
@@ -287,7 +296,6 @@ final class AddPersonFlowUITests: XCTestCase {
         XCTAssertFalse(datePicker.exists, "Date picker should disappear when toggle is off")
     }
 
-    @MainActor
     func testAddPersonFormHasAllElements() throws {
         // Tap Add Member
         let addButton = app.buttons["toolbarAddMember"]

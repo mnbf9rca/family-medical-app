@@ -10,6 +10,7 @@ import XCTest
 /// Tests for new user account creation flow
 /// - Note: Ensure hardware keyboard is disabled in simulator: I/O → Keyboard → Connect Hardware Keyboard (unchecked)
 ///   This prevents password autofill prompts from interfering with UI tests
+@MainActor
 final class NewUserFlowUITests: XCTestCase {
     var app: XCUIApplication!
 
@@ -39,7 +40,6 @@ final class NewUserFlowUITests: XCTestCase {
 
     // MARK: - Complete Journey Tests
 
-    @MainActor
     func testCompleteNewUserJourney() throws {
         // Launch app with fresh state
         app.launchForUITesting(resetState: true)
@@ -56,7 +56,6 @@ final class NewUserFlowUITests: XCTestCase {
         XCTAssertTrue(emptyStateText.exists, "Empty state should appear after account creation")
     }
 
-    @MainActor
     func testNewUserWithCustomCredentials() throws {
         app.launchForUITesting(resetState: true)
 
@@ -72,7 +71,6 @@ final class NewUserFlowUITests: XCTestCase {
 
     // MARK: - Password Validation Tests
 
-    @MainActor
     func testWeakPasswordShowsStrengthIndicator() throws {
         app.launchForUITesting(resetState: true)
 
@@ -95,7 +93,6 @@ final class NewUserFlowUITests: XCTestCase {
         XCTAssertTrue(weakText.waitForExistence(timeout: 2), "Strength indicator showing 'Weak' should appear for weak password")
     }
 
-    @MainActor
     func testMismatchedPasswordsShowError() throws {
         app.launchForUITesting(resetState: true)
 
@@ -120,7 +117,6 @@ final class NewUserFlowUITests: XCTestCase {
         XCTAssertFalse(continueButton.isEnabled, "Continue should be disabled with mismatched passwords")
     }
 
-    @MainActor
     func testEmptyFieldsDisableContinueButton() throws {
         app.launchForUITesting(resetState: true)
 
@@ -132,7 +128,6 @@ final class NewUserFlowUITests: XCTestCase {
         XCTAssertFalse(continueButton.isEnabled, "Continue should be disabled with empty fields")
     }
 
-    @MainActor
     func testPartiallyFilledFieldsDisableContinueButton() throws {
         app.launchForUITesting(resetState: true)
 
@@ -151,7 +146,6 @@ final class NewUserFlowUITests: XCTestCase {
 
     // MARK: - UI Element Tests
 
-    @MainActor
     func testAllRequiredFieldsAppear() throws {
         app.launchForUITesting(resetState: true)
 
