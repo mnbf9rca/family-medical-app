@@ -12,28 +12,34 @@ import XCTest
 ///   This prevents password autofill prompts from interfering with UI tests
 @MainActor
 final class ExistingUserFlowUITests: XCTestCase {
-    var app: XCUIApplication!
+    nonisolated(unsafe) var app: XCUIApplication!
     let testPassword = "unique-horse-battery-staple-2024"
 
-    override func setUpWithError() throws {
+    nonisolated override func setUpWithError() throws {
         continueAfterFailure = false
-        app = XCUIApplication()
+
+        let application = MainActor.assumeIsolated {
+            XCUIApplication()
+        }
+        app = application
 
         // Add UI interruption monitor to handle password autofill prompts
         addUIInterruptionMonitor(withDescription: "Password Autofill") { alert in
-            if alert.buttons["Not Now"].exists {
-                alert.buttons["Not Now"].tap()
-                return true
+            return MainActor.assumeIsolated {
+                if alert.buttons["Not Now"].exists {
+                    alert.buttons["Not Now"].tap()
+                    return true
+                }
+                if alert.buttons["Cancel"].exists {
+                    alert.buttons["Cancel"].tap()
+                    return true
+                }
+                return false
             }
-            if alert.buttons["Cancel"].exists {
-                alert.buttons["Cancel"].tap()
-                return true
-            }
-            return false
         }
     }
 
-    override func tearDownWithError() throws {
+    nonisolated override func tearDownWithError() throws {
         app = nil
     }
 
