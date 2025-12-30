@@ -44,7 +44,7 @@ final class AddPersonFlowUITests: XCTestCase {
     @MainActor
     func testAddPersonWithNameOnly() throws {
         // Verify we're on empty home view
-        let emptyStateText = app.staticTexts["No Members Yet"]
+        let emptyStateText = app.staticTexts["No Members"]
         XCTAssertTrue(emptyStateText.exists, "Should start with empty state")
 
         // Add person with just name

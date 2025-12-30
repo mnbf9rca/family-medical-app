@@ -160,8 +160,8 @@ extension XCUIApplication {
         notes: String? = nil,
         timeout: TimeInterval = 5
     ) {
-        // Tap Add Member button
-        let addButton = buttons["Add Member"]
+        // Tap Add Member button (use toolbar button with "plus" identifier to avoid ambiguity)
+        let addButton = buttons.matching(identifier: "plus").element
         XCTAssertTrue(addButton.waitForExistence(timeout: timeout))
         addButton.tap()
 

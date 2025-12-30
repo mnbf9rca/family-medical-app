@@ -52,7 +52,7 @@ final class NewUserFlowUITests: XCTestCase {
         app.createAccount()
 
         // Verify we're on HomeView with empty state
-        let emptyStateText = app.staticTexts["No Members Yet"]
+        let emptyStateText = app.staticTexts["No Members"]
         XCTAssertTrue(emptyStateText.exists, "Empty state should appear after account creation")
     }
 
