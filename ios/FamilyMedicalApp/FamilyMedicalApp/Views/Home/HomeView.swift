@@ -40,6 +40,7 @@ struct HomeView: View {
                     }
                 )
                 .accessibilityLabel("Add Member")
+                .accessibilityIdentifier("toolbarAddMember")
             }
         }
         .sheet(isPresented: $showingAddPerson) {

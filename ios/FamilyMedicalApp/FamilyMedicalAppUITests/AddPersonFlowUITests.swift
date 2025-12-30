@@ -62,7 +62,7 @@ final class AddPersonFlowUITests: XCTestCase {
     func testAddPersonWithDateOfBirth() throws {
         // Add person
         let personName = "Bob Johnson"
-        let addButton = app.buttons["Add Member"]
+        let addButton = app.buttons["toolbarAddMember"]
         addButton.tap()
 
         // Wait for sheet
@@ -97,7 +97,7 @@ final class AddPersonFlowUITests: XCTestCase {
         let personName = "Carol Williams"
         let notes = "Test notes for this person"
 
-        let addButton = app.buttons["Add Member"]
+        let addButton = app.buttons["toolbarAddMember"]
         addButton.tap()
 
         // Wait for sheet
@@ -151,7 +151,7 @@ final class AddPersonFlowUITests: XCTestCase {
     @MainActor
     func testAddPersonWithEmptyNameShowsError() throws {
         // Tap Add Member
-        let addButton = app.buttons["Add Member"]
+        let addButton = app.buttons["toolbarAddMember"]
         addButton.tap()
 
         // Wait for sheet
@@ -179,7 +179,7 @@ final class AddPersonFlowUITests: XCTestCase {
     @MainActor
     func testAddPersonWithWhitespaceOnlyNameShowsError() throws {
         // Tap Add Member
-        let addButton = app.buttons["Add Member"]
+        let addButton = app.buttons["toolbarAddMember"]
         addButton.tap()
 
         // Wait for sheet
@@ -203,7 +203,7 @@ final class AddPersonFlowUITests: XCTestCase {
     @MainActor
     func testAddPersonWithTooLongNameShowsError() throws {
         // Tap Add Member
-        let addButton = app.buttons["Add Member"]
+        let addButton = app.buttons["toolbarAddMember"]
         addButton.tap()
 
         // Wait for sheet
@@ -233,7 +233,7 @@ final class AddPersonFlowUITests: XCTestCase {
     @MainActor
     func testCancelAddPersonDismissesSheet() throws {
         // Tap Add Member
-        let addButton = app.buttons["Add Member"]
+        let addButton = app.buttons["toolbarAddMember"]
         addButton.tap()
 
         // Wait for sheet
@@ -256,7 +256,7 @@ final class AddPersonFlowUITests: XCTestCase {
     @MainActor
     func testDateOfBirthToggleShowsHidesPicker() throws {
         // Tap Add Member
-        let addButton = app.buttons["Add Member"]
+        let addButton = app.buttons["toolbarAddMember"]
         addButton.tap()
 
         // Wait for sheet
@@ -287,7 +287,7 @@ final class AddPersonFlowUITests: XCTestCase {
     @MainActor
     func testAddPersonFormHasAllElements() throws {
         // Tap Add Member
-        let addButton = app.buttons["Add Member"]
+        let addButton = app.buttons["toolbarAddMember"]
         addButton.tap()
 
         // Wait for sheet
