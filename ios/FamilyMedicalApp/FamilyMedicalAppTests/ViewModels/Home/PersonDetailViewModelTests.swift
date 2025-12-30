@@ -28,7 +28,7 @@ struct PersonDetailViewModelTests {
         let service = MockRecordContentService()
         let encryptedData = try service.encrypt(content, using: testFMK)
 
-        return try MedicalRecord(
+        return MedicalRecord(
             id: UUID(),
             personId: person.id,
             encryptedContent: encryptedData
@@ -160,7 +160,7 @@ struct PersonDetailViewModelTests {
         var content = RecordContent()
         content.schemaId = nil // Freeform record
         let encryptedData = try mockContentService.encrypt(content, using: testFMK)
-        let record = try MedicalRecord(
+        let record = MedicalRecord(
             id: UUID(),
             personId: person.id,
             encryptedContent: encryptedData

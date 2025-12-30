@@ -113,7 +113,7 @@ struct HomeViewTests {
         #expect(viewModel.persons.count == 2)
 
         // Create view and trigger delete
-        var view = HomeView(viewModel: viewModel)
+        let view = HomeView(viewModel: viewModel)
         let offsets = IndexSet(integer: 0)
 
         // Call delete method directly (ViewInspector can't access .onDelete closure)
