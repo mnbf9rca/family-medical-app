@@ -272,4 +272,25 @@ final class KeychainService: KeychainServiceProtocol, @unchecked Sendable {
         let status = SecItemCopyMatching(query as CFDictionary, nil)
         return status == errSecSuccess
     }
+
+    /// Delete all items for this service (for testing only)
+    /// - Throws: KeychainError on failure (except when no items found)
+    func deleteAllItems() throws {
+        logger.debug("Deleting all keychain items for service: \(serviceName)", privacy: .public)
+
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: serviceName
+        ]
+
+        let status = SecItemDelete(query as CFDictionary)
+
+        // Success or no items found are both acceptable
+        guard status == errSecSuccess || status == errSecItemNotFound else {
+            logger.error("Failed to delete all items, status: \(status)", privacy: .public)
+            throw KeychainError.deleteFailed(status)
+        }
+
+        logger.debug("Successfully deleted all keychain items", privacy: .public)
+    }
 }

@@ -1,5 +1,5 @@
 {
-  "originHash" : "29922c29ea71527662fd1dbdfab0e75a9c78420926c009c4a5d3dcb4017118f6",
+  "originHash" : "058a71e86998fbccb2c9f5925e3e3dfb785c4380a187e4256f512a662903fe19",
   "pins" : [
     {
       "identity" : "swift-sodium",
@@ -17,6 +17,15 @@
       "state" : {
         "revision" : "e9a06346499a3a889165647e3f23f8a7b2609a1c",
         "version" : "0.10.3"
+      }
+    },
+    {
+      "identity" : "xctestextensions",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/StanfordBDHG/XCTestExtensions",
+      "state" : {
+        "revision" : "5f4b9670acfac68ed55a2d6462d716a2bcdc2261",
+        "version" : "1.2.2"
       }
     }
   ],

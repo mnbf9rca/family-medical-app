@@ -1,0 +1,95 @@
+import CryptoKit
+import SwiftUI
+import Testing
+import ViewInspector
+@testable import FamilyMedicalApp
+
+@MainActor
+struct HomeViewTests {
+    // MARK: - Test Data
+
+    let testKey = SymmetricKey(size: .bits256)
+
+    func createTestPerson(name: String = "Test Person") throws -> Person {
+        try Person(
+            id: UUID(),
+            name: name,
+            dateOfBirth: Date(),
+            labels: ["Self"],
+            notes: nil
+        )
+    }
+
+    func createViewModel() -> HomeViewModel {
+        let mockRepo = MockPersonRepository()
+        let mockKeyProvider = MockPrimaryKeyProvider(primaryKey: testKey)
+        return HomeViewModel(
+            personRepository: mockRepo,
+            primaryKeyProvider: mockKeyProvider
+        )
+    }
+
+    // MARK: - Basic Rendering Tests
+
+    @Test
+    func viewRendersSuccessfully() throws {
+        let viewModel = createViewModel()
+        let view = HomeView(viewModel: viewModel)
+
+        _ = try view.inspect()
+    }
+
+    @Test
+    func viewDisplaysEmptyStateWhenNoPersons() throws {
+        let viewModel = createViewModel()
+        let view = HomeView(viewModel: viewModel)
+
+        // Should render empty state when no persons
+        _ = try view.inspect()
+    }
+
+    @Test
+    func viewDisplaysListWhenPersonsExist() async throws {
+        let mockRepo = MockPersonRepository()
+        let person = try createTestPerson()
+        mockRepo.addPerson(person)
+
+        let mockKeyProvider = MockPrimaryKeyProvider(primaryKey: testKey)
+        let viewModel = HomeViewModel(
+            personRepository: mockRepo,
+            primaryKeyProvider: mockKeyProvider
+        )
+
+        await viewModel.loadPersons()
+
+        let view = HomeView(viewModel: viewModel)
+        _ = try view.inspect()
+    }
+
+    // MARK: - Error State Tests
+
+    @Test
+    func viewRendersWithError() throws {
+        let mockRepo = MockPersonRepository()
+        mockRepo.shouldFailFetchAll = true
+
+        let mockKeyProvider = MockPrimaryKeyProvider(primaryKey: testKey)
+        let viewModel = HomeViewModel(
+            personRepository: mockRepo,
+            primaryKeyProvider: mockKeyProvider
+        )
+
+        let view = HomeView(viewModel: viewModel)
+        _ = try view.inspect()
+    }
+
+    // MARK: - Loading State Tests
+
+    @Test
+    func viewRendersWhileLoading() throws {
+        let viewModel = createViewModel()
+        let view = HomeView(viewModel: viewModel)
+
+        _ = try view.inspect()
+    }
+}

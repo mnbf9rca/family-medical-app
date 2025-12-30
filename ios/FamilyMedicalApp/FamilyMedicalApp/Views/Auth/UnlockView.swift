@@ -49,17 +49,24 @@ struct UnlockView: View {
                 } else {
                     // Password field
                     VStack(spacing: 16) {
-                        SecureField("Enter password", text: $viewModel.unlockPassword)
-                            .textFieldStyle(.roundedBorder)
-                            .textContentType(.password)
-                            .autocorrectionDisabled()
-                            .submitLabel(.done)
-                            .onSubmit {
-                                Task {
-                                    await viewModel.unlockWithPassword()
-                                }
+                        Group {
+                            if UITestingHelpers.isUITesting {
+                                // Use TextField in UI testing mode to avoid autofill issues
+                                TextField("Enter password", text: $viewModel.unlockPassword)
+                            } else {
+                                SecureField("Enter password", text: $viewModel.unlockPassword)
+                                    .textContentType(.password)
                             }
-                            .disabled(viewModel.isLockedOut)
+                        }
+                        .textFieldStyle(.roundedBorder)
+                        .autocorrectionDisabled()
+                        .submitLabel(.done)
+                        .onSubmit {
+                            Task {
+                                await viewModel.unlockWithPassword()
+                            }
+                        }
+                        .disabled(viewModel.isLockedOut)
 
                         Button(action: {
                             Task {

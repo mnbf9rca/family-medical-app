@@ -30,7 +30,7 @@ struct PasswordSetupView: View {
 
                     TextField("Choose a username", text: $viewModel.username)
                         .textFieldStyle(.roundedBorder)
-                        .textContentType(.username)
+                        .textContentTypeIfNotTesting(.username)
                         .autocorrectionDisabled()
                         .textInputAutocapitalization(.never)
                 }
@@ -41,11 +41,18 @@ struct PasswordSetupView: View {
                         Text("Password")
                             .font(.headline)
 
-                        SecureField("Enter password", text: $viewModel.password)
-                            .textFieldStyle(.roundedBorder)
-                            .textContentType(.newPassword)
-                            .autocorrectionDisabled()
-                            .submitLabel(.next)
+                        Group {
+                            if UITestingHelpers.isUITesting {
+                                // Use TextField in UI testing mode to avoid autofill issues
+                                TextField("Enter password", text: $viewModel.password)
+                            } else {
+                                SecureField("Enter password", text: $viewModel.password)
+                                    .textContentType(.newPassword)
+                            }
+                        }
+                        .textFieldStyle(.roundedBorder)
+                        .autocorrectionDisabled()
+                        .submitLabel(.next)
 
                         if !viewModel.password.isEmpty {
                             PasswordStrengthIndicator(strength: viewModel.passwordStrength)
@@ -56,16 +63,23 @@ struct PasswordSetupView: View {
                         Text("Confirm Password")
                             .font(.headline)
 
-                        SecureField("Confirm password", text: $viewModel.confirmPassword)
-                            .textFieldStyle(.roundedBorder)
-                            .textContentType(.newPassword)
-                            .autocorrectionDisabled()
-                            .submitLabel(.done)
-                            .onSubmit {
-                                Task {
-                                    await viewModel.setUp()
-                                }
+                        Group {
+                            if UITestingHelpers.isUITesting {
+                                // Use TextField in UI testing mode to avoid autofill issues
+                                TextField("Confirm password", text: $viewModel.confirmPassword)
+                            } else {
+                                SecureField("Confirm password", text: $viewModel.confirmPassword)
+                                    .textContentType(.newPassword)
                             }
+                        }
+                        .textFieldStyle(.roundedBorder)
+                        .autocorrectionDisabled()
+                        .submitLabel(.done)
+                        .onSubmit {
+                            Task {
+                                await viewModel.setUp()
+                            }
+                        }
                     }
 
                     // Validation errors (only shown after user attempts setup)

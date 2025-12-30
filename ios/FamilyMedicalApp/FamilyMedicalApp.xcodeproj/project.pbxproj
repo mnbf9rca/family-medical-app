@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		D40AC5A42F0332AD00564AAD /* ViewInspector in Frameworks */ = {isa = PBXBuildFile; productRef = D40AC5A32F0332AD00564AAD /* ViewInspector */; };
+		D40AC7C42F03420900564AAD /* XCTestApp in Frameworks */ = {isa = PBXBuildFile; productRef = D40AC7C32F03420900564AAD /* XCTestApp */; };
+		D40AC7C62F03420900564AAD /* XCTestExtensions in Frameworks */ = {isa = PBXBuildFile; productRef = D40AC7C52F03420900564AAD /* XCTestExtensions */; };
 		D445F7DE2EFB435900E07F78 /* Clibsodium in Frameworks */ = {isa = PBXBuildFile; productRef = D445F7DD2EFB435900E07F78 /* Clibsodium */; };
 		D445F7E02EFB435900E07F78 /* Sodium in Frameworks */ = {isa = PBXBuildFile; productRef = D445F7DF2EFB435900E07F78 /* Sodium */; };
 /* End PBXBuildFile section */
@@ -76,6 +78,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D40AC7C42F03420900564AAD /* XCTestApp in Frameworks */,
+				D40AC7C62F03420900564AAD /* XCTestExtensions in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -172,6 +176,8 @@
 			);
 			name = FamilyMedicalAppUITests;
 			packageProductDependencies = (
+				D40AC7C32F03420900564AAD /* XCTestApp */,
+				D40AC7C52F03420900564AAD /* XCTestExtensions */,
 			);
 			productName = FamilyMedicalAppUITests;
 			productReference = D445F7B12EF7E94000E07F78 /* FamilyMedicalAppUITests.xctest */;
@@ -212,6 +218,7 @@
 			packageReferences = (
 				D445F7DC2EFB435900E07F78 /* XCRemoteSwiftPackageReference "swift-sodium" */,
 				D40AC5A22F0332AD00564AAD /* XCRemoteSwiftPackageReference "ViewInspector" */,
+				D40AC7C22F03420900564AAD /* XCRemoteSwiftPackageReference "XCTestExtensions" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = D445F79B2EF7E93C00E07F78 /* Products */;
@@ -610,6 +617,14 @@
 				minimumVersion = 0.10.3;
 			};
 		};
+		D40AC7C22F03420900564AAD /* XCRemoteSwiftPackageReference "XCTestExtensions" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/StanfordBDHG/XCTestExtensions";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.2.2;
+			};
+		};
 		D445F7DC2EFB435900E07F78 /* XCRemoteSwiftPackageReference "swift-sodium" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/jedisct1/swift-sodium.git";
@@ -625,6 +640,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = D40AC5A22F0332AD00564AAD /* XCRemoteSwiftPackageReference "ViewInspector" */;
 			productName = ViewInspector;
+		};
+		D40AC7C32F03420900564AAD /* XCTestApp */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D40AC7C22F03420900564AAD /* XCRemoteSwiftPackageReference "XCTestExtensions" */;
+			productName = XCTestApp;
+		};
+		D40AC7C52F03420900564AAD /* XCTestExtensions */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D40AC7C22F03420900564AAD /* XCRemoteSwiftPackageReference "XCTestExtensions" */;
+			productName = XCTestExtensions;
 		};
 		D445F7DD2EFB435900E07F78 /* Clibsodium */ = {
 			isa = XCSwiftPackageProductDependency;
