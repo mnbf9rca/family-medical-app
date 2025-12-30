@@ -74,14 +74,16 @@ final class AddPersonFlowUITests: XCTestCase {
         nameField.tap()
         nameField.typeText(personName)
 
-        // Enable date of birth
-        let dobToggle = app.switches["Include Date of Birth"]
-        XCTAssertTrue(dobToggle.exists)
-        dobToggle.tap()
+        // Enable date of birth using helper (SwiftUI Toggle requires special handling)
+        let dobToggle = app.switches["includeDateOfBirthToggle"]
+        XCTAssertTrue(dobToggle.exists, "Toggle should exist")
 
-        // Verify date picker appears
-        let datePicker = app.datePickers.firstMatch
-        XCTAssertTrue(datePicker.exists, "Date picker should appear when toggle is on")
+        turnSwitchOn(dobToggle)
+
+        // Verify date picker appears using accessibility identifier
+        // Compact DatePicker can be various element types, so search descendants
+        let datePicker = app.descendants(matching: .any)["dateOfBirthPicker"]
+        XCTAssertTrue(datePicker.waitForExistence(timeout: 2), "Date picker should appear when toggle is on")
 
         // Save
         let saveButton = app.buttons["Save"]
@@ -263,22 +265,23 @@ final class AddPersonFlowUITests: XCTestCase {
         let navTitle = app.navigationBars["Add Member"]
         XCTAssertTrue(navTitle.waitForExistence(timeout: 5))
 
-        let dobToggle = app.switches["Include Date of Birth"]
+        let dobToggle = app.switches["includeDateOfBirthToggle"]
         XCTAssertTrue(dobToggle.exists)
 
-        let datePicker = app.datePickers.firstMatch
+        // Date picker identified by accessibility identifier
+        let datePicker = app.descendants(matching: .any)["dateOfBirthPicker"]
 
         // Toggle should start OFF (no date picker)
         XCTAssertFalse(datePicker.exists, "Date picker should not exist when toggle is off")
 
-        // Turn toggle ON
-        dobToggle.tap()
+        // Turn toggle ON using helper (SwiftUI Toggle requires special handling)
+        turnSwitchOn(dobToggle)
 
         // Date picker should appear
-        XCTAssertTrue(datePicker.waitForExistence(timeout: 1), "Date picker should appear when toggle is on")
+        XCTAssertTrue(datePicker.exists, "Date picker should appear when toggle is on")
 
         // Turn toggle OFF again
-        dobToggle.tap()
+        turnSwitchOff(dobToggle)
 
         // Date picker should disappear
         XCTAssertFalse(datePicker.exists, "Date picker should disappear when toggle is off")

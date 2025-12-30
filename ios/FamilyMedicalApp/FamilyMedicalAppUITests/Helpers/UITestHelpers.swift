@@ -7,6 +7,39 @@
 
 import XCTest
 
+/// Helper functions for UI testing with SwiftUI Toggles
+extension XCTestCase {
+    /// Turn a SwiftUI Toggle on
+    /// - Parameter toggle: The toggle element to turn on
+    /// - Note: SwiftUI Toggle tap() doesn't work - must tap inner switch coordinate
+    func turnSwitchOn(_ toggle: XCUIElement) {
+        // Find the inner UISwitch descendant
+        let innerSwitch = toggle.descendants(matching: .switch).firstMatch
+        let center = innerSwitch.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+
+        // Required: tap toggle first, otherwise inner switch tap is ignored
+        toggle.tap()
+        center.tap()
+
+        // Wait for state to update
+        let expectation = expectation(for: NSPredicate(format: "value == '1'"), evaluatedWith: toggle)
+        wait(for: [expectation], timeout: 2)
+    }
+
+    /// Turn a SwiftUI Toggle off
+    /// - Parameter toggle: The toggle element to turn off
+    func turnSwitchOff(_ toggle: XCUIElement) {
+        let innerSwitch = toggle.descendants(matching: .switch).firstMatch
+        let center = innerSwitch.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+
+        toggle.tap()
+        center.tap()
+
+        let expectation = expectation(for: NSPredicate(format: "value == '0'"), evaluatedWith: toggle)
+        wait(for: [expectation], timeout: 2)
+    }
+}
+
 /// Helper functions for UI testing
 extension XCUIApplication {
     /// Get password field (TextField in UI testing mode, SecureField in production)
@@ -177,16 +210,19 @@ extension XCUIApplication {
 
         // Handle date of birth if provided
         if let dateOfBirth {
-            let dobToggle = switches["Include Date of Birth"]
+            let dobToggle = switches["includeDateOfBirthToggle"]
             XCTAssertTrue(dobToggle.exists)
-            let toggleValue = (dobToggle.value as? String) == "1"
-            if !toggleValue {
-                dobToggle.tap() // Turn on DOB
-            }
+
+            // Turn on toggle using proper SwiftUI Toggle interaction
+            // Note: Cannot use turnSwitchOn() helper here (XCUIApplication vs XCTestCase)
+            let innerSwitch = dobToggle.descendants(matching: .switch).firstMatch
+            let center = innerSwitch.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+            dobToggle.tap()
+            center.tap()
 
             // Note: Setting DatePicker value in UI tests is complex
-            // For now, just verify the picker appears
-            let datePicker = datePickers.firstMatch
+            // Compact picker identified by accessibility identifier - just verify it exists
+            let datePicker = descendants(matching: .any)["dateOfBirthPicker"]
             XCTAssertTrue(datePicker.waitForExistence(timeout: 1), "Date picker should appear when toggle is on")
         }
 

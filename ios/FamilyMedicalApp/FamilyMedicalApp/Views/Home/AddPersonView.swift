@@ -25,6 +25,7 @@ struct AddPersonView: View {
                         .autocorrectionDisabled()
 
                     Toggle("Include Date of Birth", isOn: $showDatePicker)
+                        .accessibilityIdentifier("includeDateOfBirthToggle")
 
                     if showDatePicker {
                         DatePicker(
@@ -36,6 +37,7 @@ struct AddPersonView: View {
                             displayedComponents: .date
                         )
                         .datePickerStyle(.compact)
+                        .accessibilityIdentifier("dateOfBirthPicker")
                     }
 
                     TextField("Notes (optional)", text: $notes, axis: .vertical)
