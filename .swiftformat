@@ -58,7 +58,6 @@
 --enable sortImports  # Was sortedImports (deprecated)
 --enable sortSwitchCases  # Was sortedSwitchCases (deprecated)
 --enable trailingCommas
---enable wrapMultilineStatementBraces
 --enable redundantType
 --enable strongifiedSelf
 --enable redundantObjc
@@ -68,3 +67,4 @@
 --disable redundantNilInit  # Explicit nil initialization OK in crypto code
 --disable redundantOptionalBinding  # Explicit checks OK in crypto code
 --disable redundantSelf  # Swift 6 concurrency requires explicit self in closures
+--disable wrapMultilineStatementBraces  # SwiftLint requires braces on same line

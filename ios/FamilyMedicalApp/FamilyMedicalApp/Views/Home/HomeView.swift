@@ -53,10 +53,11 @@ struct HomeView: View {
                     .scaleEffect(1.5)
             }
         }
-        .alert("Error", isPresented: .constant(viewModel.errorMessage != nil)) {
-            Button("OK") {
-                viewModel.errorMessage = nil
-            }
+        .alert("Error", isPresented: Binding(
+            get: { viewModel.errorMessage != nil },
+            set: { if !$0 { viewModel.errorMessage = nil } }
+        )) {
+            Button("OK", role: .cancel) {}
         } message: {
             if let errorMessage = viewModel.errorMessage {
                 Text(errorMessage)

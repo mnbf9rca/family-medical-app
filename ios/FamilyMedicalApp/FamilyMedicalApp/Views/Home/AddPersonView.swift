@@ -16,6 +16,9 @@ struct AddPersonView: View {
     @State private var showValidationError = false
     @State private var validationErrorMessage = ""
 
+    // Track person being created to avoid race conditions
+    @State private var creatingPersonId: UUID?
+
     var body: some View {
         NavigationStack {
             Form {
@@ -67,9 +70,12 @@ struct AddPersonView: View {
             } message: {
                 Text(validationErrorMessage)
             }
-            .onChange(of: viewModel.persons.count) { oldCount, newCount in
-                if newCount > oldCount, !viewModel.isLoading {
-                    // Success - new person added, dismiss the sheet
+            .onChange(of: viewModel.persons) { _, newPersons in
+                // Check if the person we created is now in the list
+                if let creatingId = creatingPersonId,
+                   newPersons.contains(where: { $0.id == creatingId }),
+                   !viewModel.isLoading {
+                    // Success - our person was added, dismiss the sheet
                     dismiss()
                 }
             }
@@ -85,8 +91,8 @@ struct AddPersonView: View {
             return
         }
 
-        guard trimmedName.count <= 100 else {
-            validationErrorMessage = "Name must be 100 characters or less"
+        guard trimmedName.count <= Person.nameMaxLength else {
+            validationErrorMessage = "Name must be \(Person.nameMaxLength) characters or less"
             showValidationError = true
             return
         }
@@ -101,6 +107,7 @@ struct AddPersonView: View {
                 notes: notes.isEmpty ? nil : notes
             )
 
+            creatingPersonId = person.id
             Task {
                 await viewModel.createPerson(person)
             }
@@ -108,6 +115,7 @@ struct AddPersonView: View {
             validationErrorMessage = "Unable to save this member. Please try again."
             LoggingService.shared.logger(category: .ui).logError(error, context: "AddPersonView.savePerson")
             showValidationError = true
+            creatingPersonId = nil
         }
     }
 }
