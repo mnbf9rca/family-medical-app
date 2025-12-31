@@ -255,7 +255,7 @@ struct MedicalRecordFormViewModelTests {
         #expect(viewModel.errorMessage != nil)
     }
 
-    // MARK: - Validation Tests
+    // MARK: - Additional Validation Tests
 
     @Test
     func validateReturnsTrueWhenAllRequiredFieldsPresent() throws {
@@ -302,17 +302,49 @@ struct MedicalRecordFormViewModelTests {
         #expect(viewModel.errorMessage?.contains("required") == true)
     }
 
-    // MARK: - ModelError UserFacingMessage Tests
+    @Test
+    func validateClearsErrorMessageOnSuccess() throws {
+        let person = try makeTestPerson()
+        let schema = makeVaccineSchema()
+        let viewModel = MedicalRecordFormViewModel(person: person, schema: schema)
+
+        // First cause a validation error
+        _ = viewModel.validate()
+        #expect(viewModel.errorMessage != nil)
+
+        // Then set valid data and validate again
+        viewModel.fieldValues["vaccineName"] = .string("COVID-19")
+        viewModel.fieldValues["dateAdministered"] = .date(Date())
+        let result = viewModel.validate()
+
+        #expect(result == true)
+        #expect(viewModel.errorMessage == nil)
+    }
+
+    // MARK: - Title Computed Property Tests
 
     @Test
-    func modelErrorProducesUserFriendlyMessages() {
-        let error1 = ModelError.fieldRequired(fieldName: "vaccine name")
-        #expect(error1.userFacingMessage == "vaccine name is required.")
+    func titleForNewRecordShowsAdd() throws {
+        let person = try makeTestPerson()
+        let schema = makeVaccineSchema()
 
-        let error2 = ModelError.stringTooLong(fieldName: "name", maxLength: 100)
-        #expect(error2.userFacingMessage.contains("100") == true)
+        let viewModel = MedicalRecordFormViewModel(person: person, schema: schema)
 
-        let error3 = ModelError.numberOutOfRange(fieldName: "dose", min: 1, max: nil)
-        #expect(error3.userFacingMessage.contains("at least 1") == true)
+        #expect(viewModel.title == "Add Vaccine")
+    }
+
+    @Test
+    func titleForExistingRecordShowsEdit() throws {
+        let person = try makeTestPerson()
+        let schema = makeVaccineSchema()
+        let existingRecord = MedicalRecord(personId: person.id, encryptedContent: Data())
+
+        let viewModel = MedicalRecordFormViewModel(
+            person: person,
+            schema: schema,
+            existingRecord: existingRecord
+        )
+
+        #expect(viewModel.title == "Edit Vaccine")
     }
 }

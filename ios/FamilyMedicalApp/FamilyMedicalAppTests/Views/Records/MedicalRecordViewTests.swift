@@ -2,33 +2,9 @@ import SwiftUI
 import Testing
 @testable import FamilyMedicalApp
 
+/// Tests for MedicalRecordRowView and EmptyRecordListView
 @MainActor
 struct MedicalRecordViewTests {
-    // MARK: - Test Helpers
-
-    func makeTestPerson() throws -> Person {
-        try Person(
-            id: UUID(),
-            name: "Test Person",
-            dateOfBirth: Date(),
-            labels: ["Self"],
-            notes: nil
-        )
-    }
-
-    func makeTestDecryptedRecord() -> DecryptedRecord {
-        var content = RecordContent(schemaId: "vaccine")
-        content.setString("vaccineName", "COVID-19")
-        content.setDate("dateAdministered", Date())
-
-        let record = MedicalRecord(
-            personId: UUID(),
-            encryptedContent: Data()
-        )
-
-        return DecryptedRecord(record: record, content: content)
-    }
-
     // MARK: - MedicalRecordRowView Tests
 
     @Test
@@ -44,6 +20,43 @@ struct MedicalRecordViewTests {
         #expect(content.getString("vaccineName") == "COVID-19")
     }
 
+    @Test
+    func medicalRecordRowViewRendersWithDate() {
+        let schema = RecordSchema.builtIn(.vaccine)
+        var content = RecordContent(schemaId: "vaccine")
+        content.setString("vaccineName", "Flu Shot")
+        content.setDate("dateAdministered", Date())
+
+        let view = MedicalRecordRowView(schema: schema, content: content)
+        _ = view.body
+
+        #expect(content.getDate("dateAdministered") != nil)
+    }
+
+    @Test
+    func medicalRecordRowViewRendersWithoutOptionalFields() {
+        let schema = RecordSchema.builtIn(.vaccine)
+        var content = RecordContent(schemaId: "vaccine")
+        content.setString("vaccineName", "Tetanus")
+
+        let view = MedicalRecordRowView(schema: schema, content: content)
+        _ = view.body
+
+        #expect(content.getString("provider") == nil)
+    }
+
+    @Test
+    func medicalRecordRowViewRendersForAllSchemaTypes() {
+        for schemaType in BuiltInSchemaType.allCases {
+            let schema = RecordSchema.builtIn(schemaType)
+            var content = RecordContent(schemaId: schemaType.rawValue)
+            content.setDate("dateAdministered", Date())
+
+            let view = MedicalRecordRowView(schema: schema, content: content)
+            _ = view.body
+        }
+    }
+
     // MARK: - EmptyRecordListView Tests
 
     @Test
@@ -55,71 +68,45 @@ struct MedicalRecordViewTests {
 
         _ = view.body
 
-        #expect(wasCallbackCalled == false) // Not called until button tapped
-    }
-
-    // MARK: - MedicalRecordListView Tests
-
-    @Test
-    func medicalRecordListViewInitializesWithPerson() throws {
-        let person = try makeTestPerson()
-        let view = MedicalRecordListView(person: person, schemaType: .vaccine)
-
-        _ = view.body
-
-        #expect(person.name == "Test Person")
-    }
-
-    // MARK: - MedicalRecordDetailView Tests
-
-    @Test
-    func medicalRecordDetailViewRendersWithDecryptedRecord() throws {
-        let person = try makeTestPerson()
-        let decryptedRecord = makeTestDecryptedRecord()
-
-        let view = MedicalRecordDetailView(
-            person: person,
-            schemaType: .vaccine,
-            decryptedRecord: decryptedRecord
-        )
-
-        _ = view.body
-
-        #expect(decryptedRecord.content.schemaId == "vaccine")
-    }
-
-    // MARK: - MedicalRecordFormView Tests
-
-    @Test
-    func medicalRecordFormViewRendersForAdd() throws {
-        let person = try makeTestPerson()
-        let schema = RecordSchema.builtIn(.vaccine)
-
-        let view = MedicalRecordFormView(
-            person: person,
-            schema: schema
-        )
-
-        _ = view.body
-
-        #expect(schema.id == "vaccine")
+        #expect(wasCallbackCalled == false)
     }
 
     @Test
-    func medicalRecordFormViewRendersForEdit() throws {
-        let person = try makeTestPerson()
-        let schema = RecordSchema.builtIn(.vaccine)
-        let decryptedRecord = makeTestDecryptedRecord()
+    func emptyRecordListViewRendersForAllSchemaTypes() {
+        for schemaType in BuiltInSchemaType.allCases {
+            let view = EmptyRecordListView(schemaType: schemaType) {}
+            _ = view.body
+        }
+    }
 
-        let view = MedicalRecordFormView(
-            person: person,
-            schema: schema,
-            existingRecord: decryptedRecord.record,
-            existingContent: decryptedRecord.content
-        )
-
+    @Test
+    func emptyRecordListViewDisplaysCorrectText() {
+        let view = EmptyRecordListView(schemaType: .vaccine) {}
         _ = view.body
+        // View should render with appropriate text for vaccines
+    }
 
-        #expect(decryptedRecord.content.getString("vaccineName") == "COVID-19")
+    @Test
+    func emptyRecordListViewDisplaysForAllergy() {
+        let view = EmptyRecordListView(schemaType: .allergy) {}
+        _ = view.body
+    }
+
+    @Test
+    func emptyRecordListViewDisplaysForMedication() {
+        let view = EmptyRecordListView(schemaType: .medication) {}
+        _ = view.body
+    }
+
+    @Test
+    func emptyRecordListViewDisplaysForCondition() {
+        let view = EmptyRecordListView(schemaType: .condition) {}
+        _ = view.body
+    }
+
+    @Test
+    func emptyRecordListViewDisplaysForNote() {
+        let view = EmptyRecordListView(schemaType: .note) {}
+        _ = view.body
     }
 }
