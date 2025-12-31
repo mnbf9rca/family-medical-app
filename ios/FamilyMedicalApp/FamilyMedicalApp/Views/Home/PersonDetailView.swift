@@ -32,11 +32,7 @@ struct PersonDetailView: View {
         .navigationTitle(person.name)
         .navigationBarTitleDisplayMode(.large)
         .navigationDestination(for: BuiltInSchemaType.self) { schemaType in
-            // Placeholder for record list view (Issue #9)
-            PlaceholderRecordListView(
-                personName: person.name,
-                schemaType: schemaType
-            )
+            MedicalRecordListView(person: person, schemaType: schemaType)
         }
         .alert("Error", isPresented: Binding(
             get: { viewModel.errorMessage != nil },
@@ -54,22 +50,6 @@ struct PersonDetailView: View {
         .refreshable {
             await viewModel.loadRecordCounts()
         }
-    }
-}
-
-/// Placeholder view for record list (to be implemented in Issue #9)
-private struct PlaceholderRecordListView: View {
-    let personName: String
-    let schemaType: BuiltInSchemaType
-
-    var body: some View {
-        ContentUnavailableView {
-            Label("\(schemaType.displayName) Records", systemImage: schemaType.iconSystemName)
-        } description: {
-            Text("Record list view will be implemented in Issue #9")
-        }
-        .navigationTitle("\(personName)'s \(schemaType.displayName)")
-        .navigationBarTitleDisplayMode(.inline)
     }
 }
 
