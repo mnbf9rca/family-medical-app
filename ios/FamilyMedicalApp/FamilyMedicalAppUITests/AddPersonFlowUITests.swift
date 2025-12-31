@@ -52,16 +52,34 @@ final class AddPersonFlowUITests: XCTestCase {
             }
         }
 
-        // Navigate back to home view if not already there
+        // Ensure we're on home view with clean state
         // Access sharedApp directly to avoid capturing self in MainActor.assumeIsolated
         MainActor.assumeIsolated {
-            let navTitle = Self.sharedApp.navigationBars["Members"]
-            if !navTitle.exists {
-                // Dismiss any open sheets
-                if Self.sharedApp.buttons["Cancel"].exists {
-                    Self.sharedApp.buttons["Cancel"].tap()
+            // First dismiss any alerts (they block other UI)
+            let alert = Self.sharedApp.alerts.firstMatch
+            if alert.waitForExistence(timeout: 1) {
+                // Tap OK or any dismiss button
+                for buttonLabel in ["OK", "Cancel", "Dismiss"] {
+                    if alert.buttons[buttonLabel].exists {
+                        alert.buttons[buttonLabel].tap()
+                        break
+                    }
                 }
+                // Wait for alert dismissal
+                _ = alert.waitForNonExistence(timeout: 2)
             }
+
+            // Then dismiss any open sheets
+            let cancelButton = Self.sharedApp.buttons["Cancel"]
+            if cancelButton.waitForExistence(timeout: 1) {
+                cancelButton.tap()
+                // Wait for sheet dismissal animation
+                _ = cancelButton.waitForNonExistence(timeout: 2)
+            }
+
+            // Verify we're on home view
+            let navTitle = Self.sharedApp.navigationBars["Members"]
+            XCTAssertTrue(navTitle.waitForExistence(timeout: 3), "Should be on Members view after cleanup")
         }
     }
 
