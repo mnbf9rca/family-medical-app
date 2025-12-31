@@ -239,7 +239,7 @@ extension XCUIApplication {
         saveButton.tap()
 
         // Wait for sheet to dismiss (person should appear in list)
-        XCTAssertFalse(navTitle.waitForExistence(timeout: 1), "Sheet should dismiss after save")
+        XCTAssertTrue(navTitle.waitForNonExistence(timeout: 3), "Sheet should dismiss after save")
     }
 
     /// Verify a person appears in the home list
