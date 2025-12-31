@@ -58,6 +58,12 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# Validate --limit is a non-negative integer
+if ! [[ "$LIMIT" =~ ^[0-9]+$ ]]; then
+    echo "Error: --limit must be a non-negative integer, got: $LIMIT"
+    exit 1
+fi
+
 # Apply default destination if not set
 DESTINATION="${DESTINATION:-platform=iOS Simulator,name=iPhone 17,OS=26.2}"
 
@@ -127,7 +133,7 @@ if [[ "$RESULTS_ONLY" == "true" ]]; then
     # Check if xcresult exists (indicates tests ran, even if some failed)
     if [[ ! -d "test-results/TestResults.xcresult" ]]; then
         # Build failed before tests could run
-        echo -e "${RED}${BOLD}BUILD FAILED${NC}"
+        echo "${RED}${BOLD}BUILD FAILED${NC}"
         cat "$TEMP_OUTPUT"
         rm -f "$TEMP_OUTPUT"
         exit 2
@@ -140,7 +146,7 @@ else
     # Check if xcresult exists (indicates tests ran, even if some failed)
     if [[ ! -d "test-results/TestResults.xcresult" ]]; then
         # Build failed before tests could run
-        echo -e "${RED}${BOLD}BUILD FAILED${NC}"
+        echo "${RED}${BOLD}BUILD FAILED${NC}"
         exit 2
     fi
 fi
@@ -148,22 +154,24 @@ echo "✅ Tests completed"
 
 # Parse and display test summary
 echo ""
-echo -e "${BOLD}Test Results${NC}"
+echo "${BOLD}Test Results${NC}"
 echo "============================================================"
 
 # Get test counts from summary - save to temp file
 TEMP_SUMMARY=$(mktemp)
+TEMP_LEGACY=$(mktemp)
+
+# Ensure temp files are cleaned up on exit (even if script fails)
+trap 'rm -f "$TEMP_SUMMARY" "$TEMP_LEGACY"' EXIT
+
 if ! xcrun xcresulttool get test-results summary --path test-results/TestResults.xcresult --compact > "$TEMP_SUMMARY" 2>&1; then
-    echo -e "${RED}${BOLD}ERROR: Failed to extract test summary${NC}"
-    rm -f "$TEMP_SUMMARY"
+    echo "${RED}${BOLD}ERROR: Failed to extract test summary${NC}"
     exit 2
 fi
 
 # Get failure details from legacy format - save to temp file
-TEMP_LEGACY=$(mktemp)
 if ! xcrun xcresulttool get --path test-results/TestResults.xcresult --format json --legacy > "$TEMP_LEGACY" 2>&1; then
-    echo -e "${RED}${BOLD}ERROR: Failed to extract test details${NC}"
-    rm -f "$TEMP_SUMMARY" "$TEMP_LEGACY"
+    echo "${RED}${BOLD}ERROR: Failed to extract test details${NC}"
     exit 2
 fi
 
@@ -188,8 +196,19 @@ TEMP_SUMMARY = os.environ.get('TEMP_SUMMARY', '')
 TEMP_LEGACY = os.environ.get('TEMP_LEGACY', '')
 
 # Read summary JSON from temp file
-with open(TEMP_SUMMARY, 'r') as f:
-    summary = json.load(f)
+try:
+    with open(TEMP_SUMMARY, 'r') as f:
+        summary = json.load(f)
+except (IOError, OSError) as e:
+    print(f"{RED}{BOLD}ERROR: Failed to read test summary file{NC}", file=sys.stderr)
+    print(f"  File: {TEMP_SUMMARY}", file=sys.stderr)
+    print(f"  Error: {e}", file=sys.stderr)
+    sys.exit(2)
+except json.JSONDecodeError as e:
+    print(f"{RED}{BOLD}ERROR: Failed to parse test summary JSON{NC}", file=sys.stderr)
+    print(f"  File: {TEMP_SUMMARY}", file=sys.stderr)
+    print(f"  Error: {e}", file=sys.stderr)
+    sys.exit(2)
 
 total = summary.get('totalTestCount', 0)
 passed = summary.get('passedTests', 0)
@@ -206,48 +225,64 @@ if skipped > 0:
     print(f"{YELLOW}⏭️  {skipped} tests skipped{NC}")
 
 # Read legacy format from temp file
-with open(TEMP_LEGACY, 'r') as f:
-    legacy = json.load(f)
+try:
+    with open(TEMP_LEGACY, 'r') as f:
+        legacy = json.load(f)
+except (IOError, OSError) as e:
+    print(f"{RED}{BOLD}ERROR: Failed to read test details file{NC}", file=sys.stderr)
+    print(f"  File: {TEMP_LEGACY}", file=sys.stderr)
+    print(f"  Error: {e}", file=sys.stderr)
+    sys.exit(2)
+except json.JSONDecodeError as e:
+    print(f"{RED}{BOLD}ERROR: Failed to parse test details JSON{NC}", file=sys.stderr)
+    print(f"  File: {TEMP_LEGACY}", file=sys.stderr)
+    print(f"  Error: {e}", file=sys.stderr)
+    sys.exit(2)
 
 # Navigate to test failure summaries
 failures_with_location = []
-actions = legacy.get('actions', {}).get('_values', [])
-for action in actions:
-    result = action.get('actionResult', {})
-    issues = result.get('issues', {})
-    test_failures = issues.get('testFailureSummaries', {}).get('_values', [])
+try:
+    actions = legacy.get('actions', {}).get('_values', [])
+    for action in actions:
+        result = action.get('actionResult', {})
+        issues = result.get('issues', {})
+        test_failures = issues.get('testFailureSummaries', {}).get('_values', [])
 
-    for failure in test_failures:
-        test_name = failure.get('testCaseName', {}).get('_value', 'unknown')
-        message = failure.get('message', {}).get('_value', '')
-        doc_loc = failure.get('documentLocationInCreatingWorkspace', {})
-        url = doc_loc.get('url', {}).get('_value', '')
+        for failure in test_failures:
+            test_name = failure.get('testCaseName', {}).get('_value', 'unknown')
+            message = failure.get('message', {}).get('_value', '')
+            doc_loc = failure.get('documentLocationInCreatingWorkspace', {})
+            url = doc_loc.get('url', {}).get('_value', '')
 
-        # Parse the URL to extract file and line
-        file_name = ''
-        line_num = ''
-        if url:
-            # Extract file path (use raw string to avoid escape warnings)
-            path_match = re.search(r'file://(.+?)#', url)
-            if path_match:
-                file_path = path_match.group(1)
-                file_name = file_path.split('/')[-1]
+            # Parse the URL to extract file and line
+            file_name = ''
+            line_num = ''
+            if url:
+                # Extract file path (use raw string to avoid escape warnings)
+                path_match = re.search(r'^file://([^#]+)', url)
+                if path_match:
+                    file_path = path_match.group(1)
+                    file_name = file_path.split('/')[-1]
 
-            # Extract line number
-            line_match = re.search(r'StartingLineNumber=(\d+)', url)
-            if line_match:
-                line_num = line_match.group(1)
+                # Extract line number
+                line_match = re.search(r'StartingLineNumber=(\d+)', url)
+                if line_match:
+                    line_num = line_match.group(1)
 
-        location = f"{file_name}:{line_num}" if file_name and line_num else "unknown location"
+            location = f"{file_name}:{line_num}" if file_name and line_num else "unknown location"
 
-        # Extract just the test method name (remove class prefix if present)
-        method_name = test_name.split('.')[-1] if '.' in test_name else test_name
+            # Extract just the test method name (remove class prefix if present)
+            method_name = test_name.split('.')[-1] if '.' in test_name else test_name
 
-        failures_with_location.append({
-            'method': method_name,
-            'location': location,
-            'message': message
-        })
+            failures_with_location.append({
+                'method': method_name,
+                'location': location,
+                'message': message
+            })
+except (KeyError, AttributeError, TypeError) as e:
+    print(f"{YELLOW}⚠️  Warning: Failed to parse some failure details (JSON structure unexpected){NC}", file=sys.stderr)
+    print(f"  Error: {e}", file=sys.stderr)
+    # Continue with whatever failures we managed to parse
 
 # Display failed tests
 if failures_with_location:
@@ -283,8 +318,5 @@ PYEOF
 
 SUMMARY_EXIT=$?
 
-# Clean up temp files
-rm -f "$TEMP_SUMMARY" "$TEMP_LEGACY"
-
-# Return the summary exit code
+# Return the summary exit code (temp files cleaned by trap)
 exit $SUMMARY_EXIT
