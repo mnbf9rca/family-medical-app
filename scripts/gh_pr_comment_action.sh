@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 #
+# **IMPORTANT** Do not add escapted characters to response_text argument
+#
 # gh_pr_comment_action.sh
 # Wrapper script for GitHub CLI to manage PR review comments and threads
 #
@@ -13,6 +15,7 @@
 #                         - Thread node ID (e.g., PRRT_kwDOQNO0Es5jvUvj)
 #                         - Comment node ID (e.g., PRRC_kwDOQNO0Es6Y_JfW)
 #   response_text       - Response text (required)
+#                       **IMPORTANT** Do not add escapted characters to response_text argument
 #
 # Behavior:
 #   Posts a reply to the comment/thread, then marks the review thread as resolved
@@ -340,7 +343,8 @@ Arguments:
                  - Numeric comment database ID (e.g., 2566690774)
                  - Thread node ID (e.g., PRRT_kwDOQNO0Es5jvUvj)
                  - Comment node ID (e.g., PRRC_kwDOQNO0Es6Y_JfW)
-  response_text  Response text (required)
+  response_text  Response text (required). Keep comments simple.
+                 **IMPORTANT** Do not add escaped characters to response_text argument
 
 Behavior:
   Posts a reply to the comment/thread, then marks the review thread as resolved
@@ -366,6 +370,11 @@ EOF
 
 # Main function
 main() {
+    # Check for help flag
+    if [[ $# -eq 1 ]] && [[ "$1" == "--help" || "$1" == "-h" ]]; then
+        usage
+    fi
+
     # Parse arguments
     if [[ $# -lt 3 ]]; then
         usage

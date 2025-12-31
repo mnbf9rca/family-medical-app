@@ -79,9 +79,6 @@ jobs:
           xcodebuild -version
           swift --version
 
-      - name: Install xcpretty
-        run: gem install xcpretty
-
       - name: Generate cache key
         id: cache-key
         run: echo "key=$(echo '${{ matrix.destination }}' | shasum -a 256 | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
@@ -103,8 +100,7 @@ jobs:
             -scheme FamilyMedicalApp \
             -destination "${{ matrix.destination }}" \
             CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            | xcpretty
+            CODE_SIGNING_REQUIRED=NO
 
       - name: Save DerivedData cache
         uses: actions/cache/save@v4
@@ -126,7 +122,7 @@ jobs:
       - name: Run Unit Tests
         env:
           DESTINATION: ${{ matrix.destination }}
-        run: ./scripts/run-tests.sh "$DESTINATION" | xcpretty
+        run: ./scripts/run-tests.sh --destination "$DESTINATION"
 
       - name: Generate code coverage report
         if: matrix.destination == 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.2'
