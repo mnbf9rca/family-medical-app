@@ -106,7 +106,7 @@ struct AttachmentRepositoryTests {
 
     @Test
     func fetch_existingAttachment_returnsDecrypted() async throws {
-        let repo = makeRepository()
+        _ = makeRepository()
         let attachment = try makeTestAttachment()
 
         // Store FMK first

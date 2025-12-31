@@ -4,7 +4,7 @@ import Foundation
 ///
 /// Represents a person whose medical records are being tracked.
 /// Note: When stored, name, dateOfBirth, and labels are encrypted with the person's Family Member Key (FMK).
-struct Person: Codable, Equatable, Identifiable {
+struct Person: Codable, Equatable, Hashable, Identifiable {
     // MARK: - Validation Constants
 
     static let nameMinLength = 1

@@ -81,4 +81,72 @@ final class CoreDataStack: CoreDataStackProtocol, @unchecked Sendable {
             }
         }
     }
+
+    // MARK: - Testing Support
+
+    /// Delete all data from Core Data (for testing only)
+    /// - Throws: Error if deletion fails
+    func deleteAllData() async throws {
+        try await performBackgroundTask { context in
+            // Get all entity names from the model
+            guard let entities = self.container.managedObjectModel.entities.compactMap(\.name) as [String]? else {
+                return
+            }
+
+            // Delete all objects for each entity
+            for entityName in entities {
+                let fetchRequest = NSFetchRequest<NSFetchRequestResult>(entityName: entityName)
+                let deleteRequest = NSBatchDeleteRequest(fetchRequest: fetchRequest)
+                try context.execute(deleteRequest)
+            }
+
+            // Save changes
+            try context.save()
+
+            // Reset contexts
+            context.reset()
+        }
+
+        // Also reset view context on main thread
+        await MainActor.run {
+            viewContext.reset()
+        }
+    }
+
+    /// Synchronously delete all data from Core Data (for testing only, called from app init)
+    /// - Throws: Error if deletion fails
+    func deleteAllDataSync() throws {
+        let context = container.newBackgroundContext()
+
+        var thrownError: Error?
+
+        context.performAndWait {
+            do {
+                // Get all entity names from the model
+                guard let entities = container.managedObjectModel.entities.compactMap(\.name) as [String]? else {
+                    return
+                }
+
+                // Delete all objects for each entity
+                for entityName in entities {
+                    let fetchRequest = NSFetchRequest<NSFetchRequestResult>(entityName: entityName)
+                    let deleteRequest = NSBatchDeleteRequest(fetchRequest: fetchRequest)
+                    try context.execute(deleteRequest)
+                }
+
+                // Save changes
+                try context.save()
+
+                // Reset contexts
+                context.reset()
+                viewContext.reset()
+            } catch {
+                thrownError = error
+            }
+        }
+
+        if let error = thrownError {
+            throw error
+        }
+    }
 }

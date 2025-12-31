@@ -10,6 +10,7 @@
   ],
   "defaultOptions" : {
     "codeCoverage" : true,
+    "preferredScreenCaptureFormat" : "screenshot",
     "testTimeoutsEnabled" : true
   },
   "testTargets" : [

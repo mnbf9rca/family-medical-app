@@ -19,6 +19,20 @@ echo "Running tests with destination: $DESTINATION"
 # Clean previous test results
 rm -rf test-results* DerivedData/TestResults.xcresult
 
+# Configure simulator for UI testing
+# Disable hardware keyboard to prevent password autofill prompts from blocking XCUITest automation
+echo "Configuring simulator for UI testing..."
+UDID=$(defaults read com.apple.iphonesimulator CurrentDeviceUDID 2>/dev/null || echo "")
+if [ -n "$UDID" ]; then
+  /usr/libexec/PlistBuddy -c "Set :DevicePreferences:$UDID:ConnectHardwareKeyboard false" \
+    ~/Library/Preferences/com.apple.iphonesimulator.plist 2>/dev/null || \
+  /usr/libexec/PlistBuddy -c "Add :DevicePreferences:$UDID:ConnectHardwareKeyboard bool false" \
+    ~/Library/Preferences/com.apple.iphonesimulator.plist
+  echo "  ✓ Hardware keyboard disabled for simulator $UDID"
+else
+  echo "  ⚠ Could not determine simulator UDID, hardware keyboard setting not changed"
+fi
+
 # Run tests
 xcodebuild test \
   -project FamilyMedicalApp.xcodeproj \
