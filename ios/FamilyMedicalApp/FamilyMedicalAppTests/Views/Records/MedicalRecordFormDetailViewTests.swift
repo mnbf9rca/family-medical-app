@@ -141,6 +141,58 @@ struct MedicalRecordFormDetailViewTests {
         // Should handle gracefully with "Untitled" fallback
     }
 
+    @Test
+    func medicalRecordDetailViewRendersWithCallbacks() throws {
+        let person = try makeTestPerson()
+        var content = RecordContent(schemaId: "vaccine")
+        content.setString("vaccineName", "Test Vaccine")
+        content.setDate("dateAdministered", Date())
+
+        let record = MedicalRecord(personId: person.id, encryptedContent: Data())
+        let decryptedRecord = DecryptedRecord(record: record, content: content)
+
+        var deleteCallbackProvided = false
+        var updateCallbackProvided = false
+
+        let view = MedicalRecordDetailView(
+            person: person,
+            schemaType: .vaccine,
+            decryptedRecord: decryptedRecord,
+            onDelete: {
+                deleteCallbackProvided = true
+            },
+            onRecordUpdated: {
+                updateCallbackProvided = true
+            }
+        )
+
+        _ = view.body
+
+        // Callbacks are provided but not triggered during render
+        #expect(deleteCallbackProvided == false)
+        #expect(updateCallbackProvided == false)
+    }
+
+    @Test
+    func medicalRecordDetailViewRendersWithoutCallbacks() throws {
+        let person = try makeTestPerson()
+        var content = RecordContent(schemaId: "vaccine")
+        content.setString("vaccineName", "Test Vaccine")
+        content.setDate("dateAdministered", Date())
+
+        let record = MedicalRecord(personId: person.id, encryptedContent: Data())
+        let decryptedRecord = DecryptedRecord(record: record, content: content)
+
+        // View should render without callbacks (nil defaults)
+        let view = MedicalRecordDetailView(
+            person: person,
+            schemaType: .vaccine,
+            decryptedRecord: decryptedRecord
+        )
+
+        _ = view.body
+    }
+
     // MARK: - MedicalRecordFormView Tests (using generic schema)
 
     @Test

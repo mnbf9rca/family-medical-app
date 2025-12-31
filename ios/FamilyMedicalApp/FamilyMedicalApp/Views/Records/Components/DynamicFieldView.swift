@@ -78,6 +78,7 @@ struct DynamicFieldView: View {
                 .textFieldStyle(.roundedBorder)
                 .lineLimit(3 ... 6)
                 .focused($isFocused)
+                .accessibilityIdentifier(field.displayName)
             } else {
                 TextField(
                     field.placeholder ?? "",
@@ -88,6 +89,7 @@ struct DynamicFieldView: View {
                     field.id.contains("name") ? .words : .sentences
                 )
                 .focused($isFocused)
+                .accessibilityIdentifier(field.displayName)
             }
         }
     }
@@ -101,6 +103,7 @@ struct DynamicFieldView: View {
         .textFieldStyle(.roundedBorder)
         .keyboardType(.numberPad)
         .focused($isFocused)
+        .accessibilityIdentifier(field.displayName)
     }
 
     private var doubleInputView: some View {
@@ -112,11 +115,13 @@ struct DynamicFieldView: View {
         .textFieldStyle(.roundedBorder)
         .keyboardType(.decimalPad)
         .focused($isFocused)
+        .accessibilityIdentifier(field.displayName)
     }
 
     private var boolInputView: some View {
         Toggle(field.displayName, isOn: boolBinding)
             .toggleStyle(.switch)
+            .accessibilityIdentifier(field.displayName)
     }
 
     private var dateInputView: some View {
@@ -127,6 +132,7 @@ struct DynamicFieldView: View {
         )
         .datePickerStyle(.compact)
         .labelsHidden()
+        .accessibilityIdentifier(field.displayName)
     }
 
     private var attachmentPlaceholderView: some View {
@@ -139,6 +145,7 @@ struct DynamicFieldView: View {
             }
             .foregroundStyle(.secondary)
         }
+        .accessibilityIdentifier(field.displayName)
     }
 
     private var stringArrayInputView: some View {
@@ -148,6 +155,7 @@ struct DynamicFieldView: View {
         )
         .textFieldStyle(.roundedBorder)
         .focused($isFocused)
+        .accessibilityIdentifier(field.displayName)
     }
 
     // MARK: - Bindings

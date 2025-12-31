@@ -8,10 +8,17 @@ struct MedicalRecordDetailView: View {
     let schemaType: BuiltInSchemaType
     let decryptedRecord: DecryptedRecord
 
+    /// Callback invoked when the record is deleted
+    var onDelete: (() async -> Void)?
+
+    /// Callback invoked when the record is updated (triggers refresh in parent)
+    var onRecordUpdated: (() -> Void)?
+
     @Environment(\.dismiss)
     private var dismiss
     @State private var showingEditForm = false
     @State private var showingDeleteConfirmation = false
+    @State private var isDeleting = false
 
     // MARK: - Body
 
@@ -69,17 +76,26 @@ struct MedicalRecordDetailView: View {
             isPresented: $showingDeleteConfirmation
         ) {
             Button("Delete", role: .destructive) {
-                // TODO: Implement delete from detail view
-                // For now, user must delete from list view
-                dismiss()
+                Task {
+                    isDeleting = true
+                    await onDelete?()
+                    isDeleting = false
+                    dismiss()
+                }
             }
         } message: {
             Text("Are you sure you want to delete this record?")
         }
+        .overlay {
+            if isDeleting {
+                ProgressView()
+            }
+        }
         .onChange(of: showingEditForm) { _, isShowing in
             if !isShowing {
-                // TODO: Refresh if record was updated
-                // For now, changes will be reflected when returning to list
+                // Notify parent to refresh, then dismiss since our data is stale
+                onRecordUpdated?()
+                dismiss()
             }
         }
     }

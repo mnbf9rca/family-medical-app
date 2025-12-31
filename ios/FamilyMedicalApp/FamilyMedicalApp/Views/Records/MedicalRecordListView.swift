@@ -52,7 +52,15 @@ struct MedicalRecordListView: View {
             MedicalRecordDetailView(
                 person: person,
                 schemaType: schemaType,
-                decryptedRecord: decryptedRecord
+                decryptedRecord: decryptedRecord,
+                onDelete: {
+                    await viewModel.deleteRecord(id: decryptedRecord.id)
+                },
+                onRecordUpdated: {
+                    Task {
+                        await viewModel.loadRecords()
+                    }
+                }
             )
         }
         .toolbar {
