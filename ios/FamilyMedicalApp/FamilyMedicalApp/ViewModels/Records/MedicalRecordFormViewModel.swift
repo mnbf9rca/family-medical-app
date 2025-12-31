@@ -64,9 +64,18 @@ final class MedicalRecordFormViewModel {
         self.schema = schema
         self.existingRecord = existingRecord
 
-        // Initialize field values from existing content if editing
+        // Initialize field values from existing content if editing,
+        // or pre-populate date fields with today's date for new records
         if let content = existingContent {
             self.fieldValues = content.allFields
+        } else {
+            // For new records, initialize date fields with today's date
+            // This ensures DatePicker's visual default matches the actual value
+            var initialValues: [String: FieldValue] = [:]
+            for field in schema.fields where field.fieldType == .date {
+                initialValues[field.id] = .date(Date())
+            }
+            self.fieldValues = initialValues
         }
 
         // Use optional parameter pattern per ADR-0008

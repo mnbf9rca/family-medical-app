@@ -3,46 +3,60 @@ import Testing
 @testable import FamilyMedicalApp
 
 /// Tests for MedicalRecordRowView and EmptyRecordListView
+/// MedicalRecordRowView tests use generic schema (ExampleSchema.comprehensiveExample).
+/// EmptyRecordListView requires BuiltInSchemaType, so those are integration tests.
 @MainActor
 struct MedicalRecordViewTests {
-    // MARK: - MedicalRecordRowView Tests
+    // MARK: - Test Helpers
+
+    /// Returns the comprehensive example schema that exercises all field types
+    var testSchema: RecordSchema { ExampleSchema.comprehensiveExample }
+
+    /// Schema ID for the comprehensive example schema
+    var testSchemaId: String { "comprehensive_example" }
+
+    /// Required string field ID in the comprehensive schema
+    var requiredStringFieldId: String { "exampleName" }
+
+    /// Required date field ID in the comprehensive schema
+    var requiredDateFieldId: String { "recordedDate" }
+
+    // MARK: - MedicalRecordRowView Tests (using generic schema)
 
     @Test
     func medicalRecordRowViewRendersWithContent() {
-        let schema = RecordSchema.builtIn(.vaccine)
-        var content = RecordContent(schemaId: "vaccine")
-        content.setString("vaccineName", "COVID-19")
+        var content = RecordContent(schemaId: testSchemaId)
+        content.setString(requiredStringFieldId, "Test Record")
 
-        let view = MedicalRecordRowView(schema: schema, content: content)
+        let view = MedicalRecordRowView(schema: testSchema, content: content)
 
         _ = view.body
 
-        #expect(content.getString("vaccineName") == "COVID-19")
+        #expect(content.getString(requiredStringFieldId) == "Test Record")
     }
 
     @Test
     func medicalRecordRowViewRendersWithDate() {
-        let schema = RecordSchema.builtIn(.vaccine)
-        var content = RecordContent(schemaId: "vaccine")
-        content.setString("vaccineName", "Flu Shot")
-        content.setDate("dateAdministered", Date())
+        var content = RecordContent(schemaId: testSchemaId)
+        content.setString(requiredStringFieldId, "Test Record")
+        content.setDate(requiredDateFieldId, Date())
 
-        let view = MedicalRecordRowView(schema: schema, content: content)
+        let view = MedicalRecordRowView(schema: testSchema, content: content)
         _ = view.body
 
-        #expect(content.getDate("dateAdministered") != nil)
+        #expect(content.getDate(requiredDateFieldId) != nil)
     }
 
     @Test
     func medicalRecordRowViewRendersWithoutOptionalFields() {
-        let schema = RecordSchema.builtIn(.vaccine)
-        var content = RecordContent(schemaId: "vaccine")
-        content.setString("vaccineName", "Tetanus")
+        var content = RecordContent(schemaId: testSchemaId)
+        content.setString(requiredStringFieldId, "Test Record")
 
-        let view = MedicalRecordRowView(schema: schema, content: content)
+        let view = MedicalRecordRowView(schema: testSchema, content: content)
         _ = view.body
 
-        #expect(content.getString("provider") == nil)
+        // Optional fields should be nil
+        #expect(content.getString("notes") == nil)
     }
 
     @Test
@@ -57,19 +71,8 @@ struct MedicalRecordViewTests {
         }
     }
 
-    // MARK: - EmptyRecordListView Tests
-
-    @Test
-    func emptyRecordListViewRendersForVaccine() {
-        var wasCallbackCalled = false
-        let view = EmptyRecordListView(schemaType: .vaccine) {
-            wasCallbackCalled = true
-        }
-
-        _ = view.body
-
-        #expect(wasCallbackCalled == false)
-    }
+    // MARK: - EmptyRecordListView Integration Tests
+    // Note: EmptyRecordListView requires BuiltInSchemaType, so these are integration tests
 
     @Test
     func emptyRecordListViewRendersForAllSchemaTypes() {
@@ -80,33 +83,14 @@ struct MedicalRecordViewTests {
     }
 
     @Test
-    func emptyRecordListViewDisplaysCorrectText() {
-        let view = EmptyRecordListView(schemaType: .vaccine) {}
-        _ = view.body
-        // View should render with appropriate text for vaccines
-    }
+    func emptyRecordListViewCallbackNotTriggeredOnRender() {
+        var wasCallbackCalled = false
+        let view = EmptyRecordListView(schemaType: .vaccine) {
+            wasCallbackCalled = true
+        }
 
-    @Test
-    func emptyRecordListViewDisplaysForAllergy() {
-        let view = EmptyRecordListView(schemaType: .allergy) {}
         _ = view.body
-    }
 
-    @Test
-    func emptyRecordListViewDisplaysForMedication() {
-        let view = EmptyRecordListView(schemaType: .medication) {}
-        _ = view.body
-    }
-
-    @Test
-    func emptyRecordListViewDisplaysForCondition() {
-        let view = EmptyRecordListView(schemaType: .condition) {}
-        _ = view.body
-    }
-
-    @Test
-    func emptyRecordListViewDisplaysForNote() {
-        let view = EmptyRecordListView(schemaType: .note) {}
-        _ = view.body
+        #expect(wasCallbackCalled == false)
     }
 }

@@ -3,10 +3,13 @@ import Foundation
 import Testing
 @testable import FamilyMedicalApp
 
+/// Tests for MedicalRecordFormViewModel using generic schema (ExampleSchema.comprehensiveExample)
+/// to validate ViewModel behavior independent of specific record types.
 @MainActor
 struct MedicalRecordFormViewModelTests {
     // MARK: - Test Helpers
 
+    /// Creates a test person for use in tests
     func makeTestPerson() throws -> Person {
         try Person(
             id: UUID(),
@@ -17,16 +20,26 @@ struct MedicalRecordFormViewModelTests {
         )
     }
 
-    func makeVaccineSchema() -> RecordSchema {
-        RecordSchema.builtIn(.vaccine)
+    /// Returns the comprehensive example schema that exercises all field types
+    func makeTestSchema() -> RecordSchema {
+        ExampleSchema.comprehensiveExample
     }
+
+    /// Schema ID for the comprehensive example schema
+    var testSchemaId: String { "comprehensive_example" }
+
+    /// Required string field ID in the comprehensive schema
+    var requiredStringFieldId: String { "exampleName" }
+
+    /// Required date field ID in the comprehensive schema
+    var requiredDateFieldId: String { "recordedDate" }
 
     // MARK: - Initialization Tests
 
     @Test
     func initializesForNewRecord() throws {
         let person = try makeTestPerson()
-        let schema = makeVaccineSchema()
+        let schema = makeTestSchema()
 
         let viewModel = MedicalRecordFormViewModel(
             person: person,
@@ -36,19 +49,39 @@ struct MedicalRecordFormViewModelTests {
         #expect(viewModel.person.id == person.id)
         #expect(viewModel.schema.id == schema.id)
         #expect(viewModel.existingRecord == nil)
-        #expect(viewModel.fieldValues.isEmpty)
         #expect(viewModel.isEditing == false)
         #expect(viewModel.didSaveSuccessfully == false)
     }
 
     @Test
+    func initializesDateFieldsWithTodayForNewRecord() throws {
+        let person = try makeTestPerson()
+        let schema = makeTestSchema()
+
+        let viewModel = MedicalRecordFormViewModel(
+            person: person,
+            schema: schema
+        )
+
+        // Date fields should be pre-initialized with today's date
+        let dateValue = viewModel.fieldValues[requiredDateFieldId]?.dateValue
+        #expect(dateValue != nil)
+
+        // Should be within the last second (essentially "now")
+        if let date = dateValue {
+            let timeDifference = abs(date.timeIntervalSinceNow)
+            #expect(timeDifference < 1.0)
+        }
+    }
+
+    @Test
     func initializesForEditWithExistingContent() throws {
         let person = try makeTestPerson()
-        let schema = makeVaccineSchema()
+        let schema = makeTestSchema()
 
-        var content = RecordContent(schemaId: "vaccine")
-        content.setString("vaccineName", "COVID-19")
-        content.setDate("dateAdministered", Date())
+        var content = RecordContent(schemaId: testSchemaId)
+        content.setString(requiredStringFieldId, "Test Value")
+        content.setDate(requiredDateFieldId, Date())
 
         let record = MedicalRecord(
             personId: person.id,
@@ -63,8 +96,8 @@ struct MedicalRecordFormViewModelTests {
         )
 
         #expect(viewModel.isEditing == true)
-        #expect(viewModel.fieldValues["vaccineName"]?.stringValue == "COVID-19")
-        #expect(viewModel.fieldValues["dateAdministered"]?.dateValue != nil)
+        #expect(viewModel.fieldValues[requiredStringFieldId]?.stringValue == "Test Value")
+        #expect(viewModel.fieldValues[requiredDateFieldId]?.dateValue != nil)
     }
 
     // MARK: - Validation Tests
@@ -72,7 +105,7 @@ struct MedicalRecordFormViewModelTests {
     @Test
     func validatePassesForValidData() throws {
         let person = try makeTestPerson()
-        let schema = makeVaccineSchema()
+        let schema = makeTestSchema()
 
         let viewModel = MedicalRecordFormViewModel(
             person: person,
@@ -80,8 +113,8 @@ struct MedicalRecordFormViewModelTests {
         )
 
         // Set required fields
-        viewModel.fieldValues["vaccineName"] = .string("COVID-19")
-        viewModel.fieldValues["dateAdministered"] = .date(Date())
+        viewModel.fieldValues[requiredStringFieldId] = .string("Test Value")
+        viewModel.fieldValues[requiredDateFieldId] = .date(Date())
 
         let result = viewModel.validate()
 
@@ -92,14 +125,14 @@ struct MedicalRecordFormViewModelTests {
     @Test
     func validateFailsForMissingRequiredField() throws {
         let person = try makeTestPerson()
-        let schema = makeVaccineSchema()
+        let schema = makeTestSchema()
 
         let viewModel = MedicalRecordFormViewModel(
             person: person,
             schema: schema
         )
 
-        // Missing required fields
+        // Missing required string field (date is pre-initialized)
         let result = viewModel.validate()
 
         #expect(result == false)
@@ -109,16 +142,16 @@ struct MedicalRecordFormViewModelTests {
     @Test
     func validateFailsForInvalidStringLength() throws {
         let person = try makeTestPerson()
-        let schema = makeVaccineSchema()
+        let schema = makeTestSchema()
 
         let viewModel = MedicalRecordFormViewModel(
             person: person,
             schema: schema
         )
 
-        // Set required fields
-        viewModel.fieldValues["vaccineName"] = .string("") // Empty string
-        viewModel.fieldValues["dateAdministered"] = .date(Date())
+        // Set required fields but with invalid string (empty violates minLength(1))
+        viewModel.fieldValues[requiredStringFieldId] = .string("")
+        viewModel.fieldValues[requiredDateFieldId] = .date(Date())
 
         let result = viewModel.validate()
 
@@ -131,7 +164,7 @@ struct MedicalRecordFormViewModelTests {
     @Test
     func saveCreatesNewRecordWhenNotEditing() async throws {
         let person = try makeTestPerson()
-        let schema = makeVaccineSchema()
+        let schema = makeTestSchema()
         let mockRepo = MockMedicalRecordRepository()
         let mockContentService = MockRecordContentService()
         let mockPrimaryKeyProvider = MockPrimaryKeyProvider()
@@ -150,8 +183,8 @@ struct MedicalRecordFormViewModelTests {
         )
 
         // Set valid data
-        viewModel.fieldValues["vaccineName"] = .string("COVID-19")
-        viewModel.fieldValues["dateAdministered"] = .date(Date())
+        viewModel.fieldValues[requiredStringFieldId] = .string("Test Value")
+        viewModel.fieldValues[requiredDateFieldId] = .date(Date())
 
         await viewModel.save()
 
@@ -163,7 +196,7 @@ struct MedicalRecordFormViewModelTests {
     @Test
     func saveUpdatesExistingRecordWhenEditing() async throws {
         let person = try makeTestPerson()
-        let schema = makeVaccineSchema()
+        let schema = makeTestSchema()
         let mockRepo = MockMedicalRecordRepository()
         let mockContentService = MockRecordContentService()
         let mockPrimaryKeyProvider = MockPrimaryKeyProvider()
@@ -179,9 +212,9 @@ struct MedicalRecordFormViewModelTests {
             version: 1
         )
 
-        var existingContent = RecordContent(schemaId: "vaccine")
-        existingContent.setString("vaccineName", "COVID-19")
-        existingContent.setDate("dateAdministered", Date())
+        var existingContent = RecordContent(schemaId: testSchemaId)
+        existingContent.setString(requiredStringFieldId, "Original Value")
+        existingContent.setDate(requiredDateFieldId, Date())
 
         let viewModel = MedicalRecordFormViewModel(
             person: person,
@@ -195,7 +228,7 @@ struct MedicalRecordFormViewModelTests {
         )
 
         // Modify data
-        viewModel.fieldValues["vaccineName"] = .string("COVID-19 Moderna")
+        viewModel.fieldValues[requiredStringFieldId] = .string("Updated Value")
 
         await viewModel.save()
 
@@ -206,7 +239,7 @@ struct MedicalRecordFormViewModelTests {
     @Test
     func saveFailsWhenValidationFails() async throws {
         let person = try makeTestPerson()
-        let schema = makeVaccineSchema()
+        let schema = makeTestSchema()
         let mockRepo = MockMedicalRecordRepository()
 
         let viewModel = MedicalRecordFormViewModel(
@@ -215,7 +248,7 @@ struct MedicalRecordFormViewModelTests {
             medicalRecordRepository: mockRepo
         )
 
-        // Missing required fields
+        // Missing required string field (date is pre-initialized)
         await viewModel.save()
 
         #expect(viewModel.didSaveSuccessfully == false)
@@ -226,7 +259,7 @@ struct MedicalRecordFormViewModelTests {
     @Test
     func saveSetsErrorWhenEncryptionFails() async throws {
         let person = try makeTestPerson()
-        let schema = makeVaccineSchema()
+        let schema = makeTestSchema()
         let mockRepo = MockMedicalRecordRepository()
         let mockContentService = MockRecordContentService()
         let mockPrimaryKeyProvider = MockPrimaryKeyProvider()
@@ -246,8 +279,8 @@ struct MedicalRecordFormViewModelTests {
         )
 
         // Set valid data
-        viewModel.fieldValues["vaccineName"] = .string("COVID-19")
-        viewModel.fieldValues["dateAdministered"] = .date(Date())
+        viewModel.fieldValues[requiredStringFieldId] = .string("Test Value")
+        viewModel.fieldValues[requiredDateFieldId] = .date(Date())
 
         await viewModel.save()
 
@@ -260,12 +293,12 @@ struct MedicalRecordFormViewModelTests {
     @Test
     func validateReturnsTrueWhenAllRequiredFieldsPresent() throws {
         let person = try makeTestPerson()
-        let schema = makeVaccineSchema()
+        let schema = makeTestSchema()
         let viewModel = MedicalRecordFormViewModel(person: person, schema: schema)
 
         // Set required fields
-        viewModel.fieldValues["vaccineName"] = .string("COVID-19")
-        viewModel.fieldValues["dateAdministered"] = .date(Date())
+        viewModel.fieldValues[requiredStringFieldId] = .string("Test Value")
+        viewModel.fieldValues[requiredDateFieldId] = .date(Date())
 
         let result = viewModel.validate()
 
@@ -276,12 +309,13 @@ struct MedicalRecordFormViewModelTests {
     @Test
     func validateReturnsFalseWhenRequiredFieldMissing() throws {
         let person = try makeTestPerson()
-        let schema = makeVaccineSchema()
+        let schema = makeTestSchema()
         let viewModel = MedicalRecordFormViewModel(person: person, schema: schema)
 
-        // Only set one required field
-        viewModel.fieldValues["vaccineName"] = .string("COVID-19")
-        // dateAdministered is required but missing
+        // Only set one required field (string)
+        viewModel.fieldValues[requiredStringFieldId] = .string("Test Value")
+        // Date fields are pre-initialized with today's date, so clear it to test missing field
+        viewModel.fieldValues.removeValue(forKey: requiredDateFieldId)
 
         let result = viewModel.validate()
 
@@ -292,10 +326,10 @@ struct MedicalRecordFormViewModelTests {
     @Test
     func validateSetsAppropriateErrorMessage() throws {
         let person = try makeTestPerson()
-        let schema = makeVaccineSchema()
+        let schema = makeTestSchema()
         let viewModel = MedicalRecordFormViewModel(person: person, schema: schema)
 
-        // Missing required field
+        // Missing required string field
         let result = viewModel.validate()
 
         #expect(result == false)
@@ -305,7 +339,7 @@ struct MedicalRecordFormViewModelTests {
     @Test
     func validateClearsErrorMessageOnSuccess() throws {
         let person = try makeTestPerson()
-        let schema = makeVaccineSchema()
+        let schema = makeTestSchema()
         let viewModel = MedicalRecordFormViewModel(person: person, schema: schema)
 
         // First cause a validation error
@@ -313,8 +347,8 @@ struct MedicalRecordFormViewModelTests {
         #expect(viewModel.errorMessage != nil)
 
         // Then set valid data and validate again
-        viewModel.fieldValues["vaccineName"] = .string("COVID-19")
-        viewModel.fieldValues["dateAdministered"] = .date(Date())
+        viewModel.fieldValues[requiredStringFieldId] = .string("Test Value")
+        viewModel.fieldValues[requiredDateFieldId] = .date(Date())
         let result = viewModel.validate()
 
         #expect(result == true)
@@ -326,17 +360,17 @@ struct MedicalRecordFormViewModelTests {
     @Test
     func titleForNewRecordShowsAdd() throws {
         let person = try makeTestPerson()
-        let schema = makeVaccineSchema()
+        let schema = makeTestSchema()
 
         let viewModel = MedicalRecordFormViewModel(person: person, schema: schema)
 
-        #expect(viewModel.title == "Add Vaccine")
+        #expect(viewModel.title == "Add Comprehensive Example")
     }
 
     @Test
     func titleForExistingRecordShowsEdit() throws {
         let person = try makeTestPerson()
-        let schema = makeVaccineSchema()
+        let schema = makeTestSchema()
         let existingRecord = MedicalRecord(personId: person.id, encryptedContent: Data())
 
         let viewModel = MedicalRecordFormViewModel(
@@ -345,6 +379,6 @@ struct MedicalRecordFormViewModelTests {
             existingRecord: existingRecord
         )
 
-        #expect(viewModel.title == "Edit Vaccine")
+        #expect(viewModel.title == "Edit Comprehensive Example")
     }
 }

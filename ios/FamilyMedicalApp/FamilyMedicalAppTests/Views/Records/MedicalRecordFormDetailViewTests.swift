@@ -4,12 +4,26 @@ import Testing
 import ViewInspector
 @testable import FamilyMedicalApp
 
+/// Tests for MedicalRecordDetailView and MedicalRecordFormView using generic schema
+/// (ExampleSchema.comprehensiveExample) to validate view behavior independent of specific record types.
 @MainActor
 struct MedicalRecordFormDetailViewTests {
     // MARK: - Test Data
 
     let testPrimaryKey = SymmetricKey(size: .bits256)
     let testFMK = SymmetricKey(size: .bits256)
+
+    /// Returns the comprehensive example schema that exercises all field types
+    var testSchema: RecordSchema { ExampleSchema.comprehensiveExample }
+
+    /// Schema ID for the comprehensive example schema
+    var testSchemaId: String { "comprehensive_example" }
+
+    /// Required string field ID in the comprehensive schema
+    var requiredStringFieldId: String { "exampleName" }
+
+    /// Required date field ID in the comprehensive schema
+    var requiredDateFieldId: String { "recordedDate" }
 
     func makeTestPerson() throws -> Person {
         try Person(
@@ -22,9 +36,9 @@ struct MedicalRecordFormDetailViewTests {
     }
 
     func makeTestDecryptedRecord(personId: UUID? = nil) -> DecryptedRecord {
-        var content = RecordContent(schemaId: "vaccine")
-        content.setString("vaccineName", "COVID-19")
-        content.setDate("dateAdministered", Date())
+        var content = RecordContent(schemaId: testSchemaId)
+        content.setString(requiredStringFieldId, "Test Record")
+        content.setDate(requiredDateFieldId, Date())
 
         let record = MedicalRecord(
             personId: personId ?? UUID(),
@@ -47,7 +61,7 @@ struct MedicalRecordFormDetailViewTests {
 
         return MedicalRecordFormViewModel(
             person: person,
-            schema: RecordSchema.builtIn(.vaccine),
+            schema: testSchema,
             existingRecord: existingRecord,
             existingContent: existingContent,
             medicalRecordRepository: mockRecordRepo,
@@ -57,31 +71,41 @@ struct MedicalRecordFormDetailViewTests {
         )
     }
 
-    // MARK: - MedicalRecordDetailView Tests
+    // MARK: - MedicalRecordDetailView Integration Tests
+    // Note: MedicalRecordDetailView requires BuiltInSchemaType, so these are integration tests
+    // that verify all built-in schemas render correctly.
 
     @Test
-    func medicalRecordDetailViewRendersWithDecryptedRecord() throws {
+    func medicalRecordDetailViewRendersForAllSchemaTypes() throws {
         let person = try makeTestPerson()
-        let decryptedRecord = makeTestDecryptedRecord()
 
-        let view = MedicalRecordDetailView(
-            person: person,
-            schemaType: .vaccine,
-            decryptedRecord: decryptedRecord
-        )
+        for schemaType in BuiltInSchemaType.allCases {
+            var content = RecordContent(schemaId: schemaType.rawValue)
+            // Add date fields that various schemas might have
+            content.setDate("dateAdministered", Date())
+            content.setDate("diagnosedDate", Date())
+            content.setDate("startDate", Date())
 
-        _ = view.body
+            let record = MedicalRecord(personId: person.id, encryptedContent: Data())
+            let decryptedRecord = DecryptedRecord(record: record, content: content)
 
-        #expect(decryptedRecord.content.schemaId == "vaccine")
+            let view = MedicalRecordDetailView(
+                person: person,
+                schemaType: schemaType,
+                decryptedRecord: decryptedRecord
+            )
+            _ = view.body
+        }
     }
 
     @Test
-    func medicalRecordDetailViewRendersRecordContent() throws {
+    func medicalRecordDetailViewRendersContent() throws {
         let person = try makeTestPerson()
+        // Use vaccine schema for this integration test
         var content = RecordContent(schemaId: "vaccine")
-        content.setString("vaccineName", "COVID-19 Pfizer")
+        content.setString("vaccineName", "Test Vaccine")
         content.setDate("dateAdministered", Date())
-        content.setString("provider", "CVS Pharmacy")
+        content.setString("provider", "Test Provider")
         content.setInt("doseNumber", 2)
 
         let record = MedicalRecord(personId: person.id, encryptedContent: Data())
@@ -117,74 +141,47 @@ struct MedicalRecordFormDetailViewTests {
         // Should handle gracefully with "Untitled" fallback
     }
 
-    @Test
-    func medicalRecordDetailViewRendersForAllSchemaTypes() throws {
-        let person = try makeTestPerson()
-
-        for schemaType in BuiltInSchemaType.allCases {
-            var content = RecordContent(schemaId: schemaType.rawValue)
-            // Add a date field (most schemas have one)
-            content.setDate("dateAdministered", Date())
-            content.setDate("diagnosedDate", Date())
-            content.setDate("prescribedDate", Date())
-            content.setDate("createdDate", Date())
-
-            let record = MedicalRecord(personId: person.id, encryptedContent: Data())
-            let decryptedRecord = DecryptedRecord(record: record, content: content)
-
-            let view = MedicalRecordDetailView(
-                person: person,
-                schemaType: schemaType,
-                decryptedRecord: decryptedRecord
-            )
-            _ = view.body
-        }
-    }
-
-    // MARK: - MedicalRecordFormView Tests
+    // MARK: - MedicalRecordFormView Tests (using generic schema)
 
     @Test
     func medicalRecordFormViewRendersForAdd() throws {
         let person = try makeTestPerson()
-        let schema = RecordSchema.builtIn(.vaccine)
 
         let view = MedicalRecordFormView(
             person: person,
-            schema: schema
+            schema: testSchema
         )
 
         _ = view.body
 
-        #expect(schema.id == "vaccine")
+        #expect(testSchema.id == testSchemaId)
     }
 
     @Test
     func medicalRecordFormViewRendersForEdit() throws {
         let person = try makeTestPerson()
-        let schema = RecordSchema.builtIn(.vaccine)
         let decryptedRecord = makeTestDecryptedRecord()
 
         let view = MedicalRecordFormView(
             person: person,
-            schema: schema,
+            schema: testSchema,
             existingRecord: decryptedRecord.record,
             existingContent: decryptedRecord.content
         )
 
         _ = view.body
 
-        #expect(decryptedRecord.content.getString("vaccineName") == "COVID-19")
+        #expect(decryptedRecord.content.getString(requiredStringFieldId) == "Test Record")
     }
 
     @Test
     func medicalRecordFormViewRendersWithInjectedViewModel() throws {
         let person = try makeTestPerson()
-        let schema = RecordSchema.builtIn(.vaccine)
         let viewModel = createFormViewModel(person: person)
 
         let view = MedicalRecordFormView(
             person: person,
-            schema: schema,
+            schema: testSchema,
             viewModel: viewModel
         )
 
@@ -195,12 +192,11 @@ struct MedicalRecordFormDetailViewTests {
     @Test
     func medicalRecordFormViewRendersFormFields() throws {
         let person = try makeTestPerson()
-        let schema = RecordSchema.builtIn(.vaccine)
         let viewModel = createFormViewModel(person: person)
 
         let view = MedicalRecordFormView(
             person: person,
-            schema: schema,
+            schema: testSchema,
             viewModel: viewModel
         )
 
@@ -212,13 +208,12 @@ struct MedicalRecordFormDetailViewTests {
     @Test
     func medicalRecordFormViewRendersLoadingState() throws {
         let person = try makeTestPerson()
-        let schema = RecordSchema.builtIn(.vaccine)
         let viewModel = createFormViewModel(person: person)
         viewModel.isLoading = true
 
         let view = MedicalRecordFormView(
             person: person,
-            schema: schema,
+            schema: testSchema,
             viewModel: viewModel
         )
 
@@ -229,13 +224,12 @@ struct MedicalRecordFormDetailViewTests {
     @Test
     func medicalRecordFormViewHandlesErrorMessage() throws {
         let person = try makeTestPerson()
-        let schema = RecordSchema.builtIn(.vaccine)
         let viewModel = createFormViewModel(person: person)
         viewModel.errorMessage = "Validation failed"
 
         let view = MedicalRecordFormView(
             person: person,
-            schema: schema,
+            schema: testSchema,
             viewModel: viewModel
         )
 
@@ -257,11 +251,10 @@ struct MedicalRecordFormDetailViewTests {
     @Test
     func medicalRecordFormViewPreservesExistingContent() throws {
         let person = try makeTestPerson()
-        let schema = RecordSchema.builtIn(.vaccine)
 
-        var existingContent = RecordContent(schemaId: "vaccine")
-        existingContent.setString("vaccineName", "Existing Vaccine")
-        existingContent.setDate("dateAdministered", Date())
+        var existingContent = RecordContent(schemaId: testSchemaId)
+        existingContent.setString(requiredStringFieldId, "Existing Record")
+        existingContent.setDate(requiredDateFieldId, Date())
 
         let existingRecord = MedicalRecord(personId: person.id, encryptedContent: Data())
 
@@ -273,7 +266,7 @@ struct MedicalRecordFormDetailViewTests {
 
         let view = MedicalRecordFormView(
             person: person,
-            schema: schema,
+            schema: testSchema,
             existingRecord: existingRecord,
             existingContent: existingContent,
             viewModel: viewModel
@@ -281,6 +274,6 @@ struct MedicalRecordFormDetailViewTests {
 
         _ = view.body
 
-        #expect(viewModel.fieldValues["vaccineName"]?.stringValue == "Existing Vaccine")
+        #expect(viewModel.fieldValues[requiredStringFieldId]?.stringValue == "Existing Record")
     }
 }
