@@ -28,6 +28,12 @@ repos:
     hooks:
       - id: actionlint
 
+  # Shell script linting
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.11.0.1  # Latest as of Dec 2025
+    hooks:
+      - id: shellcheck
+
   # General file checks
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0  # Latest as of Dec 2025
