@@ -38,10 +38,18 @@ while [[ $# -gt 0 ]]; do
             shift
             ;;
         --limit)
+            if [[ $# -lt 2 || -z "$2" || "$2" == -* ]]; then
+                echo "Error: --limit requires a non-negative integer argument"
+                exit 1
+            fi
             LIMIT="$2"
             shift 2
             ;;
         --destination)
+            if [[ $# -lt 2 || -z "$2" || "$2" == -* ]]; then
+                echo "Error: --destination requires a destination argument"
+                exit 1
+            fi
             DESTINATION="$2"
             shift 2
             ;;
@@ -191,13 +199,17 @@ GREEN = os.environ.get('GREEN', '')
 YELLOW = os.environ.get('YELLOW', '')
 BOLD = os.environ.get('BOLD', '')
 NC = os.environ.get('NC', '')
-LIMIT = int(os.environ.get('LIMIT', '0'))
+try:
+    LIMIT = int(os.environ.get('LIMIT', '0'))
+except ValueError:
+    print(f"{YELLOW}WARNING: Invalid LIMIT value; defaulting to 0{NC}", file=sys.stderr)
+    LIMIT = 0
 TEMP_SUMMARY = os.environ.get('TEMP_SUMMARY', '')
 TEMP_LEGACY = os.environ.get('TEMP_LEGACY', '')
 
 # Read summary JSON from temp file
 try:
-    with open(TEMP_SUMMARY, 'r') as f:
+    with open(TEMP_SUMMARY, 'r', encoding='utf-8') as f:
         summary = json.load(f)
 except (IOError, OSError) as e:
     print(f"{RED}{BOLD}ERROR: Failed to read test summary file{NC}", file=sys.stderr)
@@ -226,7 +238,7 @@ if skipped > 0:
 
 # Read legacy format from temp file
 try:
-    with open(TEMP_LEGACY, 'r') as f:
+    with open(TEMP_LEGACY, 'r', encoding='utf-8') as f:
         legacy = json.load(f)
 except (IOError, OSError) as e:
     print(f"{RED}{BOLD}ERROR: Failed to read test details file{NC}", file=sys.stderr)
