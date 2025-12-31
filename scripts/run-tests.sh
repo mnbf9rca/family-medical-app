@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -u
 
 # iOS Test Runner with Enhanced Output
 # Runs unit tests with code coverage and provides a concise summary
@@ -77,7 +77,7 @@ else
 fi
 
 # Change to project directory
-cd "$(dirname "$0")/../ios/FamilyMedicalApp"
+cd "$(dirname "$0")/../ios/FamilyMedicalApp" || { echo "Error: Cannot change to project directory"; exit 2; }
 
 echo "Running tests with destination: $DESTINATION"
 if [[ "$UNIT_TESTS_ONLY" == "true" ]]; then
@@ -153,11 +153,19 @@ echo "============================================================"
 
 # Get test counts from summary - save to temp file
 TEMP_SUMMARY=$(mktemp)
-xcrun xcresulttool get test-results summary --path test-results/TestResults.xcresult --compact > "$TEMP_SUMMARY"
+if ! xcrun xcresulttool get test-results summary --path test-results/TestResults.xcresult --compact > "$TEMP_SUMMARY" 2>&1; then
+    echo -e "${RED}${BOLD}ERROR: Failed to extract test summary${NC}"
+    rm -f "$TEMP_SUMMARY"
+    exit 2
+fi
 
 # Get failure details from legacy format - save to temp file
 TEMP_LEGACY=$(mktemp)
-xcrun xcresulttool get --path test-results/TestResults.xcresult --format json --legacy > "$TEMP_LEGACY"
+if ! xcrun xcresulttool get --path test-results/TestResults.xcresult --format json --legacy > "$TEMP_LEGACY" 2>&1; then
+    echo -e "${RED}${BOLD}ERROR: Failed to extract test details${NC}"
+    rm -f "$TEMP_SUMMARY" "$TEMP_LEGACY"
+    exit 2
+fi
 
 # Export variables for Python script
 export RED GREEN YELLOW BOLD NC LIMIT TEMP_SUMMARY TEMP_LEGACY
