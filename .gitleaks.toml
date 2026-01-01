@@ -1,0 +1,20 @@
+# Gitleaks configuration
+# See: https://github.com/gitleaks/gitleaks#configuration
+
+title = "Family Medical App Gitleaks Config"
+
+[extend]
+useDefault = true
+
+# Extend generic-api-key rule with allowlist for test files
+# This keeps the rule active for production code while ignoring test fixtures
+[[rules]]
+id = "generic-api-key"
+
+    [[rules.allowlists]]
+    description = "Test passwords in UI test files"
+    paths = [
+        '''.*UITests.*''',
+        '''.*Tests/Fixtures.*''',
+        '''.*testdata.*''',
+    ]
