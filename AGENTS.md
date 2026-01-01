@@ -21,10 +21,10 @@
   - Use pure functions to reduce complexity
 - ⚠️ **NEVER** skip or override pre-commit hooks
   - The hooks are there for a reason - fix the issues instead
-- ⚠️ **ALWAYS** achieve required code coverage thresholds:
+- ⚠️ **ALWAYS** achieve required code coverage thresholds, validated through testing:
   - **Overall project coverage: 90% minimum** and **individual file coverage: 85% minimum** (with exceptions for specific files, see `scripts/check-coverage.sh` - only add exceptions with explicit user consent)
   - Coverage applies to existing, new, **and changed** code
-  - Use `{projectRoot}/scripts/run-tests.sh` to run tests - this is the same script used in CI
+  - Use `{projectRoot}/scripts/run-tests.sh` to run tests - this is the same script used in CI. Note that it can take up to 15 minutes for the full (UI) test suite to run.
   - **After** running tests, use `{projectRoot}/scripts/check-coverage.sh` to validate coverage - this is the same script used in CI
   - Use `--detailed` flag with check-coverage.sh to see function-level coverage details for files below 100%
   - **Using other methods will fail CI** meaning the PR cannot be merged
