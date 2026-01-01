@@ -2,14 +2,29 @@
 //  AddPersonFlowUITests.swift
 //  FamilyMedicalAppUITests
 //
-//  Created by rob on 29/12/2025.
+//  Tests for adding person/member flow
 //
+//  ## Test Organization
+//  Uses shared app instance with class-level setUp to avoid repeated account creation.
+//  Account creation happens once, then all tests reuse that session.
+//
+//  Tests are kept independent (not numbered/chained) because:
+//  - Creation tests modify persistent state (add people to database)
+//  - Validation tests open/close sheets and need clean slate
+//  - Each test's cleanup in setUpWithError ensures proper state
+//
+//  ## Tradeoffs
+//  - Pro: Single account creation saves ~15 seconds total
+//  - Pro: Tests remain independent and can run in any order
+//  - Con: Per-test sheet cleanup adds small overhead (acceptable)
+//
+//  - Note: Ensure hardware keyboard is disabled in simulator:
+//    I/O -> Keyboard -> Connect Hardware Keyboard (unchecked)
+//    This prevents password autofill prompts from interfering with UI tests
 
 import XCTest
 
 /// Tests for adding person/member flow
-/// - Note: Ensure hardware keyboard is disabled in simulator: I/O → Keyboard → Connect Hardware Keyboard (unchecked)
-///   This prevents password autofill prompts from interfering with UI tests
 @MainActor
 final class AddPersonFlowUITests: XCTestCase {
     nonisolated(unsafe) static var sharedApp: XCUIApplication!

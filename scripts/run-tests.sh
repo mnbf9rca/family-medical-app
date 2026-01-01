@@ -75,6 +75,19 @@ fi
 # Apply default destination if not set
 DESTINATION="${DESTINATION:-platform=iOS Simulator,name=iPhone 17,OS=26.2}"
 
+# Capture start time for duration tracking
+START_TIME=$(date +%s)
+
+# Helper function to print duration
+print_duration() {
+    local END_TIME
+    END_TIME=$(date +%s)
+    local DURATION=$((END_TIME - START_TIME))
+    local MINUTES=$((DURATION / 60))
+    local SECONDS=$((DURATION % 60))
+    echo "⏱️  Duration: ${MINUTES}m ${SECONDS}s"
+}
+
 # Color support (check if stdout is a terminal and supports color)
 if [[ -t 1 ]] && [[ "${TERM:-}" != "dumb" ]]; then
     RED=$'\033[0;31m'
@@ -136,14 +149,18 @@ echo "Running tests..."
 if [[ "$RESULTS_ONLY" == "true" ]]; then
     # Hide output, show only summary
     TEMP_OUTPUT=$(mktemp)
-    "${TEST_CMD[@]}" > "$TEMP_OUTPUT" 2>&1 || true
+    "${TEST_CMD[@]}" > "$TEMP_OUTPUT" 2>&1
+    BUILD_EXIT_CODE=$?
 
     # Check if xcresult exists (indicates tests ran, even if some failed)
     if [[ ! -d "test-results/TestResults.xcresult" ]]; then
         # Build failed before tests could run
-        echo "${RED}${BOLD}BUILD FAILED${NC}"
+        echo "${RED}${BOLD}BUILD FAILED${NC} (exit code: $BUILD_EXIT_CODE)"
+        echo ""
+        echo "${BOLD}Build Output:${NC}"
         cat "$TEMP_OUTPUT"
         rm -f "$TEMP_OUTPUT"
+        print_duration
         exit 2
     fi
     rm -f "$TEMP_OUTPUT"
@@ -155,6 +172,7 @@ else
     if [[ ! -d "test-results/TestResults.xcresult" ]]; then
         # Build failed before tests could run
         echo "${RED}${BOLD}BUILD FAILED${NC}"
+        print_duration
         exit 2
     fi
 fi
@@ -174,12 +192,14 @@ trap 'rm -f "$TEMP_SUMMARY" "$TEMP_LEGACY"' EXIT
 
 if ! xcrun xcresulttool get test-results summary --path test-results/TestResults.xcresult --compact > "$TEMP_SUMMARY" 2>&1; then
     echo "${RED}${BOLD}ERROR: Failed to extract test summary${NC}"
+    print_duration
     exit 2
 fi
 
 # Get failure details from legacy format - save to temp file
 if ! xcrun xcresulttool get --path test-results/TestResults.xcresult --format json --legacy > "$TEMP_LEGACY" 2>&1; then
     echo "${RED}${BOLD}ERROR: Failed to extract test details${NC}"
+    print_duration
     exit 2
 fi
 
@@ -330,5 +350,6 @@ PYEOF
 
 SUMMARY_EXIT=$?
 
-# Return the summary exit code (temp files cleaned by trap)
+# Print duration and return the summary exit code (temp files cleaned by trap)
+print_duration
 exit $SUMMARY_EXIT

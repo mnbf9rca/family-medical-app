@@ -2,26 +2,68 @@
 //  ExistingUserFlowUITests.swift
 //  FamilyMedicalAppUITests
 //
-//  Created by rob on 29/12/2025.
+//  Tests for existing user login/unlock flow
 //
+//  ## Test Chaining Pattern
+//  Account creation happens once in class setUp, then all tests reuse that account.
+//  This saves ~15 seconds per test (Argon2id key derivation is intentionally slow).
+//
+//  Each test:
+//  1. Relaunches the app (without resetState, so account persists)
+//  2. Tests unlock behavior
+//  3. Terminates the app for the next test
+//
+//  ## Tradeoffs
+//  - Pro: ~60% faster test execution
+//  - Con: If class setUp fails, all tests fail
+//  - Con: Tests share the same account (acceptable for unlock flow tests)
+//
+//  - Note: Ensure hardware keyboard is disabled in simulator:
+//    I/O -> Keyboard -> Connect Hardware Keyboard (unchecked)
+//    This prevents password autofill prompts from interfering with UI tests
 
 import XCTest
 
 /// Tests for existing user login/unlock flow
-/// - Note: Ensure hardware keyboard is disabled in simulator: I/O → Keyboard → Connect Hardware Keyboard (unchecked)
-///   This prevents password autofill prompts from interfering with UI tests
 @MainActor
 final class ExistingUserFlowUITests: XCTestCase {
-    nonisolated(unsafe) var app: XCUIApplication!
-    let testPassword = "unique-horse-battery-staple-2024"
+    // MARK: - Shared State
 
-    nonisolated override func setUpWithError() throws {
-        continueAfterFailure = false
+    /// Shared app instance - created once, reused across tests
+    nonisolated(unsafe) static var sharedApp: XCUIApplication!
 
-        let application = MainActor.assumeIsolated {
-            XCUIApplication()
+    /// Instance accessor
+    var app: XCUIApplication { Self.sharedApp }
+
+    /// Password used to create the test account
+    static let testPassword = "unique-horse-battery-staple-2024"
+
+    // MARK: - Class Setup / Teardown
+
+    nonisolated override class func setUp() {
+        super.setUp()
+
+        // Create account once for entire test class
+        MainActor.assumeIsolated {
+            sharedApp = XCUIApplication()
+            sharedApp.launchForUITesting(resetState: true)
+            sharedApp.createAccount(password: testPassword)
+            sharedApp.terminate()
         }
-        app = application
+    }
+
+    nonisolated override class func tearDown() {
+        MainActor.assumeIsolated {
+            sharedApp?.terminate()
+            sharedApp = nil
+        }
+        super.tearDown()
+    }
+
+    // MARK: - Per-Test Setup
+
+    override func setUpWithError() throws {
+        continueAfterFailure = false
 
         // Add UI interruption monitor to handle password autofill prompts
         addUIInterruptionMonitor(withDescription: "Password Autofill") { alert in
@@ -37,29 +79,29 @@ final class ExistingUserFlowUITests: XCTestCase {
                 return false
             }
         }
+
+        // Relaunch app for each test (keeps account from class setUp)
+        MainActor.assumeIsolated {
+            Self.sharedApp.launchForUITesting(resetState: false)
+        }
     }
 
-    nonisolated override func tearDownWithError() throws {
-        app = nil
+    override func tearDownWithError() throws {
+        // Terminate after each test so next test starts fresh at unlock screen
+        MainActor.assumeIsolated {
+            Self.sharedApp.terminate()
+        }
     }
 
     // MARK: - Unlock Tests
 
     func testUnlockWithCorrectPassword() throws {
-        // Setup: Create account first
-        app.launchForUITesting(resetState: true)
-        app.createAccount(password: testPassword)
-
-        // Terminate and relaunch (simulates returning user)
-        app.terminate()
-        app.launchForUITesting(resetState: false)
-
-        // Verify UnlockView appears
+        // Verify UnlockView appears (account was created in class setUp)
         let appTitle = app.staticTexts["Family Medical App"]
         XCTAssertTrue(appTitle.waitForExistence(timeout: 5), "Unlock view should appear")
 
         // Unlock
-        app.unlockApp(password: testPassword)
+        app.unlockApp(password: Self.testPassword)
 
         // Verify we're on HomeView
         let navTitle = app.navigationBars["Members"]
@@ -67,14 +109,6 @@ final class ExistingUserFlowUITests: XCTestCase {
     }
 
     func testUnlockWithIncorrectPassword() throws {
-        // Setup: Create account first
-        app.launchForUITesting(resetState: true)
-        app.createAccount(password: testPassword)
-
-        // Terminate and relaunch
-        app.terminate()
-        app.launchForUITesting(resetState: false)
-
         let appTitle = app.staticTexts["Family Medical App"]
         XCTAssertTrue(appTitle.waitForExistence(timeout: 5))
 
@@ -103,14 +137,6 @@ final class ExistingUserFlowUITests: XCTestCase {
     }
 
     func testFailedAttemptsCounterIncreases() throws {
-        // Setup: Create account first
-        app.launchForUITesting(resetState: true)
-        app.createAccount(password: testPassword)
-
-        // Terminate and relaunch
-        app.terminate()
-        app.launchForUITesting(resetState: false)
-
         let appTitle = app.staticTexts["Family Medical App"]
         XCTAssertTrue(appTitle.waitForExistence(timeout: 5))
 
@@ -143,14 +169,6 @@ final class ExistingUserFlowUITests: XCTestCase {
     }
 
     func testUnlockViewElements() throws {
-        // Setup: Create account first
-        app.launchForUITesting(resetState: true)
-        app.createAccount(password: testPassword)
-
-        // Terminate and relaunch
-        app.terminate()
-        app.launchForUITesting(resetState: false)
-
         // Verify all expected elements exist
         XCTAssertTrue(app.staticTexts["Family Medical App"].waitForExistence(timeout: 5))
 
@@ -165,14 +183,6 @@ final class ExistingUserFlowUITests: XCTestCase {
     }
 
     func testSwitchFromBiometricToPassword() throws {
-        // Setup: Create account first
-        app.launchForUITesting(resetState: true)
-        app.createAccount(password: testPassword)
-
-        // Terminate and relaunch
-        app.terminate()
-        app.launchForUITesting(resetState: false)
-
         let appTitle = app.staticTexts["Family Medical App"]
         XCTAssertTrue(appTitle.waitForExistence(timeout: 5))
 

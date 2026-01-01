@@ -41,11 +41,13 @@ struct UnlockView: View {
                         .cornerRadius(12)
                     })
                     .disabled(viewModel.isLoading)
+                    .accessibilityIdentifier("biometricButton")
 
                     Button("Use Password") {
                         viewModel.showBiometricPrompt = false
                     }
                     .font(.subheadline)
+                    .accessibilityIdentifier("usePasswordButton")
                 } else {
                     // Password field
                     VStack(spacing: 16) {
@@ -67,6 +69,7 @@ struct UnlockView: View {
                             }
                         }
                         .disabled(viewModel.isLockedOut)
+                        .accessibilityIdentifier("passwordField")
 
                         Button(action: {
                             Task {
@@ -88,6 +91,7 @@ struct UnlockView: View {
                         .foregroundColor(.white)
                         .cornerRadius(12)
                         .disabled(viewModel.unlockPassword.isEmpty || viewModel.isLockedOut || viewModel.isLoading)
+                        .accessibilityIdentifier("unlockButton")
                     }
 
                     // Switch back to biometric if available
@@ -96,6 +100,7 @@ struct UnlockView: View {
                             viewModel.showBiometricPrompt = true
                         }
                         .font(.subheadline)
+                        .accessibilityIdentifier("useBiometricButton")
                     }
                 }
 
@@ -104,6 +109,7 @@ struct UnlockView: View {
                     Text("\(viewModel.failedAttempts) failed attempt\(viewModel.failedAttempts == 1 ? "" : "s")")
                         .font(.caption)
                         .foregroundColor(.orange)
+                        .accessibilityIdentifier("failedAttemptsLabel")
                 }
 
                 // Lockout message
@@ -115,6 +121,7 @@ struct UnlockView: View {
                         .padding()
                         .background(Color.red.opacity(0.1))
                         .cornerRadius(8)
+                        .accessibilityIdentifier("lockoutLabel")
                 }
 
                 // Error message
@@ -123,6 +130,7 @@ struct UnlockView: View {
                         .font(.callout)
                         .foregroundColor(.red)
                         .multilineTextAlignment(.center)
+                        .accessibilityIdentifier("errorLabel")
                 }
             }
             .padding()

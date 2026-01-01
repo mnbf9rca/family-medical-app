@@ -15,9 +15,11 @@ struct FieldDisplayView: View {
     var body: some View {
         LabeledContent {
             valueView
+                .accessibilityIdentifier("fieldValue")
         } label: {
             Text(field.displayName)
                 .accessibilityLabel(field.displayName)
+                .accessibilityIdentifier("fieldLabel")
         }
     }
 

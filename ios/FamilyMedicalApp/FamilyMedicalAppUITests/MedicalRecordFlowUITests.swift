@@ -4,67 +4,23 @@
 //
 //  Tests for medical record CRUD flows including add, edit, and delete from detail view
 //
-//  ## Test Chaining Pattern
-//  Tests are numbered (test1_, test2_, etc.) to ensure execution order.
-//  Earlier tests create data that later tests reuse, reducing redundant
-//  setup and navigation. This trades test isolation for ~60% faster execution.
-//
-//  If test1 fails, subsequent tests will also fail (expected behavior).
+//  ## Note on XCTest Ordering
+//  XCTest does NOT guarantee test execution order. Previously, tests were named
+//  `test1_`, `test2_`, etc. to imply ordering, but this is not reliable.
+//  CRUD operations are now consolidated into a single test method.
 //
 
 import XCTest
 
 /// Tests for medical record creation, viewing, editing, and deletion
-///
-/// Uses test chaining pattern: tests build on each other to reduce setup overhead.
-/// - `test1_AddRecords`: Creates records used by subsequent tests
-/// - `test2_ViewRecordDetail`: Verifies detail view (uses record from test1)
-/// - `test3_EditRecordFromDetail`: Tests edit flow (uses record from test1)
-/// - `test4_DeleteRecordFromDetail`: Tests delete flow (uses record from test1)
-/// - `test5_DeleteRecordCancelPreserves`: Tests cancel delete (uses record from test1)
 @MainActor
 final class MedicalRecordFlowUITests: XCTestCase {
-    nonisolated(unsafe) static var sharedApp: XCUIApplication!
-    var app: XCUIApplication { Self.sharedApp }
+    var app: XCUIApplication!
 
     // Test person name - unique to avoid conflicts with other tests
     let testPersonName = "MedRecordTest User"
 
-    // MARK: - Shared State for Test Chaining
-    //
-    // These track state between tests to avoid redundant navigation.
-    // Reset in class setUp, used across test1...test5.
-
-    /// Whether we're already on the vaccines list (avoids re-navigation)
-    nonisolated(unsafe) static var isOnVaccinesList = false
-
-    /// Record names created in test1, available for test2-5 to use
-    nonisolated(unsafe) static var viewTestRecord = "ViewTest Vaccine"
-    nonisolated(unsafe) static var editTestRecord = "EditTest Vaccine"
-    nonisolated(unsafe) static var deleteTestRecord = "DeleteTest Vaccine"
-    nonisolated(unsafe) static var cancelTestRecord = "CancelTest Vaccine"
-
     // MARK: - Setup / Teardown
-
-    nonisolated override class func setUp() {
-        super.setUp()
-
-        MainActor.assumeIsolated {
-            sharedApp = XCUIApplication()
-            sharedApp.launchForUITesting(resetState: true)
-            sharedApp.createAccount()
-            isOnVaccinesList = false
-        }
-    }
-
-    nonisolated override class func tearDown() {
-        MainActor.assumeIsolated {
-            sharedApp.terminate()
-            sharedApp = nil
-            isOnVaccinesList = false
-        }
-        super.tearDown()
-    }
 
     override func setUpWithError() throws {
         continueAfterFailure = false
@@ -79,55 +35,17 @@ final class MedicalRecordFlowUITests: XCTestCase {
                 return false
             }
         }
+    }
 
-        // Lightweight per-test setup: only clean up unexpected state
-        // Skip heavy navigation since tests chain together
-        MainActor.assumeIsolated {
-            // Dismiss any alerts that appeared unexpectedly
-            let alert = Self.sharedApp.alerts.firstMatch
-            if alert.waitForExistence(timeout: 0.5) {
-                for buttonLabel in ["OK", "Cancel", "Dismiss"] {
-                    if alert.buttons[buttonLabel].exists {
-                        alert.buttons[buttonLabel].tap()
-                        break
-                    }
-                }
-                _ = alert.waitForNonExistence(timeout: 1)
-            }
-
-            // Dismiss any sheets that appeared unexpectedly
-            let cancelButton = Self.sharedApp.buttons["Cancel"]
-            if cancelButton.waitForExistence(timeout: 0.5) {
-                cancelButton.tap()
-                _ = cancelButton.waitForNonExistence(timeout: 1)
-            }
-        }
+    override func tearDownWithError() throws {
+        app?.terminate()
+        app = nil
     }
 
     // MARK: - Helper Methods
 
-    /// Navigate to the vaccines list, reusing state if already there
-    private func ensureOnVaccinesList() {
-        // If already on vaccines list, just verify
-        let listTitle = app.navigationBars["\(testPersonName)'s Vaccine"]
-        if Self.isOnVaccinesList && listTitle.exists {
-            return
-        }
-
-        // Need to navigate from wherever we are
-        navigateToVaccinesListFresh()
-        Self.isOnVaccinesList = true
-    }
-
-    /// Full navigation to vaccines list (used when state is unknown)
-    private func navigateToVaccinesListFresh() {
-        // Navigate back to home if needed
-        let backButton = app.navigationBars.buttons.element(boundBy: 0)
-        while backButton.exists && !app.navigationBars["Members"].exists {
-            backButton.tap()
-            _ = app.navigationBars["Members"].waitForExistence(timeout: 2)
-        }
-
+    /// Navigate to the vaccines list for the test person
+    private func navigateToVaccinesList() {
         // Ensure on home view
         XCTAssertTrue(
             app.navigationBars["Members"].waitForExistence(timeout: 3),
@@ -203,57 +121,53 @@ final class MedicalRecordFlowUITests: XCTestCase {
         XCTAssertTrue(listTitle.waitForExistence(timeout: 3), "Should return to vaccines list")
     }
 
-    // MARK: - Test 1: Create Records (Setup for subsequent tests)
+    // MARK: - CRUD Workflow Test
+    //
+    // This test consolidates all CRUD operations into a single method.
+    // XCTest does NOT guarantee test ordering, so chained tests with `test1_`, `test2_`
+    // prefixes are unreliable. This single method tests all operations sequentially.
 
-    func test1_AddRecords() throws {
-        ensureOnVaccinesList()
+    func testMedicalRecordCRUDWorkflow() throws {
+        // Setup: Launch app and create account
+        app = XCUIApplication()
+        app.launchForUITesting(resetState: true)
+        app.createAccount()
 
-        // Create records that will be used by test2-5
-        // Also tests the add flow itself (combines testAddVaccineRecord + testAddVaccineRecordWithDefaultDate)
+        // Navigate to vaccines list
+        navigateToVaccinesList()
 
-        // Record for view detail test
-        addVaccineRecord(name: Self.viewTestRecord)
-        verifyRecordExists(name: Self.viewTestRecord)
+        // Record names for this test
+        let viewTestRecord = "ViewTest Vaccine"
+        let editTestRecord = "EditTest Vaccine"
+        let deleteTestRecord = "DeleteTest Vaccine"
+        let cancelTestRecord = "CancelTest Vaccine"
 
-        // Record for edit test
-        addVaccineRecord(name: Self.editTestRecord)
-        verifyRecordExists(name: Self.editTestRecord)
+        // --- Step 1: Create Records ---
+        addVaccineRecord(name: viewTestRecord)
+        verifyRecordExists(name: viewTestRecord)
 
-        // Record for delete test
-        addVaccineRecord(name: Self.deleteTestRecord)
-        verifyRecordExists(name: Self.deleteTestRecord)
+        addVaccineRecord(name: editTestRecord)
+        verifyRecordExists(name: editTestRecord)
 
-        // Record for cancel delete test
-        addVaccineRecord(name: Self.cancelTestRecord)
-        verifyRecordExists(name: Self.cancelTestRecord)
-    }
+        addVaccineRecord(name: deleteTestRecord)
+        verifyRecordExists(name: deleteTestRecord)
 
-    // MARK: - Test 2: View Record Detail
+        addVaccineRecord(name: cancelTestRecord)
+        verifyRecordExists(name: cancelTestRecord)
 
-    func test2_ViewRecordDetail() throws {
-        ensureOnVaccinesList()
-
-        // Use record created in test1
-        navigateToRecordDetail(name: Self.viewTestRecord)
+        // --- Step 2: View Record Detail ---
+        navigateToRecordDetail(name: viewTestRecord)
 
         // Verify Edit and Delete buttons exist
         XCTAssertTrue(app.navigationBars.buttons["Edit Vaccine"].exists, "Edit button should exist")
         XCTAssertTrue(app.navigationBars.buttons["Delete Vaccine"].exists, "Delete button should exist")
 
-        // Navigate back for next test
         navigateBackToList()
-    }
 
-    // MARK: - Test 3: Edit Record from Detail
-
-    func test3_EditRecordFromDetail() throws {
-        ensureOnVaccinesList()
-
-        let originalName = Self.editTestRecord
+        // --- Step 3: Edit Record from Detail ---
         let updatedName = "EditTest Updated"
 
-        // Use record created in test1
-        navigateToRecordDetail(name: originalName)
+        navigateToRecordDetail(name: editTestRecord)
 
         // Tap Edit
         let editButton = app.navigationBars.buttons["Edit Vaccine"]
@@ -287,15 +201,9 @@ final class MedicalRecordFlowUITests: XCTestCase {
         // Verify updated record appears
         let updatedCell = app.cells.containing(.staticText, identifier: updatedName).firstMatch
         XCTAssertTrue(updatedCell.waitForExistence(timeout: 3), "Updated vaccine should appear in list")
-    }
 
-    // MARK: - Test 4: Delete Record from Detail
-
-    func test4_DeleteRecordFromDetail() throws {
-        ensureOnVaccinesList()
-
-        // Use record created in test1
-        navigateToRecordDetail(name: Self.deleteTestRecord)
+        // --- Step 4: Delete Record from Detail ---
+        navigateToRecordDetail(name: deleteTestRecord)
 
         // Tap Delete
         let deleteButton = app.navigationBars.buttons["Delete Vaccine"]
@@ -307,28 +215,21 @@ final class MedicalRecordFlowUITests: XCTestCase {
         confirmButton.tap()
 
         // Should return to list
-        let listTitle = app.navigationBars["\(testPersonName)'s Vaccine"]
         XCTAssertTrue(listTitle.waitForExistence(timeout: 3), "Should return to list after delete")
 
         // Verify record no longer exists
-        let deletedCell = app.cells.containing(.staticText, identifier: Self.deleteTestRecord).firstMatch
+        let deletedCell = app.cells.containing(.staticText, identifier: deleteTestRecord).firstMatch
         XCTAssertFalse(deletedCell.exists, "Deleted vaccine should not appear in list")
-    }
 
-    // MARK: - Test 5: Cancel Delete Preserves Record
+        // --- Step 5: Cancel Delete Preserves Record ---
+        navigateToRecordDetail(name: cancelTestRecord)
 
-    func test5_DeleteRecordCancelPreserves() throws {
-        ensureOnVaccinesList()
-
-        // Use record created in test1
-        navigateToRecordDetail(name: Self.cancelTestRecord)
-
-        let detailTitle = app.navigationBars[Self.cancelTestRecord]
+        let detailTitle = app.navigationBars[cancelTestRecord]
         XCTAssertTrue(detailTitle.exists)
 
         // Tap Delete
-        let deleteButton = app.navigationBars.buttons["Delete Vaccine"]
-        deleteButton.tap()
+        let deleteButtonForCancel = app.navigationBars.buttons["Delete Vaccine"]
+        deleteButtonForCancel.tap()
 
         // Cancel deletion
         let cancelButton = app.buttons["Cancel"].firstMatch
@@ -347,6 +248,6 @@ final class MedicalRecordFlowUITests: XCTestCase {
 
         // Navigate back and verify record still exists
         navigateBackToList()
-        verifyRecordExists(name: Self.cancelTestRecord)
+        verifyRecordExists(name: cancelTestRecord)
     }
 }
