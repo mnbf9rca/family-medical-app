@@ -13,7 +13,7 @@ enum ExampleSchema {
             displayName: "Comprehensive Example",
             iconSystemName: "doc.text.magnifyingglass",
             fields: [
-                // String field (required)
+                // String field (required, with .words capitalization)
                 FieldDefinition(
                     id: "exampleName",
                     displayName: "Example Name",
@@ -22,7 +22,8 @@ enum ExampleSchema {
                     displayOrder: 1,
                     placeholder: "Enter name",
                     helpText: "A required string field",
-                    validationRules: [.minLength(1), .maxLength(100)]
+                    validationRules: [.minLength(1), .maxLength(100)],
+                    capitalizationMode: .words
                 ),
 
                 // Int field
@@ -90,7 +91,7 @@ enum ExampleSchema {
                     helpText: "File attachments"
                 ),
 
-                // Optional string field (for testing optional validation)
+                // Optional string field (multiline, for testing optional validation)
                 FieldDefinition(
                     id: "notes",
                     displayName: "Notes",
@@ -99,7 +100,8 @@ enum ExampleSchema {
                     displayOrder: 8,
                     placeholder: "Additional notes",
                     helpText: "Optional notes",
-                    validationRules: [.maxLength(500)]
+                    validationRules: [.maxLength(500)],
+                    isMultiline: true
                 )
             ]
         )

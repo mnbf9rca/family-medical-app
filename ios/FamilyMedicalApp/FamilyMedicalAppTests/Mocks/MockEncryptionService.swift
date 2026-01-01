@@ -15,6 +15,9 @@ final class MockEncryptionService: EncryptionServiceProtocol, @unchecked Sendabl
     /// Store encrypted data for proper decryption (ciphertext -> plaintext mapping)
     private var storage: [Data: Data] = [:]
 
+    /// Counter to generate unique ciphertexts
+    private var encryptCounter: UInt64 = 0
+
     // MARK: - Tracking
 
     private(set) var encryptCalls: [(data: Data, key: SymmetricKey)] = []
@@ -29,16 +32,28 @@ final class MockEncryptionService: EncryptionServiceProtocol, @unchecked Sendabl
             throw CryptoError.encryptionFailed("Mock encryption failure")
         }
 
-        // Generate predictable mock encrypted payload
-        let nonce = Data(repeating: 0x01, count: 12) // 96-bit nonce
-        let ciphertext = Data(repeating: 0x02, count: data.count) // Same length as input
+        // Generate unique mock encrypted payload using counter
+        encryptCounter += 1
+        var nonceData = Data(repeating: 0x01, count: 12) // 96-bit nonce
+        // Embed counter in nonce to make each encryption unique
+        withUnsafeBytes(of: encryptCounter.bigEndian) { counterBytes in
+            nonceData.replaceSubrange(0 ..< 8, with: counterBytes)
+        }
+
+        // Use counter-based prefix to ensure unique ciphertext
+        var ciphertext = Data(capacity: data.count + 8)
+        withUnsafeBytes(of: encryptCounter.bigEndian) { counterBytes in
+            ciphertext.append(contentsOf: counterBytes)
+        }
+        ciphertext.append(Data(repeating: 0x02, count: data.count))
+
         let tag = Data(repeating: 0x03, count: 16) // 128-bit tag
 
         // Store mapping for later decryption
         storage[ciphertext] = data
 
         // swiftlint:disable:next force_try
-        return try! EncryptedPayload(nonce: nonce, ciphertext: ciphertext, tag: tag)
+        return try! EncryptedPayload(nonce: nonceData, ciphertext: ciphertext, tag: tag)
     }
 
     func decrypt(_ payload: EncryptedPayload, using key: SymmetricKey) throws -> Data {
@@ -68,6 +83,7 @@ final class MockEncryptionService: EncryptionServiceProtocol, @unchecked Sendabl
         encryptCalls.removeAll()
         decryptCalls.removeAll()
         storage.removeAll()
+        encryptCounter = 0
         shouldFailEncryption = false
         shouldFailDecryption = false
     }

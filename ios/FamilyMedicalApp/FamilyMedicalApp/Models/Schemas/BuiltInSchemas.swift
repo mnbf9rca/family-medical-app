@@ -43,7 +43,8 @@ extension BuiltInSchemas {
                     displayOrder: 1,
                     placeholder: "e.g., COVID-19, MMR, Flu",
                     helpText: "Name of the vaccine administered",
-                    validationRules: [.minLength(1), .maxLength(200)]
+                    validationRules: [.minLength(1), .maxLength(200)],
+                    capitalizationMode: .words
                 ),
                 FieldDefinition(
                     id: "dateAdministered",
@@ -61,7 +62,8 @@ extension BuiltInSchemas {
                     displayOrder: 3,
                     placeholder: "e.g., Dr. Smith, CVS Pharmacy",
                     helpText: "Provider or location where vaccine was administered",
-                    validationRules: [.maxLength(200)]
+                    validationRules: [.maxLength(200)],
+                    capitalizationMode: .words
                 ),
                 FieldDefinition(
                     id: "batchNumber",
@@ -99,7 +101,8 @@ extension BuiltInSchemas {
                     displayOrder: 7,
                     placeholder: "Any additional notes",
                     helpText: "Additional information or reactions",
-                    validationRules: [.maxLength(2_000)]
+                    validationRules: [.maxLength(2_000)],
+                    isMultiline: true
                 ),
                 FieldDefinition(
                     id: "attachmentIds",
@@ -133,7 +136,8 @@ extension BuiltInSchemas {
                     displayOrder: 1,
                     placeholder: "e.g., Asthma, Diabetes, Hypertension",
                     helpText: "Name of the medical condition",
-                    validationRules: [.minLength(1), .maxLength(200)]
+                    validationRules: [.minLength(1), .maxLength(200)],
+                    capitalizationMode: .words
                 ),
                 FieldDefinition(
                     id: "diagnosedDate",
@@ -171,7 +175,8 @@ extension BuiltInSchemas {
                     displayOrder: 5,
                     placeholder: "e.g., Dr. Johnson",
                     helpText: "Healthcare provider managing this condition",
-                    validationRules: [.maxLength(200)]
+                    validationRules: [.maxLength(200)],
+                    capitalizationMode: .words
                 ),
                 FieldDefinition(
                     id: "notes",
@@ -181,7 +186,8 @@ extension BuiltInSchemas {
                     displayOrder: 6,
                     placeholder: "Any additional notes",
                     helpText: "Additional information about the condition",
-                    validationRules: [.maxLength(2_000)]
+                    validationRules: [.maxLength(2_000)],
+                    isMultiline: true
                 ),
                 FieldDefinition(
                     id: "attachmentIds",
@@ -215,7 +221,8 @@ extension BuiltInSchemas {
                     displayOrder: 1,
                     placeholder: "e.g., Aspirin, Metformin",
                     helpText: "Name of the medication",
-                    validationRules: [.minLength(1), .maxLength(200)]
+                    validationRules: [.minLength(1), .maxLength(200)],
+                    capitalizationMode: .words
                 ),
                 FieldDefinition(
                     id: "dosage",
@@ -261,7 +268,8 @@ extension BuiltInSchemas {
                     displayOrder: 6,
                     placeholder: "e.g., Dr. Williams",
                     helpText: "Healthcare provider who prescribed this medication",
-                    validationRules: [.maxLength(200)]
+                    validationRules: [.maxLength(200)],
+                    capitalizationMode: .words
                 ),
                 FieldDefinition(
                     id: "pharmacy",
@@ -271,7 +279,8 @@ extension BuiltInSchemas {
                     displayOrder: 7,
                     placeholder: "e.g., Walgreens",
                     helpText: "Pharmacy where prescription is filled",
-                    validationRules: [.maxLength(200)]
+                    validationRules: [.maxLength(200)],
+                    capitalizationMode: .words
                 ),
                 FieldDefinition(
                     id: "refillsRemaining",
@@ -291,7 +300,8 @@ extension BuiltInSchemas {
                     displayOrder: 9,
                     placeholder: "Any additional notes",
                     helpText: "Additional information or side effects",
-                    validationRules: [.maxLength(2_000)]
+                    validationRules: [.maxLength(2_000)],
+                    isMultiline: true
                 ),
                 FieldDefinition(
                     id: "attachmentIds",
@@ -325,7 +335,8 @@ extension BuiltInSchemas {
                     displayOrder: 1,
                     placeholder: "e.g., Peanuts, Penicillin, Pollen",
                     helpText: "What causes the allergic reaction",
-                    validationRules: [.minLength(1), .maxLength(200)]
+                    validationRules: [.minLength(1), .maxLength(200)],
+                    capitalizationMode: .words
                 ),
                 FieldDefinition(
                     id: "severity",
@@ -363,7 +374,8 @@ extension BuiltInSchemas {
                     displayOrder: 5,
                     placeholder: "Any additional notes",
                     helpText: "Additional information or treatment details",
-                    validationRules: [.maxLength(2_000)]
+                    validationRules: [.maxLength(2_000)],
+                    isMultiline: true
                 ),
                 FieldDefinition(
                     id: "attachmentIds",
@@ -397,7 +409,8 @@ extension BuiltInSchemas {
                     displayOrder: 1,
                     placeholder: "e.g., Doctor Visit, Lab Results",
                     helpText: "Brief title for this note",
-                    validationRules: [.minLength(1), .maxLength(200)]
+                    validationRules: [.minLength(1), .maxLength(200)],
+                    capitalizationMode: .words
                 ),
                 FieldDefinition(
                     id: "content",
@@ -407,7 +420,8 @@ extension BuiltInSchemas {
                     displayOrder: 2,
                     placeholder: "Notes and details",
                     helpText: "Full content of the note",
-                    validationRules: [.maxLength(10_000)]
+                    validationRules: [.maxLength(10_000)],
+                    isMultiline: true
                 ),
                 FieldDefinition(
                     id: "attachmentIds",
