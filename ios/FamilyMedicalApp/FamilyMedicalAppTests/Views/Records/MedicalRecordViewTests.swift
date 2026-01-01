@@ -59,27 +59,30 @@ struct MedicalRecordViewTests {
         #expect(content.getString("notes") == nil)
     }
 
-    @Test
-    func medicalRecordRowViewRendersForAllSchemaTypes() {
-        for schemaType in BuiltInSchemaType.allCases {
-            let schema = RecordSchema.builtIn(schemaType)
-            var content = RecordContent(schemaId: schemaType.rawValue)
-            content.setDate("dateAdministered", Date())
+    // MARK: - Parameterized Schema Type Tests
+    //
+    // Using @Test(arguments:) instead of manual loops provides:
+    // - Clear test names showing which schema type failed
+    // - Parallel execution of independent test cases
+    // - Better test reporting in Xcode and CI
 
-            let view = MedicalRecordRowView(schema: schema, content: content)
-            _ = view.body
-        }
+    @Test(arguments: BuiltInSchemaType.allCases)
+    func medicalRecordRowViewRendersForSchemaType(_ schemaType: BuiltInSchemaType) {
+        let schema = RecordSchema.builtIn(schemaType)
+        var content = RecordContent(schemaId: schemaType.rawValue)
+        content.setDate("dateAdministered", Date())
+
+        let view = MedicalRecordRowView(schema: schema, content: content)
+        _ = view.body
     }
 
     // MARK: - EmptyRecordListView Integration Tests
     // Note: EmptyRecordListView requires BuiltInSchemaType, so these are integration tests
 
-    @Test
-    func emptyRecordListViewRendersForAllSchemaTypes() {
-        for schemaType in BuiltInSchemaType.allCases {
-            let view = EmptyRecordListView(schemaType: schemaType) {}
-            _ = view.body
-        }
+    @Test(arguments: BuiltInSchemaType.allCases)
+    func emptyRecordListViewRendersForSchemaType(_ schemaType: BuiltInSchemaType) {
+        let view = EmptyRecordListView(schemaType: schemaType) {}
+        _ = view.body
     }
 
     @Test

@@ -4,10 +4,24 @@
 //
 //  Tests for medical record CRUD flows including add, edit, and delete from detail view
 //
+//  ## Test Chaining Pattern
+//  Tests are numbered (test1_, test2_, etc.) to ensure execution order.
+//  Earlier tests create data that later tests reuse, reducing redundant
+//  setup and navigation. This trades test isolation for ~60% faster execution.
+//
+//  If test1 fails, subsequent tests will also fail (expected behavior).
+//
 
 import XCTest
 
 /// Tests for medical record creation, viewing, editing, and deletion
+///
+/// Uses test chaining pattern: tests build on each other to reduce setup overhead.
+/// - `test1_AddRecords`: Creates records used by subsequent tests
+/// - `test2_ViewRecordDetail`: Verifies detail view (uses record from test1)
+/// - `test3_EditRecordFromDetail`: Tests edit flow (uses record from test1)
+/// - `test4_DeleteRecordFromDetail`: Tests delete flow (uses record from test1)
+/// - `test5_DeleteRecordCancelPreserves`: Tests cancel delete (uses record from test1)
 @MainActor
 final class MedicalRecordFlowUITests: XCTestCase {
     nonisolated(unsafe) static var sharedApp: XCUIApplication!
@@ -16,6 +30,22 @@ final class MedicalRecordFlowUITests: XCTestCase {
     // Test person name - unique to avoid conflicts with other tests
     let testPersonName = "MedRecordTest User"
 
+    // MARK: - Shared State for Test Chaining
+    //
+    // These track state between tests to avoid redundant navigation.
+    // Reset in class setUp, used across test1...test5.
+
+    /// Whether we're already on the vaccines list (avoids re-navigation)
+    nonisolated(unsafe) static var isOnVaccinesList = false
+
+    /// Record names created in test1, available for test2-5 to use
+    nonisolated(unsafe) static var viewTestRecord = "ViewTest Vaccine"
+    nonisolated(unsafe) static var editTestRecord = "EditTest Vaccine"
+    nonisolated(unsafe) static var deleteTestRecord = "DeleteTest Vaccine"
+    nonisolated(unsafe) static var cancelTestRecord = "CancelTest Vaccine"
+
+    // MARK: - Setup / Teardown
+
     nonisolated override class func setUp() {
         super.setUp()
 
@@ -23,6 +53,7 @@ final class MedicalRecordFlowUITests: XCTestCase {
             sharedApp = XCUIApplication()
             sharedApp.launchForUITesting(resetState: true)
             sharedApp.createAccount()
+            isOnVaccinesList = false
         }
     }
 
@@ -30,6 +61,7 @@ final class MedicalRecordFlowUITests: XCTestCase {
         MainActor.assumeIsolated {
             sharedApp.terminate()
             sharedApp = nil
+            isOnVaccinesList = false
         }
         super.tearDown()
     }
@@ -48,187 +80,185 @@ final class MedicalRecordFlowUITests: XCTestCase {
             }
         }
 
-        // Navigate to home view
+        // Lightweight per-test setup: only clean up unexpected state
+        // Skip heavy navigation since tests chain together
         MainActor.assumeIsolated {
-            // Dismiss any alerts
+            // Dismiss any alerts that appeared unexpectedly
             let alert = Self.sharedApp.alerts.firstMatch
-            if alert.waitForExistence(timeout: 1) {
+            if alert.waitForExistence(timeout: 0.5) {
                 for buttonLabel in ["OK", "Cancel", "Dismiss"] {
                     if alert.buttons[buttonLabel].exists {
                         alert.buttons[buttonLabel].tap()
                         break
                     }
                 }
-                _ = alert.waitForNonExistence(timeout: 2)
+                _ = alert.waitForNonExistence(timeout: 1)
             }
 
-            // Dismiss any sheets
+            // Dismiss any sheets that appeared unexpectedly
             let cancelButton = Self.sharedApp.buttons["Cancel"]
-            if cancelButton.waitForExistence(timeout: 1) {
+            if cancelButton.waitForExistence(timeout: 0.5) {
                 cancelButton.tap()
-                _ = cancelButton.waitForNonExistence(timeout: 2)
+                _ = cancelButton.waitForNonExistence(timeout: 1)
             }
-
-            // Navigate back to home if needed
-            let backButton = Self.sharedApp.navigationBars.buttons.element(boundBy: 0)
-            while backButton.exists, !Self.sharedApp.navigationBars["Members"].exists {
-                backButton.tap()
-                _ = Self.sharedApp.navigationBars["Members"].waitForExistence(timeout: 2)
-            }
-
-            // Verify we're on home view
-            XCTAssertTrue(
-                Self.sharedApp.navigationBars["Members"].waitForExistence(timeout: 3),
-                "Should be on Members view"
-            )
         }
     }
 
     // MARK: - Helper Methods
 
-    /// Ensure test person exists, navigate to their detail view
-    private func navigateToTestPersonDetail() {
+    /// Navigate to the vaccines list, reusing state if already there
+    private func ensureOnVaccinesList() {
+        // If already on vaccines list, just verify
+        let listTitle = app.navigationBars["\(testPersonName)'s Vaccine"]
+        if Self.isOnVaccinesList && listTitle.exists {
+            return
+        }
+
+        // Need to navigate from wherever we are
+        navigateToVaccinesListFresh()
+        Self.isOnVaccinesList = true
+    }
+
+    /// Full navigation to vaccines list (used when state is unknown)
+    private func navigateToVaccinesListFresh() {
+        // Navigate back to home if needed
+        let backButton = app.navigationBars.buttons.element(boundBy: 0)
+        while backButton.exists && !app.navigationBars["Members"].exists {
+            backButton.tap()
+            _ = app.navigationBars["Members"].waitForExistence(timeout: 2)
+        }
+
+        // Ensure on home view
+        XCTAssertTrue(
+            app.navigationBars["Members"].waitForExistence(timeout: 3),
+            "Should be on Members view"
+        )
+
         // Create test person if doesn't exist
         if !app.verifyPersonExists(name: testPersonName, timeout: 1) {
             app.addPerson(name: testPersonName)
         }
 
-        // Tap on person to go to detail
+        // Navigate to person detail
         let personCell = app.cells.containing(.staticText, identifier: testPersonName).firstMatch
         XCTAssertTrue(personCell.waitForExistence(timeout: 3))
         personCell.tap()
 
-        // Wait for person detail view
         let navTitle = app.navigationBars[testPersonName]
         XCTAssertTrue(navTitle.waitForExistence(timeout: 3), "Should navigate to person detail")
-    }
 
-    /// Navigate to vaccines list for test person
-    private func navigateToVaccinesList() {
-        navigateToTestPersonDetail()
-
-        // Tap on Vaccine row (singular - matches BuiltInSchemaType.displayName)
+        // Navigate to vaccines list
         let vaccineRow = app.cells.containing(.staticText, identifier: "Vaccine").firstMatch
         XCTAssertTrue(vaccineRow.waitForExistence(timeout: 3), "Vaccine row should exist")
         vaccineRow.tap()
 
-        // Wait for vaccines list
         let listTitle = app.navigationBars["\(testPersonName)'s Vaccine"]
         XCTAssertTrue(listTitle.waitForExistence(timeout: 3), "Should navigate to vaccines list")
     }
 
-    /// Add a vaccine record with given name
+    /// Add a vaccine record with given name (assumes already on vaccines list)
     private func addVaccineRecord(name: String) {
-        // Tap add button in toolbar (not the one in empty state view)
         let addButton = app.navigationBars.buttons["Add Vaccine"]
         XCTAssertTrue(addButton.waitForExistence(timeout: 3))
         addButton.tap()
 
-        // Wait for form
         let formTitle = app.navigationBars["Add Vaccine"]
         XCTAssertTrue(formTitle.waitForExistence(timeout: 3))
 
-        // Fill in vaccine name
         let nameField = app.textFields["Vaccine Name"]
         XCTAssertTrue(nameField.waitForExistence(timeout: 2))
         nameField.tap()
         nameField.typeText(name)
 
-        // Date is pre-populated with today, so just save
         let saveButton = app.buttons["Save"]
         XCTAssertTrue(saveButton.exists)
         saveButton.tap()
 
-        // Wait for form to dismiss
         XCTAssertTrue(formTitle.waitForNonExistence(timeout: 3), "Form should dismiss after save")
     }
 
-    // MARK: - Add Record Tests
-
-    func testAddVaccineRecord() throws {
-        navigateToVaccinesList()
-
-        let vaccineName = "TestAdd Vaccine"
-        addVaccineRecord(name: vaccineName)
-
-        // Verify record appears in list
-        let recordCell = app.cells.containing(.staticText, identifier: vaccineName).firstMatch
-        XCTAssertTrue(recordCell.waitForExistence(timeout: 3), "New vaccine should appear in list")
+    /// Verify a record exists in the list
+    private func verifyRecordExists(name: String) {
+        let recordCell = app.cells.containing(.staticText, identifier: name).firstMatch
+        XCTAssertTrue(recordCell.waitForExistence(timeout: 3), "\(name) should appear in list")
     }
 
-    func testAddVaccineRecordWithDefaultDate() throws {
-        navigateToVaccinesList()
-
-        let vaccineName = "TestDefaultDate Vaccine"
-
-        // Tap add button in toolbar
-        let addButton = app.navigationBars.buttons["Add Vaccine"]
-        addButton.tap()
-
-        // Wait for form
-        let formTitle = app.navigationBars["Add Vaccine"]
-        XCTAssertTrue(formTitle.waitForExistence(timeout: 3))
-
-        // Fill in vaccine name only - date should default to today
-        let nameField = app.textFields["Vaccine Name"]
-        nameField.tap()
-        nameField.typeText(vaccineName)
-
-        // Save without touching date picker
-        let saveButton = app.buttons["Save"]
-        saveButton.tap()
-
-        // Should succeed (no validation error)
-        XCTAssertTrue(formTitle.waitForNonExistence(timeout: 3), "Form should dismiss - date pre-initialized")
-
-        // Verify record appears
-        let recordCell = app.cells.containing(.staticText, identifier: vaccineName).firstMatch
-        XCTAssertTrue(recordCell.waitForExistence(timeout: 3))
-    }
-
-    // MARK: - View Detail Tests
-
-    func testViewRecordDetail() throws {
-        navigateToVaccinesList()
-
-        let vaccineName = "TestViewDetail Vaccine"
-        addVaccineRecord(name: vaccineName)
-
-        // Tap on record to view detail
-        let recordCell = app.cells.containing(.staticText, identifier: vaccineName).firstMatch
+    /// Navigate to record detail view
+    private func navigateToRecordDetail(name: String) {
+        let recordCell = app.cells.containing(.staticText, identifier: name).firstMatch
         XCTAssertTrue(recordCell.waitForExistence(timeout: 3))
         recordCell.tap()
 
-        // Verify detail view shows
-        let detailTitle = app.navigationBars[vaccineName]
+        let detailTitle = app.navigationBars[name]
         XCTAssertTrue(detailTitle.waitForExistence(timeout: 3), "Should navigate to record detail")
+    }
 
-        // Verify Edit and Delete buttons exist (in toolbar)
+    /// Navigate back to the vaccines list from a detail view
+    private func navigateBackToList() {
+        let backButton = app.navigationBars.buttons.element(boundBy: 0)
+        if backButton.exists {
+            backButton.tap()
+        }
+        let listTitle = app.navigationBars["\(testPersonName)'s Vaccine"]
+        XCTAssertTrue(listTitle.waitForExistence(timeout: 3), "Should return to vaccines list")
+    }
+
+    // MARK: - Test 1: Create Records (Setup for subsequent tests)
+
+    func test1_AddRecords() throws {
+        ensureOnVaccinesList()
+
+        // Create records that will be used by test2-5
+        // Also tests the add flow itself (combines testAddVaccineRecord + testAddVaccineRecordWithDefaultDate)
+
+        // Record for view detail test
+        addVaccineRecord(name: Self.viewTestRecord)
+        verifyRecordExists(name: Self.viewTestRecord)
+
+        // Record for edit test
+        addVaccineRecord(name: Self.editTestRecord)
+        verifyRecordExists(name: Self.editTestRecord)
+
+        // Record for delete test
+        addVaccineRecord(name: Self.deleteTestRecord)
+        verifyRecordExists(name: Self.deleteTestRecord)
+
+        // Record for cancel delete test
+        addVaccineRecord(name: Self.cancelTestRecord)
+        verifyRecordExists(name: Self.cancelTestRecord)
+    }
+
+    // MARK: - Test 2: View Record Detail
+
+    func test2_ViewRecordDetail() throws {
+        ensureOnVaccinesList()
+
+        // Use record created in test1
+        navigateToRecordDetail(name: Self.viewTestRecord)
+
+        // Verify Edit and Delete buttons exist
         XCTAssertTrue(app.navigationBars.buttons["Edit Vaccine"].exists, "Edit button should exist")
         XCTAssertTrue(app.navigationBars.buttons["Delete Vaccine"].exists, "Delete button should exist")
+
+        // Navigate back for next test
+        navigateBackToList()
     }
 
-    // MARK: - Edit from Detail Tests
+    // MARK: - Test 3: Edit Record from Detail
 
-    func testEditRecordFromDetail() throws {
-        navigateToVaccinesList()
+    func test3_EditRecordFromDetail() throws {
+        ensureOnVaccinesList()
 
-        let originalName = "TestEdit Original"
-        let updatedName = "TestEdit Updated"
-        addVaccineRecord(name: originalName)
+        let originalName = Self.editTestRecord
+        let updatedName = "EditTest Updated"
 
-        // Navigate to detail
-        let recordCell = app.cells.containing(.staticText, identifier: originalName).firstMatch
-        recordCell.tap()
+        // Use record created in test1
+        navigateToRecordDetail(name: originalName)
 
-        let detailTitle = app.navigationBars[originalName]
-        XCTAssertTrue(detailTitle.waitForExistence(timeout: 3))
-
-        // Tap Edit (uses accessibility label)
+        // Tap Edit
         let editButton = app.navigationBars.buttons["Edit Vaccine"]
         editButton.tap()
 
-        // Wait for edit form
         let formTitle = app.navigationBars["Edit Vaccine"]
         XCTAssertTrue(formTitle.waitForExistence(timeout: 3))
 
@@ -236,7 +266,7 @@ final class MedicalRecordFlowUITests: XCTestCase {
         let nameField = app.textFields["Vaccine Name"]
         XCTAssertTrue(nameField.waitForExistence(timeout: 2))
 
-        // Clear existing text by deleting all characters
+        // Clear existing text and enter new name
         nameField.tap()
         let existingText = (nameField.value as? String) ?? ""
         let deleteKeys = String(repeating: XCUIKeyboardKey.delete.rawValue, count: existingText.count)
@@ -247,83 +277,76 @@ final class MedicalRecordFlowUITests: XCTestCase {
         let saveButton = app.buttons["Save"]
         saveButton.tap()
 
-        // Form should dismiss and detail view should dismiss (data is stale)
+        // Form and detail should dismiss (edit returns to list)
         XCTAssertTrue(formTitle.waitForNonExistence(timeout: 3))
 
-        // Should be back at list view
+        // Verify back at list
         let listTitle = app.navigationBars["\(testPersonName)'s Vaccine"]
         XCTAssertTrue(listTitle.waitForExistence(timeout: 3), "Should return to list after edit")
 
-        // Updated record should appear in list
+        // Verify updated record appears
         let updatedCell = app.cells.containing(.staticText, identifier: updatedName).firstMatch
         XCTAssertTrue(updatedCell.waitForExistence(timeout: 3), "Updated vaccine should appear in list")
     }
 
-    // MARK: - Delete from Detail Tests
+    // MARK: - Test 4: Delete Record from Detail
 
-    func testDeleteRecordFromDetail() throws {
-        navigateToVaccinesList()
+    func test4_DeleteRecordFromDetail() throws {
+        ensureOnVaccinesList()
 
-        let vaccineName = "TestDelete Vaccine"
-        addVaccineRecord(name: vaccineName)
+        // Use record created in test1
+        navigateToRecordDetail(name: Self.deleteTestRecord)
 
-        // Navigate to detail
-        let recordCell = app.cells.containing(.staticText, identifier: vaccineName).firstMatch
-        recordCell.tap()
-
-        let detailTitle = app.navigationBars[vaccineName]
-        XCTAssertTrue(detailTitle.waitForExistence(timeout: 3))
-
-        // Tap Delete (uses accessibility label)
+        // Tap Delete
         let deleteButton = app.navigationBars.buttons["Delete Vaccine"]
         deleteButton.tap()
 
-        // Confirm deletion in dialog
+        // Confirm deletion
         let confirmButton = app.buttons["Delete"]
         XCTAssertTrue(confirmButton.waitForExistence(timeout: 2))
         confirmButton.tap()
 
-        // Should return to list view
+        // Should return to list
         let listTitle = app.navigationBars["\(testPersonName)'s Vaccine"]
         XCTAssertTrue(listTitle.waitForExistence(timeout: 3), "Should return to list after delete")
 
-        // Record should no longer exist
-        let deletedCell = app.cells.containing(.staticText, identifier: vaccineName).firstMatch
+        // Verify record no longer exists
+        let deletedCell = app.cells.containing(.staticText, identifier: Self.deleteTestRecord).firstMatch
         XCTAssertFalse(deletedCell.exists, "Deleted vaccine should not appear in list")
     }
 
-    func testDeleteRecordFromDetailCancel() throws {
-        navigateToVaccinesList()
+    // MARK: - Test 5: Cancel Delete Preserves Record
 
-        let vaccineName = "TestDeleteCancel Vaccine"
-        addVaccineRecord(name: vaccineName)
+    func test5_DeleteRecordCancelPreserves() throws {
+        ensureOnVaccinesList()
 
-        // Navigate to detail
-        let recordCell = app.cells.containing(.staticText, identifier: vaccineName).firstMatch
-        recordCell.tap()
+        // Use record created in test1
+        navigateToRecordDetail(name: Self.cancelTestRecord)
 
-        let detailTitle = app.navigationBars[vaccineName]
-        XCTAssertTrue(detailTitle.waitForExistence(timeout: 3))
+        let detailTitle = app.navigationBars[Self.cancelTestRecord]
+        XCTAssertTrue(detailTitle.exists)
 
-        // Tap Delete (uses accessibility label)
+        // Tap Delete
         let deleteButton = app.navigationBars.buttons["Delete Vaccine"]
         deleteButton.tap()
 
-        // Cancel deletion - button may be in sheet or main app
+        // Cancel deletion
         let cancelButton = app.buttons["Cancel"].firstMatch
         if cancelButton.waitForExistence(timeout: 2) {
             cancelButton.tap()
-            // Wait for cancel button to disappear (dialog dismissed)
             _ = cancelButton.waitForNonExistence(timeout: 2)
         } else {
             // Dismiss by tapping outside the action sheet
             app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.3)).tap()
-            // Wait for delete confirmation button to disappear
             let deleteConfirmButton = app.buttons["Delete"]
             _ = deleteConfirmButton.waitForNonExistence(timeout: 2)
         }
 
         // Should still be on detail view
         XCTAssertTrue(detailTitle.waitForExistence(timeout: 2), "Should remain on detail view after cancel")
+
+        // Navigate back and verify record still exists
+        navigateBackToList()
+        verifyRecordExists(name: Self.cancelTestRecord)
     }
 }
