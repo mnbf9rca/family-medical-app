@@ -313,13 +313,15 @@ final class MedicalRecordFlowUITests: XCTestCase {
         let cancelButton = app.buttons["Cancel"].firstMatch
         if cancelButton.waitForExistence(timeout: 2) {
             cancelButton.tap()
+            // Wait for cancel button to disappear (dialog dismissed)
+            _ = cancelButton.waitForNonExistence(timeout: 2)
         } else {
             // Dismiss by tapping outside the action sheet
             app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.3)).tap()
+            // Wait for delete confirmation button to disappear
+            let deleteConfirmButton = app.buttons["Delete"]
+            _ = deleteConfirmButton.waitForNonExistence(timeout: 2)
         }
-
-        // Wait for dialog to dismiss
-        Thread.sleep(forTimeInterval: 0.5)
 
         // Should still be on detail view
         XCTAssertTrue(detailTitle.waitForExistence(timeout: 2), "Should remain on detail view after cancel")

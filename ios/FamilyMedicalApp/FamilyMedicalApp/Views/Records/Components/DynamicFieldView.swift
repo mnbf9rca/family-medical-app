@@ -97,8 +97,7 @@ struct DynamicFieldView: View {
     private var intInputView: some View {
         TextField(
             field.placeholder ?? "",
-            value: intBinding,
-            format: .number
+            text: intBinding
         )
         .textFieldStyle(.roundedBorder)
         .keyboardType(.numberPad)
@@ -109,8 +108,7 @@ struct DynamicFieldView: View {
     private var doubleInputView: some View {
         TextField(
             field.placeholder ?? "",
-            value: doubleBinding,
-            format: .number
+            text: doubleBinding
         )
         .textFieldStyle(.roundedBorder)
         .keyboardType(.decimalPad)
@@ -161,41 +159,67 @@ struct DynamicFieldView: View {
     // MARK: - Bindings
 
     /// Binding for string values
+    ///
+    /// Always stores the string value (even empty) so validation can properly
+    /// distinguish between "no value" and "empty string" for minLength rules.
     private var stringBinding: Binding<String> {
         Binding(
             get: {
                 value?.stringValue ?? ""
             },
             set: { newValue in
-                if newValue.isEmpty {
-                    value = nil
-                } else {
-                    value = .string(newValue)
+                value = .string(newValue)
+            }
+        )
+    }
+
+    /// Binding for int values as text
+    ///
+    /// Uses text-based input to distinguish between "no value" (empty) and "zero" ("0").
+    /// Invalid input is ignored (keeps previous value).
+    private var intBinding: Binding<String> {
+        Binding(
+            get: {
+                if let intValue = value?.intValue {
+                    return String(intValue)
                 }
+                return ""
+            },
+            set: { newValue in
+                let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+                if trimmed.isEmpty {
+                    value = nil
+                } else if let intValue = Int(trimmed) {
+                    value = .int(intValue)
+                }
+                // Invalid input: ignore (keep existing value)
             }
         )
     }
 
-    /// Binding for int values
-    private var intBinding: Binding<Int> {
+    /// Binding for double values as text
+    ///
+    /// Uses text-based input to distinguish between "no value" (empty) and "zero" ("0.0").
+    /// Invalid input is ignored (keeps previous value).
+    private var doubleBinding: Binding<String> {
         Binding(
             get: {
-                value?.intValue ?? 0
+                if let doubleValue = value?.doubleValue {
+                    // Format without trailing zeros for cleaner display
+                    return doubleValue.truncatingRemainder(dividingBy: 1) == 0
+                        ? String(format: "%.0f", doubleValue)
+                        : String(doubleValue)
+                }
+                return ""
             },
             set: { newValue in
-                value = .int(newValue)
-            }
-        )
-    }
-
-    /// Binding for double values
-    private var doubleBinding: Binding<Double> {
-        Binding(
-            get: {
-                value?.doubleValue ?? 0.0
-            },
-            set: { newValue in
-                value = .double(newValue)
+                let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+                if trimmed.isEmpty {
+                    value = nil
+                } else if let doubleValue = Double(trimmed) {
+                    value = .double(doubleValue)
+                }
+                // Invalid input: ignore (keep existing value)
             }
         )
     }

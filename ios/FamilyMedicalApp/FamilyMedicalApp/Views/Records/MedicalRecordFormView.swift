@@ -9,6 +9,9 @@ struct MedicalRecordFormView: View {
     let existingRecord: MedicalRecord?
     let existingContent: RecordContent?
 
+    /// Callback invoked after a successful save (before dismissal)
+    var onSave: (() -> Void)?
+
     @Environment(\.dismiss)
     private var dismiss
     @State private var viewModel: MedicalRecordFormViewModel
@@ -20,12 +23,14 @@ struct MedicalRecordFormView: View {
         schema: RecordSchema,
         existingRecord: MedicalRecord? = nil,
         existingContent: RecordContent? = nil,
-        viewModel: MedicalRecordFormViewModel? = nil
+        viewModel: MedicalRecordFormViewModel? = nil,
+        onSave: (() -> Void)? = nil
     ) {
         self.person = person
         self.schema = schema
         self.existingRecord = existingRecord
         self.existingContent = existingContent
+        self.onSave = onSave
         self._viewModel = State(initialValue: viewModel ?? MedicalRecordFormViewModel(
             person: person,
             schema: schema,
@@ -90,6 +95,7 @@ struct MedicalRecordFormView: View {
             }
             .onChange(of: viewModel.didSaveSuccessfully) { _, didSave in
                 if didSave {
+                    onSave?()
                     dismiss()
                 }
             }

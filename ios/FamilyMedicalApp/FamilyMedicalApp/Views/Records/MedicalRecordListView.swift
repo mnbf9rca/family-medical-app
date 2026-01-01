@@ -120,6 +120,11 @@ struct MedicalRecordListView: View {
 
     // MARK: - Actions
 
+    /// Handle swipe-to-delete gesture
+    ///
+    /// SwiftUI's `.onDelete` modifier for swipe gestures always provides a single-element IndexSet.
+    /// Multi-row deletion would require Edit mode with selection, which is not currently implemented.
+    /// If multi-select is added later, update this to handle all indices.
     private func deleteRecords(at offsets: IndexSet) {
         guard let index = offsets.first else { return }
         recordToDelete = viewModel.records[index]

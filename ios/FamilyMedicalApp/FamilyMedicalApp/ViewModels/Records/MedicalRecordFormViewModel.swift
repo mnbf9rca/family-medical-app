@@ -137,7 +137,9 @@ final class MedicalRecordFormViewModel {
 
             // Create or update record
             let record = if let existingRecord {
-                // Update existing record
+                // In-place update: same ID, no version chain (future feature)
+                // When true versioning is added, this will create a new ID
+                // and set previousVersionId to the old record's ID
                 MedicalRecord(
                     id: existingRecord.id,
                     personId: person.id,
@@ -145,7 +147,7 @@ final class MedicalRecordFormViewModel {
                     createdAt: existingRecord.createdAt,
                     updatedAt: Date(),
                     version: existingRecord.version + 1,
-                    previousVersionId: existingRecord.id
+                    previousVersionId: nil
                 )
             } else {
                 // Create new record

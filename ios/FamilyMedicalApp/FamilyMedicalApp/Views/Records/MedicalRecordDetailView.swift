@@ -69,7 +69,11 @@ struct MedicalRecordDetailView: View {
                 schema: schema,
                 existingRecord: decryptedRecord.record,
                 existingContent: decryptedRecord.content
-            )
+            ) {
+                // Only refresh and dismiss on successful save
+                onRecordUpdated?()
+                dismiss()
+            }
         }
         .confirmationDialog(
             "Delete Record",
@@ -89,13 +93,6 @@ struct MedicalRecordDetailView: View {
         .overlay {
             if isDeleting {
                 ProgressView()
-            }
-        }
-        .onChange(of: showingEditForm) { _, isShowing in
-            if !isShowing {
-                // Notify parent to refresh, then dismiss since our data is stale
-                onRecordUpdated?()
-                dismiss()
             }
         }
     }
