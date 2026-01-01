@@ -173,20 +173,6 @@ private let unlockViewTestCases: [UnlockViewTestCase] = [
 struct UnlockViewTests {
     // MARK: - Helper Methods
 
-    /// Formats lockout message to match UnlockView's formattedLockoutTime format
-    private func formatLockoutMessage(seconds: Int) -> String {
-        let minutes = seconds / 60
-        let remainingSeconds = seconds % 60
-
-        let timeString = if minutes > 0 {
-            "\(minutes)m \(remainingSeconds)s"
-        } else {
-            "\(remainingSeconds)s"
-        }
-
-        return "Too many failed attempts. Try again in \(timeString)"
-    }
-
     private func createViewModel(for testCase: UnlockViewTestCase) -> AuthenticationViewModel {
         let biometricService = MockViewModelBiometricService(
             isAvailable: testCase.isBiometricEnabled,
