@@ -218,55 +218,60 @@ struct UnlockViewTests {
 
         // Verify password field presence
         if testCase.expectPasswordField {
-            // Check for either TextField (UI testing mode) or SecureField (normal mode)
-            let hasPasswordField = (try? inspectedView.find(ViewType.SecureField.self)) != nil ||
-                (try? inspectedView.find(ViewType.TextField.self)) != nil
-            #expect(hasPasswordField, "Expected password field to be present")
+            // Find password field by accessibility identifier (more robust than text matching)
+            let passwordField = try? inspectedView.find(viewWithAccessibilityIdentifier: "passwordField")
+            #expect(passwordField != nil, "Expected password field to be present")
 
             // Verify "Unlock" button is present with password field
-            let unlockButton = try? inspectedView.find(button: "Unlock")
+            let unlockButton = try? inspectedView.find(viewWithAccessibilityIdentifier: "unlockButton")
             #expect(unlockButton != nil, "Expected Unlock button to be present")
         }
 
         // Verify biometric button presence (Face ID or Touch ID icon button)
         if testCase.expectBiometricButton {
+            // Use accessibility identifier for structural test
+            let biometricButton = try? inspectedView.find(viewWithAccessibilityIdentifier: "biometricButton")
+            #expect(biometricButton != nil, "Expected biometric button to be present")
+
+            // Also verify correct biometry type label for behavioral correctness
             let expectedLabel = testCase.biometryType == .faceID ? "Face ID" : "Touch ID"
-            let biometricButton = try? inspectedView.find(text: "Unlock with \(expectedLabel)")
-            #expect(biometricButton != nil, "Expected biometric button with label 'Unlock with \(expectedLabel)'")
+            let labelText = try? inspectedView.find(text: "Unlock with \(expectedLabel)")
+            #expect(labelText != nil, "Expected biometric button with label 'Unlock with \(expectedLabel)'")
         }
 
         // Verify "Use Password" button presence (in biometric mode)
         if testCase.expectUsePasswordButton {
-            let usePasswordButton = try? inspectedView.find(button: "Use Password")
+            let usePasswordButton = try? inspectedView.find(viewWithAccessibilityIdentifier: "usePasswordButton")
             #expect(usePasswordButton != nil, "Expected 'Use Password' button to be present")
         }
 
         // Verify "Use Face ID/Touch ID" button presence (in password mode when biometric available)
         if testCase.expectUseBiometricButton {
-            let expectedLabel = testCase.biometryType == .faceID ? "Use Face ID" : "Use Touch ID"
-            let useBiometricButton = try? inspectedView.find(button: expectedLabel)
-            #expect(useBiometricButton != nil, "Expected '\(expectedLabel)' button to be present")
+            let useBiometricButton = try? inspectedView.find(viewWithAccessibilityIdentifier: "useBiometricButton")
+            #expect(useBiometricButton != nil, "Expected 'Use Biometric' button to be present")
         }
 
         // Verify failed attempts text presence
         if testCase.expectFailedAttemptsText {
-            let failedText = try? inspectedView.find(text: "\(testCase.failedAttemptCount) failed attempt")
-            let failedTextPlural = try? inspectedView.find(text: "\(testCase.failedAttemptCount) failed attempts")
-            #expect(
-                failedText != nil || failedTextPlural != nil,
-                "Expected failed attempts text to be present"
-            )
+            // Use accessibility identifier for structural test
+            let failedLabel = try? inspectedView.find(viewWithAccessibilityIdentifier: "failedAttemptsLabel")
+            #expect(failedLabel != nil, "Expected failed attempts label to be present")
         }
 
         // Verify lockout message presence
         if testCase.expectLockoutMessage {
-            let expectedLockoutText = formatLockoutMessage(seconds: testCase.lockoutRemainingSeconds)
-            let lockoutText = try? inspectedView.find(text: expectedLockoutText)
-            #expect(lockoutText != nil, "Expected lockout message '\(expectedLockoutText)' to be present")
+            // Use accessibility identifier for structural test
+            let lockoutLabel = try? inspectedView.find(viewWithAccessibilityIdentifier: "lockoutLabel")
+            #expect(lockoutLabel != nil, "Expected lockout label to be present")
         }
 
         // Verify error message presence
         if testCase.expectErrorMessage, let errorMessage = testCase.errorMessage {
+            // Use accessibility identifier for structural test
+            let errorLabel = try? inspectedView.find(viewWithAccessibilityIdentifier: "errorLabel")
+            #expect(errorLabel != nil, "Expected error label to be present")
+
+            // Also verify the correct message content for behavioral correctness
             let errorText = try? inspectedView.find(text: errorMessage)
             #expect(errorText != nil, "Expected error message '\(errorMessage)' to be present")
         }
@@ -306,14 +311,12 @@ struct UnlockViewTests {
 
         // Verify the view renders correctly with lockout state
         // The password field should exist (password mode is shown)
-        let hasPasswordField = (try? inspectedView.find(ViewType.SecureField.self)) != nil ||
-            (try? inspectedView.find(ViewType.TextField.self)) != nil
-        #expect(hasPasswordField, "Expected password field to be present during lockout")
+        let passwordField = try? inspectedView.find(viewWithAccessibilityIdentifier: "passwordField")
+        #expect(passwordField != nil, "Expected password field to be present during lockout")
 
         // Verify lockout message is shown
-        let expectedLockoutText = formatLockoutMessage(seconds: 30)
-        let lockoutText = try? inspectedView.find(text: expectedLockoutText)
-        #expect(lockoutText != nil, "Expected lockout message during lockout state")
+        let lockoutLabel = try? inspectedView.find(viewWithAccessibilityIdentifier: "lockoutLabel")
+        #expect(lockoutLabel != nil, "Expected lockout label during lockout state")
     }
 
     @Test

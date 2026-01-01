@@ -4,11 +4,83 @@ This document captures iOS testing patterns and solutions for common issues.
 
 ## Table of Contents
 
+- [XCTest Does NOT Guarantee Test Order](#xctest-does-not-guarantee-test-order)
 - [SwiftUI Toggle Not Responding to tap()](#swiftui-toggle-not-responding-to-tap)
 - [Password AutoFill Blocking Tests](#password-autofill-blocking-tests)
 - [Testing SwiftUI Bindings with ViewInspector](#testing-swiftui-bindings-with-viewinspector)
-- [UI Test Performance: Test Chaining Pattern](#ui-test-performance-test-chaining-pattern)
+- [UI Test Performance: Shared Setup Pattern](#ui-test-performance-shared-setup-pattern)
 - [Swift Testing Parameterization](#swift-testing-parameterization)
+
+## XCTest Does NOT Guarantee Test Order
+
+**⚠️ Critical:** XCTest does NOT guarantee test execution order. Numeric prefixes like `test1_`, `test2_`, `test3_` do NOT ensure tests run in that sequence.
+
+**Root Cause:** XCTest may run tests in any order depending on:
+
+- Parallel execution settings
+- Environment configuration
+- Xcode version and simulator state
+
+**What Breaks:**
+
+```swift
+// BAD: These tests depend on execution order that isn't guaranteed
+func test1_CreateRecord() throws {
+    Self.createdRecordId = createRecord()  // Creates state for test2
+}
+
+func test2_ViewRecord() throws {
+    // WILL FAIL if test1 hasn't run yet!
+    viewRecord(id: Self.createdRecordId)
+}
+
+func test3_DeleteRecord() throws {
+    // WILL FAIL if test1 or test2 haven't run!
+    deleteRecord(id: Self.createdRecordId)
+}
+```
+
+**Solution:** Consolidate interdependent operations into a single test method:
+
+```swift
+// GOOD: All CRUD operations in one method - guaranteed execution order
+func testRecordCRUDWorkflow() throws {
+    // --- Step 1: Create ---
+    let recordId = createRecord()
+    verifyRecordExists(id: recordId)
+
+    // --- Step 2: View ---
+    viewRecord(id: recordId)
+    verifyRecordDetails()
+
+    // --- Step 3: Delete ---
+    deleteRecord(id: recordId)
+    verifyRecordDeleted(id: recordId)
+}
+```
+
+**Benefits:**
+
+- ✅ Guaranteed execution order within the method
+- ✅ No shared mutable state between tests
+- ✅ Clear test intent (tests a complete workflow)
+
+**Trade-offs:**
+
+- ❌ Single test failure stops the entire workflow
+- ❌ Longer individual test duration
+- ❌ Less granular test reporting
+
+**When to use:**
+
+- CRUD operation tests that naturally chain together
+- Workflow tests where later steps require earlier steps
+- Any scenario where tests share mutable state
+
+**References:**
+
+- `NewUserFlowUITests.swift` - `testPasswordSetupValidation()` consolidates 5 validation checks
+- `MedicalRecordFlowUITests.swift` - `testMedicalRecordCRUDWorkflow()` consolidates 5 CRUD operations
 
 ## SwiftUI Toggle Not Responding to tap()
 
@@ -93,53 +165,73 @@ final class BindingTestHarness<Value> {
 }
 ```
 
-## UI Test Performance: Test Chaining Pattern
+## UI Test Performance: Shared Setup Pattern
 
-**Problem:** UI tests are slow when each test independently navigates and creates test data.
+**Problem:** UI tests are slow when each test independently creates accounts and navigates.
 
-**Solution:** Use test chaining where earlier tests create data that later tests reuse.
+**Solution:** Use class-level shared setup for independent tests, and consolidate interdependent tests.
 
-**Implementation:**
+**⚠️ Important:** Do NOT rely on `test1_`, `test2_` prefixes for ordering - see [XCTest Does NOT Guarantee Test Order](#xctest-does-not-guarantee-test-order).
 
-1. Name tests with numeric prefixes to control execution order: `test1_`, `test2_`, etc.
-2. Store shared state in static variables
-3. Track navigation state to avoid redundant navigation
+### Pattern 1: Shared Class Setup (Independent Tests)
+
+For tests that don't depend on each other but share expensive setup (e.g., account creation):
 
 ```swift
-// Static state shared across tests
-nonisolated(unsafe) static var isOnTargetScreen = false
-nonisolated(unsafe) static var testRecordName = "Test Record"
+@MainActor
+final class MyUITests: XCTestCase {
+    nonisolated(unsafe) static var sharedApp: XCUIApplication!
+    var app: XCUIApplication { Self.sharedApp }
 
-func test1_CreateTestData() throws {
-    navigateToScreen()
-    Self.isOnTargetScreen = true
-    createRecord(name: Self.testRecordName)
+    nonisolated override class func setUp() {
+        super.setUp()
+        MainActor.assumeIsolated {
+            sharedApp = XCUIApplication()
+            sharedApp.launchForUITesting(resetState: true)
+            sharedApp.createAccount()  // Expensive operation done once
+        }
+    }
+
+    func testFeatureA() throws {
+        // Uses shared account, tests independently
+    }
+
+    func testFeatureB() throws {
+        // Uses shared account, tests independently
+    }
 }
+```
 
-func test2_UseTestData() throws {
-    // Skip navigation if already there
-    if !Self.isOnTargetScreen { navigateToScreen() }
+### Pattern 2: Consolidated Workflow (Dependent Tests)
 
-    // Use record created in test1
-    tapOnRecord(name: Self.testRecordName)
+For tests that must run in sequence, consolidate into one method:
+
+```swift
+func testCompleteWorkflow() throws {
+    // All steps execute in guaranteed order
+    let record = createRecord()
+    verifyRecord(record)
+    editRecord(record)
+    deleteRecord(record)
 }
 ```
 
 **Trade-offs:**
 
-- ✅ ~60% faster execution
-- ❌ Tests are interdependent (if test1 fails, test2+ also fail)
-- ❌ Less isolation between tests
+- ✅ ~60% faster execution with shared setup
+- ✅ Guaranteed order with consolidated tests
+- ❌ Shared setup: if setUp fails, all tests fail
+- ❌ Consolidated tests: less granular reporting
 
 **When to use:**
 
-- UI test suites taking >5 minutes
-- CRUD operation tests that naturally chain together
-- When test isolation is less important than speed
+- Shared setup: Independent tests with expensive common setup
+- Consolidated: Tests that must run in sequence
 
 **References:**
 
-- Example: `MedicalRecordFlowUITests.swift`
+- Shared setup: `ExistingUserFlowUITests.swift`, `AddPersonFlowUITests.swift`
+- Consolidated: `MedicalRecordFlowUITests.swift`, `NewUserFlowUITests.swift`
 
 ## Swift Testing Parameterization
 

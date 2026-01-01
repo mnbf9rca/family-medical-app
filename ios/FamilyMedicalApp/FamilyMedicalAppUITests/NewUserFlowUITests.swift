@@ -8,15 +8,14 @@
 //  - Independent tests: `testCompleteNewUserJourney`, `testNewUserWithCustomCredentials`
 //    These require fresh app state and test complete account creation flows.
 //
-//  - Chained validation tests: `test1_...` through `test5_...`
-//    These share a single app launch to reduce overhead (~60% faster).
-//    They only READ UI state (checking button enabled/disabled, text visibility).
-//    Each test clears form fields before starting to ensure clean state.
+//  - Validation test: `testPasswordSetupValidation`
+//    Tests all password validation rules in a single method (field presence,
+//    button states, strength indicator, password matching).
 //
-//  ## Tradeoffs
-//  Test chaining trades isolation for speed. If test1 fails to launch properly,
-//  subsequent chained tests will also fail. This is acceptable for validation
-//  tests that don't modify persistent state.
+//  ## Note on XCTest Ordering
+//  XCTest does NOT guarantee test execution order. Previously, tests were named
+//  `test1_`, `test2_`, etc. to imply ordering, but this is not reliable.
+//  Validation checks are now consolidated into a single test method.
 //
 //  - Note: Ensure hardware keyboard is disabled in simulator:
 //    I/O -> Keyboard -> Connect Hardware Keyboard (unchecked)
@@ -27,24 +26,13 @@ import XCTest
 /// Tests for new user account creation flow
 @MainActor
 final class NewUserFlowUITests: XCTestCase {
-    // MARK: - Shared State for Test Chaining
-
-    /// Shared app instance for chained validation tests
-    nonisolated(unsafe) static var sharedApp: XCUIApplication!
-
-    /// Instance accessor for convenience
-    private var chainedApp: XCUIApplication { Self.sharedApp }
-
-    /// Track if chained tests have been initialized
-    nonisolated(unsafe) static var chainedTestsInitialized = false
-
-    // MARK: - Instance app for independent tests
+    // MARK: - Instance app
 
     nonisolated(unsafe) var app: XCUIApplication!
 
     // MARK: - Setup / Teardown
 
-    nonisolated override func setUpWithError() throws {
+    override func setUpWithError() throws {
         continueAfterFailure = false
 
         // Add UI interruption monitor to handle password autofill prompts
@@ -63,39 +51,17 @@ final class NewUserFlowUITests: XCTestCase {
         }
     }
 
-    nonisolated override func tearDownWithError() throws {
+    override func tearDownWithError() throws {
+        app?.terminate()
         app = nil
-    }
-
-    nonisolated override class func tearDown() {
-        MainActor.assumeIsolated {
-            sharedApp?.terminate()
-            sharedApp = nil
-            chainedTestsInitialized = false
-        }
-        super.tearDown()
     }
 
     // MARK: - Helper Methods
 
-    /// Initialize the shared app for chained tests (called once by first chained test)
-    private func ensureChainedAppLaunched() {
-        if !Self.chainedTestsInitialized {
-            Self.sharedApp = XCUIApplication()
-            Self.sharedApp.launchForUITesting(resetState: true)
-
-            // Wait for setup view
-            let headerText = Self.sharedApp.staticTexts["Secure Your Medical Records"]
-            XCTAssertTrue(headerText.waitForExistence(timeout: 5), "Setup screen should appear")
-
-            Self.chainedTestsInitialized = true
-        }
-    }
-
-    /// Clear all form fields to reset state between chained tests
+    /// Clear all form fields to reset state
     private func clearFormFields() {
         // Clear username field
-        let usernameField = chainedApp.textFields["Choose a username"]
+        let usernameField = app.textFields["Choose a username"]
         if usernameField.exists {
             usernameField.tap()
             if let text = usernameField.value as? String, !text.isEmpty, text != "Choose a username" {
@@ -105,7 +71,7 @@ final class NewUserFlowUITests: XCTestCase {
         }
 
         // Clear password field
-        let passwordField = chainedApp.passwordField("Enter password")
+        let passwordField = app.passwordField("Enter password")
         if passwordField.exists {
             passwordField.tap()
             if let text = passwordField.value as? String, !text.isEmpty, text != "Enter password" {
@@ -115,7 +81,7 @@ final class NewUserFlowUITests: XCTestCase {
         }
 
         // Clear confirm password field
-        let confirmPasswordField = chainedApp.passwordField("Confirm password")
+        let confirmPasswordField = app.passwordField("Confirm password")
         if confirmPasswordField.exists {
             confirmPasswordField.tap()
             if let text = confirmPasswordField.value as? String, !text.isEmpty, text != "Confirm password" {
@@ -125,7 +91,7 @@ final class NewUserFlowUITests: XCTestCase {
         }
 
         // Tap header to dismiss keyboard
-        let header = chainedApp.staticTexts["Secure Your Medical Records"]
+        let header = app.staticTexts["Secure Your Medical Records"]
         if header.exists {
             header.tap()
         }
@@ -170,82 +136,59 @@ final class NewUserFlowUITests: XCTestCase {
         app.terminate()
     }
 
-    // MARK: - Chained Validation Tests (Shared App Instance)
+    // MARK: - Password Setup Validation Test
     //
-    // These tests share a single app launch. They only read UI state and
-    // clear form fields between tests. Numbered for execution order.
+    // This test consolidates all password validation checks into a single method.
+    // XCTest does NOT guarantee test ordering, so chained tests with `test1_`, `test2_`
+    // prefixes are unreliable. This single method tests all validation rules sequentially.
 
-    func test1_AllRequiredFieldsAppear() throws {
-        ensureChainedAppLaunched()
+    func testPasswordSetupValidation() throws {
+        // Launch app with fresh state
+        app = XCUIApplication()
+        app.launchForUITesting(resetState: true)
 
-        // Verify all fields exist
-        XCTAssertTrue(chainedApp.textFields["Choose a username"].exists, "Username field should exist")
-        XCTAssertTrue(chainedApp.passwordField("Enter password").exists, "Password field should exist")
-        XCTAssertTrue(chainedApp.passwordField("Confirm password").exists, "Confirm password field should exist")
-        XCTAssertTrue(chainedApp.buttons["Continue"].exists, "Continue button should exist")
-    }
+        // Wait for setup view
+        let headerText = app.staticTexts["Secure Your Medical Records"]
+        XCTAssertTrue(headerText.waitForExistence(timeout: 5), "Setup screen should appear")
 
-    func test2_EmptyFieldsDisableContinueButton() throws {
-        ensureChainedAppLaunched()
-        clearFormFields()
+        // --- Step 1: Verify all required fields appear ---
+        XCTAssertTrue(app.textFields["Choose a username"].exists, "Username field should exist")
+        XCTAssertTrue(app.passwordField("Enter password").exists, "Password field should exist")
+        XCTAssertTrue(app.passwordField("Confirm password").exists, "Confirm password field should exist")
+        XCTAssertTrue(app.buttons["Continue"].exists, "Continue button should exist")
 
-        // Continue button should be disabled with empty fields
-        let continueButton = chainedApp.buttons["Continue"]
+        // --- Step 2: Empty fields should disable continue button ---
+        let continueButton = app.buttons["Continue"]
         XCTAssertFalse(continueButton.isEnabled, "Continue should be disabled with empty fields")
-    }
 
-    func test3_PartiallyFilledFieldsDisableContinueButton() throws {
-        ensureChainedAppLaunched()
-        clearFormFields()
-
-        // Only fill username
-        let usernameField = chainedApp.textFields["Choose a username"]
+        // --- Step 3: Partially filled fields should disable continue button ---
+        let usernameField = app.textFields["Choose a username"]
         usernameField.tap()
         usernameField.typeText("testuser")
-
-        // Continue button should still be disabled
-        let continueButton = chainedApp.buttons["Continue"]
         XCTAssertFalse(continueButton.isEnabled, "Continue should be disabled with only username")
-    }
 
-    func test4_WeakPasswordShowsStrengthIndicator() throws {
-        ensureChainedAppLaunched()
-        clearFormFields()
-
-        // Enter username
-        let usernameField = chainedApp.textFields["Choose a username"]
-        usernameField.tap()
-        usernameField.typeText("testuser")
-
-        // Enter weak password (too short, less than 12 chars)
-        let passwordField = chainedApp.passwordField("Enter password")
+        // --- Step 4: Weak password should show strength indicator ---
+        let passwordField = app.passwordField("Enter password")
         passwordField.tap()
         passwordField.typeText("weak")
 
-        // Verify strength indicator appears (check for "Weak" text)
-        let weakText = chainedApp.staticTexts["Weak"]
+        let weakText = app.staticTexts["Weak"]
         XCTAssertTrue(weakText.waitForExistence(timeout: 2), "Strength indicator showing 'Weak' should appear for weak password")
-    }
 
-    func test5_MismatchedPasswordsShowError() throws {
-        ensureChainedAppLaunched()
+        // Clear fields for next test
         clearFormFields()
 
-        // Fill in fields with mismatched passwords
-        let usernameField = chainedApp.textFields["Choose a username"]
+        // --- Step 5: Mismatched passwords should disable continue button ---
         usernameField.tap()
         usernameField.typeText("testuser")
 
-        let passwordField = chainedApp.passwordField("Enter password")
         passwordField.tap()
         passwordField.typeText("unique-horse-battery-staple-2024")
 
-        let confirmPasswordField = chainedApp.passwordField("Confirm password")
+        let confirmPasswordField = app.passwordField("Confirm password")
         confirmPasswordField.tap()
         confirmPasswordField.typeText("unique-good-pass-1234")
 
-        // Continue button should be disabled
-        let continueButton = chainedApp.buttons["Continue"]
         XCTAssertFalse(continueButton.isEnabled, "Continue should be disabled with mismatched passwords")
     }
 }
