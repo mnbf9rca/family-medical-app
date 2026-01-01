@@ -71,6 +71,7 @@ print("-" * 80)
 failed_files = []
 file_details = {}  # Store file data for detailed mode
 files_below_100 = []  # Track files < 100% for detailed mode
+actual_coverage = {}  # Track actual coverage for exception analysis
 
 for file_data in app_target['files']:
     file_path = file_data['path']
@@ -83,6 +84,9 @@ for file_data in app_target['files']:
 
     # Store file data for detailed mode
     file_details[file_name] = file_data
+
+    # Track actual coverage for exception analysis
+    actual_coverage[file_name] = coverage
 
     # Track files below 100% for detailed reporting
     if coverage < 100.0:
@@ -98,6 +102,42 @@ for file_data in app_target['files']:
     print(f"{file_name:<60} {coverage:>9.2f}% {status:>8}")
 
 print("=" * 80)
+
+# Coverage Exceptions Analysis
+if FILE_EXCEPTIONS:
+    print(f"\n📋 Coverage Exceptions Analysis")
+    print("-" * 80)
+
+    for file_name, exception_threshold in sorted(FILE_EXCEPTIONS.items()):
+        file_coverage = actual_coverage.get(file_name, 0.0)
+
+        if file_coverage >= THRESHOLD:
+            # Coverage meets or exceeds standard threshold - exception can be removed
+            print(f"  {file_name}:")
+            print(f"    Current exception: {exception_threshold}%")
+            print(f"    Actual coverage:   {file_coverage:.2f}%")
+            print(f"    ✅ Suggestion: Exception can be REMOVED (coverage >= {THRESHOLD}%)")
+        elif file_coverage > exception_threshold + 5:
+            # Coverage is more than 5% above exception - can be raised
+            suggested = min(int(file_coverage) - 2, THRESHOLD - 1)  # Leave some margin
+            print(f"  {file_name}:")
+            print(f"    Current exception: {exception_threshold}%")
+            print(f"    Actual coverage:   {file_coverage:.2f}%")
+            print(f"    📈 Suggestion: Exception can be RAISED to {suggested}%")
+        elif file_coverage < exception_threshold:
+            # Coverage is below exception threshold - warning
+            print(f"  {file_name}:")
+            print(f"    Current exception: {exception_threshold}%")
+            print(f"    Actual coverage:   {file_coverage:.2f}%")
+            print(f"    ⚠️  WARNING: Coverage is BELOW exception threshold!")
+        else:
+            # Coverage is within normal range of exception
+            print(f"  {file_name}:")
+            print(f"    Current exception: {exception_threshold}%")
+            print(f"    Actual coverage:   {file_coverage:.2f}%")
+            print(f"    ✓ Exception is appropriate")
+
+    print("-" * 80)
 
 # Overall summary
 print(f"\n📈 Overall Coverage: {overall_coverage:.2f}%")

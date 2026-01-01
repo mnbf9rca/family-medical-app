@@ -1,6 +1,14 @@
-# SwiftUI XCUITest Common Issues
+# iOS Testing Patterns
 
-This document captures known SwiftUI XCUITest issues and their solutions.
+This document captures iOS testing patterns and solutions for common issues.
+
+## Table of Contents
+
+- [SwiftUI Toggle Not Responding to tap()](#swiftui-toggle-not-responding-to-tap)
+- [Password AutoFill Blocking Tests](#password-autofill-blocking-tests)
+- [Testing SwiftUI Bindings with ViewInspector](#testing-swiftui-bindings-with-viewinspector)
+- [UI Test Performance: Test Chaining Pattern](#ui-test-performance-test-chaining-pattern)
+- [Swift Testing Parameterization](#swift-testing-parameterization)
 
 ## SwiftUI Toggle Not Responding to tap()
 

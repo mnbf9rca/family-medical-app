@@ -36,7 +36,7 @@
 - **Before starting work, always read:**
   - [ADRs](docs/adr/README.md) - Architecture decisions and rationale
   - [Coding Practices](docs/coding-practices.md) - Standards and patterns
-  - [SwiftUI XCUITest Gotchas](docs/swiftui-xcuitest-gotchas.md) - UI testing guidance
+  - [Testing Patterns](docs/testing-patterns.md) - UI testing guidance
 - Consider whether your changes warrant updating the ADRs; include this as a task if needed
 
 ## Testing Requirements
