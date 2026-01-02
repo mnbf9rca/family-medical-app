@@ -63,4 +63,20 @@
             </uniquenessConstraint>
         </uniquenessConstraints>
     </entity>
+    <entity name="MigrationCheckpointEntity" representedClassName="MigrationCheckpointEntity" syncable="YES">
+        <attribute name="createdAt" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="id" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="migrationId" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="personId" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="recordBackups" attributeType="Binary" allowsExternalBinaryDataStorage="YES"/>
+        <attribute name="schemaId" attributeType="String"/>
+        <uniquenessConstraints>
+            <uniquenessConstraint>
+                <constraint value="id"/>
+            </uniquenessConstraint>
+            <uniquenessConstraint>
+                <constraint value="migrationId"/>
+            </uniquenessConstraint>
+        </uniquenessConstraints>
+    </entity>
 </model>

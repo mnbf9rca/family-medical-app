@@ -88,4 +88,84 @@ struct RepositoryErrorsTests {
 
         #expect(error.localizedDescription == "Deserialization failed: Test deserialization error")
     }
+
+    // MARK: - Schema Validation Errors
+
+    @Test
+    func schemaIdConflictsWithBuiltIn_hasCorrectDescription() {
+        let error = RepositoryError.schemaIdConflictsWithBuiltIn("vaccination")
+
+        #expect(error.localizedDescription == "Schema ID 'vaccination' conflicts with a built-in schema")
+    }
+
+    @Test
+    func customSchemaNotFound_hasCorrectDescription() {
+        let error = RepositoryError.customSchemaNotFound("my-custom-schema")
+
+        #expect(error.localizedDescription == "Custom schema 'my-custom-schema' not found")
+    }
+
+    @Test
+    func fieldTypeChangeNotAllowed_hasCorrectDescription() {
+        let error = RepositoryError.fieldTypeChangeNotAllowed(fieldId: "age", from: .string, to: .int)
+
+        #expect(error.localizedDescription == "Cannot change field type for 'age' from string to int")
+    }
+
+    @Test
+    func schemaVersionNotIncremented_hasCorrectDescription() {
+        let error = RepositoryError.schemaVersionNotIncremented(current: 2, expected: 3)
+
+        #expect(error.localizedDescription == "Schema version must be incremented (current: 2, expected: 3)")
+    }
+
+    // MARK: - Migration Errors
+
+    @Test
+    func migrationFailed_hasCorrectDescription() {
+        let error = RepositoryError.migrationFailed("Test migration error")
+
+        #expect(error.localizedDescription == "Migration failed: Test migration error")
+    }
+
+    @Test
+    func migrationRollbackFailed_hasCorrectDescription() {
+        let error = RepositoryError.migrationRollbackFailed("Test rollback error")
+
+        #expect(error.localizedDescription == "Migration rollback failed: Test rollback error")
+    }
+
+    @Test
+    func checkpointNotFound_hasCorrectDescription() {
+        let migrationId = UUID()
+        let error = RepositoryError.checkpointNotFound(migrationId)
+
+        #expect(error.localizedDescription == "Migration checkpoint not found: \(migrationId)")
+    }
+
+    @Test
+    func checkpointAlreadyExists_hasCorrectDescription() {
+        let migrationId = UUID()
+        let error = RepositoryError.checkpointAlreadyExists(migrationId)
+
+        #expect(error.localizedDescription == "Checkpoint already exists for migration: \(migrationId)")
+    }
+
+    // MARK: - Equality Tests
+
+    @Test
+    func errors_areEqual_whenSame() {
+        let errorOne = RepositoryError.migrationFailed("error")
+        let errorTwo = RepositoryError.migrationFailed("error")
+
+        #expect(errorOne == errorTwo)
+    }
+
+    @Test
+    func errors_areNotEqual_whenDifferent() {
+        let errorOne = RepositoryError.migrationFailed("error1")
+        let errorTwo = RepositoryError.migrationFailed("error2")
+
+        #expect(errorOne != errorTwo)
+    }
 }
