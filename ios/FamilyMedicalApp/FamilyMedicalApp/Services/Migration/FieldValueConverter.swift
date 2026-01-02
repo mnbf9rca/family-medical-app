@@ -161,7 +161,7 @@ extension FieldValueConverter {
         case let .bool(boolValue):
             boolValue ? "true" : "false"
         case let .date(dateValue):
-            ISO8601DateFormatter().string(from: dateValue)
+            dateValue.formatted(.iso8601)
         case let .stringArray(arr):
             arr.joined(separator: ", ")
         case .attachmentIds:

@@ -138,11 +138,19 @@ final class SchemaMigrationService: SchemaMigrationServiceProtocol, @unchecked S
             recordsToMigrate, migration: migration, options: options, fmk: fmk, progressHandler: progressHandler
         )
 
-        // If any errors occurred, rollback to the checkpoint
+        // If any errors occurred, attempt rollback to the checkpoint
         if !errors.isEmpty {
-            _ = try await checkpointService.restoreCheckpoint(migrationId: migration.id)
+            do {
+                _ = try await checkpointService.restoreCheckpoint(migrationId: migration.id)
+            } catch {
+                // Rollback failed - log but continue to delete checkpoint to avoid leaks
+                LoggingService.shared.logger(category: .storage).logError(
+                    error, context: "SchemaMigrationService.executeMigration rollback failed"
+                )
+            }
         }
 
+        // Always delete checkpoint to avoid leaking storage
         try await checkpointService.deleteCheckpoint(migrationId: migration.id)
 
         progressHandler(MigrationProgress(
