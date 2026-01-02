@@ -90,54 +90,16 @@ enum FieldVisibility: String, Codable {
 }
 ```
 
-### Migration from String to UUID
-
-For backward compatibility:
+### UUID.zero Sentinel
 
 ```swift
-extension FieldDefinition {
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-
-        // Try UUID first (new format)
-        if let uuid = try? container.decode(UUID.self, forKey: .id) {
-            self.id = uuid
-        } else {
-            // Fall back to string (old format) - generate deterministic UUID
-            let stringId = try container.decode(String.self, forKey: .id)
-            self.id = Self.deterministicUUID(from: stringId)
-            // Use stringId as displayName if not already set
-            self.displayName = (try? container.decode(String.self, forKey: .displayName)) ?? stringId
-        }
-
-        // Provenance defaults for migrated fields
-        self.createdBy = (try? container.decode(UUID.self, forKey: .createdBy)) ?? UUID.zero
-        self.createdAt = (try? container.decode(Date.self, forKey: .createdAt)) ?? Date.distantPast
-        self.updatedBy = (try? container.decode(UUID.self, forKey: .updatedBy)) ?? UUID.zero
-        self.updatedAt = (try? container.decode(Date.self, forKey: .updatedAt)) ?? Date.distantPast
-        self.visibility = (try? container.decode(FieldVisibility.self, forKey: .visibility)) ?? .active
-
-        // ... other properties
-    }
-
-    /// Generate deterministic UUID from string (for migration and built-in fields)
-    static func deterministicUUID(from string: String) -> UUID {
-        let hash = SHA256.hash(data: Data(string.utf8))
-        let bytes = Array(hash.prefix(16))
-        return UUID(uuid: (
-            bytes[0], bytes[1], bytes[2], bytes[3],
-            bytes[4], bytes[5], bytes[6], bytes[7],
-            bytes[8], bytes[9], bytes[10], bytes[11],
-            bytes[12], bytes[13], bytes[14], bytes[15]
-        ))
-    }
-}
-
 extension UUID {
     /// Sentinel value for "system" or "unknown" device
     static let zero = UUID(uuid: (0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0))
 }
 ```
+
+Used for built-in fields where `createdBy` has no meaningful device.
 
 ---
 
