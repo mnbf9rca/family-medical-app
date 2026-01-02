@@ -2,6 +2,8 @@
 
 This document provides implementation details for ADR-0009 (Schema Evolution in Multi-Master Replication).
 
+> **Note**: This document describes a **future implementation** (Issue #72) that builds on the current string-based field ID system. The current implementation uses string field IDs and integer versions. See ADR-0009 for the rationale behind this future design.
+
 ## Problem Scenarios
 
 ### Scenario 1: Version Collision

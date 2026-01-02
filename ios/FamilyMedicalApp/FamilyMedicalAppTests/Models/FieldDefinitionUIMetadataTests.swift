@@ -164,7 +164,8 @@ struct FieldDefinitionUIMetadataTests {
             String(describing: allCharsResult)
         ]
 
-        // All should be valid TextInputAutocapitalization values
-        #expect(descriptions.count == 4)
+        // Verify each case produces a different result (uniqueness check)
+        let uniqueDescriptions = Set(descriptions)
+        #expect(uniqueDescriptions.count == 4, "Each capitalization mode should produce a unique result")
     }
 }

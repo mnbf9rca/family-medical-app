@@ -7,7 +7,10 @@ protocol CustomSchemaRepositoryProtocol: Sendable {
     /// Save a custom schema (creates or updates)
     ///
     /// On create: Validates schema ID doesn't conflict with built-in schemas
-    /// On update: Validates schema evolution rules (no type/id changes, version increment)
+    /// On update: Validates schema evolution rules:
+    ///   - Field types cannot change (breaking)
+    ///   - Version must be incremented
+    ///   - Optional→required allowed (soft-enforced at edit time)
     ///
     /// - Parameters:
     ///   - schema: Schema to save
