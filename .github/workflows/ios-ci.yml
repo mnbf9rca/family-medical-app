@@ -64,8 +64,8 @@ jobs:
       matrix:
         # Test on multiple device types (no OS version = Xcode picks latest available)
         destination:
-          - platform=iOS Simulator,name=iPhone 16 Pro
-          - platform=iOS Simulator,name=iPad Pro 13-inch (M4)
+          - platform=iOS Simulator,name=iPhone 17 Pro
+          - platform=iOS Simulator,name=iPad Pro 13-inch (M5)
 
     steps:
       - name: Checkout
@@ -128,11 +128,11 @@ jobs:
         run: ./scripts/run-tests.sh --destination "$DESTINATION"
 
       - name: Generate code coverage report
-        if: matrix.destination == 'platform=iOS Simulator,name=iPhone 16 Pro'
+        if: matrix.destination == 'platform=iOS Simulator,name=iPhone 17 Pro'
         run: ./scripts/check-coverage.sh
 
       - name: Upload coverage reports
-        if: matrix.destination == 'platform=iOS Simulator,name=iPhone 16 Pro'
+        if: matrix.destination == 'platform=iOS Simulator,name=iPhone 17 Pro'
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
