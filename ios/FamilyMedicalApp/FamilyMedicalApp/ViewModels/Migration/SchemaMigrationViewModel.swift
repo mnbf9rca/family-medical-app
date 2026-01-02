@@ -68,9 +68,16 @@ final class SchemaMigrationViewModel {
         migration.hasTypeConversions
     }
 
-    /// The current merge strategy (updated when separator changes)
+    /// The current merge strategy with user-configured options
     var currentMergeStrategy: MergeStrategy {
-        .concatenate(separator: concatenateSeparator)
+        switch mergeStrategy {
+        case .concatenate:
+            // Apply the user-configurable separator
+            .concatenate(separator: concatenateSeparator)
+        default:
+            // For non-concatenate strategies, use as-is
+            mergeStrategy
+        }
     }
 
     /// Title for the migration view

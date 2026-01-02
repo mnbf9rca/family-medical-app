@@ -28,6 +28,31 @@ enum MergeStrategy: Codable, Equatable, Hashable, Sendable {
 
     /// Prefer the target value (keep existing target if present)
     case preferTarget
+
+    /// The strategy type without associated values (for Picker binding)
+    var strategyType: MergeStrategyType {
+        switch self {
+        case .concatenate: .concatenate
+        case .preferSource: .preferSource
+        case .preferTarget: .preferTarget
+        }
+    }
+}
+
+/// Strategy type for UI Picker binding (without associated values)
+enum MergeStrategyType: CaseIterable, Hashable {
+    case concatenate
+    case preferSource
+    case preferTarget
+
+    /// Default strategy for each type
+    var defaultStrategy: MergeStrategy {
+        switch self {
+        case .concatenate: .concatenate(separator: " ")
+        case .preferSource: .preferSource
+        case .preferTarget: .preferTarget
+        }
+    }
 }
 
 // MARK: - Migration Preview

@@ -138,6 +138,11 @@ final class SchemaMigrationService: SchemaMigrationServiceProtocol, @unchecked S
             recordsToMigrate, migration: migration, options: options, fmk: fmk, progressHandler: progressHandler
         )
 
+        // If any errors occurred, rollback to the checkpoint
+        if !errors.isEmpty {
+            _ = try await checkpointService.restoreCheckpoint(migrationId: migration.id)
+        }
+
         try await checkpointService.deleteCheckpoint(migrationId: migration.id)
 
         progressHandler(MigrationProgress(

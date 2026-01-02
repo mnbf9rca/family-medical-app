@@ -225,18 +225,34 @@ struct FieldValueConverterTests {
         #expect(result == .string("A, B, C"))
     }
 
-    @Test("Merge preferTarget returns first non-empty value")
+    @Test("Merge preferTarget returns last non-empty value (target is last in array)")
     func mergePreferTarget() {
-        let values: [FieldValue?] = [nil, .string(""), .string("Second"), .string("Third")]
+        // In [source, target] array order, target is last
+        let values: [FieldValue?] = [.string("Source"), .string("Target")]
         let result = FieldValueConverter.merge(values, using: .preferTarget)
-        #expect(result == .string("Second"))
+        #expect(result == .string("Target"))
     }
 
-    @Test("Merge preferSource returns last non-empty value")
+    @Test("Merge preferTarget with nil target uses source")
+    func mergePreferTargetWithNilTarget() {
+        let values: [FieldValue?] = [.string("Source"), nil]
+        let result = FieldValueConverter.merge(values, using: .preferTarget)
+        #expect(result == .string("Source"))
+    }
+
+    @Test("Merge preferSource returns first non-empty value (source is first in array)")
     func mergePreferSource() {
-        let values: [FieldValue?] = [.string("First"), .string("Second"), nil]
+        // In [source, target] array order, source is first
+        let values: [FieldValue?] = [.string("Source"), .string("Target")]
         let result = FieldValueConverter.merge(values, using: .preferSource)
-        #expect(result == .string("Second"))
+        #expect(result == .string("Source"))
+    }
+
+    @Test("Merge preferSource with nil source uses target")
+    func mergePreferSourceWithNilSource() {
+        let values: [FieldValue?] = [nil, .string("Target")]
+        let result = FieldValueConverter.merge(values, using: .preferSource)
+        #expect(result == .string("Target"))
     }
 
     @Test("Merge skips nil values")

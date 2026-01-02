@@ -68,7 +68,7 @@
         <attribute name="id" attributeType="UUID" usesScalarValueType="NO"/>
         <attribute name="migrationId" attributeType="UUID" usesScalarValueType="NO"/>
         <attribute name="personId" attributeType="UUID" usesScalarValueType="NO"/>
-        <attribute name="recordBackups" attributeType="Binary" allowsExternalBinaryDataStorage="YES"/>
+        <attribute name="recordBackups" optional="NO" attributeType="Binary" allowsExternalBinaryDataStorage="YES"/>
         <attribute name="schemaId" attributeType="String"/>
         <uniquenessConstraints>
             <uniquenessConstraint>

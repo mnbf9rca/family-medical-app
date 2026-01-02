@@ -127,9 +127,11 @@ extension FieldValueConverter {
         switch strategy {
         case let .concatenate(separator):
             return concatenateValues(nonNilValues, separator: separator)
-        case .preferTarget:
-            return findFirstNonEmpty(nonNilValues)
         case .preferSource:
+            // Source is first in the [source, target] array
+            return findFirstNonEmpty(nonNilValues)
+        case .preferTarget:
+            // Target is last in the [source, target] array
             return findLastNonEmpty(nonNilValues)
         }
     }

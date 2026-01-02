@@ -93,6 +93,46 @@ struct MigrationTypesTests {
         #expect(set.count == 2)
     }
 
+    @Test("MergeStrategy strategyType returns correct type")
+    func mergeStrategyTypeProperty() {
+        #expect(MergeStrategy.concatenate(separator: " ").strategyType == .concatenate)
+        #expect(MergeStrategy.concatenate(separator: ", ").strategyType == .concatenate)
+        #expect(MergeStrategy.preferSource.strategyType == .preferSource)
+        #expect(MergeStrategy.preferTarget.strategyType == .preferTarget)
+    }
+
+    // MARK: - MergeStrategyType Tests
+
+    @Test("MergeStrategyType defaultStrategy returns correct strategy")
+    func mergeStrategyTypeDefaultStrategy() {
+        if case let .concatenate(separator) = MergeStrategyType.concatenate.defaultStrategy {
+            #expect(separator == " ")
+        } else {
+            Issue.record("Expected concatenate strategy")
+        }
+
+        #expect(MergeStrategyType.preferSource.defaultStrategy == .preferSource)
+        #expect(MergeStrategyType.preferTarget.defaultStrategy == .preferTarget)
+    }
+
+    @Test("MergeStrategyType is CaseIterable")
+    func mergeStrategyTypeCaseIterable() {
+        #expect(MergeStrategyType.allCases.count == 3)
+        #expect(MergeStrategyType.allCases.contains(.concatenate))
+        #expect(MergeStrategyType.allCases.contains(.preferSource))
+        #expect(MergeStrategyType.allCases.contains(.preferTarget))
+    }
+
+    @Test("MergeStrategyType is Hashable")
+    func mergeStrategyTypeHashable() {
+        var set = Set<MergeStrategyType>()
+        set.insert(.concatenate)
+        set.insert(.concatenate)
+        set.insert(.preferSource)
+
+        #expect(set.count == 2)
+    }
+
     // MARK: - MigrationPreview Tests
 
     @Test("MigrationPreview empty static property")

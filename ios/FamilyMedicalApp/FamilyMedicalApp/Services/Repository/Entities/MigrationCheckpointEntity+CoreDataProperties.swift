@@ -12,7 +12,7 @@ public extension MigrationCheckpointEntity {
     @NSManaged var personId: UUID
     @NSManaged var schemaId: String
     @NSManaged var createdAt: Date
-    @NSManaged var recordBackups: Data?
+    @NSManaged var recordBackups: Data
 }
 
 extension MigrationCheckpointEntity: Identifiable {}

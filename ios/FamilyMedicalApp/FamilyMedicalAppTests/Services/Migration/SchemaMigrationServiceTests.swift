@@ -410,6 +410,43 @@ struct SchemaMigrationServiceExecuteTests {
 
         #expect(result.isSuccess)
     }
+
+    @Test("Execute migration with errors triggers rollback before delete")
+    func executeWithErrorsTriggersRollback() async throws {
+        let mocks = makeMocks()
+        let service = mocks.makeService()
+        let personId = UUID()
+        let primaryKey = SymmetricKey(size: .bits256)
+        mocks.fmkService.setFMK(SymmetricKey(size: .bits256), for: personId.uuidString)
+
+        let content = makeTestContent(schemaId: "test-schema", fields: ["field": .string("value")])
+        let record = try makeTestRecord(personId: personId, content: content)
+        mocks.recordRepo.addRecord(record)
+        mocks.contentService.setContent(content, for: record.encryptedContent)
+
+        // Configure the content service to fail on encrypt (simulates error during migration)
+        mocks.contentService.shouldFailEncrypt = true
+
+        let migration = try SchemaMigration(
+            schemaId: "test-schema", fromVersion: 1, toVersion: 2, transformations: [.remove(fieldId: "field")]
+        )
+
+        let result = try await service.executeMigration(
+            migration,
+            forPerson: personId,
+            primaryKey: primaryKey,
+            options: .default
+        ) { _ in }
+
+        // Migration should report the error
+        #expect(!result.isSuccess)
+        #expect(result.recordsFailed == 1)
+
+        // Checkpoint operations: create -> rollback -> delete
+        #expect(mocks.checkpointService.createCheckpointCalled)
+        #expect(mocks.checkpointService.restoreCheckpointCalled)
+        #expect(mocks.checkpointService.deleteCheckpointCalled)
+    }
 }
 
 // MARK: - Mock Checkpoint Service

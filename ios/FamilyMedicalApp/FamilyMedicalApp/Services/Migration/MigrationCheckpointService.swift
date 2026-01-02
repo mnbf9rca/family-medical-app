@@ -127,9 +127,7 @@ final class MigrationCheckpointService: MigrationCheckpointServiceProtocol, @unc
         }
 
         // Deserialize the backed-up records
-        guard let recordData = checkpoint.recordBackups else {
-            throw RepositoryError.deserializationFailed("Checkpoint has no record backups")
-        }
+        let recordData = checkpoint.recordBackups
 
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601

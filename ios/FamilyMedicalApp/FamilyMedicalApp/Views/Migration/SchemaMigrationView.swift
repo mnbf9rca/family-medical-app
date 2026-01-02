@@ -58,10 +58,14 @@ struct SchemaMigrationView: View {
                     Button("Cancel", role: .cancel) {}
                 } message: {
                     if let preview = viewModel.preview {
-                        Text("This will migrate \(preview.recordCount) records. This action cannot be undone.")
+                        Text("This will migrate \(preview.recordCount) records.")
+                            + Text(" The operation will be rolled back if any errors occur.")
                     }
                 }
-                .alert("Error", isPresented: .constant(viewModel.errorMessage != nil && viewModel.phase == .failed)) {
+                .alert("Error", isPresented: Binding(
+                    get: { viewModel.errorMessage != nil && viewModel.phase == .failed },
+                    set: { if !$0 { viewModel.errorMessage = nil } }
+                )) {
                     Button("OK") {
                         viewModel.errorMessage = nil
                     }
@@ -145,10 +149,13 @@ struct SchemaMigrationView: View {
 
             if viewModel.hasMerges {
                 Section {
-                    Picker("Merge strategy", selection: $viewModel.mergeStrategy) {
-                        Text("Concatenate").tag(MergeStrategy.concatenate(separator: " "))
-                        Text("Prefer source").tag(MergeStrategy.preferSource)
-                        Text("Prefer target").tag(MergeStrategy.preferTarget)
+                    Picker("Merge strategy", selection: Binding(
+                        get: { viewModel.mergeStrategy.strategyType },
+                        set: { viewModel.mergeStrategy = $0.defaultStrategy }
+                    )) {
+                        Text("Concatenate").tag(MergeStrategyType.concatenate)
+                        Text("Prefer source").tag(MergeStrategyType.preferSource)
+                        Text("Prefer target").tag(MergeStrategyType.preferTarget)
                     }
                     .pickerStyle(.menu)
 
@@ -159,7 +166,10 @@ struct SchemaMigrationView: View {
                 } header: {
                     Text("Merge Options")
                 } footer: {
-                    Text("Prefer source uses merged values. Prefer target keeps existing value if present.")
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Prefer source: Use the field being merged.")
+                        Text("Prefer target: Keep existing value if present, otherwise use source.")
+                    }
                 }
             }
 
