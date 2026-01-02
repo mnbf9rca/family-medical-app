@@ -2,7 +2,9 @@
 
 This document provides implementation details for ADR-0009 (Schema Evolution in Multi-Master Replication).
 
-> **Note**: This document describes a **future implementation** (Issue #72) that builds on the current string-based field ID system. The current implementation uses string field IDs and integer versions. See ADR-0009 for the rationale behind this future design.
+> **Note**: This document describes **future multi-master sync support** that builds on the current string-based field ID system. The current implementation uses string field IDs and integer versions. See ADR-0009 for the rationale.
+>
+> **Related but distinct**: Issue #72 implemented *local* schema migrations (type conversion, field removal, field merging) via `SchemaMigrationService`. This document describes the *sync-layer* evolution (UUID field IDs, hybrid clocks, device identity) needed for conflict-free multi-device schema editing.
 
 ## Problem Scenarios
 
