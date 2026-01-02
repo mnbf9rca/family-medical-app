@@ -46,6 +46,11 @@ protocol CustomSchemaRepositoryProtocol: Sendable {
 /// Custom schemas are encrypted at rest using the user's primary key directly
 /// (unlike Person/MedicalRecord which use per-family-member keys).
 final class CustomSchemaRepository: CustomSchemaRepositoryProtocol, @unchecked Sendable {
+    // MARK: - Constants
+
+    /// Built-in schema IDs (O(1) lookup)
+    private static let builtInSchemaIds = Set(BuiltInSchemaType.allCases.map(\.rawValue))
+
     // MARK: - Dependencies
 
     private let coreDataStack: CoreDataStackProtocol
@@ -65,7 +70,7 @@ final class CustomSchemaRepository: CustomSchemaRepositoryProtocol, @unchecked S
 
     func save(_ schema: RecordSchema, primaryKey: SymmetricKey) async throws {
         // Validate schema ID doesn't conflict with built-in schemas
-        if BuiltInSchemaType.allCases.map(\.rawValue).contains(schema.id) {
+        if Self.builtInSchemaIds.contains(schema.id) {
             throw RepositoryError.schemaIdConflictsWithBuiltIn(schema.id)
         }
 
@@ -199,7 +204,7 @@ final class CustomSchemaRepository: CustomSchemaRepositoryProtocol, @unchecked S
                 continue
             }
 
-            // Check field type hasn't changed
+            // Check field type hasn't changed (would corrupt existing data)
             if updatedField.fieldType != existingField.fieldType {
                 throw RepositoryError.fieldTypeChangeNotAllowed(
                     fieldId: fieldId,
@@ -208,14 +213,19 @@ final class CustomSchemaRepository: CustomSchemaRepositoryProtocol, @unchecked S
                 )
             }
 
-            // Check isRequired hasn't changed from optional to required
-            if updatedField.isRequired, !existingField.isRequired {
-                throw RepositoryError.requiredFieldChangeNotAllowed(fieldId: fieldId)
-            }
+            // Note: optional→required changes ARE allowed (soft enforcement at edit time)
         }
 
-        // Note: Adding new fields is always allowed
-        // Note: Changing displayName, placeholder, helpText, validation rules is allowed
+        // Schema evolution uses "soft enforcement" for required fields:
+        // - Adding new required fields: Allowed
+        // - Changing optional→required: Allowed
+        // - Existing records remain valid
+        // - User must populate required fields when editing a record
+        //
+        // Allowed changes:
+        // - Adding/removing fields (data preserved for removed fields)
+        // - Changing displayName, placeholder, helpText, validation rules
+        // - Changing isRequired (enforcement happens at record edit time)
     }
 
     // MARK: - Encryption/Decryption

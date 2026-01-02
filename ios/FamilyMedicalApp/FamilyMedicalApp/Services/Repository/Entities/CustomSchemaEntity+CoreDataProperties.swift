@@ -7,10 +7,10 @@ public extension CustomSchemaEntity {
         NSFetchRequest<CustomSchemaEntity>(entityName: "CustomSchemaEntity")
     }
 
-    @NSManaged var id: UUID?
-    @NSManaged var schemaId: String?
-    @NSManaged var createdAt: Date?
-    @NSManaged var updatedAt: Date?
+    @NSManaged var id: UUID
+    @NSManaged var schemaId: String
+    @NSManaged var createdAt: Date
+    @NSManaged var updatedAt: Date
     @NSManaged var version: Int32
     @NSManaged var encryptedDefinition: Data?
 }

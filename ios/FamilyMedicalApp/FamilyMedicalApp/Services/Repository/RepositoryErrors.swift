@@ -46,12 +46,6 @@ enum RepositoryError: LocalizedError, Equatable {
     /// Attempted to change field type on schema update (breaking change)
     case fieldTypeChangeNotAllowed(fieldId: String, from: FieldType, to: FieldType)
 
-    /// Attempted to change field ID on schema update (breaking change)
-    case fieldIdChangeNotAllowed(oldId: String, newId: String)
-
-    /// Attempted to make optional field required on schema update (breaking change)
-    case requiredFieldChangeNotAllowed(fieldId: String)
-
     /// Schema version was not incremented on update
     case schemaVersionNotIncremented(current: Int, expected: Int)
 
@@ -95,10 +89,6 @@ enum RepositoryError: LocalizedError, Equatable {
             "Custom schema '\(schemaId)' not found"
         case let .fieldTypeChangeNotAllowed(fieldId, from, to):
             "Cannot change field type for '\(fieldId)' from \(from) to \(to)"
-        case let .fieldIdChangeNotAllowed(oldId, newId):
-            "Cannot change field ID from '\(oldId)' to '\(newId)'"
-        case let .requiredFieldChangeNotAllowed(fieldId):
-            "Cannot make field '\(fieldId)' required (was optional)"
         case let .schemaVersionNotIncremented(current, expected):
             "Schema version must be incremented (current: \(current), expected: \(expected))"
         // Serialization errors

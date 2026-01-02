@@ -210,6 +210,88 @@ struct CustomSchemaEvolutionSafeTests {
         #expect(fetched?.fields.first?.isRequired == false)
     }
 
+    @Test
+    func save_optionalToRequired_succeeds() async throws {
+        // Soft enforcement: optional→required is allowed
+        // Existing records remain valid; enforcement happens at edit time
+        let repo = makeRepository()
+        let schema = try RecordSchema(
+            id: "test-schema",
+            displayName: "Test Schema",
+            iconSystemName: "doc",
+            fields: [
+                FieldDefinition(
+                    id: "field1",
+                    displayName: "Field",
+                    fieldType: .string,
+                    isRequired: false,
+                    displayOrder: 1
+                )
+            ],
+            isBuiltIn: false,
+            version: 1
+        )
+
+        try await repo.save(schema, primaryKey: testPrimaryKey)
+
+        let updatedSchema = try RecordSchema(
+            id: schema.id,
+            displayName: schema.displayName,
+            iconSystemName: schema.iconSystemName,
+            fields: [
+                FieldDefinition(
+                    id: "field1",
+                    displayName: "Field",
+                    fieldType: .string,
+                    isRequired: true,
+                    displayOrder: 1
+                )
+            ],
+            isBuiltIn: false,
+            version: 2
+        )
+
+        try await repo.save(updatedSchema, primaryKey: testPrimaryKey)
+
+        let fetched = try await repo.fetch(schemaId: schema.id, primaryKey: testPrimaryKey)
+        #expect(fetched?.fields.first?.isRequired == true)
+    }
+
+    @Test
+    func save_newRequiredFieldAdded_succeeds() async throws {
+        // Soft enforcement: adding required fields is allowed
+        // Existing records remain valid; enforcement happens at edit time
+        let repo = makeRepository()
+        let schema = try makeTestSchema(version: 1)
+
+        try await repo.save(schema, primaryKey: testPrimaryKey)
+
+        var updatedFields = schema.fields
+        updatedFields.append(FieldDefinition(
+            id: "new-required-field",
+            displayName: "New Required Field",
+            fieldType: .string,
+            isRequired: true,
+            displayOrder: 10
+        ))
+
+        let updatedSchema = try RecordSchema(
+            id: schema.id,
+            displayName: schema.displayName,
+            iconSystemName: schema.iconSystemName,
+            fields: updatedFields,
+            isBuiltIn: false,
+            version: 2
+        )
+
+        try await repo.save(updatedSchema, primaryKey: testPrimaryKey)
+
+        let fetched = try await repo.fetch(schemaId: schema.id, primaryKey: testPrimaryKey)
+        #expect(fetched?.fields.count == schema.fields.count + 1)
+        let newField = fetched?.fields.first { $0.id == "new-required-field" }
+        #expect(newField?.isRequired == true)
+    }
+
     // MARK: - Icon Changes
 
     @Test

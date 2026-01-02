@@ -1,5 +1,4 @@
 import Foundation
-import SwiftUI
 
 /// Type of a field value in a medical record
 enum FieldType: String, Codable, CaseIterable, Hashable {
@@ -151,20 +150,6 @@ enum TextCapitalizationMode: String, Codable, CaseIterable, Hashable {
 
     /// Capitalize all characters
     case allCharacters
-
-    /// Convert to SwiftUI's TextInputAutocapitalization
-    var toSwiftUI: TextInputAutocapitalization {
-        switch self {
-        case .none:
-            .never
-        case .words:
-            .words
-        case .sentences:
-            .sentences
-        case .allCharacters:
-            .characters
-        }
-    }
 }
 
 /// Definition of a field in a medical record schema
