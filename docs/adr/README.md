@@ -58,6 +58,12 @@ ADRs document significant architectural decisions, their context, and consequenc
   - Separation of schema definition (compile-time) from record storage (runtime)
   - Built-in schema support for common medical record types
   - Custom schema extensibility for user-defined record types
+- [ADR-0009: Schema Evolution in Multi-Master Replication](adr-0009-schema-evolution-multi-master.md) - **Proposed** (2026-01-02)
+  - UUID-based field IDs for collision-free multi-device schema editing
+  - Hybrid logical clock versioning (timestamp + deviceId + counter)
+  - Field-level merge on sync (union by UUID, last-write-wins per field)
+  - Field visibility state (hidden preserves data, can be restored)
+  - Device identity tracking for provenance
 
 ### Build & Test Infrastructure
 

@@ -134,6 +134,24 @@ enum ValidationRule: Codable, Equatable, Hashable {
     }
 }
 
+/// Text capitalization mode for string input fields
+///
+/// Controls how text is automatically capitalized during input.
+/// This is a UI hint that affects the keyboard behavior, not validation.
+enum TextCapitalizationMode: String, Codable, CaseIterable, Hashable {
+    /// No automatic capitalization
+    case none
+
+    /// Capitalize the first letter of each word (for names, titles)
+    case words
+
+    /// Capitalize the first letter of each sentence (default for prose)
+    case sentences
+
+    /// Capitalize all characters
+    case allCharacters
+}
+
 /// Definition of a field in a medical record schema
 ///
 /// Describes the structure, type, and validation rules for a single field
@@ -164,6 +182,24 @@ struct FieldDefinition: Codable, Equatable, Hashable, Identifiable {
     /// Optional validation rules for this field
     var validationRules: [ValidationRule]
 
+    // MARK: - UI Hints
+
+    /// Whether this field should use a multiline text input (default: false)
+    ///
+    /// Only applies to string fields. When true, the UI will render a multi-line
+    /// text editor instead of a single-line text field. Useful for notes, descriptions,
+    /// and other long-form content.
+    var isMultiline: Bool
+
+    /// Text capitalization mode for string fields (default: .sentences)
+    ///
+    /// Controls automatic capitalization behavior during text input.
+    /// - `.words`: For names, titles (e.g., "Vaccine Name", "Provider")
+    /// - `.sentences`: For prose, notes (e.g., "Notes", "Description")
+    /// - `.none`: For codes, identifiers (e.g., "Batch Number")
+    /// - `.allCharacters`: For abbreviations, codes requiring uppercase
+    var capitalizationMode: TextCapitalizationMode
+
     // MARK: - Initialization
 
     init(
@@ -174,7 +210,9 @@ struct FieldDefinition: Codable, Equatable, Hashable, Identifiable {
         displayOrder: Int = 0,
         placeholder: String? = nil,
         helpText: String? = nil,
-        validationRules: [ValidationRule] = []
+        validationRules: [ValidationRule] = [],
+        isMultiline: Bool = false,
+        capitalizationMode: TextCapitalizationMode = .sentences
     ) {
         self.id = id
         self.displayName = displayName
@@ -184,6 +222,8 @@ struct FieldDefinition: Codable, Equatable, Hashable, Identifiable {
         self.placeholder = placeholder
         self.helpText = helpText
         self.validationRules = validationRules
+        self.isMultiline = isMultiline
+        self.capitalizationMode = capitalizationMode
     }
 
     // MARK: - Validation

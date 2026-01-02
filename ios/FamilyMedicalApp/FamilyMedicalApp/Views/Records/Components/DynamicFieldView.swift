@@ -68,8 +68,8 @@ struct DynamicFieldView: View {
 
     private var stringInputView: some View {
         Group {
-            // Multi-line for notes and content fields
-            if field.id.contains("notes") || field.id == "content" {
+            // Use explicit isMultiline property instead of string matching on field ID
+            if field.isMultiline {
                 TextField(
                     field.placeholder ?? "",
                     text: stringBinding,
@@ -77,6 +77,7 @@ struct DynamicFieldView: View {
                 )
                 .textFieldStyle(.roundedBorder)
                 .lineLimit(3 ... 6)
+                .textInputAutocapitalization(field.capitalizationMode.toSwiftUI)
                 .focused($isFocused)
                 .accessibilityIdentifier(field.displayName)
             } else {
@@ -85,9 +86,7 @@ struct DynamicFieldView: View {
                     text: stringBinding
                 )
                 .textFieldStyle(.roundedBorder)
-                .textInputAutocapitalization(
-                    field.id.contains("name") ? .words : .sentences
-                )
+                .textInputAutocapitalization(field.capitalizationMode.toSwiftUI)
                 .focused($isFocused)
                 .accessibilityIdentifier(field.displayName)
             }
@@ -285,12 +284,13 @@ struct DynamicFieldView: View {
 
 #Preview {
     @Previewable @State var stringValue: FieldValue? = .string("Test")
+    @Previewable @State var notesValue: FieldValue? = .string("Some notes here...")
     @Previewable @State var intValue: FieldValue? = .int(5)
     @Previewable @State var dateValue: FieldValue? = .date(Date())
     @Previewable @State var boolValue: FieldValue? = .bool(true)
 
     return Form {
-        Section("String Field") {
+        Section("String Field (with capitalizationMode: .words)") {
             DynamicFieldView(
                 field: FieldDefinition(
                     id: "vaccineName",
@@ -299,9 +299,26 @@ struct DynamicFieldView: View {
                     isRequired: true,
                     displayOrder: 1,
                     placeholder: "e.g., COVID-19, MMR",
-                    helpText: "Name of the vaccine administered"
+                    helpText: "Name of the vaccine administered",
+                    capitalizationMode: .words
                 ),
                 value: $stringValue
+            )
+        }
+
+        Section("Multiline Field (isMultiline: true)") {
+            DynamicFieldView(
+                field: FieldDefinition(
+                    id: "notes",
+                    displayName: "Notes",
+                    fieldType: .string,
+                    isRequired: false,
+                    displayOrder: 2,
+                    placeholder: "Any additional notes",
+                    helpText: "Additional information or reactions",
+                    isMultiline: true
+                ),
+                value: $notesValue
             )
         }
 
@@ -312,7 +329,7 @@ struct DynamicFieldView: View {
                     displayName: "Dose Number",
                     fieldType: .int,
                     isRequired: false,
-                    displayOrder: 2,
+                    displayOrder: 3,
                     placeholder: "e.g., 1, 2, 3",
                     helpText: "Which dose in the series"
                 ),
@@ -327,7 +344,7 @@ struct DynamicFieldView: View {
                     displayName: "Date Administered",
                     fieldType: .date,
                     isRequired: true,
-                    displayOrder: 3,
+                    displayOrder: 4,
                     helpText: "When the vaccine was given"
                 ),
                 value: $dateValue
@@ -341,7 +358,7 @@ struct DynamicFieldView: View {
                     displayName: "Is Active",
                     fieldType: .bool,
                     isRequired: false,
-                    displayOrder: 4
+                    displayOrder: 5
                 ),
                 value: $boolValue
             )
@@ -354,7 +371,7 @@ struct DynamicFieldView: View {
                     displayName: "Attachments",
                     fieldType: .attachmentIds,
                     isRequired: false,
-                    displayOrder: 5,
+                    displayOrder: 6,
                     helpText: "Photos and documents"
                 ),
                 value: .constant(nil)

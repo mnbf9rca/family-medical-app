@@ -66,6 +66,14 @@ struct RecordSchema: Codable, Equatable, Identifiable {
     /// Optional description of what this schema is for
     var description: String?
 
+    /// Schema version number (incremented on each change)
+    ///
+    /// Used for tracking schema evolution. When a schema is updated:
+    /// - Version must be incremented
+    /// - Certain changes (field type, field id, making optional fields required) are prohibited
+    /// - Safe changes (displayName, new fields, relaxing required) are allowed
+    var version: Int
+
     // MARK: - Initialization
 
     init(
@@ -74,7 +82,8 @@ struct RecordSchema: Codable, Equatable, Identifiable {
         iconSystemName: String,
         fields: [FieldDefinition],
         isBuiltIn: Bool = false,
-        description: String? = nil
+        description: String? = nil,
+        version: Int = 1
     ) throws {
         // Validate schema ID
         let trimmedId = id.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -97,6 +106,7 @@ struct RecordSchema: Codable, Equatable, Identifiable {
         self.fields = fields
         self.isBuiltIn = isBuiltIn
         self.description = description
+        self.version = version
     }
 
     /// Internal initializer for built-in schemas (skips validation)
@@ -106,7 +116,8 @@ struct RecordSchema: Codable, Equatable, Identifiable {
         iconSystemName: String,
         fields: [FieldDefinition],
         isBuiltIn: Bool = true,
-        description: String? = nil
+        description: String? = nil,
+        version: Int = 1
     ) {
         self.id = id
         self.displayName = displayName
@@ -114,6 +125,7 @@ struct RecordSchema: Codable, Equatable, Identifiable {
         self.fields = fields
         self.isBuiltIn = isBuiltIn
         self.description = description
+        self.version = version
     }
 
     // MARK: - Built-in Schema Factory

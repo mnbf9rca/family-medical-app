@@ -33,6 +33,29 @@ Core models:
 
 **Person labels** use flexible string arrays instead of fixed relationship enums to avoid encoding nuclear-family assumptions.
 
+## Schema Evolution Rules
+
+Custom schemas can be modified over time. The following rules apply:
+
+**Prohibited (breaking changes):**
+
+- Field type changes (would corrupt existing data) - but functionality will be provided for migrations and e.g. field merges. So for example, converting an int to a string would mean creating a new field, and then populating the new field with the data from the old one.
+
+**Allowed with soft enforcement:**
+
+- Adding new required fields
+- Changing optional → required
+
+*Soft enforcement*: Existing records remain valid. When a record is edited, user must populate all required fields before saving.
+
+**Always allowed:**
+
+- Adding/removing optional fields
+- Changing displayName, placeholder, helpText
+- Changing validation rules
+- Relaxing required → optional
+- Adding/removing required fields (which is the same as making it optional then removing)
+
 ## Consequences
 
 ### Positive

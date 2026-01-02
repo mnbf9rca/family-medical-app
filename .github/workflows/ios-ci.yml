@@ -62,10 +62,10 @@ jobs:
 
     strategy:
       matrix:
-        # Test on multiple iOS versions for compatibility
+        # Test on multiple device types (no OS version = Xcode picks latest available)
         destination:
-          - platform=iOS Simulator,name=iPhone 17 Pro,OS=26.2
-          - platform=iOS Simulator,name=iPad Pro 13-inch (M5),OS=26.2
+          - platform=iOS Simulator,name=iPhone 17 Pro
+          - platform=iOS Simulator,name=iPad Pro 13-inch (M5)
 
     steps:
       - name: Checkout
@@ -78,6 +78,9 @@ jobs:
         run: |
           xcodebuild -version
           swift --version
+
+      - name: List available simulators (debug)
+        run: xcrun simctl list devices available | head -50
 
       - name: Generate cache key
         id: cache-key
@@ -125,11 +128,11 @@ jobs:
         run: ./scripts/run-tests.sh --destination "$DESTINATION"
 
       - name: Generate code coverage report
-        if: matrix.destination == 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.2'
+        if: matrix.destination == 'platform=iOS Simulator,name=iPhone 17 Pro'
         run: ./scripts/check-coverage.sh
 
       - name: Upload coverage reports
-        if: matrix.destination == 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.2'
+        if: matrix.destination == 'platform=iOS Simulator,name=iPhone 17 Pro'
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report

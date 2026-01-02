@@ -35,6 +35,20 @@ enum RepositoryError: LocalizedError, Equatable {
     /// Attempted to create entity with duplicate ID
     case duplicateEntity(UUID)
 
+    // MARK: - Schema Validation Errors
+
+    /// Schema ID conflicts with a built-in schema
+    case schemaIdConflictsWithBuiltIn(String)
+
+    /// Custom schema was not found
+    case customSchemaNotFound(String)
+
+    /// Attempted to change field type on schema update (breaking change)
+    case fieldTypeChangeNotAllowed(fieldId: String, from: FieldType, to: FieldType)
+
+    /// Schema version was not incremented on update
+    case schemaVersionNotIncremented(current: Int, expected: Int)
+
     // MARK: - Serialization Errors
 
     /// Failed to serialize data to JSON or binary format
@@ -68,6 +82,15 @@ enum RepositoryError: LocalizedError, Equatable {
             "Validation failed: \(details)"
         case let .duplicateEntity(id):
             "Entity with ID \(id) already exists"
+        // Schema validation errors
+        case let .schemaIdConflictsWithBuiltIn(schemaId):
+            "Schema ID '\(schemaId)' conflicts with a built-in schema"
+        case let .customSchemaNotFound(schemaId):
+            "Custom schema '\(schemaId)' not found"
+        case let .fieldTypeChangeNotAllowed(fieldId, from, to):
+            "Cannot change field type for '\(fieldId)' from \(from) to \(to)"
+        case let .schemaVersionNotIncremented(current, expected):
+            "Schema version must be incremented (current: \(current), expected: \(expected))"
         // Serialization errors
         case let .serializationFailed(details):
             "Serialization failed: \(details)"
