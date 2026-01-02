@@ -185,83 +185,65 @@ struct SchemaVersion: Codable, Comparable, Hashable {
 
 **Why Hybrid Clock?**
 
+The primary goal is **uniqueness** - no two versions can ever be identical. Ordering is secondary.
+
 | Approach | Pros | Cons |
 |----------|------|------|
-| Sequential Int | Simple | Fails in multi-master |
-| Timestamp only | Human readable | Clock skew causes incorrect ordering |
-| Vector clock | Correct | Complex, grows with devices |
-| Hybrid clock | Correct + readable | Slightly larger (~24 bytes vs 4 bytes) |
+| Sequential Int | Simple | Collides in multi-master (both create v2) |
+| Timestamp only | Human readable | Collides if same millisecond |
+| Hybrid clock | Unique + readable | Slightly larger (~24 bytes vs 4 bytes) |
 
 ---
 
-## Merge Algorithm
+## Schema Merge is Trivial
 
-### Field-Level Union
+Schema merge is just a **set union by field UUID**. No complex conflict resolution needed.
 
-When syncing two versions of the same schema:
+### The Algorithm
 
 ```swift
 func mergeSchemas(_ local: RecordSchema, _ remote: RecordSchema) -> RecordSchema {
+    // Set union by UUID - that's it
     var mergedFields: [UUID: FieldDefinition] = [:]
 
-    // Add all local fields
     for field in local.fields {
         mergedFields[field.id] = field
     }
 
-    // Merge remote fields
     for field in remote.fields {
         if let existing = mergedFields[field.id] {
-            // Same UUID: last-write-wins on this field
+            // Same UUID edited on both devices - ask user to pick
+            // Or use timestamp if non-interactive sync
             if field.updatedAt > existing.updatedAt {
                 mergedFields[field.id] = field
             }
         } else {
-            // New field from remote: add it
+            // Different UUID = different field, keep both
             mergedFields[field.id] = field
         }
     }
 
-    // Schema-level metadata: use newer version
-    let newerVersion = local.version > remote.version ? local : remote
-
     return RecordSchema(
-        id: local.id,  // Schema ID doesn't change
-        displayName: newerVersion.displayName,
-        iconSystemName: newerVersion.iconSystemName,
+        id: local.id,
         fields: Array(mergedFields.values).sorted { $0.displayOrder < $1.displayOrder },
-        isBuiltIn: local.isBuiltIn,
-        description: newerVersion.description,
-        version: max(local.version, remote.version)
+        // ... other metadata uses newer version
     )
 }
 ```
 
-### displayName Collision Detection
+### Why It's Simple
 
-After merge, detect and warn about fields with same displayName:
+| Scenario | What Happens |
+|----------|--------------|
+| Device A adds "Notes", Device B adds "Severity" | Both kept (different UUIDs) |
+| Both devices add "Notes" independently | Both kept (different UUIDs, same displayName is fine) |
+| Both edit the SAME field's displayName | Only true conflict: ask user to pick |
 
-```swift
-func detectDisplayNameCollisions(_ schema: RecordSchema) -> [(FieldDefinition, FieldDefinition)] {
-    var collisions: [(FieldDefinition, FieldDefinition)] = []
-    var byName: [String: FieldDefinition] = [:]
+### displayName Duplicates Are Not Conflicts
 
-    for field in schema.fields where field.visibility == .active {
-        if let existing = byName[field.displayName] {
-            collisions.append((existing, field))
-        } else {
-            byName[field.displayName] = field
-        }
-    }
+Two fields can have the same displayName - they're still different fields with different UUIDs. The UI just shows both.
 
-    return collisions
-}
-```
-
-UI shows warning: "Two fields named 'Notes' exist (from iPad and iPhone)". User can:
-
-1. Rename one field
-2. Merge fields (triggers migration - see Issue #72)
+If user wants to consolidate them into one field, that's a **data migration** (Issue #72), not a schema merge. Migration would remap record data from one field UUID to another.
 
 ---
 
@@ -290,7 +272,7 @@ final class DeviceIdentityService: DeviceIdentityServiceProtocol {
                 return uuid
             }
 
-            // Generate new ID on first launch
+            // Generate new ID on first launch (or after reinstall - iOS 10.3+ clears Keychain on uninstall)
             let newId = UUID()
             try await keychain.save(key: Self.deviceIdKey, data: newId.data)
             return newId
@@ -318,7 +300,7 @@ final class DeviceIdentityService: DeviceIdentityServiceProtocol {
 
 ### Device Registry
 
-Synced to server for device list UI:
+Synced to server **encrypted** (like all user data per ADR-0004):
 
 ```swift
 struct DeviceRegistry: Codable {
@@ -327,12 +309,14 @@ struct DeviceRegistry: Codable {
 
 struct DeviceInfo: Codable {
     let id: UUID
-    var name: String?
+    var name: String?           // PII - must be encrypted
     let firstSeen: Date
     var lastSeen: Date
-    var isRevoked: Bool  // Soft-delete
+    var isRevoked: Bool         // Soft-delete
 }
 ```
+
+Server sees only the encrypted blob - cannot see device names or count.
 
 **Device Revocation**:
 
@@ -343,69 +327,6 @@ struct DeviceInfo: Codable {
 
 ---
 
-## Migration Path
-
-### Phase 1: Add New Properties (Backward Compatible)
-
-1. Add new optional properties with defaults in decoder
-2. Existing schemas decode successfully
-3. New saves include full metadata
-
-### Phase 2: Built-In Schema UUIDs
-
-Built-in field IDs use deterministic UUIDs:
-
-```swift
-// Old: FieldDefinition(id: "vaccineName", ...)
-// New: FieldDefinition(id: deterministicUUID("vaccine:vaccineName"), ...)
-
-static func builtInFieldId(schemaId: String, fieldId: String) -> UUID {
-    deterministicUUID(from: "\(schemaId):\(fieldId)")
-}
-```
-
-This ensures:
-
-- Same UUID across all app versions
-- Records created with old field IDs still match
-
-### Phase 3: First Sync After Upgrade
-
-When syncing after upgrade:
-
-1. Detect old-format schema (version: Int instead of SchemaVersion)
-2. Migrate to new format
-3. Upload migrated schema
-4. Remote devices receive new format
-
----
-
-## Record Storage Impact
-
-Records store field values by field ID:
-
-```swift
-struct RecordContent {
-    var fields: [String: FieldValue]  // Currently String keys
-}
-```
-
-After migration to UUID:
-
-```swift
-struct RecordContent {
-    var fields: [UUID: FieldValue]  // UUID keys
-}
-```
-
-**Migration**:
-
-1. On decode, if key is String, convert using `deterministicUUID(from:)`
-2. On encode, always use UUID
-3. Records remain compatible because same string → same UUID
-
----
-
 ## Test Scenarios
 
 1. **Concurrent field addition**: Device A adds "Notes", Device B adds "Severity" → both preserved
@@ -413,4 +334,3 @@ struct RecordContent {
 3. **displayName collision**: Both add "Notes" with different UUIDs → warning shown
 4. **Field hiding**: Hide field → data preserved → restore field → data visible
 5. **Device provenance**: New field shows "Created by iPad on Jan 2"
-6. **Migration**: Old string-ID schema → new UUID schema → records still work

@@ -23,15 +23,18 @@ Field IDs are auto-generated UUIDs, not user-provided strings. `displayName` bec
 
 ### 2. Hybrid Logical Clock for Versions
 
-Replace sequential `version: Int` with `(timestamp, deviceId, counter)` tuple that guarantees total ordering even with clock skew.
+Replace sequential `version: Int` with `(timestamp, deviceId, counter)` tuple.
 
-**Rationale**: Sequential integers fail when two devices independently create the same version. Hybrid clock preserves human-meaningful timestamps while guaranteeing uniqueness.
+**Rationale**: Sequential integers collide when two devices independently create the same version number. The hybrid clock ensures **uniqueness** - no two versions can ever be identical. Ordering is secondary; the primary goal is collision avoidance.
 
-### 3. Field-Level Merge on Sync
+### 3. Schema Merge is Trivial (Set Union)
 
-Merge field arrays using UUID as key. Different UUIDs = different fields, both preserved. Same UUID with different values = last-write-wins on that field.
+Schema merge is just a set union by field UUID:
 
-**Rationale**: Concurrent field additions from different devices should all be preserved. Only true conflicts (same UUID, different content) need resolution.
+- Different UUIDs = keep all fields (no conflict)
+- Same UUID edited on both devices = pick one (timestamp or ask user)
+
+**Rationale**: With UUID-based field IDs, there are no structural conflicts. Two devices adding fields independently just results in more fields. The only "conflict" is when the same field (same UUID) has different metadata (displayName, etc.) - ask user to pick.
 
 ### 4. Field Visibility State
 
