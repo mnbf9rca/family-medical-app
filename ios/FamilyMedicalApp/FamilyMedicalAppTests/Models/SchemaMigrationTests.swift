@@ -145,6 +145,22 @@ struct SchemaMigrationTests {
         }
     }
 
+    @Test("Throws when duplicate field ID appears in multiple transformations")
+    func duplicateFieldIdThrows() {
+        // Same field appears in both remove and typeConvert
+        #expect(throws: ModelError.self) {
+            try SchemaMigration(
+                schemaId: "test",
+                fromVersion: 1,
+                toVersion: 2,
+                transformations: [
+                    .remove(fieldId: "duplicateField"),
+                    .typeConvert(fieldId: "duplicateField", toType: .string)
+                ]
+            )
+        }
+    }
+
     // MARK: - Computed Properties
 
     @Test("hasTypeConversions returns true when present")

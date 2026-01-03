@@ -101,6 +101,20 @@ struct SchemaMigration: Codable, Equatable, Identifiable, Hashable {
         for transformation in transformations {
             try transformation.validate()
         }
+
+        // Check for duplicate field IDs across transformations
+        var seenFieldIds: Set<String> = []
+        for transformation in transformations {
+            for fieldId in transformation.affectedFieldIds {
+                if seenFieldIds.contains(fieldId) {
+                    throw ModelError.validationFailed(
+                        fieldName: "transformations",
+                        reason: "Field '\(fieldId)' appears in multiple transformations"
+                    )
+                }
+                seenFieldIds.insert(fieldId)
+            }
+        }
     }
 
     // MARK: - Computed Properties

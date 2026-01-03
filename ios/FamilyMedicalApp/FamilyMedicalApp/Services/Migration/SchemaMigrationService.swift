@@ -43,6 +43,13 @@ protocol SchemaMigrationServiceProtocol: Sendable {
     ) async throws -> MigrationResult
 }
 
+/// `SchemaMigrationService` is marked `@unchecked Sendable` because the compiler cannot prove
+/// that the injected protocol-typed dependencies are `Sendable`.
+///
+/// Safety guarantees:
+/// - The class is `final` with immutable (`let`) stored properties initialized in the constructor
+/// - No shared mutable state; all work is delegated to dependencies
+/// - Dependencies are required by design to be concurrency-safe when used from multiple tasks
 final class SchemaMigrationService: SchemaMigrationServiceProtocol, @unchecked Sendable {
     // MARK: - Dependencies
 
@@ -139,19 +146,24 @@ final class SchemaMigrationService: SchemaMigrationServiceProtocol, @unchecked S
         )
 
         // If any errors occurred, attempt rollback to the checkpoint
+        var rollbackSucceeded = true
         if !errors.isEmpty {
             do {
                 _ = try await checkpointService.restoreCheckpoint(migrationId: migration.id)
             } catch {
-                // Rollback failed - log but continue to delete checkpoint to avoid leaks
+                // Rollback failed - keep checkpoint for manual recovery
+                rollbackSucceeded = false
                 LoggingService.shared.logger(category: .storage).logError(
                     error, context: "SchemaMigrationService.executeMigration rollback failed"
                 )
             }
         }
 
-        // Always delete checkpoint to avoid leaking storage
-        try await checkpointService.deleteCheckpoint(migrationId: migration.id)
+        // Only delete checkpoint if migration succeeded or rollback succeeded
+        // Keep checkpoint on rollback failure to allow manual recovery
+        if errors.isEmpty || rollbackSucceeded {
+            try await checkpointService.deleteCheckpoint(migrationId: migration.id)
+        }
 
         progressHandler(MigrationProgress(
             totalRecords: recordsToMigrate.count, processedRecords: recordsToMigrate.count, currentRecordId: nil
@@ -287,7 +299,8 @@ final class SchemaMigrationService: SchemaMigrationServiceProtocol, @unchecked S
         let sourceValue = content[sourceFieldId]
         let targetValue = content[targetFieldId]
 
-        // Merge: [source, target] - source merges INTO target
+        // Array order: [source, target] where source is the field being merged INTO target.
+        // preferSource uses first non-empty; preferTarget uses last non-empty.
         let values: [FieldValue?] = [sourceValue, targetValue]
 
         // Merge using the strategy

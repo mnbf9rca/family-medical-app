@@ -89,6 +89,10 @@ enum FieldValueConverter {
     }
 
     private static func convertDoubleToInt(_ doubleValue: Double) -> FieldValue? {
+        // Check for NaN and infinity first
+        guard doubleValue.isFinite else {
+            return nil
+        }
         // Check for reasonable bounds to avoid overflow
         guard doubleValue >= Double(Int.min), doubleValue <= Double(Int.max) else {
             return nil

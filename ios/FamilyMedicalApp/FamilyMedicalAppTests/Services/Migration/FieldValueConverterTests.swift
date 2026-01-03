@@ -140,6 +140,24 @@ struct FieldValueConverterTests {
         #expect(result == .int(1_000_000))
     }
 
+    @Test("Double to Int returns nil for NaN")
+    func doubleToIntNaN() {
+        let result = FieldValueConverter.convert(.double(Double.nan), to: .int)
+        #expect(result == nil)
+    }
+
+    @Test("Double to Int returns nil for positive infinity")
+    func doubleToIntPositiveInfinity() {
+        let result = FieldValueConverter.convert(.double(Double.infinity), to: .int)
+        #expect(result == nil)
+    }
+
+    @Test("Double to Int returns nil for negative infinity")
+    func doubleToIntNegativeInfinity() {
+        let result = FieldValueConverter.convert(.double(-Double.infinity), to: .int)
+        #expect(result == nil)
+    }
+
     // MARK: - Same Type Returns Original
 
     @Test("String to String returns same value")

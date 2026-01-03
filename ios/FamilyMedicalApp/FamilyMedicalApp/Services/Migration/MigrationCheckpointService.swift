@@ -45,6 +45,14 @@ protocol MigrationCheckpointServiceProtocol: Sendable {
     func hasCheckpoint(migrationId: UUID) async throws -> Bool
 }
 
+/// `MigrationCheckpointService` is marked `@unchecked Sendable` because the compiler cannot prove
+/// that the injected protocol-typed dependencies are `Sendable`.
+///
+/// Safety guarantees:
+/// - The class is `final` with immutable (`let`) stored properties initialized in the constructor
+/// - No shared mutable state; all work is delegated to dependencies
+/// - Dependencies (`CoreDataStackProtocol`, `MedicalRecordRepositoryProtocol`) are required by design
+///   to be concurrency-safe when used from multiple tasks
 final class MigrationCheckpointService: MigrationCheckpointServiceProtocol, @unchecked Sendable {
     // MARK: - Dependencies
 
@@ -158,6 +166,9 @@ final class MigrationCheckpointService: MigrationCheckpointServiceProtocol, @unc
 
             guard let entity = try context.fetch(request).first else {
                 // Not found is not an error - checkpoint may have already been deleted
+                LoggingService.shared.logger(category: .storage).debug(
+                    "Checkpoint not found for migration \(migrationId) - may have already been deleted"
+                )
                 return
             }
 
