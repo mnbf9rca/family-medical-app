@@ -79,4 +79,4 @@ See: `docs/technical/schema-evolution-design.md` for implementation details.
 - **ADR-0004**: Sync Encryption (async-first, last-write-wins pattern)
 - **ADR-0007**: Schema-Overlay Data Model (flexible field structures)
 - **Issue #71**: Convert built-in schemas to prebuilt (uses deterministic UUIDs)
-- **Issue #72**: Schema migration support (handles displayName collision merges)
+- **Issue #72**: Schema migration support (✅ local migration complete - provides local migration capabilities for type conversion, field removal, and field merging; sync-layer integration is a separate future item)

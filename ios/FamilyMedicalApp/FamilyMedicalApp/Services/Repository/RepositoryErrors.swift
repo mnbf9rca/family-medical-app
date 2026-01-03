@@ -57,6 +57,20 @@ enum RepositoryError: LocalizedError, Equatable {
     /// Failed to deserialize data from JSON or binary format
     case deserializationFailed(String)
 
+    // MARK: - Migration Errors
+
+    /// Migration failed with the given reason
+    case migrationFailed(String)
+
+    /// Failed to rollback a migration
+    case migrationRollbackFailed(String)
+
+    /// Migration checkpoint was not found
+    case checkpointNotFound(UUID)
+
+    /// A checkpoint already exists for this migration
+    case checkpointAlreadyExists(UUID)
+
     // MARK: - LocalizedError Conformance
 
     var errorDescription: String? {
@@ -96,6 +110,15 @@ enum RepositoryError: LocalizedError, Equatable {
             "Serialization failed: \(details)"
         case let .deserializationFailed(details):
             "Deserialization failed: \(details)"
+        // Migration errors
+        case let .migrationFailed(details):
+            "Migration failed: \(details)"
+        case let .migrationRollbackFailed(details):
+            "Migration rollback failed: \(details)"
+        case let .checkpointNotFound(migrationId):
+            "Migration checkpoint not found: \(migrationId)"
+        case let .checkpointAlreadyExists(migrationId):
+            "Checkpoint already exists for migration: \(migrationId)"
         }
     }
 }

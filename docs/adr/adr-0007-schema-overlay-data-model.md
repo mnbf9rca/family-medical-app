@@ -39,7 +39,7 @@ Custom schemas can be modified over time. The following rules apply:
 
 **Prohibited (breaking changes):**
 
-- Field type changes (would corrupt existing data) - but functionality will be provided for migrations and e.g. field merges. So for example, converting an int to a string would mean creating a new field, and then populating the new field with the data from the old one.
+- Field type changes (would corrupt existing data) - but migration support is available (see `SchemaMigrationService`). Users can convert types (string ↔ int ↔ double), remove fields, or merge multiple fields into one.
 
 **Allowed with soft enforcement:**
 
