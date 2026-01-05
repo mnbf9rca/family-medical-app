@@ -53,16 +53,6 @@ struct RecordContent: Codable, Equatable, Sendable {
         }
     }
 
-    /// Access field values by string key (for backward compatibility)
-    subscript(key: String) -> FieldValue? {
-        get {
-            fields[key]
-        }
-        set {
-            fields[key] = newValue
-        }
-    }
-
     /// Get all fields as a dictionary (keys are UUID strings)
     var allFields: [String: FieldValue] {
         fields
@@ -81,14 +71,6 @@ struct RecordContent: Codable, Equatable, Sendable {
         fields[key.uuidString] != nil
     }
 
-    /// Check if a field exists by string key
-    ///
-    /// - Parameter key: The field key to check
-    /// - Returns: true if the field exists, false otherwise
-    func hasField(_ key: String) -> Bool {
-        fields[key] != nil
-    }
-
     /// Remove a field by UUID
     ///
     /// - Parameter key: The field UUID to remove
@@ -96,19 +78,12 @@ struct RecordContent: Codable, Equatable, Sendable {
         fields.removeValue(forKey: key.uuidString)
     }
 
-    /// Remove a field by string key
-    ///
-    /// - Parameter key: The field key to remove
-    mutating func removeField(_ key: String) {
-        fields.removeValue(forKey: key)
-    }
-
     /// Remove all fields
     mutating func removeAllFields() {
         fields.removeAll()
     }
 
-    // MARK: - UUID-based Convenience Accessors
+    // MARK: - Convenience Accessors
 
     /// Get a string value for a field by UUID
     func getString(_ key: UUID) -> String? {
@@ -145,7 +120,7 @@ struct RecordContent: Codable, Equatable, Sendable {
         fields[key.uuidString]?.stringArrayValue
     }
 
-    // MARK: - UUID-based Convenience Setters
+    // MARK: - Convenience Setters
 
     /// Set a string value by UUID
     mutating func setString(_ key: UUID, _ value: String) {
@@ -180,101 +155,6 @@ struct RecordContent: Codable, Equatable, Sendable {
     /// Set a string array by UUID
     mutating func setStringArray(_ key: UUID, _ value: [String]) {
         fields[key.uuidString] = .stringArray(value)
-    }
-
-    // MARK: - String-based Convenience Accessors (backward compatibility)
-
-    /// Get a string value for a field
-    ///
-    /// - Parameter key: The field key (UUID string)
-    /// - Returns: The string value, or nil if field doesn't exist or isn't a string
-    func getString(_ key: String) -> String? {
-        fields[key]?.stringValue
-    }
-
-    /// Get an int value for a field
-    ///
-    /// - Parameter key: The field key (UUID string)
-    /// - Returns: The int value, or nil if field doesn't exist or isn't an int
-    func getInt(_ key: String) -> Int? {
-        fields[key]?.intValue
-    }
-
-    /// Get a double value for a field
-    ///
-    /// - Parameter key: The field key (UUID string)
-    /// - Returns: The double value, or nil if field doesn't exist or isn't a double
-    func getDouble(_ key: String) -> Double? {
-        fields[key]?.doubleValue
-    }
-
-    /// Get a bool value for a field
-    ///
-    /// - Parameter key: The field key (UUID string)
-    /// - Returns: The bool value, or nil if field doesn't exist or isn't a bool
-    func getBool(_ key: String) -> Bool? {
-        fields[key]?.boolValue
-    }
-
-    /// Get a date value for a field
-    ///
-    /// - Parameter key: The field key (UUID string)
-    /// - Returns: The date value, or nil if field doesn't exist or isn't a date
-    func getDate(_ key: String) -> Date? {
-        fields[key]?.dateValue
-    }
-
-    /// Get attachment IDs for a field
-    ///
-    /// - Parameter key: The field key (UUID string)
-    /// - Returns: The attachment IDs, or nil if field doesn't exist or isn't attachmentIds
-    func getAttachmentIds(_ key: String) -> [UUID]? {
-        fields[key]?.attachmentIdsValue
-    }
-
-    /// Get a string array for a field
-    ///
-    /// - Parameter key: The field key (UUID string)
-    /// - Returns: The string array, or nil if field doesn't exist or isn't a stringArray
-    func getStringArray(_ key: String) -> [String]? {
-        fields[key]?.stringArrayValue
-    }
-
-    // MARK: - String-based Convenience Setters (backward compatibility)
-
-    /// Set a string value
-    mutating func setString(_ key: String, _ value: String) {
-        fields[key] = .string(value)
-    }
-
-    /// Set an int value
-    mutating func setInt(_ key: String, _ value: Int) {
-        fields[key] = .int(value)
-    }
-
-    /// Set a double value
-    mutating func setDouble(_ key: String, _ value: Double) {
-        fields[key] = .double(value)
-    }
-
-    /// Set a bool value
-    mutating func setBool(_ key: String, _ value: Bool) {
-        fields[key] = .bool(value)
-    }
-
-    /// Set a date value
-    mutating func setDate(_ key: String, _ value: Date) {
-        fields[key] = .date(value)
-    }
-
-    /// Set attachment IDs
-    mutating func setAttachmentIds(_ key: String, _ value: [UUID]) {
-        fields[key] = .attachmentIds(value)
-    }
-
-    /// Set a string array
-    mutating func setStringArray(_ key: String, _ value: [String]) {
-        fields[key] = .stringArray(value)
     }
 }
 

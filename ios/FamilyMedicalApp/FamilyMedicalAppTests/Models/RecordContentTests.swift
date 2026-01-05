@@ -3,6 +3,22 @@ import Testing
 @testable import FamilyMedicalApp
 
 struct RecordContentTests {
+    // MARK: - Test Field IDs
+
+    /// Test UUIDs for field identification
+    private enum TestFieldIds {
+        static let name = UUID()
+        static let age = UUID()
+        static let price = UUID()
+        static let active = UUID()
+        static let created = UUID()
+        static let attachments = UUID()
+        static let tags = UUID()
+        static let field1 = UUID()
+        static let field2 = UUID()
+        static let test = UUID()
+    }
+
     // MARK: - Initialization
 
     @Test
@@ -15,9 +31,9 @@ struct RecordContentTests {
 
     @Test
     func init_withFields_succeeds() {
-        let content = RecordContent(fields: ["name": .string("test")])
+        let content = RecordContent(fields: [TestFieldIds.name.uuidString: .string("test")])
         #expect(content.allFields.count == 1)
-        #expect(content.getString("name") == "test")
+        #expect(content.getString(TestFieldIds.name) == "test")
         #expect(content.schemaId == nil)
     }
 
@@ -30,9 +46,12 @@ struct RecordContentTests {
 
     @Test
     func init_withSchemaIdAndFields_storesBoth() {
-        let content = RecordContent(schemaId: "medication", fields: ["name": .string("Aspirin")])
+        let content = RecordContent(
+            schemaId: "medication",
+            fields: [TestFieldIds.name.uuidString: .string("Aspirin")]
+        )
         #expect(content.schemaId == "medication")
-        #expect(content.getString("name") == "Aspirin")
+        #expect(content.getString(TestFieldIds.name) == "Aspirin")
     }
 
     // MARK: - Subscript Access
@@ -40,21 +59,21 @@ struct RecordContentTests {
     @Test
     func subscript_getExistingField_returnsValue() {
         var content = RecordContent()
-        content["test"] = .string("value")
-        #expect(content["test"]?.stringValue == "value")
+        content[TestFieldIds.test] = .string("value")
+        #expect(content[TestFieldIds.test]?.stringValue == "value")
     }
 
     @Test
     func subscript_getNonExistentField_returnsNil() {
         let content = RecordContent()
-        #expect(content["nonexistent"] == nil)
+        #expect(content[UUID()] == nil)
     }
 
     @Test
     func subscript_setField_storesValue() {
         var content = RecordContent()
-        content["key"] = .int(42)
-        #expect(content["key"]?.intValue == 42)
+        content[TestFieldIds.age] = .int(42)
+        #expect(content[TestFieldIds.age]?.intValue == 42)
     }
 
     // MARK: - Field Management
@@ -62,29 +81,29 @@ struct RecordContentTests {
     @Test
     func hasField_existingField_returnsTrue() {
         var content = RecordContent()
-        content["test"] = .string("value")
-        #expect(content.hasField("test"))
+        content[TestFieldIds.test] = .string("value")
+        #expect(content.hasField(TestFieldIds.test))
     }
 
     @Test
     func hasField_nonExistentField_returnsFalse() {
         let content = RecordContent()
-        #expect(!content.hasField("test"))
+        #expect(!content.hasField(TestFieldIds.test))
     }
 
     @Test
     func removeField_existingField_removes() {
         var content = RecordContent()
-        content["test"] = .string("value")
-        content.removeField("test")
-        #expect(!content.hasField("test"))
+        content[TestFieldIds.test] = .string("value")
+        content.removeField(TestFieldIds.test)
+        #expect(!content.hasField(TestFieldIds.test))
     }
 
     @Test
     func removeAllFields_clearsAll() {
         var content = RecordContent(fields: [
-            "field1": .string("value1"),
-            "field2": .int(42)
+            TestFieldIds.field1.uuidString: .string("value1"),
+            TestFieldIds.field2.uuidString: .int(42)
         ])
         content.removeAllFields()
         #expect(content.allFields.isEmpty)
@@ -95,60 +114,60 @@ struct RecordContentTests {
     @Test
     func getString_stringField_returnsValue() {
         var content = RecordContent()
-        content["name"] = .string("John")
-        #expect(content.getString("name") == "John")
+        content[TestFieldIds.name] = .string("John")
+        #expect(content.getString(TestFieldIds.name) == "John")
     }
 
     @Test
     func getString_nonStringField_returnsNil() {
         var content = RecordContent()
-        content["age"] = .int(42)
-        #expect(content.getString("age") == nil)
+        content[TestFieldIds.age] = .int(42)
+        #expect(content.getString(TestFieldIds.age) == nil)
     }
 
     @Test
     func getInt_intField_returnsValue() {
         var content = RecordContent()
-        content["age"] = .int(42)
-        #expect(content.getInt("age") == 42)
+        content[TestFieldIds.age] = .int(42)
+        #expect(content.getInt(TestFieldIds.age) == 42)
     }
 
     @Test
     func getDouble_doubleField_returnsValue() {
         var content = RecordContent()
-        content["price"] = .double(3.14)
-        #expect(content.getDouble("price") == 3.14)
+        content[TestFieldIds.price] = .double(3.14)
+        #expect(content.getDouble(TestFieldIds.price) == 3.14)
     }
 
     @Test
     func getBool_boolField_returnsValue() {
         var content = RecordContent()
-        content["active"] = .bool(true)
-        #expect(content.getBool("active") == true)
+        content[TestFieldIds.active] = .bool(true)
+        #expect(content.getBool(TestFieldIds.active) == true)
     }
 
     @Test
     func getDate_dateField_returnsValue() {
         var content = RecordContent()
         let date = Date()
-        content["created"] = .date(date)
-        #expect(content.getDate("created") == date)
+        content[TestFieldIds.created] = .date(date)
+        #expect(content.getDate(TestFieldIds.created) == date)
     }
 
     @Test
     func getAttachmentIds_attachmentIdsField_returnsValue() {
         var content = RecordContent()
         let ids = [UUID(), UUID()]
-        content["attachments"] = .attachmentIds(ids)
-        #expect(content.getAttachmentIds("attachments") == ids)
+        content[TestFieldIds.attachments] = .attachmentIds(ids)
+        #expect(content.getAttachmentIds(TestFieldIds.attachments) == ids)
     }
 
     @Test
     func getStringArray_stringArrayField_returnsValue() {
         var content = RecordContent()
         let tags = ["tag1", "tag2"]
-        content["tags"] = .stringArray(tags)
-        #expect(content.getStringArray("tags") == tags)
+        content[TestFieldIds.tags] = .stringArray(tags)
+        #expect(content.getStringArray(TestFieldIds.tags) == tags)
     }
 
     // MARK: - Convenience Setters
@@ -156,53 +175,53 @@ struct RecordContentTests {
     @Test
     func setString_setsStringValue() {
         var content = RecordContent()
-        content.setString("name", "John")
-        #expect(content.getString("name") == "John")
+        content.setString(TestFieldIds.name, "John")
+        #expect(content.getString(TestFieldIds.name) == "John")
     }
 
     @Test
     func setInt_setsIntValue() {
         var content = RecordContent()
-        content.setInt("age", 42)
-        #expect(content.getInt("age") == 42)
+        content.setInt(TestFieldIds.age, 42)
+        #expect(content.getInt(TestFieldIds.age) == 42)
     }
 
     @Test
     func setDouble_setsDoubleValue() {
         var content = RecordContent()
-        content.setDouble("price", 3.14)
-        #expect(content.getDouble("price") == 3.14)
+        content.setDouble(TestFieldIds.price, 3.14)
+        #expect(content.getDouble(TestFieldIds.price) == 3.14)
     }
 
     @Test
     func setBool_setsBoolValue() {
         var content = RecordContent()
-        content.setBool("active", true)
-        #expect(content.getBool("active") == true)
+        content.setBool(TestFieldIds.active, true)
+        #expect(content.getBool(TestFieldIds.active) == true)
     }
 
     @Test
     func setDate_setsDateValue() {
         var content = RecordContent()
         let date = Date()
-        content.setDate("created", date)
-        #expect(content.getDate("created") == date)
+        content.setDate(TestFieldIds.created, date)
+        #expect(content.getDate(TestFieldIds.created) == date)
     }
 
     @Test
     func setAttachmentIds_setsAttachmentIdsValue() {
         var content = RecordContent()
         let ids = [UUID(), UUID()]
-        content.setAttachmentIds("attachments", ids)
-        #expect(content.getAttachmentIds("attachments") == ids)
+        content.setAttachmentIds(TestFieldIds.attachments, ids)
+        #expect(content.getAttachmentIds(TestFieldIds.attachments) == ids)
     }
 
     @Test
     func setStringArray_setsStringArrayValue() {
         var content = RecordContent()
         let tags = ["tag1", "tag2"]
-        content.setStringArray("tags", tags)
-        #expect(content.getStringArray("tags") == tags)
+        content.setStringArray(TestFieldIds.tags, tags)
+        #expect(content.getStringArray(TestFieldIds.tags) == tags)
     }
 
     // MARK: - Codable
@@ -210,17 +229,17 @@ struct RecordContentTests {
     @Test
     func codable_roundTrip() throws {
         var original = RecordContent(schemaId: "vaccine")
-        original.setString("name", "John Doe")
-        original.setInt("age", 42)
-        original.setDate("created", Date(timeIntervalSince1970: 1_000_000))
+        original.setString(TestFieldIds.name, "John Doe")
+        original.setInt(TestFieldIds.age, 42)
+        original.setDate(TestFieldIds.created, Date(timeIntervalSince1970: 1_000_000))
 
         let encoded = try JSONEncoder().encode(original)
         let decoded = try JSONDecoder().decode(RecordContent.self, from: encoded)
 
         #expect(decoded == original)
         #expect(decoded.schemaId == "vaccine")
-        #expect(decoded.getString("name") == "John Doe")
-        #expect(decoded.getInt("age") == 42)
+        #expect(decoded.getString(TestFieldIds.name) == "John Doe")
+        #expect(decoded.getInt(TestFieldIds.age) == 42)
     }
 
     // MARK: - Equatable
@@ -228,10 +247,10 @@ struct RecordContentTests {
     @Test
     func equatable_sameFields_equal() {
         var content1 = RecordContent(schemaId: "test")
-        content1.setString("name", "John")
+        content1.setString(TestFieldIds.name, "John")
 
         var content2 = RecordContent(schemaId: "test")
-        content2.setString("name", "John")
+        content2.setString(TestFieldIds.name, "John")
 
         #expect(content1 == content2)
     }
@@ -239,10 +258,10 @@ struct RecordContentTests {
     @Test
     func equatable_differentFields_notEqual() {
         var content1 = RecordContent()
-        content1.setString("name", "John")
+        content1.setString(TestFieldIds.name, "John")
 
         var content2 = RecordContent()
-        content2.setString("name", "Jane")
+        content2.setString(TestFieldIds.name, "Jane")
 
         #expect(content1 != content2)
     }
@@ -250,10 +269,10 @@ struct RecordContentTests {
     @Test
     func equatable_differentSchemaId_notEqual() {
         var content1 = RecordContent(schemaId: "vaccine")
-        content1.setString("name", "Test")
+        content1.setString(TestFieldIds.name, "Test")
 
         var content2 = RecordContent(schemaId: "medication")
-        content2.setString("name", "Test")
+        content2.setString(TestFieldIds.name, "Test")
 
         #expect(content1 != content2)
     }

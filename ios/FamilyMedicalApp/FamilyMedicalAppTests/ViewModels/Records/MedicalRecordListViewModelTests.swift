@@ -5,6 +5,11 @@ import Testing
 
 @MainActor
 struct MedicalRecordListViewModelTests {
+    // MARK: - Test Field IDs
+
+    /// Test UUID for generic test fields
+    private static let testFieldId = UUID()
+
     // MARK: - Test Helpers
 
     func makeTestPerson() throws -> Person {
@@ -17,10 +22,10 @@ struct MedicalRecordListViewModelTests {
         )
     }
 
-    func makeTestRecord(personId: UUID, schemaId: String, dateField: String, date: Date) -> MedicalRecord {
+    func makeTestRecord(personId: UUID, schemaId: String, dateFieldId: UUID, date: Date) -> MedicalRecord {
         var content = RecordContent(schemaId: schemaId)
-        content.setDate(dateField, date)
-        content.setString("testField", "test value")
+        content.setDate(dateFieldId, date)
+        content.setString(Self.testFieldId, "test value")
 
         // Create unique encrypted content for each record (use schemaId for uniqueness)
         let encryptedData = Data("encrypted-\(schemaId)".utf8)
@@ -66,14 +71,14 @@ struct MedicalRecordListViewModelTests {
         let record1 = makeTestRecord(
             personId: person.id,
             schemaId: "vaccine",
-            dateField: "dateAdministered",
+            dateFieldId: BuiltInFieldIds.Vaccine.dateAdministered,
             date: Date()
         )
         mockRepo.addRecord(record1)
 
         // Mock decryption
         var content1 = RecordContent(schemaId: "vaccine")
-        content1.setDate("dateAdministered", Date())
+        content1.setDate(BuiltInFieldIds.Vaccine.dateAdministered, Date())
         mockContentService.setContent(content1, for: record1.encryptedContent)
 
         let viewModel = MedicalRecordListViewModel(
@@ -107,7 +112,7 @@ struct MedicalRecordListViewModelTests {
         let vaccineRecord = makeTestRecord(
             personId: person.id,
             schemaId: "vaccine",
-            dateField: "dateAdministered",
+            dateFieldId: BuiltInFieldIds.Vaccine.dateAdministered,
             date: Date()
         )
         mockRepo.addRecord(vaccineRecord)
@@ -116,18 +121,18 @@ struct MedicalRecordListViewModelTests {
         let medRecord = makeTestRecord(
             personId: person.id,
             schemaId: "medication",
-            dateField: "startDate",
+            dateFieldId: BuiltInFieldIds.Medication.startDate,
             date: Date()
         )
         mockRepo.addRecord(medRecord)
 
         // Mock decryption to return correct schema
         var vaccineContent = RecordContent(schemaId: "vaccine")
-        vaccineContent.setDate("dateAdministered", Date())
+        vaccineContent.setDate(BuiltInFieldIds.Vaccine.dateAdministered, Date())
         mockContentService.setContent(vaccineContent, for: vaccineRecord.encryptedContent)
 
         var medContent = RecordContent(schemaId: "medication")
-        medContent.setDate("startDate", Date())
+        medContent.setDate(BuiltInFieldIds.Medication.startDate, Date())
         mockContentService.setContent(medContent, for: medRecord.encryptedContent)
 
         let viewModel = MedicalRecordListViewModel(
@@ -208,7 +213,7 @@ struct MedicalRecordListViewModelTests {
         let record = makeTestRecord(
             personId: person.id,
             schemaId: "vaccine",
-            dateField: "dateAdministered",
+            dateFieldId: BuiltInFieldIds.Vaccine.dateAdministered,
             date: Date()
         )
 
@@ -220,7 +225,7 @@ struct MedicalRecordListViewModelTests {
         )
 
         // Manually add to records for testing
-        var content = RecordContent(schemaId: "vaccine")
+        let content = RecordContent(schemaId: "vaccine")
         viewModel.records = [DecryptedRecord(record: record, content: content)]
 
         await viewModel.deleteRecord(id: record.id)
@@ -241,7 +246,7 @@ struct MedicalRecordListViewModelTests {
         let record = makeTestRecord(
             personId: person.id,
             schemaId: "vaccine",
-            dateField: "dateAdministered",
+            dateFieldId: BuiltInFieldIds.Vaccine.dateAdministered,
             date: Date()
         )
 
@@ -251,7 +256,7 @@ struct MedicalRecordListViewModelTests {
             medicalRecordRepository: mockRepo
         )
 
-        var content = RecordContent(schemaId: "vaccine")
+        let content = RecordContent(schemaId: "vaccine")
         viewModel.records = [DecryptedRecord(record: record, content: content)]
 
         await viewModel.deleteRecord(id: record.id)

@@ -99,8 +99,9 @@ final class SchemaMigrationService: SchemaMigrationServiceProtocol, @unchecked S
 
                 // Check for potential conversion issues
                 for transformation in migration.transformations {
-                    if case let .typeConvert(fieldId, toType) = transformation {
-                        if let value = content[fieldId] {
+                    if case let .typeConvert(fieldId, toType) = transformation,
+                       let fieldUUID = UUID(uuidString: fieldId) {
+                        if let value = content[fieldUUID] {
                             let converted = FieldValueConverter.convert(value, to: toType)
                             if converted == nil {
                                 warnings.append(
@@ -260,18 +261,25 @@ final class SchemaMigrationService: SchemaMigrationServiceProtocol, @unchecked S
     ) {
         switch transformation {
         case let .remove(fieldId):
-            content.removeField(fieldId)
+            if let fieldUUID = UUID(uuidString: fieldId) {
+                content.removeField(fieldUUID)
+            }
 
         case let .typeConvert(fieldId, toType):
-            applyTypeConvert(fieldId: fieldId, toType: toType, to: &content)
+            if let fieldUUID = UUID(uuidString: fieldId) {
+                applyTypeConvert(fieldId: fieldUUID, toType: toType, to: &content)
+            }
 
         case let .merge(fieldId, into):
-            applyMerge(sourceFieldId: fieldId, targetFieldId: into, to: &content, options: options)
+            if let sourceUUID = UUID(uuidString: fieldId),
+               let targetUUID = UUID(uuidString: into) {
+                applyMerge(sourceFieldId: sourceUUID, targetFieldId: targetUUID, to: &content, options: options)
+            }
         }
     }
 
     private func applyTypeConvert(
-        fieldId: String,
+        fieldId: UUID,
         toType: FieldType,
         to content: inout RecordContent
     ) {
@@ -290,8 +298,8 @@ final class SchemaMigrationService: SchemaMigrationServiceProtocol, @unchecked S
     }
 
     private func applyMerge(
-        sourceFieldId: String,
-        targetFieldId: String,
+        sourceFieldId: UUID,
+        targetFieldId: UUID,
         to content: inout RecordContent,
         options: MigrationOptions
     ) {

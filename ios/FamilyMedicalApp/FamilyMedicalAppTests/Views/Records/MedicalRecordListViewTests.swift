@@ -23,8 +23,8 @@ struct MedicalRecordListViewTests {
 
     func makeTestDecryptedRecord(personId: UUID? = nil) -> DecryptedRecord {
         var content = RecordContent(schemaId: "vaccine")
-        content.setString("vaccineName", "COVID-19")
-        content.setDate("dateAdministered", Date())
+        content.setString(BuiltInFieldIds.Vaccine.name, "COVID-19")
+        content.setDate(BuiltInFieldIds.Vaccine.dateAdministered, Date())
 
         let record = MedicalRecord(
             personId: personId ?? UUID(),

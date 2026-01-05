@@ -157,10 +157,10 @@ struct MedicalRecordDetailView: View {
             notes: nil
         ), let decryptedRecord = {
             var content = RecordContent(schemaId: "vaccine")
-            content.setString("vaccineName", "COVID-19 Pfizer")
-            content.setDate("dateAdministered", Date())
-            content.setString("provider", "CVS Pharmacy")
-            content.setInt("doseNumber", 2)
+            content.setString(BuiltInFieldIds.Vaccine.name, "COVID-19 Pfizer")
+            content.setDate(BuiltInFieldIds.Vaccine.dateAdministered, Date())
+            content.setString(BuiltInFieldIds.Vaccine.provider, "CVS Pharmacy")
+            content.setInt(BuiltInFieldIds.Vaccine.doseNumber, 2)
 
             let record = MedicalRecord(
                 personId: person.id,
