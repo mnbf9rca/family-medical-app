@@ -1,7 +1,7 @@
 import Foundation
 
 /// Type of a field value in a medical record
-enum FieldType: String, Codable, CaseIterable, Hashable {
+enum FieldType: String, Codable, CaseIterable, Hashable, Sendable {
     case string
     case int
     case double
@@ -54,7 +54,7 @@ enum FieldType: String, Codable, CaseIterable, Hashable {
 }
 
 /// Validation rule for a field
-enum ValidationRule: Codable, Equatable, Hashable {
+enum ValidationRule: Codable, Equatable, Hashable, Sendable {
     case minLength(Int)
     case maxLength(Int)
     case minValue(Double)
@@ -138,7 +138,7 @@ enum ValidationRule: Codable, Equatable, Hashable {
 ///
 /// Controls how text is automatically capitalized during input.
 /// This is a UI hint that affects the keyboard behavior, not validation.
-enum TextCapitalizationMode: String, Codable, CaseIterable, Hashable {
+enum TextCapitalizationMode: String, Codable, CaseIterable, Hashable, Sendable {
     /// No automatic capitalization
     case none
 
@@ -154,24 +154,35 @@ enum TextCapitalizationMode: String, Codable, CaseIterable, Hashable {
 
 /// Definition of a field in a medical record schema
 ///
-/// Describes the structure, type, and validation rules for a single field
-struct FieldDefinition: Codable, Equatable, Hashable, Identifiable {
-    // MARK: - Properties
+/// Describes the structure, type, and validation rules for a single field.
+/// Field IDs are UUIDs to support collision-free multi-device schema evolution
+/// per ADR-0009.
+struct FieldDefinition: Codable, Equatable, Hashable, Identifiable, Sendable {
+    // MARK: - Identity (immutable after creation)
 
-    /// Unique identifier for this field (also used as the dictionary key in RecordContent)
-    let id: String
+    /// Unique identifier for this field (UUID for collision-free multi-device support)
+    ///
+    /// Per ADR-0009: Field IDs are auto-generated UUIDs, not user-provided strings.
+    /// Built-in fields use hardcoded UUIDs; user-created fields use `UUID()`.
+    /// The `uuidString` is used as the dictionary key in RecordContent.
+    let id: UUID
 
-    /// Human-readable display name for UI (e.g., "Vaccine Name")
-    let displayName: String
-
-    /// Type of value this field holds
+    /// Type of value this field holds (immutable - changing type is a breaking change)
     let fieldType: FieldType
 
+    // MARK: - Display (mutable)
+
+    /// Human-readable display name for UI (e.g., "Vaccine Name")
+    var displayName: String
+
     /// Whether this field is required (must be present)
-    let isRequired: Bool
+    ///
+    /// Note: Changing from optional to required is soft-enforced at edit time only.
+    /// Existing records remain valid.
+    var isRequired: Bool
 
     /// Order in which this field should be displayed in UI (lower numbers first)
-    let displayOrder: Int
+    var displayOrder: Int
 
     /// Optional placeholder text for UI input fields
     var placeholder: String?
@@ -200,10 +211,40 @@ struct FieldDefinition: Codable, Equatable, Hashable, Identifiable {
     /// - `.allCharacters`: For abbreviations, codes requiring uppercase
     var capitalizationMode: TextCapitalizationMode
 
+    // MARK: - Visibility
+
+    /// Visibility state of this field (active, hidden, deprecated)
+    ///
+    /// Per ADR-0009: Hidden fields keep their data in records.
+    /// Users can "remove" fields without losing existing data.
+    var visibility: FieldVisibility
+
+    // MARK: - Provenance (immutable after creation)
+
+    /// Device ID that created this field, or UUID.zero for built-in fields
+    ///
+    /// Per ADR-0009: Users need to know "who added this field?" for trust decisions.
+    /// Built-in fields use `.zero` to indicate system origin.
+    let createdBy: UUID
+
+    /// When this field was created
+    ///
+    /// Built-in fields use `.distantPast` to indicate they predate user data.
+    let createdAt: Date
+
+    // MARK: - Update Tracking (mutable)
+
+    /// Device ID that last updated this field, or UUID.zero for built-in fields
+    var updatedBy: UUID
+
+    /// When this field was last updated
+    var updatedAt: Date
+
     // MARK: - Initialization
 
+    /// Full initializer with all properties
     init(
-        id: String,
+        id: UUID,
         displayName: String,
         fieldType: FieldType,
         isRequired: Bool = false,
@@ -212,7 +253,12 @@ struct FieldDefinition: Codable, Equatable, Hashable, Identifiable {
         helpText: String? = nil,
         validationRules: [ValidationRule] = [],
         isMultiline: Bool = false,
-        capitalizationMode: TextCapitalizationMode = .sentences
+        capitalizationMode: TextCapitalizationMode = .sentences,
+        visibility: FieldVisibility = .active,
+        createdBy: UUID,
+        createdAt: Date,
+        updatedBy: UUID,
+        updatedAt: Date
     ) {
         self.id = id
         self.displayName = displayName
@@ -224,6 +270,85 @@ struct FieldDefinition: Codable, Equatable, Hashable, Identifiable {
         self.validationRules = validationRules
         self.isMultiline = isMultiline
         self.capitalizationMode = capitalizationMode
+        self.visibility = visibility
+        self.createdBy = createdBy
+        self.createdAt = createdAt
+        self.updatedBy = updatedBy
+        self.updatedAt = updatedAt
+    }
+
+    /// Convenience initializer for built-in fields
+    ///
+    /// Sets provenance to system values:
+    /// - `createdBy`/`updatedBy`: `.zero` (system origin)
+    /// - `createdAt`/`updatedAt`: `.distantPast` (predates user data)
+    /// - `visibility`: `.active`
+    static func builtIn(
+        id: UUID,
+        displayName: String,
+        fieldType: FieldType,
+        isRequired: Bool = false,
+        displayOrder: Int = 0,
+        placeholder: String? = nil,
+        helpText: String? = nil,
+        validationRules: [ValidationRule] = [],
+        isMultiline: Bool = false,
+        capitalizationMode: TextCapitalizationMode = .sentences
+    ) -> FieldDefinition {
+        FieldDefinition(
+            id: id,
+            displayName: displayName,
+            fieldType: fieldType,
+            isRequired: isRequired,
+            displayOrder: displayOrder,
+            placeholder: placeholder,
+            helpText: helpText,
+            validationRules: validationRules,
+            isMultiline: isMultiline,
+            capitalizationMode: capitalizationMode,
+            visibility: .active,
+            createdBy: .zero,
+            createdAt: .distantPast,
+            updatedBy: .zero,
+            updatedAt: .distantPast
+        )
+    }
+
+    /// Convenience initializer for user-created fields
+    ///
+    /// Generates a new UUID and sets provenance to current device/time.
+    ///
+    /// - Parameter deviceId: The device ID creating this field
+    static func userCreated(
+        displayName: String,
+        fieldType: FieldType,
+        isRequired: Bool = false,
+        displayOrder: Int = 0,
+        placeholder: String? = nil,
+        helpText: String? = nil,
+        validationRules: [ValidationRule] = [],
+        isMultiline: Bool = false,
+        capitalizationMode: TextCapitalizationMode = .sentences,
+        deviceId: UUID
+    ) -> FieldDefinition {
+        let now = Date()
+        return FieldDefinition(
+            id: UUID(),
+            displayName: displayName,
+            fieldType: fieldType,
+            isRequired: isRequired,
+            displayOrder: displayOrder,
+            placeholder: placeholder,
+            helpText: helpText,
+            validationRules: validationRules,
+            isMultiline: isMultiline,
+            capitalizationMode: capitalizationMode,
+            visibility: .active,
+            createdBy: deviceId,
+            createdAt: now,
+            updatedBy: deviceId,
+            updatedAt: now
+        )
     }
 
     // MARK: - Validation

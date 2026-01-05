@@ -9,8 +9,8 @@ struct FieldDefinitionUIMetadataTests {
 
     @Test
     func init_defaultUIMetadata_hasCorrectDefaults() {
-        let definition = FieldDefinition(
-            id: "test",
+        let definition = FieldDefinition.builtIn(
+            id: UUID(),
             displayName: "Test",
             fieldType: .string
         )
@@ -23,8 +23,8 @@ struct FieldDefinitionUIMetadataTests {
 
     @Test
     func init_customUIMetadata_preservesValues() {
-        let definition = FieldDefinition(
-            id: "notes",
+        let definition = FieldDefinition.builtIn(
+            id: UUID(),
             displayName: "Notes",
             fieldType: .string,
             isMultiline: true,
@@ -37,8 +37,8 @@ struct FieldDefinitionUIMetadataTests {
 
     @Test
     func init_multilineWithSentences_preservesBoth() {
-        let definition = FieldDefinition(
-            id: "content",
+        let definition = FieldDefinition.builtIn(
+            id: UUID(),
             displayName: "Content",
             fieldType: .string,
             isMultiline: true,
@@ -51,8 +51,8 @@ struct FieldDefinitionUIMetadataTests {
 
     @Test
     func init_singleLineWithNone_preservesBoth() {
-        let definition = FieldDefinition(
-            id: "code",
+        let definition = FieldDefinition.builtIn(
+            id: UUID(),
             displayName: "Code",
             fieldType: .string,
             isMultiline: false,
@@ -101,8 +101,9 @@ struct FieldDefinitionUIMetadataTests {
 
     @Test
     func fieldDefinition_encodeDecode_preservesUIMetadata() throws {
-        let original = FieldDefinition(
-            id: "notes",
+        let fieldId = UUID()
+        let original = FieldDefinition.builtIn(
+            id: fieldId,
             displayName: "Notes",
             fieldType: .string,
             isRequired: false,
@@ -130,8 +131,8 @@ struct FieldDefinitionUIMetadataTests {
     @Test
     func fieldDefinition_encodeDecode_defaultUIMetadata() throws {
         // Field with default UI metadata should decode correctly
-        let original = FieldDefinition(
-            id: "name",
+        let original = FieldDefinition.builtIn(
+            id: UUID(),
             displayName: "Name",
             fieldType: .string
         )

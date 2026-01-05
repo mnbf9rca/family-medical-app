@@ -3,6 +3,15 @@ import Testing
 @testable import FamilyMedicalApp
 
 struct RecordSchemaValidationTests {
+    // MARK: - Test Field IDs
+
+    // Stable UUIDs for consistent field identity across tests
+    // swiftlint:disable force_unwrapping
+    private static let nameFieldId = UUID(uuidString: "55555555-0001-0001-0000-000000000001")!
+    private static let ageFieldId = UUID(uuidString: "55555555-0001-0002-0000-000000000001")!
+    private static let extraFieldId = UUID(uuidString: "55555555-0001-0003-0000-000000000001")!
+    // swiftlint:enable force_unwrapping
+
     // MARK: - Validation
 
     @Test
@@ -12,8 +21,8 @@ struct RecordSchemaValidationTests {
             displayName: "Test",
             iconSystemName: "star",
             fields: [
-                FieldDefinition(
-                    id: "name",
+                .builtIn(
+                    id: Self.nameFieldId,
                     displayName: "Name",
                     fieldType: .string,
                     isRequired: true
@@ -22,7 +31,7 @@ struct RecordSchemaValidationTests {
         )
 
         var content = RecordContent()
-        content.setString("name", "John")
+        content.setString(Self.nameFieldId, "John")
 
         try schema.validate(content: content)
     }
@@ -34,8 +43,8 @@ struct RecordSchemaValidationTests {
             displayName: "Test",
             iconSystemName: "star",
             fields: [
-                FieldDefinition(
-                    id: "name",
+                .builtIn(
+                    id: Self.nameFieldId,
                     displayName: "Name",
                     fieldType: .string,
                     isRequired: true
@@ -57,8 +66,8 @@ struct RecordSchemaValidationTests {
             displayName: "Test",
             iconSystemName: "star",
             fields: [
-                FieldDefinition(
-                    id: "name",
+                .builtIn(
+                    id: Self.nameFieldId,
                     displayName: "Name",
                     fieldType: .string,
                     isRequired: true
@@ -67,8 +76,8 @@ struct RecordSchemaValidationTests {
         )
 
         var content = RecordContent()
-        content.setString("name", "John")
-        content.setInt("extraField", 42) // Not in schema, but allowed
+        content.setString(Self.nameFieldId, "John")
+        content.setInt(Self.extraFieldId, 42) // Not in schema, but allowed
 
         try schema.validate(content: content)
     }
@@ -80,8 +89,8 @@ struct RecordSchemaValidationTests {
             displayName: "Test",
             iconSystemName: "star",
             fields: [
-                FieldDefinition(
-                    id: "age",
+                .builtIn(
+                    id: Self.ageFieldId,
                     displayName: "Age",
                     fieldType: .int,
                     isRequired: true
@@ -90,7 +99,7 @@ struct RecordSchemaValidationTests {
         )
 
         var content = RecordContent()
-        content.setString("age", "42") // Wrong type
+        content.setString(Self.ageFieldId, "42") // Wrong type
 
         #expect(throws: ModelError.self) {
             try schema.validate(content: content)
@@ -104,8 +113,8 @@ struct RecordSchemaValidationTests {
             displayName: "Test",
             iconSystemName: "star",
             fields: [
-                FieldDefinition(
-                    id: "name",
+                .builtIn(
+                    id: Self.nameFieldId,
                     displayName: "Name",
                     fieldType: .string,
                     isRequired: true
@@ -114,7 +123,7 @@ struct RecordSchemaValidationTests {
         )
 
         var content = RecordContent()
-        content.setString("name", "John")
+        content.setString(Self.nameFieldId, "John")
 
         #expect(schema.isValid(content: content))
     }
@@ -126,8 +135,8 @@ struct RecordSchemaValidationTests {
             displayName: "Test",
             iconSystemName: "star",
             fields: [
-                FieldDefinition(
-                    id: "name",
+                .builtIn(
+                    id: Self.nameFieldId,
                     displayName: "Name",
                     fieldType: .string,
                     isRequired: true

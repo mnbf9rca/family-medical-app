@@ -12,8 +12,8 @@ struct DynamicFieldViewTests {
 
     @Test
     func stringBindingUpdatesValue() throws {
-        let field = FieldDefinition(
-            id: "testField",
+        let field = FieldDefinition.builtIn(
+            id: UUID(),
             displayName: "Test Field",
             fieldType: .string
         )
@@ -28,8 +28,8 @@ struct DynamicFieldViewTests {
 
     @Test
     func intBindingUpdatesValue() throws {
-        let field = FieldDefinition(
-            id: "doseNumber",
+        let field = FieldDefinition.builtIn(
+            id: UUID(),
             displayName: "Dose Number",
             fieldType: .int
         )
@@ -44,8 +44,8 @@ struct DynamicFieldViewTests {
 
     @Test
     func intBindingRejectsInvalidInput() throws {
-        let field = FieldDefinition(
-            id: "count",
+        let field = FieldDefinition.builtIn(
+            id: UUID(),
             displayName: "Count",
             fieldType: .int
         )
@@ -63,8 +63,8 @@ struct DynamicFieldViewTests {
 
     @Test
     func intBindingClearsOnEmptyInput() throws {
-        let field = FieldDefinition(
-            id: "count",
+        let field = FieldDefinition.builtIn(
+            id: UUID(),
             displayName: "Count",
             fieldType: .int
         )
@@ -80,8 +80,8 @@ struct DynamicFieldViewTests {
 
     @Test
     func doubleBindingUpdatesValue() throws {
-        let field = FieldDefinition(
-            id: "temperature",
+        let field = FieldDefinition.builtIn(
+            id: UUID(),
             displayName: "Temperature",
             fieldType: .double
         )
@@ -96,8 +96,8 @@ struct DynamicFieldViewTests {
 
     @Test
     func doubleBindingRejectsInvalidInput() throws {
-        let field = FieldDefinition(
-            id: "temperature",
+        let field = FieldDefinition.builtIn(
+            id: UUID(),
             displayName: "Temperature",
             fieldType: .double
         )
@@ -113,8 +113,8 @@ struct DynamicFieldViewTests {
 
     @Test
     func boolBindingTogglesValue() throws {
-        let field = FieldDefinition(
-            id: "isActive",
+        let field = FieldDefinition.builtIn(
+            id: UUID(),
             displayName: "Is Active",
             fieldType: .bool
         )
@@ -129,8 +129,8 @@ struct DynamicFieldViewTests {
 
     @Test
     func dateBindingUpdatesValue() throws {
-        let field = FieldDefinition(
-            id: "dateAdministered",
+        let field = FieldDefinition.builtIn(
+            id: UUID(),
             displayName: "Date Administered",
             fieldType: .date
         )
@@ -149,8 +149,8 @@ struct DynamicFieldViewTests {
 
     @Test
     func stringArrayBindingParsesCsv() throws {
-        let field = FieldDefinition(
-            id: "tags",
+        let field = FieldDefinition.builtIn(
+            id: UUID(),
             displayName: "Tags",
             fieldType: .stringArray
         )
@@ -165,8 +165,8 @@ struct DynamicFieldViewTests {
 
     @Test
     func stringArrayBindingClearsOnEmptyInput() throws {
-        let field = FieldDefinition(
-            id: "tags",
+        let field = FieldDefinition.builtIn(
+            id: UUID(),
             displayName: "Tags",
             fieldType: .stringArray
         )

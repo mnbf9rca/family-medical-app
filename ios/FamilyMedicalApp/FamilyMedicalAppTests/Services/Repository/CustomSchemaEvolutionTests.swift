@@ -3,8 +3,26 @@ import Foundation
 import Testing
 @testable import FamilyMedicalApp
 
+// swiftlint:disable type_body_length
+
 /// Tests for schema evolution safe changes (no breaking changes)
 struct CustomSchemaEvolutionSafeTests {
+    // MARK: - Test Person ID
+
+    // swiftlint:disable force_unwrapping
+    /// Stable UUID for test person
+    private static let testPersonId = UUID(uuidString: "22222222-0000-0000-0000-000000000001")!
+
+    // MARK: - Test Field IDs
+
+    // Stable UUIDs for consistent field identity across schema updates
+    private static let titleFieldId = UUID(uuidString: "22222222-0001-0001-0000-000000000001")!
+    private static let descriptionFieldId = UUID(uuidString: "22222222-0001-0002-0000-000000000001")!
+    private static let field1Id = UUID(uuidString: "22222222-0001-0003-0000-000000000001")!
+    private static let newFieldId = UUID(uuidString: "22222222-0001-0004-0000-000000000001")!
+    private static let newRequiredFieldId = UUID(uuidString: "22222222-0001-0005-0000-000000000001")!
+    // swiftlint:enable force_unwrapping
+
     // MARK: - Test Dependencies
 
     func makeRepository() -> CustomSchemaRepository {
@@ -22,15 +40,15 @@ struct CustomSchemaEvolutionSafeTests {
             displayName: "Test Schema",
             iconSystemName: "doc.text",
             fields: [
-                FieldDefinition(
-                    id: "title",
+                .builtIn(
+                    id: Self.titleFieldId,
                     displayName: "Title",
                     fieldType: .string,
                     isRequired: true,
                     displayOrder: 1
                 ),
-                FieldDefinition(
-                    id: "description",
+                .builtIn(
+                    id: Self.descriptionFieldId,
                     displayName: "Description",
                     fieldType: .string,
                     displayOrder: 2,
@@ -42,7 +60,8 @@ struct CustomSchemaEvolutionSafeTests {
         )
     }
 
-    let testPrimaryKey = SymmetricKey(size: .bits256)
+    let testPersonId = CustomSchemaEvolutionSafeTests.testPersonId
+    let testFamilyMemberKey = SymmetricKey(size: .bits256)
 
     // MARK: - Display Name Changes
 
@@ -51,7 +70,7 @@ struct CustomSchemaEvolutionSafeTests {
         let repo = makeRepository()
         let schema = try makeTestSchema(version: 1)
 
-        try await repo.save(schema, primaryKey: testPrimaryKey)
+        try await repo.save(schema, forPerson: testPersonId, familyMemberKey: testFamilyMemberKey)
 
         let updatedSchema = try RecordSchema(
             id: schema.id,
@@ -62,9 +81,13 @@ struct CustomSchemaEvolutionSafeTests {
             version: 2
         )
 
-        try await repo.save(updatedSchema, primaryKey: testPrimaryKey)
+        try await repo.save(updatedSchema, forPerson: testPersonId, familyMemberKey: testFamilyMemberKey)
 
-        let fetched = try await repo.fetch(schemaId: schema.id, primaryKey: testPrimaryKey)
+        let fetched = try await repo.fetch(
+            schemaId: schema.id,
+            forPerson: testPersonId,
+            familyMemberKey: testFamilyMemberKey
+        )
         #expect(fetched?.displayName == "New Display Name")
         #expect(fetched?.version == 2)
     }
@@ -77,28 +100,32 @@ struct CustomSchemaEvolutionSafeTests {
             displayName: "Test Schema",
             iconSystemName: "doc",
             fields: [
-                FieldDefinition(id: "field1", displayName: "Original Name", fieldType: .string, displayOrder: 1)
+                .builtIn(id: Self.field1Id, displayName: "Original Name", fieldType: .string, displayOrder: 1)
             ],
             isBuiltIn: false,
             version: 1
         )
 
-        try await repo.save(schema, primaryKey: testPrimaryKey)
+        try await repo.save(schema, forPerson: testPersonId, familyMemberKey: testFamilyMemberKey)
 
         let updatedSchema = try RecordSchema(
             id: schema.id,
             displayName: schema.displayName,
             iconSystemName: schema.iconSystemName,
             fields: [
-                FieldDefinition(id: "field1", displayName: "Updated Name", fieldType: .string, displayOrder: 1)
+                .builtIn(id: Self.field1Id, displayName: "Updated Name", fieldType: .string, displayOrder: 1)
             ],
             isBuiltIn: false,
             version: 2
         )
 
-        try await repo.save(updatedSchema, primaryKey: testPrimaryKey)
+        try await repo.save(updatedSchema, forPerson: testPersonId, familyMemberKey: testFamilyMemberKey)
 
-        let fetched = try await repo.fetch(schemaId: schema.id, primaryKey: testPrimaryKey)
+        let fetched = try await repo.fetch(
+            schemaId: schema.id,
+            forPerson: testPersonId,
+            familyMemberKey: testFamilyMemberKey
+        )
         #expect(fetched?.fields.first?.displayName == "Updated Name")
     }
 
@@ -109,11 +136,11 @@ struct CustomSchemaEvolutionSafeTests {
         let repo = makeRepository()
         let schema = try makeTestSchema(version: 1)
 
-        try await repo.save(schema, primaryKey: testPrimaryKey)
+        try await repo.save(schema, forPerson: testPersonId, familyMemberKey: testFamilyMemberKey)
 
         var updatedFields = schema.fields
-        updatedFields.append(FieldDefinition(
-            id: "new-field",
+        updatedFields.append(.builtIn(
+            id: Self.newFieldId,
             displayName: "New Field",
             fieldType: .string,
             displayOrder: 10
@@ -128,11 +155,15 @@ struct CustomSchemaEvolutionSafeTests {
             version: 2
         )
 
-        try await repo.save(updatedSchema, primaryKey: testPrimaryKey)
+        try await repo.save(updatedSchema, forPerson: testPersonId, familyMemberKey: testFamilyMemberKey)
 
-        let fetched = try await repo.fetch(schemaId: schema.id, primaryKey: testPrimaryKey)
+        let fetched = try await repo.fetch(
+            schemaId: schema.id,
+            forPerson: testPersonId,
+            familyMemberKey: testFamilyMemberKey
+        )
         #expect(fetched?.fields.count == schema.fields.count + 1)
-        #expect(fetched?.fields.contains { $0.id == "new-field" } == true)
+        #expect(fetched?.fields.contains { $0.id == Self.newFieldId } == true)
     }
 
     @Test
@@ -140,7 +171,7 @@ struct CustomSchemaEvolutionSafeTests {
         let repo = makeRepository()
         let schema = try makeTestSchema(version: 1)
 
-        try await repo.save(schema, primaryKey: testPrimaryKey)
+        try await repo.save(schema, forPerson: testPersonId, familyMemberKey: testFamilyMemberKey)
 
         guard let firstField = schema.fields.first else {
             Issue.record("Schema should have at least one field")
@@ -157,9 +188,13 @@ struct CustomSchemaEvolutionSafeTests {
             version: 2
         )
 
-        try await repo.save(updatedSchema, primaryKey: testPrimaryKey)
+        try await repo.save(updatedSchema, forPerson: testPersonId, familyMemberKey: testFamilyMemberKey)
 
-        let fetched = try await repo.fetch(schemaId: schema.id, primaryKey: testPrimaryKey)
+        let fetched = try await repo.fetch(
+            schemaId: schema.id,
+            forPerson: testPersonId,
+            familyMemberKey: testFamilyMemberKey
+        )
         #expect(fetched?.fields.count == 1)
     }
 
@@ -173,8 +208,8 @@ struct CustomSchemaEvolutionSafeTests {
             displayName: "Test Schema",
             iconSystemName: "doc",
             fields: [
-                FieldDefinition(
-                    id: "field1",
+                .builtIn(
+                    id: Self.field1Id,
                     displayName: "Field",
                     fieldType: .string,
                     isRequired: true,
@@ -185,15 +220,15 @@ struct CustomSchemaEvolutionSafeTests {
             version: 1
         )
 
-        try await repo.save(schema, primaryKey: testPrimaryKey)
+        try await repo.save(schema, forPerson: testPersonId, familyMemberKey: testFamilyMemberKey)
 
         let updatedSchema = try RecordSchema(
             id: schema.id,
             displayName: schema.displayName,
             iconSystemName: schema.iconSystemName,
             fields: [
-                FieldDefinition(
-                    id: "field1",
+                .builtIn(
+                    id: Self.field1Id,
                     displayName: "Field",
                     fieldType: .string,
                     isRequired: false,
@@ -204,9 +239,13 @@ struct CustomSchemaEvolutionSafeTests {
             version: 2
         )
 
-        try await repo.save(updatedSchema, primaryKey: testPrimaryKey)
+        try await repo.save(updatedSchema, forPerson: testPersonId, familyMemberKey: testFamilyMemberKey)
 
-        let fetched = try await repo.fetch(schemaId: schema.id, primaryKey: testPrimaryKey)
+        let fetched = try await repo.fetch(
+            schemaId: schema.id,
+            forPerson: testPersonId,
+            familyMemberKey: testFamilyMemberKey
+        )
         #expect(fetched?.fields.first?.isRequired == false)
     }
 
@@ -220,8 +259,8 @@ struct CustomSchemaEvolutionSafeTests {
             displayName: "Test Schema",
             iconSystemName: "doc",
             fields: [
-                FieldDefinition(
-                    id: "field1",
+                .builtIn(
+                    id: Self.field1Id,
                     displayName: "Field",
                     fieldType: .string,
                     isRequired: false,
@@ -232,15 +271,15 @@ struct CustomSchemaEvolutionSafeTests {
             version: 1
         )
 
-        try await repo.save(schema, primaryKey: testPrimaryKey)
+        try await repo.save(schema, forPerson: testPersonId, familyMemberKey: testFamilyMemberKey)
 
         let updatedSchema = try RecordSchema(
             id: schema.id,
             displayName: schema.displayName,
             iconSystemName: schema.iconSystemName,
             fields: [
-                FieldDefinition(
-                    id: "field1",
+                .builtIn(
+                    id: Self.field1Id,
                     displayName: "Field",
                     fieldType: .string,
                     isRequired: true,
@@ -251,9 +290,13 @@ struct CustomSchemaEvolutionSafeTests {
             version: 2
         )
 
-        try await repo.save(updatedSchema, primaryKey: testPrimaryKey)
+        try await repo.save(updatedSchema, forPerson: testPersonId, familyMemberKey: testFamilyMemberKey)
 
-        let fetched = try await repo.fetch(schemaId: schema.id, primaryKey: testPrimaryKey)
+        let fetched = try await repo.fetch(
+            schemaId: schema.id,
+            forPerson: testPersonId,
+            familyMemberKey: testFamilyMemberKey
+        )
         #expect(fetched?.fields.first?.isRequired == true)
     }
 
@@ -264,11 +307,11 @@ struct CustomSchemaEvolutionSafeTests {
         let repo = makeRepository()
         let schema = try makeTestSchema(version: 1)
 
-        try await repo.save(schema, primaryKey: testPrimaryKey)
+        try await repo.save(schema, forPerson: testPersonId, familyMemberKey: testFamilyMemberKey)
 
         var updatedFields = schema.fields
-        updatedFields.append(FieldDefinition(
-            id: "new-required-field",
+        updatedFields.append(.builtIn(
+            id: Self.newRequiredFieldId,
             displayName: "New Required Field",
             fieldType: .string,
             isRequired: true,
@@ -284,11 +327,15 @@ struct CustomSchemaEvolutionSafeTests {
             version: 2
         )
 
-        try await repo.save(updatedSchema, primaryKey: testPrimaryKey)
+        try await repo.save(updatedSchema, forPerson: testPersonId, familyMemberKey: testFamilyMemberKey)
 
-        let fetched = try await repo.fetch(schemaId: schema.id, primaryKey: testPrimaryKey)
+        let fetched = try await repo.fetch(
+            schemaId: schema.id,
+            forPerson: testPersonId,
+            familyMemberKey: testFamilyMemberKey
+        )
         #expect(fetched?.fields.count == schema.fields.count + 1)
-        let newField = fetched?.fields.first { $0.id == "new-required-field" }
+        let newField = fetched?.fields.first { $0.id == Self.newRequiredFieldId }
         #expect(newField?.isRequired == true)
     }
 
@@ -299,7 +346,7 @@ struct CustomSchemaEvolutionSafeTests {
         let repo = makeRepository()
         let schema = try makeTestSchema(version: 1)
 
-        try await repo.save(schema, primaryKey: testPrimaryKey)
+        try await repo.save(schema, forPerson: testPersonId, familyMemberKey: testFamilyMemberKey)
 
         let updatedSchema = try RecordSchema(
             id: schema.id,
@@ -310,9 +357,13 @@ struct CustomSchemaEvolutionSafeTests {
             version: 2
         )
 
-        try await repo.save(updatedSchema, primaryKey: testPrimaryKey)
+        try await repo.save(updatedSchema, forPerson: testPersonId, familyMemberKey: testFamilyMemberKey)
 
-        let fetched = try await repo.fetch(schemaId: schema.id, primaryKey: testPrimaryKey)
+        let fetched = try await repo.fetch(
+            schemaId: schema.id,
+            forPerson: testPersonId,
+            familyMemberKey: testFamilyMemberKey
+        )
         #expect(fetched?.iconSystemName == "star.fill")
     }
 
@@ -326,8 +377,8 @@ struct CustomSchemaEvolutionSafeTests {
             displayName: "Test Schema",
             iconSystemName: "doc",
             fields: [
-                FieldDefinition(
-                    id: "field1",
+                .builtIn(
+                    id: Self.field1Id,
                     displayName: "Field",
                     fieldType: .string,
                     displayOrder: 1,
@@ -338,15 +389,15 @@ struct CustomSchemaEvolutionSafeTests {
             version: 1
         )
 
-        try await repo.save(schema, primaryKey: testPrimaryKey)
+        try await repo.save(schema, forPerson: testPersonId, familyMemberKey: testFamilyMemberKey)
 
         let updatedSchema = try RecordSchema(
             id: schema.id,
             displayName: schema.displayName,
             iconSystemName: schema.iconSystemName,
             fields: [
-                FieldDefinition(
-                    id: "field1",
+                .builtIn(
+                    id: Self.field1Id,
                     displayName: "Field",
                     fieldType: .string,
                     displayOrder: 1,
@@ -357,9 +408,15 @@ struct CustomSchemaEvolutionSafeTests {
             version: 2
         )
 
-        try await repo.save(updatedSchema, primaryKey: testPrimaryKey)
+        try await repo.save(updatedSchema, forPerson: testPersonId, familyMemberKey: testFamilyMemberKey)
 
-        let fetched = try await repo.fetch(schemaId: schema.id, primaryKey: testPrimaryKey)
+        let fetched = try await repo.fetch(
+            schemaId: schema.id,
+            forPerson: testPersonId,
+            familyMemberKey: testFamilyMemberKey
+        )
         #expect(fetched?.fields.first?.validationRules.count == 2)
     }
 }
+
+// swiftlint:enable type_body_length

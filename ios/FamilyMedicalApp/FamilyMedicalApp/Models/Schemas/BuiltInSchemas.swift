@@ -1,6 +1,15 @@
 import Foundation
 
 /// Provides built-in schema definitions for common medical record types
+///
+/// These schemas serve as templates that are seeded to each Person's schema set
+/// when they are created. Built-in schemas use hardcoded UUIDs from `BuiltInFieldIds`
+/// for stable field identification.
+///
+/// Per ADR-0009 (Schema Evolution in Multi-Master Replication):
+/// - Built-in schemas are seeded per-Person at creation time
+/// - Each Person gets their own copy of built-in schemas
+/// - Users can customize their copy without affecting others
 enum BuiltInSchemas {
     // MARK: - Schema Factory
 
@@ -35,8 +44,8 @@ extension BuiltInSchemas {
             displayName: "Vaccine",
             iconSystemName: "syringe",
             fields: [
-                FieldDefinition(
-                    id: "vaccineName",
+                .builtIn(
+                    id: BuiltInFieldIds.Vaccine.name,
                     displayName: "Vaccine Name",
                     fieldType: .string,
                     isRequired: true,
@@ -46,16 +55,16 @@ extension BuiltInSchemas {
                     validationRules: [.minLength(1), .maxLength(200)],
                     capitalizationMode: .words
                 ),
-                FieldDefinition(
-                    id: "dateAdministered",
+                .builtIn(
+                    id: BuiltInFieldIds.Vaccine.dateAdministered,
                     displayName: "Date Administered",
                     fieldType: .date,
                     isRequired: true,
                     displayOrder: 2,
                     helpText: "Date when the vaccine was given"
                 ),
-                FieldDefinition(
-                    id: "provider",
+                .builtIn(
+                    id: BuiltInFieldIds.Vaccine.provider,
                     displayName: "Healthcare Provider",
                     fieldType: .string,
                     isRequired: false,
@@ -65,8 +74,8 @@ extension BuiltInSchemas {
                     validationRules: [.maxLength(200)],
                     capitalizationMode: .words
                 ),
-                FieldDefinition(
-                    id: "batchNumber",
+                .builtIn(
+                    id: BuiltInFieldIds.Vaccine.batchNumber,
                     displayName: "Batch/Lot Number",
                     fieldType: .string,
                     isRequired: false,
@@ -75,8 +84,8 @@ extension BuiltInSchemas {
                     helpText: "Batch or lot number from the vaccine vial",
                     validationRules: [.maxLength(50)]
                 ),
-                FieldDefinition(
-                    id: "doseNumber",
+                .builtIn(
+                    id: BuiltInFieldIds.Vaccine.doseNumber,
                     displayName: "Dose Number",
                     fieldType: .int,
                     isRequired: false,
@@ -85,16 +94,16 @@ extension BuiltInSchemas {
                     helpText: "Which dose in the series (1st, 2nd, booster, etc.)",
                     validationRules: [.minValue(1)]
                 ),
-                FieldDefinition(
-                    id: "expirationDate",
+                .builtIn(
+                    id: BuiltInFieldIds.Vaccine.expirationDate,
                     displayName: "Expiration Date",
                     fieldType: .date,
                     isRequired: false,
                     displayOrder: 6,
                     helpText: "Expiration date of the vaccine batch"
                 ),
-                FieldDefinition(
-                    id: "notes",
+                .builtIn(
+                    id: BuiltInFieldIds.Vaccine.notes,
                     displayName: "Notes",
                     fieldType: .string,
                     isRequired: false,
@@ -104,8 +113,8 @@ extension BuiltInSchemas {
                     validationRules: [.maxLength(2_000)],
                     isMultiline: true
                 ),
-                FieldDefinition(
-                    id: "attachmentIds",
+                .builtIn(
+                    id: BuiltInFieldIds.Vaccine.attachmentIds,
                     displayName: "Attachments",
                     fieldType: .attachmentIds,
                     isRequired: false,
@@ -128,8 +137,8 @@ extension BuiltInSchemas {
             displayName: "Medical Condition",
             iconSystemName: "heart.text.square",
             fields: [
-                FieldDefinition(
-                    id: "conditionName",
+                .builtIn(
+                    id: BuiltInFieldIds.Condition.name,
                     displayName: "Condition Name",
                     fieldType: .string,
                     isRequired: true,
@@ -139,16 +148,16 @@ extension BuiltInSchemas {
                     validationRules: [.minLength(1), .maxLength(200)],
                     capitalizationMode: .words
                 ),
-                FieldDefinition(
-                    id: "diagnosedDate",
+                .builtIn(
+                    id: BuiltInFieldIds.Condition.diagnosedDate,
                     displayName: "Date Diagnosed",
                     fieldType: .date,
                     isRequired: false,
                     displayOrder: 2,
                     helpText: "When the condition was diagnosed"
                 ),
-                FieldDefinition(
-                    id: "status",
+                .builtIn(
+                    id: BuiltInFieldIds.Condition.status,
                     displayName: "Status",
                     fieldType: .string,
                     isRequired: false,
@@ -157,8 +166,8 @@ extension BuiltInSchemas {
                     helpText: "Current status of the condition",
                     validationRules: [.maxLength(50)]
                 ),
-                FieldDefinition(
-                    id: "severity",
+                .builtIn(
+                    id: BuiltInFieldIds.Condition.severity,
                     displayName: "Severity",
                     fieldType: .string,
                     isRequired: false,
@@ -167,8 +176,8 @@ extension BuiltInSchemas {
                     helpText: "Severity of the condition",
                     validationRules: [.maxLength(50)]
                 ),
-                FieldDefinition(
-                    id: "treatedBy",
+                .builtIn(
+                    id: BuiltInFieldIds.Condition.treatedBy,
                     displayName: "Treated By",
                     fieldType: .string,
                     isRequired: false,
@@ -178,8 +187,8 @@ extension BuiltInSchemas {
                     validationRules: [.maxLength(200)],
                     capitalizationMode: .words
                 ),
-                FieldDefinition(
-                    id: "notes",
+                .builtIn(
+                    id: BuiltInFieldIds.Condition.notes,
                     displayName: "Notes",
                     fieldType: .string,
                     isRequired: false,
@@ -189,8 +198,8 @@ extension BuiltInSchemas {
                     validationRules: [.maxLength(2_000)],
                     isMultiline: true
                 ),
-                FieldDefinition(
-                    id: "attachmentIds",
+                .builtIn(
+                    id: BuiltInFieldIds.Condition.attachmentIds,
                     displayName: "Attachments",
                     fieldType: .attachmentIds,
                     isRequired: false,
@@ -213,8 +222,8 @@ extension BuiltInSchemas {
             displayName: "Medication",
             iconSystemName: "pills",
             fields: [
-                FieldDefinition(
-                    id: "medicationName",
+                .builtIn(
+                    id: BuiltInFieldIds.Medication.name,
                     displayName: "Medication Name",
                     fieldType: .string,
                     isRequired: true,
@@ -224,8 +233,8 @@ extension BuiltInSchemas {
                     validationRules: [.minLength(1), .maxLength(200)],
                     capitalizationMode: .words
                 ),
-                FieldDefinition(
-                    id: "dosage",
+                .builtIn(
+                    id: BuiltInFieldIds.Medication.dosage,
                     displayName: "Dosage",
                     fieldType: .string,
                     isRequired: false,
@@ -234,8 +243,8 @@ extension BuiltInSchemas {
                     helpText: "Dosage amount",
                     validationRules: [.maxLength(100)]
                 ),
-                FieldDefinition(
-                    id: "frequency",
+                .builtIn(
+                    id: BuiltInFieldIds.Medication.frequency,
                     displayName: "Frequency",
                     fieldType: .string,
                     isRequired: false,
@@ -244,24 +253,24 @@ extension BuiltInSchemas {
                     helpText: "How often to take",
                     validationRules: [.maxLength(100)]
                 ),
-                FieldDefinition(
-                    id: "startDate",
+                .builtIn(
+                    id: BuiltInFieldIds.Medication.startDate,
                     displayName: "Start Date",
                     fieldType: .date,
                     isRequired: false,
                     displayOrder: 4,
                     helpText: "When this medication was started"
                 ),
-                FieldDefinition(
-                    id: "endDate",
+                .builtIn(
+                    id: BuiltInFieldIds.Medication.endDate,
                     displayName: "End Date",
                     fieldType: .date,
                     isRequired: false,
                     displayOrder: 5,
                     helpText: "When this medication was stopped (if applicable)"
                 ),
-                FieldDefinition(
-                    id: "prescribedBy",
+                .builtIn(
+                    id: BuiltInFieldIds.Medication.prescribedBy,
                     displayName: "Prescribed By",
                     fieldType: .string,
                     isRequired: false,
@@ -271,8 +280,8 @@ extension BuiltInSchemas {
                     validationRules: [.maxLength(200)],
                     capitalizationMode: .words
                 ),
-                FieldDefinition(
-                    id: "pharmacy",
+                .builtIn(
+                    id: BuiltInFieldIds.Medication.pharmacy,
                     displayName: "Pharmacy",
                     fieldType: .string,
                     isRequired: false,
@@ -282,8 +291,8 @@ extension BuiltInSchemas {
                     validationRules: [.maxLength(200)],
                     capitalizationMode: .words
                 ),
-                FieldDefinition(
-                    id: "refillsRemaining",
+                .builtIn(
+                    id: BuiltInFieldIds.Medication.refillsRemaining,
                     displayName: "Refills Remaining",
                     fieldType: .int,
                     isRequired: false,
@@ -292,8 +301,8 @@ extension BuiltInSchemas {
                     helpText: "Number of refills remaining",
                     validationRules: [.minValue(0)]
                 ),
-                FieldDefinition(
-                    id: "notes",
+                .builtIn(
+                    id: BuiltInFieldIds.Medication.notes,
                     displayName: "Notes",
                     fieldType: .string,
                     isRequired: false,
@@ -303,8 +312,8 @@ extension BuiltInSchemas {
                     validationRules: [.maxLength(2_000)],
                     isMultiline: true
                 ),
-                FieldDefinition(
-                    id: "attachmentIds",
+                .builtIn(
+                    id: BuiltInFieldIds.Medication.attachmentIds,
                     displayName: "Attachments",
                     fieldType: .attachmentIds,
                     isRequired: false,
@@ -327,8 +336,8 @@ extension BuiltInSchemas {
             displayName: "Allergy",
             iconSystemName: "exclamationmark.triangle",
             fields: [
-                FieldDefinition(
-                    id: "allergen",
+                .builtIn(
+                    id: BuiltInFieldIds.Allergy.allergen,
                     displayName: "Allergen",
                     fieldType: .string,
                     isRequired: true,
@@ -338,8 +347,8 @@ extension BuiltInSchemas {
                     validationRules: [.minLength(1), .maxLength(200)],
                     capitalizationMode: .words
                 ),
-                FieldDefinition(
-                    id: "severity",
+                .builtIn(
+                    id: BuiltInFieldIds.Allergy.severity,
                     displayName: "Severity",
                     fieldType: .string,
                     isRequired: false,
@@ -348,8 +357,8 @@ extension BuiltInSchemas {
                     helpText: "Severity of the allergic reaction",
                     validationRules: [.maxLength(50)]
                 ),
-                FieldDefinition(
-                    id: "reaction",
+                .builtIn(
+                    id: BuiltInFieldIds.Allergy.reaction,
                     displayName: "Reaction",
                     fieldType: .string,
                     isRequired: false,
@@ -358,16 +367,16 @@ extension BuiltInSchemas {
                     helpText: "Type of allergic reaction",
                     validationRules: [.maxLength(200)]
                 ),
-                FieldDefinition(
-                    id: "diagnosedDate",
+                .builtIn(
+                    id: BuiltInFieldIds.Allergy.diagnosedDate,
                     displayName: "Date Diagnosed",
                     fieldType: .date,
                     isRequired: false,
                     displayOrder: 4,
                     helpText: "When the allergy was diagnosed"
                 ),
-                FieldDefinition(
-                    id: "notes",
+                .builtIn(
+                    id: BuiltInFieldIds.Allergy.notes,
                     displayName: "Notes",
                     fieldType: .string,
                     isRequired: false,
@@ -377,8 +386,8 @@ extension BuiltInSchemas {
                     validationRules: [.maxLength(2_000)],
                     isMultiline: true
                 ),
-                FieldDefinition(
-                    id: "attachmentIds",
+                .builtIn(
+                    id: BuiltInFieldIds.Allergy.attachmentIds,
                     displayName: "Attachments",
                     fieldType: .attachmentIds,
                     isRequired: false,
@@ -401,8 +410,8 @@ extension BuiltInSchemas {
             displayName: "Note",
             iconSystemName: "note.text",
             fields: [
-                FieldDefinition(
-                    id: "title",
+                .builtIn(
+                    id: BuiltInFieldIds.Note.title,
                     displayName: "Title",
                     fieldType: .string,
                     isRequired: true,
@@ -412,8 +421,8 @@ extension BuiltInSchemas {
                     validationRules: [.minLength(1), .maxLength(200)],
                     capitalizationMode: .words
                 ),
-                FieldDefinition(
-                    id: "content",
+                .builtIn(
+                    id: BuiltInFieldIds.Note.content,
                     displayName: "Content",
                     fieldType: .string,
                     isRequired: false,
@@ -423,8 +432,8 @@ extension BuiltInSchemas {
                     validationRules: [.maxLength(10_000)],
                     isMultiline: true
                 ),
-                FieldDefinition(
-                    id: "attachmentIds",
+                .builtIn(
+                    id: BuiltInFieldIds.Note.attachmentIds,
                     displayName: "Attachments",
                     fieldType: .attachmentIds,
                     isRequired: false,

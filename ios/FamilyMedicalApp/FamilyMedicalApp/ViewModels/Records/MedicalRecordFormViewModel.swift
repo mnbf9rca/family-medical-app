@@ -73,7 +73,7 @@ final class MedicalRecordFormViewModel {
             // This ensures DatePicker's visual default matches the actual value
             var initialValues: [String: FieldValue] = [:]
             for field in schema.fields where field.fieldType == .date {
-                initialValues[field.id] = .date(Date())
+                initialValues[field.id.uuidString] = .date(Date())
             }
             self.fieldValues = initialValues
         }

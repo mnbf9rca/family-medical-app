@@ -2,7 +2,16 @@
 
 ## Status
 
-**Status**: Proposed
+**Status**: Accepted (partial implementation)
+
+### Implementation Progress (Issue #71)
+
+- ✅ UUID-based field IDs - Built-in fields use hardcoded deterministic UUIDs
+- ✅ Field visibility states - `FieldVisibility` enum with `.active`, `.hidden`, `.deprecated`
+- ✅ Device identity for provenance - `UUID.zero` sentinel for built-in; `createdBy`/`updatedBy` on fields
+- ✅ Per-Person schema ownership - Each Person has independent schema copies, encrypted with their FMK
+- ⏳ Hybrid logical clock - Sequential version numbers retained for now (sufficient without sync)
+- ⏳ Schema merge/sync - Requires sync layer (separate future work)
 
 ## Context
 
@@ -78,5 +87,6 @@ See: `docs/technical/schema-evolution-design.md` for implementation details.
 
 - **ADR-0004**: Sync Encryption (async-first, last-write-wins pattern)
 - **ADR-0007**: Schema-Overlay Data Model (flexible field structures)
-- **Issue #71**: Convert built-in schemas to prebuilt (uses deterministic UUIDs)
-- **Issue #72**: Schema migration support (✅ local migration complete - provides local migration capabilities for type conversion, field removal, and field merging; sync-layer integration is a separate future item)
+- **Issue #71**: ✅ Convert built-in schemas to prebuilt (UUID-based field IDs, per-Person ownership, schema seeding)
+- **Issue #72**: ✅ Schema migration support (local migration for type conversion, field removal, field merging)
+- **Future Issue**: Schema change propagation - "Apply changes to other Persons" feature

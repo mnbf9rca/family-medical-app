@@ -8,6 +8,7 @@ public extension CustomSchemaEntity {
     }
 
     @NSManaged var id: UUID
+    @NSManaged var personId: UUID
     @NSManaged var schemaId: String
     @NSManaged var createdAt: Date
     @NSManaged var updatedAt: Date

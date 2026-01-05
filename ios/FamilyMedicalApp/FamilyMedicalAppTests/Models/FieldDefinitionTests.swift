@@ -102,8 +102,8 @@ struct FieldDefinitionTests {
 
     @Test
     func codable_roundTrip() throws {
-        let original = FieldDefinition(
-            id: "vaccineName",
+        let original = FieldDefinition.builtIn(
+            id: BuiltInFieldIds.Vaccine.name,
             displayName: "Vaccine Name",
             fieldType: .string,
             isRequired: true,
@@ -119,5 +119,59 @@ struct FieldDefinitionTests {
         #expect(decoded == original)
         #expect(decoded.id == original.id)
         #expect(decoded.validationRules == original.validationRules)
+    }
+
+    // MARK: - FieldDefinition.builtIn
+
+    @Test
+    func builtIn_setsSystemProvenance() {
+        let field = FieldDefinition.builtIn(
+            id: UUID(),
+            displayName: "Test Field",
+            fieldType: .string
+        )
+
+        #expect(field.createdBy == .zero)
+        #expect(field.createdAt == .distantPast)
+        #expect(field.updatedBy == .zero)
+        #expect(field.updatedAt == .distantPast)
+        #expect(field.visibility == .active)
+    }
+
+    // MARK: - FieldDefinition.userCreated
+
+    @Test
+    func userCreated_setsUserProvenance() {
+        let deviceId = UUID()
+        let beforeCreation = Date()
+
+        let field = FieldDefinition.userCreated(
+            displayName: "Custom Field",
+            fieldType: .string,
+            deviceId: deviceId
+        )
+
+        let afterCreation = Date()
+
+        #expect(field.createdBy == deviceId)
+        #expect(field.updatedBy == deviceId)
+        #expect(field.createdAt >= beforeCreation)
+        #expect(field.createdAt <= afterCreation)
+        #expect(field.updatedAt >= beforeCreation)
+        #expect(field.updatedAt <= afterCreation)
+        #expect(field.visibility == .active)
+        // User-created fields get auto-generated UUID
+        #expect(field.id != .zero)
+    }
+
+    // MARK: - Visibility
+
+    @Test
+    func visibility_codable() throws {
+        for visibility in FieldVisibility.allCases {
+            let encoded = try JSONEncoder().encode(visibility)
+            let decoded = try JSONDecoder().decode(FieldVisibility.self, from: encoded)
+            #expect(decoded == visibility)
+        }
     }
 }

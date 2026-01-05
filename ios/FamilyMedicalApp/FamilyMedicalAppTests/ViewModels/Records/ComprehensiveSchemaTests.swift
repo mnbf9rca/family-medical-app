@@ -45,7 +45,7 @@ struct ComprehensiveSchemaTests {
         }
 
         // Add required string field
-        content.setString("exampleName", "Test Example")
+        content.setString(ExampleSchema.FieldIds.exampleName, "Test Example")
 
         // Still missing required date field
         #expect(throws: ModelError.self) {
@@ -53,7 +53,7 @@ struct ComprehensiveSchemaTests {
         }
 
         // Add required date field
-        content.setDate("recordedDate", Date())
+        content.setDate(ExampleSchema.FieldIds.recordedDate, Date())
 
         // Should now pass validation
         #expect(throws: Never.self) {
@@ -67,35 +67,35 @@ struct ComprehensiveSchemaTests {
         var content = RecordContent(schemaId: schema.id)
 
         // Add required fields
-        content.setString("exampleName", "Test")
-        content.setDate("recordedDate", Date())
+        content.setString(ExampleSchema.FieldIds.exampleName, "Test")
+        content.setDate(ExampleSchema.FieldIds.recordedDate, Date())
 
         // Test integer within valid range (0-1000)
-        content.setInt("quantity", 500)
+        content.setInt(ExampleSchema.FieldIds.quantity, 500)
         #expect(throws: Never.self) {
             try schema.validate(content: content)
         }
 
         // Test integer at minimum boundary
-        content.setInt("quantity", 0)
+        content.setInt(ExampleSchema.FieldIds.quantity, 0)
         #expect(throws: Never.self) {
             try schema.validate(content: content)
         }
 
         // Test integer at maximum boundary
-        content.setInt("quantity", 1_000)
+        content.setInt(ExampleSchema.FieldIds.quantity, 1_000)
         #expect(throws: Never.self) {
             try schema.validate(content: content)
         }
 
         // Test integer below minimum
-        content.setInt("quantity", -1)
+        content.setInt(ExampleSchema.FieldIds.quantity, -1)
         #expect(throws: ModelError.self) {
             try schema.validate(content: content)
         }
 
         // Test integer above maximum
-        content.setInt("quantity", 1_001)
+        content.setInt(ExampleSchema.FieldIds.quantity, 1_001)
         #expect(throws: ModelError.self) {
             try schema.validate(content: content)
         }
@@ -107,35 +107,35 @@ struct ComprehensiveSchemaTests {
         var content = RecordContent(schemaId: schema.id)
 
         // Add required fields
-        content.setString("exampleName", "Test")
-        content.setDate("recordedDate", Date())
+        content.setString(ExampleSchema.FieldIds.exampleName, "Test")
+        content.setDate(ExampleSchema.FieldIds.recordedDate, Date())
 
         // Test double within valid range (0.0-100.0)
-        content.setDouble("measurement", 50.5)
+        content.setDouble(ExampleSchema.FieldIds.measurement, 50.5)
         #expect(throws: Never.self) {
             try schema.validate(content: content)
         }
 
         // Test double at minimum boundary
-        content.setDouble("measurement", 0.0)
+        content.setDouble(ExampleSchema.FieldIds.measurement, 0.0)
         #expect(throws: Never.self) {
             try schema.validate(content: content)
         }
 
         // Test double at maximum boundary
-        content.setDouble("measurement", 100.0)
+        content.setDouble(ExampleSchema.FieldIds.measurement, 100.0)
         #expect(throws: Never.self) {
             try schema.validate(content: content)
         }
 
         // Test double below minimum
-        content.setDouble("measurement", -0.1)
+        content.setDouble(ExampleSchema.FieldIds.measurement, -0.1)
         #expect(throws: ModelError.self) {
             try schema.validate(content: content)
         }
 
         // Test double above maximum
-        content.setDouble("measurement", 100.1)
+        content.setDouble(ExampleSchema.FieldIds.measurement, 100.1)
         #expect(throws: ModelError.self) {
             try schema.validate(content: content)
         }
@@ -147,22 +147,22 @@ struct ComprehensiveSchemaTests {
         var content = RecordContent(schemaId: schema.id)
 
         // Add required fields
-        content.setString("exampleName", "Test")
-        content.setDate("recordedDate", Date())
+        content.setString(ExampleSchema.FieldIds.exampleName, "Test")
+        content.setDate(ExampleSchema.FieldIds.recordedDate, Date())
 
         // Test boolean true
-        content.setBool("isActive", true)
+        content.setBool(ExampleSchema.FieldIds.isActive, true)
         #expect(throws: Never.self) {
             try schema.validate(content: content)
         }
-        #expect(content.getBool("isActive") == true)
+        #expect(content.getBool(ExampleSchema.FieldIds.isActive) == true)
 
         // Test boolean false
-        content.setBool("isActive", false)
+        content.setBool(ExampleSchema.FieldIds.isActive, false)
         #expect(throws: Never.self) {
             try schema.validate(content: content)
         }
-        #expect(content.getBool("isActive") == false)
+        #expect(content.getBool(ExampleSchema.FieldIds.isActive) == false)
     }
 
     @Test
@@ -171,22 +171,22 @@ struct ComprehensiveSchemaTests {
         var content = RecordContent(schemaId: schema.id)
 
         // Add required fields
-        content.setString("exampleName", "Test")
-        content.setDate("recordedDate", Date())
+        content.setString(ExampleSchema.FieldIds.exampleName, "Test")
+        content.setDate(ExampleSchema.FieldIds.recordedDate, Date())
 
         // Test string array
-        content.setStringArray("tags", ["tag1", "tag2", "tag3"])
+        content.setStringArray(ExampleSchema.FieldIds.tags, ["tag1", "tag2", "tag3"])
         #expect(throws: Never.self) {
             try schema.validate(content: content)
         }
-        #expect(content.getStringArray("tags") == ["tag1", "tag2", "tag3"])
+        #expect(content.getStringArray(ExampleSchema.FieldIds.tags) == ["tag1", "tag2", "tag3"])
 
         // Test empty string array
-        content.setStringArray("tags", [])
+        content.setStringArray(ExampleSchema.FieldIds.tags, [])
         #expect(throws: Never.self) {
             try schema.validate(content: content)
         }
-        #expect(content.getStringArray("tags")?.isEmpty == true)
+        #expect(content.getStringArray(ExampleSchema.FieldIds.tags)?.isEmpty == true)
     }
 
     @Test
@@ -195,23 +195,23 @@ struct ComprehensiveSchemaTests {
         var content = RecordContent(schemaId: schema.id)
 
         // Add required fields
-        content.setString("exampleName", "Test")
-        content.setDate("recordedDate", Date())
+        content.setString(ExampleSchema.FieldIds.exampleName, "Test")
+        content.setDate(ExampleSchema.FieldIds.recordedDate, Date())
 
         // Test attachment IDs
         let attachmentIds = [UUID(), UUID()]
-        content.setAttachmentIds("attachmentIds", attachmentIds)
+        content.setAttachmentIds(ExampleSchema.FieldIds.attachmentIds, attachmentIds)
         #expect(throws: Never.self) {
             try schema.validate(content: content)
         }
-        #expect(content.getAttachmentIds("attachmentIds") == attachmentIds)
+        #expect(content.getAttachmentIds(ExampleSchema.FieldIds.attachmentIds) == attachmentIds)
 
         // Test empty attachment IDs
-        content.setAttachmentIds("attachmentIds", [])
+        content.setAttachmentIds(ExampleSchema.FieldIds.attachmentIds, [])
         #expect(throws: Never.self) {
             try schema.validate(content: content)
         }
-        #expect(content.getAttachmentIds("attachmentIds")?.isEmpty == true)
+        #expect(content.getAttachmentIds(ExampleSchema.FieldIds.attachmentIds)?.isEmpty == true)
     }
 
     @Test
@@ -220,8 +220,8 @@ struct ComprehensiveSchemaTests {
         var content = RecordContent(schemaId: schema.id)
 
         // Add only required fields
-        content.setString("exampleName", "Test")
-        content.setDate("recordedDate", Date())
+        content.setString(ExampleSchema.FieldIds.exampleName, "Test")
+        content.setDate(ExampleSchema.FieldIds.recordedDate, Date())
 
         // Should pass validation without optional fields
         #expect(throws: Never.self) {
@@ -229,12 +229,12 @@ struct ComprehensiveSchemaTests {
         }
 
         // Verify optional fields are not set
-        #expect(content.getInt("quantity") == nil)
-        #expect(content.getDouble("measurement") == nil)
-        #expect(content.getBool("isActive") == nil)
-        #expect(content.getStringArray("tags") == nil)
-        #expect(content.getAttachmentIds("attachmentIds") == nil)
-        #expect(content.getString("notes") == nil)
+        #expect(content.getInt(ExampleSchema.FieldIds.quantity) == nil)
+        #expect(content.getDouble(ExampleSchema.FieldIds.measurement) == nil)
+        #expect(content.getBool(ExampleSchema.FieldIds.isActive) == nil)
+        #expect(content.getStringArray(ExampleSchema.FieldIds.tags) == nil)
+        #expect(content.getAttachmentIds(ExampleSchema.FieldIds.attachmentIds) == nil)
+        #expect(content.getString(ExampleSchema.FieldIds.notes) == nil)
     }
 
     @Test
@@ -243,28 +243,28 @@ struct ComprehensiveSchemaTests {
         var content = RecordContent(schemaId: schema.id)
 
         // Add required date field
-        content.setDate("recordedDate", Date())
+        content.setDate(ExampleSchema.FieldIds.recordedDate, Date())
 
         // Test string below minimum length (empty string)
-        content.setString("exampleName", "")
+        content.setString(ExampleSchema.FieldIds.exampleName, "")
         #expect(throws: ModelError.self) {
             try schema.validate(content: content)
         }
 
         // Test string at minimum length (1 character)
-        content.setString("exampleName", "A")
+        content.setString(ExampleSchema.FieldIds.exampleName, "A")
         #expect(throws: Never.self) {
             try schema.validate(content: content)
         }
 
         // Test string at maximum length (100 characters)
-        content.setString("exampleName", String(repeating: "A", count: 100))
+        content.setString(ExampleSchema.FieldIds.exampleName, String(repeating: "A", count: 100))
         #expect(throws: Never.self) {
             try schema.validate(content: content)
         }
 
         // Test string above maximum length (101 characters)
-        content.setString("exampleName", String(repeating: "A", count: 101))
+        content.setString(ExampleSchema.FieldIds.exampleName, String(repeating: "A", count: 101))
         #expect(throws: ModelError.self) {
             try schema.validate(content: content)
         }
@@ -276,17 +276,17 @@ struct ComprehensiveSchemaTests {
         var content = RecordContent(schemaId: schema.id)
 
         // Add required fields
-        content.setString("exampleName", "Test")
-        content.setDate("recordedDate", Date())
+        content.setString(ExampleSchema.FieldIds.exampleName, "Test")
+        content.setDate(ExampleSchema.FieldIds.recordedDate, Date())
 
         // Test notes at maximum length (500 characters)
-        content.setString("notes", String(repeating: "A", count: 500))
+        content.setString(ExampleSchema.FieldIds.notes, String(repeating: "A", count: 500))
         #expect(throws: Never.self) {
             try schema.validate(content: content)
         }
 
         // Test notes above maximum length (501 characters)
-        content.setString("notes", String(repeating: "A", count: 501))
+        content.setString(ExampleSchema.FieldIds.notes, String(repeating: "A", count: 501))
         #expect(throws: ModelError.self) {
             try schema.validate(content: content)
         }
@@ -298,14 +298,14 @@ struct ComprehensiveSchemaTests {
         var content = RecordContent(schemaId: schema.id)
 
         // Set all fields with valid values
-        content.setString("exampleName", "Complete Example")
-        content.setInt("quantity", 42)
-        content.setDouble("measurement", 98.6)
-        content.setBool("isActive", true)
-        content.setDate("recordedDate", Date())
-        content.setStringArray("tags", ["important", "test", "comprehensive"])
-        content.setAttachmentIds("attachmentIds", [UUID(), UUID()])
-        content.setString("notes", "All field types are populated")
+        content.setString(ExampleSchema.FieldIds.exampleName, "Complete Example")
+        content.setInt(ExampleSchema.FieldIds.quantity, 42)
+        content.setDouble(ExampleSchema.FieldIds.measurement, 98.6)
+        content.setBool(ExampleSchema.FieldIds.isActive, true)
+        content.setDate(ExampleSchema.FieldIds.recordedDate, Date())
+        content.setStringArray(ExampleSchema.FieldIds.tags, ["important", "test", "comprehensive"])
+        content.setAttachmentIds(ExampleSchema.FieldIds.attachmentIds, [UUID(), UUID()])
+        content.setString(ExampleSchema.FieldIds.notes, "All field types are populated")
 
         // Should pass validation with all fields set
         #expect(throws: Never.self) {
@@ -313,13 +313,13 @@ struct ComprehensiveSchemaTests {
         }
 
         // Verify all values are retrievable
-        #expect(content.getString("exampleName") == "Complete Example")
-        #expect(content.getInt("quantity") == 42)
-        #expect(content.getDouble("measurement") == 98.6)
-        #expect(content.getBool("isActive") == true)
-        #expect(content.getDate("recordedDate") != nil)
-        #expect(content.getStringArray("tags") == ["important", "test", "comprehensive"])
-        #expect(content.getAttachmentIds("attachmentIds")?.count == 2)
-        #expect(content.getString("notes") == "All field types are populated")
+        #expect(content.getString(ExampleSchema.FieldIds.exampleName) == "Complete Example")
+        #expect(content.getInt(ExampleSchema.FieldIds.quantity) == 42)
+        #expect(content.getDouble(ExampleSchema.FieldIds.measurement) == 98.6)
+        #expect(content.getBool(ExampleSchema.FieldIds.isActive) == true)
+        #expect(content.getDate(ExampleSchema.FieldIds.recordedDate) != nil)
+        #expect(content.getStringArray(ExampleSchema.FieldIds.tags) == ["important", "test", "comprehensive"])
+        #expect(content.getAttachmentIds(ExampleSchema.FieldIds.attachmentIds)?.count == 2)
+        #expect(content.getString(ExampleSchema.FieldIds.notes) == "All field types are populated")
     }
 }
