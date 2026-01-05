@@ -3,6 +3,19 @@ import Testing
 @testable import FamilyMedicalApp
 
 struct RecordSchemaTests {
+    // MARK: - Test Field IDs
+
+    // Stable UUIDs for consistent field identity across tests
+    // swiftlint:disable force_unwrapping
+    private static let field1Id = UUID(uuidString: "44444444-0001-0001-0000-000000000001")!
+    private static let field2Id = UUID(uuidString: "44444444-0001-0002-0000-000000000001")!
+    private static let field3Id = UUID(uuidString: "44444444-0001-0003-0000-000000000001")!
+    private static let nameFieldId = UUID(uuidString: "44444444-0002-0001-0000-000000000001")!
+    private static let required1Id = UUID(uuidString: "44444444-0003-0001-0000-000000000001")!
+    private static let required2Id = UUID(uuidString: "44444444-0003-0002-0000-000000000001")!
+    private static let optional1Id = UUID(uuidString: "44444444-0003-0003-0000-000000000001")!
+    // swiftlint:enable force_unwrapping
+
     // MARK: - Valid Initialization
 
     @Test
@@ -12,8 +25,8 @@ struct RecordSchemaTests {
             displayName: "Test Schema",
             iconSystemName: "star",
             fields: [
-                FieldDefinition(
-                    id: "field1",
+                .builtIn(
+                    id: Self.field1Id,
                     displayName: "Field 1",
                     fieldType: .string
                 )
@@ -61,13 +74,13 @@ struct RecordSchemaTests {
                 displayName: "Test",
                 iconSystemName: "star",
                 fields: [
-                    FieldDefinition(
-                        id: "field1",
+                    .builtIn(
+                        id: Self.field1Id,
                         displayName: "Field 1",
                         fieldType: .string
                     ),
-                    FieldDefinition(
-                        id: "field1",
+                    .builtIn(
+                        id: Self.field1Id,
                         displayName: "Duplicate Field",
                         fieldType: .int
                     )
@@ -85,16 +98,16 @@ struct RecordSchemaTests {
             displayName: "Test",
             iconSystemName: "star",
             fields: [
-                FieldDefinition(
-                    id: "name",
+                .builtIn(
+                    id: Self.nameFieldId,
                     displayName: "Name",
                     fieldType: .string
                 )
             ]
         )
 
-        let field = schema.field(withId: "name")
-        #expect(field?.id == "name")
+        let field = schema.field(withId: Self.nameFieldId)
+        #expect(field?.id == Self.nameFieldId)
     }
 
     @Test
@@ -106,7 +119,7 @@ struct RecordSchemaTests {
             fields: []
         )
 
-        let field = schema.field(withId: "nonexistent")
+        let field = schema.field(withId: UUID())
         #expect(field == nil)
     }
 
@@ -117,20 +130,20 @@ struct RecordSchemaTests {
             displayName: "Test",
             iconSystemName: "star",
             fields: [
-                FieldDefinition(
-                    id: "required1",
+                .builtIn(
+                    id: Self.required1Id,
                     displayName: "Required 1",
                     fieldType: .string,
                     isRequired: true
                 ),
-                FieldDefinition(
-                    id: "optional1",
+                .builtIn(
+                    id: Self.optional1Id,
                     displayName: "Optional 1",
                     fieldType: .string,
                     isRequired: false
                 ),
-                FieldDefinition(
-                    id: "required2",
+                .builtIn(
+                    id: Self.required2Id,
                     displayName: "Required 2",
                     fieldType: .string,
                     isRequired: true
@@ -140,8 +153,8 @@ struct RecordSchemaTests {
 
         let requiredIds = schema.requiredFieldIds
         #expect(requiredIds.count == 2)
-        #expect(requiredIds.contains("required1"))
-        #expect(requiredIds.contains("required2"))
+        #expect(requiredIds.contains(Self.required1Id))
+        #expect(requiredIds.contains(Self.required2Id))
     }
 
     @Test
@@ -151,20 +164,20 @@ struct RecordSchemaTests {
             displayName: "Test",
             iconSystemName: "star",
             fields: [
-                FieldDefinition(
-                    id: "field3",
+                .builtIn(
+                    id: Self.field3Id,
                     displayName: "Field 3",
                     fieldType: .string,
                     displayOrder: 3
                 ),
-                FieldDefinition(
-                    id: "field1",
+                .builtIn(
+                    id: Self.field1Id,
                     displayName: "Field 1",
                     fieldType: .string,
                     displayOrder: 1
                 ),
-                FieldDefinition(
-                    id: "field2",
+                .builtIn(
+                    id: Self.field2Id,
                     displayName: "Field 2",
                     fieldType: .string,
                     displayOrder: 2
@@ -173,9 +186,9 @@ struct RecordSchemaTests {
         )
 
         let sorted = schema.fieldsByDisplayOrder
-        #expect(sorted[0].id == "field1")
-        #expect(sorted[1].id == "field2")
-        #expect(sorted[2].id == "field3")
+        #expect(sorted[0].id == Self.field1Id)
+        #expect(sorted[1].id == Self.field2Id)
+        #expect(sorted[2].id == Self.field3Id)
     }
 
     // MARK: - Built-in Schema Types
@@ -204,8 +217,8 @@ struct RecordSchemaTests {
             displayName: "Test Schema",
             iconSystemName: "star",
             fields: [
-                FieldDefinition(
-                    id: "field1",
+                .builtIn(
+                    id: Self.field1Id,
                     displayName: "Field 1",
                     fieldType: .string,
                     isRequired: true

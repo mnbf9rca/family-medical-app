@@ -3,10 +3,12 @@ import CryptoKit
 import Foundation
 
 /// Protocol for CustomSchema repository operations
+///
+/// Schemas are stored per-Person and encrypted with the Person's FamilyMemberKey.
+/// This allows schemas to travel with Person data when shared between devices/users.
 protocol CustomSchemaRepositoryProtocol: Sendable {
-    /// Save a custom schema (creates or updates)
+    /// Save a schema for a Person (creates or updates)
     ///
-    /// On create: Validates schema ID doesn't conflict with built-in schemas
     /// On update: Validates schema evolution rules:
     ///   - Field types cannot change (breaking)
     ///   - Version must be incremented
@@ -14,46 +16,52 @@ protocol CustomSchemaRepositoryProtocol: Sendable {
     ///
     /// - Parameters:
     ///   - schema: Schema to save
-    ///   - primaryKey: User's primary key for encryption
+    ///   - personId: UUID of the Person who owns this schema
+    ///   - familyMemberKey: Person's FMK for encryption
     /// - Throws: RepositoryError on failure
-    func save(_ schema: RecordSchema, primaryKey: SymmetricKey) async throws
+    func save(_ schema: RecordSchema, forPerson personId: UUID, familyMemberKey: SymmetricKey) async throws
 
-    /// Fetch a custom schema by its schema ID
+    /// Fetch a schema by its schema ID for a specific Person
     /// - Parameters:
-    ///   - schemaId: The schema's logical ID (e.g., "sports-injury")
-    ///   - primaryKey: User's primary key for decryption
+    ///   - schemaId: The schema's logical ID (e.g., "vaccine", "sports-injury")
+    ///   - personId: UUID of the Person who owns this schema
+    ///   - familyMemberKey: Person's FMK for decryption
     /// - Returns: Schema if found, nil otherwise
     /// - Throws: RepositoryError on failure
-    func fetch(schemaId: String, primaryKey: SymmetricKey) async throws -> RecordSchema?
+    func fetch(schemaId: String, forPerson personId: UUID, familyMemberKey: SymmetricKey) async throws -> RecordSchema?
 
-    /// Fetch all custom schemas
-    /// - Parameter primaryKey: User's primary key for decryption
-    /// - Returns: Array of all custom schemas
+    /// Fetch all schemas for a Person
+    /// - Parameters:
+    ///   - personId: UUID of the Person who owns the schemas
+    ///   - familyMemberKey: Person's FMK for decryption
+    /// - Returns: Array of all schemas for this Person
     /// - Throws: RepositoryError on failure
-    func fetchAll(primaryKey: SymmetricKey) async throws -> [RecordSchema]
+    func fetchAll(forPerson personId: UUID, familyMemberKey: SymmetricKey) async throws -> [RecordSchema]
 
-    /// Delete a custom schema by its schema ID
-    /// - Parameter schemaId: The schema's logical ID
+    /// Delete a schema for a Person
+    /// - Parameters:
+    ///   - schemaId: The schema's logical ID
+    ///   - personId: UUID of the Person who owns this schema
     /// - Throws: RepositoryError on failure
-    func delete(schemaId: String) async throws
+    func delete(schemaId: String, forPerson personId: UUID) async throws
 
-    /// Check if a custom schema exists
-    /// - Parameter schemaId: The schema's logical ID
+    /// Check if a schema exists for a Person
+    /// - Parameters:
+    ///   - schemaId: The schema's logical ID
+    ///   - personId: UUID of the Person who owns this schema
     /// - Returns: true if schema exists, false otherwise
     /// - Throws: RepositoryError on failure
-    func exists(schemaId: String) async throws -> Bool
+    func exists(schemaId: String, forPerson personId: UUID) async throws -> Bool
 }
 
-/// Repository for CustomSchema CRUD operations with automatic encryption
+/// Repository for schema CRUD operations with automatic encryption
 ///
-/// Custom schemas are encrypted at rest using the user's primary key directly
-/// (unlike Person/MedicalRecord which use per-family-member keys).
+/// Schemas are stored per-Person and encrypted with the Person's FamilyMemberKey (FMK).
+/// This enables schemas to travel with Person data when shared between users/devices.
+///
+/// Both built-in schemas (seeded at Person creation) and user-created custom schemas
+/// are stored in the same table, distinguished by their schemaId and isBuiltIn flag.
 final class CustomSchemaRepository: CustomSchemaRepositoryProtocol, @unchecked Sendable {
-    // MARK: - Constants
-
-    /// Built-in schema IDs (O(1) lookup)
-    private static let builtInSchemaIds = Set(BuiltInSchemaType.allCases.map(\.rawValue))
-
     // MARK: - Dependencies
 
     private let coreDataStack: CoreDataStackProtocol
@@ -71,16 +79,15 @@ final class CustomSchemaRepository: CustomSchemaRepositoryProtocol, @unchecked S
 
     // MARK: - CustomSchemaRepositoryProtocol
 
-    func save(_ schema: RecordSchema, primaryKey: SymmetricKey) async throws {
-        // Validate schema ID doesn't conflict with built-in schemas
-        if Self.builtInSchemaIds.contains(schema.id) {
-            throw RepositoryError.schemaIdConflictsWithBuiltIn(schema.id)
-        }
-
+    func save(_ schema: RecordSchema, forPerson personId: UUID, familyMemberKey: SymmetricKey) async throws {
         try await coreDataStack.performBackgroundTask { context in
-            // Check if updating existing schema
+            // Check if updating existing schema for this Person
             let fetchRequest: NSFetchRequest<CustomSchemaEntity> = CustomSchemaEntity.fetchRequest()
-            fetchRequest.predicate = NSPredicate(format: "schemaId == %@", schema.id)
+            fetchRequest.predicate = NSPredicate(
+                format: "personId == %@ AND schemaId == %@",
+                personId as CVarArg,
+                schema.id
+            )
             fetchRequest.fetchLimit = 1
 
             let existingEntity = try context.fetch(fetchRequest).first
@@ -90,12 +97,12 @@ final class CustomSchemaRepository: CustomSchemaRepositoryProtocol, @unchecked S
                 try self.validateSchemaEvolution(
                     existing: existingEntity,
                     updated: schema,
-                    primaryKey: primaryKey
+                    familyMemberKey: familyMemberKey
                 )
             }
 
             // Encrypt schema definition
-            let encryptedData = try self.encryptSchema(schema, using: primaryKey)
+            let encryptedData = try self.encryptSchema(schema, using: familyMemberKey)
 
             // Create or update entity
             let entity: CustomSchemaEntity
@@ -104,6 +111,7 @@ final class CustomSchemaRepository: CustomSchemaRepositoryProtocol, @unchecked S
             } else {
                 entity = CustomSchemaEntity(context: context)
                 entity.id = UUID()
+                entity.personId = personId
                 entity.schemaId = schema.id
                 entity.createdAt = Date()
             }
@@ -117,39 +125,52 @@ final class CustomSchemaRepository: CustomSchemaRepositoryProtocol, @unchecked S
             do {
                 try context.save()
             } catch {
-                throw RepositoryError.saveFailed("Failed to save CustomSchema: \(error.localizedDescription)")
+                throw RepositoryError.saveFailed("Failed to save schema: \(error.localizedDescription)")
             }
         }
     }
 
-    func fetch(schemaId: String, primaryKey: SymmetricKey) async throws -> RecordSchema? {
+    func fetch(
+        schemaId: String,
+        forPerson personId: UUID,
+        familyMemberKey: SymmetricKey
+    ) async throws -> RecordSchema? {
         try await coreDataStack.performBackgroundTask { context in
             let fetchRequest: NSFetchRequest<CustomSchemaEntity> = CustomSchemaEntity.fetchRequest()
-            fetchRequest.predicate = NSPredicate(format: "schemaId == %@", schemaId)
+            fetchRequest.predicate = NSPredicate(
+                format: "personId == %@ AND schemaId == %@",
+                personId as CVarArg,
+                schemaId
+            )
             fetchRequest.fetchLimit = 1
 
             guard let entity = try context.fetch(fetchRequest).first else {
                 return nil
             }
 
-            return try self.decryptSchema(from: entity, primaryKey: primaryKey)
+            return try self.decryptSchema(from: entity, familyMemberKey: familyMemberKey)
         }
     }
 
-    func fetchAll(primaryKey: SymmetricKey) async throws -> [RecordSchema] {
+    func fetchAll(forPerson personId: UUID, familyMemberKey: SymmetricKey) async throws -> [RecordSchema] {
         try await coreDataStack.performBackgroundTask { context in
             let fetchRequest: NSFetchRequest<CustomSchemaEntity> = CustomSchemaEntity.fetchRequest()
+            fetchRequest.predicate = NSPredicate(format: "personId == %@", personId as CVarArg)
             fetchRequest.sortDescriptors = [NSSortDescriptor(key: "createdAt", ascending: true)]
 
             let entities = try context.fetch(fetchRequest)
-            return try entities.map { try self.decryptSchema(from: $0, primaryKey: primaryKey) }
+            return try entities.map { try self.decryptSchema(from: $0, familyMemberKey: familyMemberKey) }
         }
     }
 
-    func delete(schemaId: String) async throws {
+    func delete(schemaId: String, forPerson personId: UUID) async throws {
         try await coreDataStack.performBackgroundTask { context in
             let fetchRequest: NSFetchRequest<CustomSchemaEntity> = CustomSchemaEntity.fetchRequest()
-            fetchRequest.predicate = NSPredicate(format: "schemaId == %@", schemaId)
+            fetchRequest.predicate = NSPredicate(
+                format: "personId == %@ AND schemaId == %@",
+                personId as CVarArg,
+                schemaId
+            )
             fetchRequest.fetchLimit = 1
 
             guard let entity = try context.fetch(fetchRequest).first else {
@@ -161,15 +182,19 @@ final class CustomSchemaRepository: CustomSchemaRepositoryProtocol, @unchecked S
             do {
                 try context.save()
             } catch {
-                throw RepositoryError.deleteFailed("Failed to delete CustomSchema: \(error.localizedDescription)")
+                throw RepositoryError.deleteFailed("Failed to delete schema: \(error.localizedDescription)")
             }
         }
     }
 
-    func exists(schemaId: String) async throws -> Bool {
+    func exists(schemaId: String, forPerson personId: UUID) async throws -> Bool {
         try await coreDataStack.performBackgroundTask { context in
             let fetchRequest: NSFetchRequest<CustomSchemaEntity> = CustomSchemaEntity.fetchRequest()
-            fetchRequest.predicate = NSPredicate(format: "schemaId == %@", schemaId)
+            fetchRequest.predicate = NSPredicate(
+                format: "personId == %@ AND schemaId == %@",
+                personId as CVarArg,
+                schemaId
+            )
             fetchRequest.fetchLimit = 1
 
             let count = try context.count(for: fetchRequest)
@@ -183,10 +208,10 @@ final class CustomSchemaRepository: CustomSchemaRepositoryProtocol, @unchecked S
     private func validateSchemaEvolution(
         existing: CustomSchemaEntity,
         updated: RecordSchema,
-        primaryKey: SymmetricKey
+        familyMemberKey: SymmetricKey
     ) throws {
         // Decrypt existing schema for comparison
-        let existingSchema = try decryptSchema(from: existing, primaryKey: primaryKey)
+        let existingSchema = try decryptSchema(from: existing, familyMemberKey: familyMemberKey)
 
         // Check version is incremented
         if updated.version <= existingSchema.version {
@@ -210,7 +235,7 @@ final class CustomSchemaRepository: CustomSchemaRepositoryProtocol, @unchecked S
             // Check field type hasn't changed (would corrupt existing data)
             if updatedField.fieldType != existingField.fieldType {
                 throw RepositoryError.fieldTypeChangeNotAllowed(
-                    fieldId: fieldId,
+                    fieldId: fieldId.uuidString,
                     from: existingField.fieldType,
                     to: updatedField.fieldType
                 )
@@ -258,7 +283,7 @@ final class CustomSchemaRepository: CustomSchemaRepositoryProtocol, @unchecked S
     }
 
     /// Decrypt schema from entity
-    private func decryptSchema(from entity: CustomSchemaEntity, primaryKey: SymmetricKey) throws -> RecordSchema {
+    private func decryptSchema(from entity: CustomSchemaEntity, familyMemberKey: SymmetricKey) throws -> RecordSchema {
         guard let encryptedData = entity.encryptedDefinition else {
             throw RepositoryError.deserializationFailed("CustomSchemaEntity missing encryptedDefinition")
         }
@@ -276,7 +301,7 @@ final class CustomSchemaRepository: CustomSchemaRepositoryProtocol, @unchecked S
         // Decrypt
         let decryptedJSON: Data
         do {
-            decryptedJSON = try encryptionService.decrypt(encryptedPayload, using: primaryKey)
+            decryptedJSON = try encryptionService.decrypt(encryptedPayload, using: familyMemberKey)
         } catch {
             throw RepositoryError.decryptionFailed("Failed to decrypt schema: \(error.localizedDescription)")
         }

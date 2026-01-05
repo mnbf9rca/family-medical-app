@@ -21,8 +21,8 @@ struct FieldDisplayTestCase: Sendable {
         expectedText: String?
     ) {
         self.name = name
-        field = FieldDefinition(
-            id: "testField",
+        field = FieldDefinition.builtIn(
+            id: UUID(),
             displayName: "Test Field",
             fieldType: fieldType
         )
@@ -180,8 +180,8 @@ struct FieldDisplayViewTests {
 
     @Test
     func fieldDisplayViewShowsFieldLabel() throws {
-        let field = FieldDefinition(
-            id: "vaccineName",
+        let field = FieldDefinition.builtIn(
+            id: UUID(),
             displayName: "Vaccine Name",
             fieldType: .string
         )
@@ -197,8 +197,8 @@ struct FieldDisplayViewTests {
     @Test
     func fieldDisplayViewShowsDateValue() throws {
         let testDate = Date(timeIntervalSince1970: 631_152_000) // Jan 1, 1990
-        let field = FieldDefinition(
-            id: "dateAdministered",
+        let field = FieldDefinition.builtIn(
+            id: UUID(),
             displayName: "Date Administered",
             fieldType: .date
         )
@@ -214,8 +214,8 @@ struct FieldDisplayViewTests {
 
     @Test
     func boolTrueShowsCheckmarkIcon() throws {
-        let field = FieldDefinition(
-            id: "isActive",
+        let field = FieldDefinition.builtIn(
+            id: UUID(),
             displayName: "Is Active",
             fieldType: .bool
         )
@@ -229,8 +229,8 @@ struct FieldDisplayViewTests {
 
     @Test
     func boolFalseShowsXmarkIcon() throws {
-        let field = FieldDefinition(
-            id: "isActive",
+        let field = FieldDefinition.builtIn(
+            id: UUID(),
             displayName: "Is Active",
             fieldType: .bool
         )
@@ -245,8 +245,8 @@ struct FieldDisplayViewTests {
 
     @Test
     func emptyPlaceholderIsRendered() throws {
-        let field = FieldDefinition(
-            id: "notes",
+        let field = FieldDefinition.builtIn(
+            id: UUID(),
             displayName: "Notes",
             fieldType: .string
         )
@@ -261,8 +261,8 @@ struct FieldDisplayViewTests {
 
     @Test
     func viewUsesLabeledContentStructure() throws {
-        let field = FieldDefinition(
-            id: "testField",
+        let field = FieldDefinition.builtIn(
+            id: UUID(),
             displayName: "Test Label",
             fieldType: .string
         )

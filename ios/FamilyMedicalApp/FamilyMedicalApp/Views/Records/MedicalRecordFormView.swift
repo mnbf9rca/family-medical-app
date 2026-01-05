@@ -44,16 +44,16 @@ struct MedicalRecordFormView: View {
     var body: some View {
         NavigationStack {
             Form {
-                ForEach(schema.fieldsByDisplayOrder) { field in
+                ForEach(schema.activeFieldsByDisplayOrder) { field in
                     Section {
                         DynamicFieldView(
                             field: field,
                             value: Binding(
                                 get: {
-                                    viewModel.fieldValues[field.id]
+                                    viewModel.fieldValues[field.id.uuidString]
                                 },
                                 set: { newValue in
-                                    viewModel.fieldValues[field.id] = newValue
+                                    viewModel.fieldValues[field.id.uuidString] = newValue
                                 }
                             )
                         )
@@ -129,8 +129,8 @@ struct MedicalRecordFormView: View {
         notes: nil
     ), let (record, content) = {
         var content = RecordContent(schemaId: "vaccine")
-        content.setString("vaccineName", "COVID-19 Pfizer")
-        content.setDate("dateAdministered", Date())
+        content.setString(BuiltInFieldIds.Vaccine.name, "COVID-19 Pfizer")
+        content.setDate(BuiltInFieldIds.Vaccine.dateAdministered, Date())
 
         let record = MedicalRecord(
             personId: person.id,

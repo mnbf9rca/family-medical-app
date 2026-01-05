@@ -1,7 +1,7 @@
 import Foundation
 
 /// Type of built-in medical record schema
-enum BuiltInSchemaType: String, Codable, CaseIterable {
+enum BuiltInSchemaType: String, Codable, CaseIterable, Sendable {
     case vaccine
     case condition
     case medication
@@ -39,13 +39,25 @@ enum BuiltInSchemaType: String, Codable, CaseIterable {
             "note.text"
         }
     }
+
+    /// Get the built-in schema definition for this type
+    ///
+    /// This is a convenience accessor that returns the schema from `BuiltInSchemas`.
+    var schema: RecordSchema {
+        BuiltInSchemas.schema(for: self)
+    }
 }
 
 /// Schema template for medical records
 ///
 /// Defines the structure, fields, and validation rules for a type of medical record.
 /// Schemas can be built-in (predefined by the app) or custom (user-defined).
-struct RecordSchema: Codable, Equatable, Identifiable {
+///
+/// Per ADR-0009 (Schema Evolution in Multi-Master Replication):
+/// - Field IDs are UUIDs for collision-free multi-device support
+/// - Each Person has their own copy of schemas
+/// - Schemas are encrypted with Person's FMK
+struct RecordSchema: Codable, Equatable, Identifiable, Sendable {
     // MARK: - Properties
 
     /// Unique identifier for this schema (e.g., "vaccine", "medication", "my-custom-type")
@@ -91,13 +103,13 @@ struct RecordSchema: Codable, Equatable, Identifiable {
             throw ModelError.invalidSchemaId(id)
         }
 
-        // Check for duplicate field IDs
-        var seen = Set<String>()
-        for fieldId in fields.map(\.id) {
-            if seen.contains(fieldId) {
-                throw ModelError.duplicateFieldId(fieldId: fieldId)
+        // Check for duplicate field IDs (UUID-based)
+        var seen = Set<UUID>()
+        for field in fields {
+            if seen.contains(field.id) {
+                throw ModelError.duplicateFieldId(fieldId: field.id.uuidString)
             }
-            seen.insert(fieldId)
+            seen.insert(field.id)
         }
 
         self.id = trimmedId
@@ -142,20 +154,38 @@ struct RecordSchema: Codable, Equatable, Identifiable {
 
     // MARK: - Field Access
 
-    /// Get a field definition by ID
+    /// Get a field definition by UUID
     ///
-    /// - Parameter fieldId: The field ID to look up
+    /// - Parameter fieldId: The field UUID to look up
     /// - Returns: The field definition, or nil if not found
-    func field(withId fieldId: String) -> FieldDefinition? {
+    func field(withId fieldId: UUID) -> FieldDefinition? {
         fields.first { $0.id == fieldId }
     }
 
+    /// Get a field definition by UUID string
+    ///
+    /// - Parameter fieldIdString: The field UUID string to look up
+    /// - Returns: The field definition, or nil if not found or invalid UUID
+    func field(withIdString fieldIdString: String) -> FieldDefinition? {
+        guard let uuid = UUID(uuidString: fieldIdString) else {
+            return nil
+        }
+        return field(withId: uuid)
+    }
+
     /// Get all required field IDs
-    var requiredFieldIds: [String] {
+    var requiredFieldIds: [UUID] {
         fields.filter(\.isRequired).map(\.id)
     }
 
-    /// Get fields sorted by display order
+    /// Get all active (visible) fields sorted by display order
+    var activeFieldsByDisplayOrder: [FieldDefinition] {
+        fields
+            .filter { $0.visibility == .active }
+            .sorted { $0.displayOrder < $1.displayOrder }
+    }
+
+    /// Get fields sorted by display order (includes all visibilities)
     var fieldsByDisplayOrder: [FieldDefinition] {
         fields.sorted { $0.displayOrder < $1.displayOrder }
     }
@@ -167,15 +197,15 @@ struct RecordSchema: Codable, Equatable, Identifiable {
     /// - Parameter content: The record content to validate
     /// - Throws: ModelError if validation fails
     func validate(content: RecordContent) throws {
-        // Check all required fields are present
-        for fieldDef in fields where fieldDef.isRequired {
+        // Check all required fields are present (only active fields)
+        for fieldDef in fields where fieldDef.isRequired && fieldDef.visibility == .active {
             let value = content[fieldDef.id]
             try fieldDef.validate(value)
         }
 
         // Validate all present fields (required and optional)
         for (key, value) in content.allFields {
-            guard let fieldDef = field(withId: key) else {
+            guard let fieldDef = field(withIdString: key) else {
                 // Field not in schema - this is allowed (schema is a template, not a constraint)
                 // Users can add extra fields beyond the schema
                 continue

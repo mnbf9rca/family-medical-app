@@ -15,11 +15,11 @@ struct MedicalRecordViewTests {
     /// Schema ID for the comprehensive example schema
     var testSchemaId: String { "comprehensive_example" }
 
-    /// Required string field ID in the comprehensive schema
-    var requiredStringFieldId: String { "exampleName" }
+    /// Required string field UUID in the comprehensive schema
+    var requiredStringFieldId: UUID { ExampleSchema.FieldIds.exampleName }
 
-    /// Required date field ID in the comprehensive schema
-    var requiredDateFieldId: String { "recordedDate" }
+    /// Required date field UUID in the comprehensive schema
+    var requiredDateFieldId: UUID { ExampleSchema.FieldIds.recordedDate }
 
     // MARK: - MedicalRecordRowView Tests (using generic schema)
 
@@ -56,7 +56,7 @@ struct MedicalRecordViewTests {
         _ = view.body
 
         // Optional fields should be nil
-        #expect(content.getString("notes") == nil)
+        #expect(content.getString(ExampleSchema.FieldIds.notes) == nil)
     }
 
     // MARK: - Parameterized Schema Type Tests
@@ -70,7 +70,7 @@ struct MedicalRecordViewTests {
     func medicalRecordRowViewRendersForSchemaType(_ schemaType: BuiltInSchemaType) {
         let schema = RecordSchema.builtIn(schemaType)
         var content = RecordContent(schemaId: schemaType.rawValue)
-        content.setDate("dateAdministered", Date())
+        content.setDate(BuiltInFieldIds.Vaccine.dateAdministered, Date())
 
         let view = MedicalRecordRowView(schema: schema, content: content)
         _ = view.body

@@ -51,6 +51,7 @@
         <attribute name="createdAt" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="encryptedDefinition" attributeType="Binary" allowsExternalBinaryDataStorage="NO"/>
         <attribute name="id" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="personId" attributeType="UUID" usesScalarValueType="NO"/>
         <attribute name="schemaId" attributeType="String"/>
         <attribute name="updatedAt" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="version" attributeType="Integer 32" defaultValueString="1" usesScalarValueType="YES"/>
@@ -59,6 +60,7 @@
                 <constraint value="id"/>
             </uniquenessConstraint>
             <uniquenessConstraint>
+                <constraint value="personId"/>
                 <constraint value="schemaId"/>
             </uniquenessConstraint>
         </uniquenessConstraints>

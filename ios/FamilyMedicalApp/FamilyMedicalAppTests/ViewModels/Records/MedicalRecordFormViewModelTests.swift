@@ -28,11 +28,11 @@ struct MedicalRecordFormViewModelTests {
     /// Schema ID for the comprehensive example schema
     var testSchemaId: String { "comprehensive_example" }
 
-    /// Required string field ID in the comprehensive schema
-    var requiredStringFieldId: String { "exampleName" }
+    /// Required string field ID in the comprehensive schema (UUID string key for fieldValues)
+    var requiredStringFieldId: String { ExampleSchema.FieldIds.exampleName.uuidString }
 
-    /// Required date field ID in the comprehensive schema
-    var requiredDateFieldId: String { "recordedDate" }
+    /// Required date field ID in the comprehensive schema (UUID string key for fieldValues)
+    var requiredDateFieldId: String { ExampleSchema.FieldIds.recordedDate.uuidString }
 
     // MARK: - Initialization Tests
 
@@ -80,8 +80,8 @@ struct MedicalRecordFormViewModelTests {
         let schema = makeTestSchema()
 
         var content = RecordContent(schemaId: testSchemaId)
-        content.setString(requiredStringFieldId, "Test Value")
-        content.setDate(requiredDateFieldId, Date())
+        content.setString(ExampleSchema.FieldIds.exampleName, "Test Value")
+        content.setDate(ExampleSchema.FieldIds.recordedDate, Date())
 
         let record = MedicalRecord(
             personId: person.id,
@@ -213,8 +213,8 @@ struct MedicalRecordFormViewModelTests {
         )
 
         var existingContent = RecordContent(schemaId: testSchemaId)
-        existingContent.setString(requiredStringFieldId, "Original Value")
-        existingContent.setDate(requiredDateFieldId, Date())
+        existingContent.setString(ExampleSchema.FieldIds.exampleName, "Original Value")
+        existingContent.setDate(ExampleSchema.FieldIds.recordedDate, Date())
 
         let viewModel = MedicalRecordFormViewModel(
             person: person,

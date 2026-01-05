@@ -40,7 +40,7 @@ struct SchemaMigrationServicePreviewTests {
 
     private func makeTestContent(
         schemaId: String = "test-schema",
-        fields: [String: FieldValue] = [:]
+        fields: [UUID: FieldValue] = [:]
     ) -> RecordContent {
         var content = RecordContent(schemaId: schemaId)
         for (key, value) in fields {
@@ -48,6 +48,10 @@ struct SchemaMigrationServicePreviewTests {
         }
         return content
     }
+
+    /// Test field UUIDs for migration tests
+    private static let field1Id = UUID()
+    private static let numberId = UUID()
 
     @Test("Preview returns correct record count")
     func previewRecordCount() async throws {
@@ -57,9 +61,9 @@ struct SchemaMigrationServicePreviewTests {
         let primaryKey = SymmetricKey(size: .bits256)
         mocks.fmkService.setFMK(SymmetricKey(size: .bits256), for: personId.uuidString)
 
-        let content1 = makeTestContent(schemaId: "test-schema", fields: ["field1": .string("value1")])
-        let content2 = makeTestContent(schemaId: "test-schema", fields: ["field1": .string("value2")])
-        let content3 = makeTestContent(schemaId: "other-schema", fields: ["field1": .string("value3")])
+        let content1 = makeTestContent(schemaId: "test-schema", fields: [Self.field1Id: .string("value1")])
+        let content2 = makeTestContent(schemaId: "test-schema", fields: [Self.field1Id: .string("value2")])
+        let content3 = makeTestContent(schemaId: "other-schema", fields: [Self.field1Id: .string("value3")])
 
         let record1 = try makeTestRecord(personId: personId, content: content1)
         let record2 = try makeTestRecord(personId: personId, content: content2)
@@ -73,7 +77,10 @@ struct SchemaMigrationServicePreviewTests {
         mocks.contentService.setContent(content3, for: record3.encryptedContent)
 
         let migration = try SchemaMigration(
-            schemaId: "test-schema", fromVersion: 1, toVersion: 2, transformations: [.remove(fieldId: "field1")]
+            schemaId: "test-schema",
+            fromVersion: 1,
+            toVersion: 2,
+            transformations: [.remove(fieldId: Self.field1Id.uuidString)]
         )
 
         let preview = try await service.previewMigration(migration, forPerson: personId, primaryKey: primaryKey)
@@ -89,7 +96,7 @@ struct SchemaMigrationServicePreviewTests {
         let primaryKey = SymmetricKey(size: .bits256)
         mocks.fmkService.setFMK(SymmetricKey(size: .bits256), for: personId.uuidString)
 
-        let content = makeTestContent(schemaId: "test-schema", fields: ["number": .string("not a number")])
+        let content = makeTestContent(schemaId: "test-schema", fields: [Self.numberId: .string("not a number")])
         let record = try makeTestRecord(personId: personId, content: content)
         mocks.recordRepo.addRecord(record)
         mocks.contentService.setContent(content, for: record.encryptedContent)
@@ -98,12 +105,12 @@ struct SchemaMigrationServicePreviewTests {
             schemaId: "test-schema",
             fromVersion: 1,
             toVersion: 2,
-            transformations: [.typeConvert(fieldId: "number", toType: .int)]
+            transformations: [.typeConvert(fieldId: Self.numberId.uuidString, toType: .int)]
         )
 
         let preview = try await service.previewMigration(migration, forPerson: personId, primaryKey: primaryKey)
         #expect(!preview.warnings.isEmpty)
-        #expect(preview.warnings.first?.contains("number") == true)
+        #expect(preview.warnings.first?.contains(Self.numberId.uuidString) == true)
     }
 }
 
@@ -120,7 +127,7 @@ struct SchemaMigrationServiceExecuteTests {
 
     private func makeTestContent(
         schemaId: String = "test-schema",
-        fields: [String: FieldValue] = [:]
+        fields: [UUID: FieldValue] = [:]
     ) -> RecordContent {
         var content = RecordContent(schemaId: schemaId)
         for (key, value) in fields {
@@ -128,6 +135,15 @@ struct SchemaMigrationServiceExecuteTests {
         }
         return content
     }
+
+    /// Test field UUIDs for migration tests
+    private static let keepId = UUID()
+    private static let removeId = UUID()
+    private static let numberId = UUID()
+    private static let firstId = UUID()
+    private static let lastId = UUID()
+    private static let fullNameId = UUID()
+    private static let fieldId = UUID()
 
     @Test("Execute migration removes fields")
     func executeRemoveField() async throws {
@@ -139,14 +155,17 @@ struct SchemaMigrationServiceExecuteTests {
 
         let content = makeTestContent(
             schemaId: "test-schema",
-            fields: ["keep": .string("value"), "remove": .string("delete me")]
+            fields: [Self.keepId: .string("value"), Self.removeId: .string("delete me")]
         )
         let record = try makeTestRecord(personId: personId, content: content)
         mocks.recordRepo.addRecord(record)
         mocks.contentService.setContent(content, for: record.encryptedContent)
 
         let migration = try SchemaMigration(
-            schemaId: "test-schema", fromVersion: 1, toVersion: 2, transformations: [.remove(fieldId: "remove")]
+            schemaId: "test-schema",
+            fromVersion: 1,
+            toVersion: 2,
+            transformations: [.remove(fieldId: Self.removeId.uuidString)]
         )
 
         let result = try await service.executeMigration(
@@ -171,7 +190,7 @@ struct SchemaMigrationServiceExecuteTests {
         let primaryKey = SymmetricKey(size: .bits256)
         mocks.fmkService.setFMK(SymmetricKey(size: .bits256), for: personId.uuidString)
 
-        let content = makeTestContent(schemaId: "test-schema", fields: ["number": .string("42")])
+        let content = makeTestContent(schemaId: "test-schema", fields: [Self.numberId: .string("42")])
         let record = try makeTestRecord(personId: personId, content: content)
         mocks.recordRepo.addRecord(record)
         mocks.contentService.setContent(content, for: record.encryptedContent)
@@ -180,7 +199,7 @@ struct SchemaMigrationServiceExecuteTests {
             schemaId: "test-schema",
             fromVersion: 1,
             toVersion: 2,
-            transformations: [.typeConvert(fieldId: "number", toType: .int)]
+            transformations: [.typeConvert(fieldId: Self.numberId.uuidString, toType: .int)]
         )
 
         let result = try await service.executeMigration(
@@ -194,6 +213,203 @@ struct SchemaMigrationServiceExecuteTests {
         #expect(mocks.contentService.encryptCallCount == 1)
     }
 
+    @Test("Execute migration creates and deletes checkpoint")
+    func executeCreatesAndDeletesCheckpoint() async throws {
+        let mocks = makeMocks()
+        let service = mocks.makeService()
+        let personId = UUID()
+        let primaryKey = SymmetricKey(size: .bits256)
+        mocks.fmkService.setFMK(SymmetricKey(size: .bits256), for: personId.uuidString)
+
+        let content = makeTestContent(schemaId: "test-schema", fields: [Self.fieldId: .string("value")])
+        let record = try makeTestRecord(personId: personId, content: content)
+        mocks.recordRepo.addRecord(record)
+        mocks.contentService.setContent(content, for: record.encryptedContent)
+
+        let migration = try SchemaMigration(
+            schemaId: "test-schema",
+            fromVersion: 1,
+            toVersion: 2,
+            transformations: [.remove(fieldId: Self.fieldId.uuidString)]
+        )
+
+        _ = try await service.executeMigration(
+            migration,
+            forPerson: personId,
+            primaryKey: primaryKey,
+            options: .default
+        ) { _ in }
+
+        #expect(mocks.checkpointService.createCheckpointCalled)
+        #expect(mocks.checkpointService.deleteCheckpointCalled)
+        #expect(!mocks.checkpointService.restoreCheckpointCalled)
+    }
+
+    @Test("Execute migration reports progress")
+    func executeReportsProgress() async throws {
+        let mocks = makeMocks()
+        let service = mocks.makeService()
+        let personId = UUID()
+        let primaryKey = SymmetricKey(size: .bits256)
+        mocks.fmkService.setFMK(SymmetricKey(size: .bits256), for: personId.uuidString)
+
+        // Use unique field IDs for each record
+        let dynamicFieldIds = [UUID(), UUID(), UUID()]
+        for idx in 0 ..< 3 {
+            let content = makeTestContent(
+                schemaId: "test-schema",
+                fields: [dynamicFieldIds[idx]: .string("value\(idx)")]
+            )
+            let record = try makeTestRecord(personId: personId, content: content)
+            mocks.recordRepo.addRecord(record)
+            mocks.contentService.setContent(content, for: record.encryptedContent)
+        }
+
+        let migration = try SchemaMigration(
+            schemaId: "test-schema",
+            fromVersion: 1,
+            toVersion: 2,
+            transformations: [.remove(fieldId: dynamicFieldIds[0].uuidString)]
+        )
+
+        let progressCollector = ProgressCollector()
+        _ = try await service.executeMigration(
+            migration, forPerson: personId, primaryKey: primaryKey, options: .default
+        ) { progressCollector.add($0) }
+
+        #expect(progressCollector.count >= 3)
+        #expect(progressCollector.first?.totalRecords == 3)
+    }
+
+    @Test("Execute migration with no matching records succeeds with zero count")
+    func executeNoMatchingRecords() async throws {
+        let mocks = makeMocks()
+        let service = mocks.makeService()
+        let personId = UUID()
+        let primaryKey = SymmetricKey(size: .bits256)
+        mocks.fmkService.setFMK(SymmetricKey(size: .bits256), for: personId.uuidString)
+
+        let content = makeTestContent(schemaId: "other-schema", fields: [Self.fieldId: .string("value")])
+        let record = try makeTestRecord(personId: personId, content: content)
+        mocks.recordRepo.addRecord(record)
+        mocks.contentService.setContent(content, for: record.encryptedContent)
+
+        let migration = try SchemaMigration(
+            schemaId: "test-schema",
+            fromVersion: 1,
+            toVersion: 2,
+            transformations: [.remove(fieldId: Self.fieldId.uuidString)]
+        )
+
+        let result = try await service.executeMigration(
+            migration,
+            forPerson: personId,
+            primaryKey: primaryKey,
+            options: .default
+        ) { _ in }
+
+        #expect(result.isSuccess)
+        #expect(result.recordsProcessed == 0)
+    }
+
+    @Test("Type conversion failure keeps original value")
+    func typeConversionFailureKeepsOriginal() async throws {
+        let mocks = makeMocks()
+        let service = mocks.makeService()
+        let personId = UUID()
+        let primaryKey = SymmetricKey(size: .bits256)
+        mocks.fmkService.setFMK(SymmetricKey(size: .bits256), for: personId.uuidString)
+
+        let content = makeTestContent(schemaId: "test-schema", fields: [Self.numberId: .string("not a number")])
+        let record = try makeTestRecord(personId: personId, content: content)
+        mocks.recordRepo.addRecord(record)
+        mocks.contentService.setContent(content, for: record.encryptedContent)
+
+        let migration = try SchemaMigration(
+            schemaId: "test-schema",
+            fromVersion: 1,
+            toVersion: 2,
+            transformations: [.typeConvert(fieldId: Self.numberId.uuidString, toType: .int)]
+        )
+
+        let result = try await service.executeMigration(
+            migration,
+            forPerson: personId,
+            primaryKey: primaryKey,
+            options: .default
+        ) { _ in }
+
+        #expect(result.isSuccess)
+    }
+
+    @Test("Execute migration with errors triggers rollback before delete")
+    func executeWithErrorsTriggersRollback() async throws {
+        let mocks = makeMocks()
+        let service = mocks.makeService()
+        let personId = UUID()
+        let primaryKey = SymmetricKey(size: .bits256)
+        mocks.fmkService.setFMK(SymmetricKey(size: .bits256), for: personId.uuidString)
+
+        let content = makeTestContent(schemaId: "test-schema", fields: [Self.fieldId: .string("value")])
+        let record = try makeTestRecord(personId: personId, content: content)
+        mocks.recordRepo.addRecord(record)
+        mocks.contentService.setContent(content, for: record.encryptedContent)
+
+        // Configure the content service to fail on encrypt (simulates error during migration)
+        mocks.contentService.shouldFailEncrypt = true
+
+        let migration = try SchemaMigration(
+            schemaId: "test-schema",
+            fromVersion: 1,
+            toVersion: 2,
+            transformations: [.remove(fieldId: Self.fieldId.uuidString)]
+        )
+
+        let result = try await service.executeMigration(
+            migration,
+            forPerson: personId,
+            primaryKey: primaryKey,
+            options: .default
+        ) { _ in }
+
+        // Migration should report the error
+        #expect(!result.isSuccess)
+        #expect(result.recordsFailed == 1)
+
+        // Checkpoint operations: create -> rollback -> delete
+        #expect(mocks.checkpointService.createCheckpointCalled)
+        #expect(mocks.checkpointService.restoreCheckpointCalled)
+        #expect(mocks.checkpointService.deleteCheckpointCalled)
+    }
+}
+
+// MARK: - Merge Migration Tests
+
+struct SchemaMigrationServiceMergeTests {
+    private func makeMocks() -> TestMocks { TestMocks() }
+
+    private func makeTestRecord(personId: UUID, content: RecordContent) throws -> MedicalRecord {
+        let encoder = JSONEncoder()
+        let contentData = try encoder.encode(content)
+        return MedicalRecord(personId: personId, encryptedContent: Data(contentData.reversed()))
+    }
+
+    private func makeTestContent(
+        schemaId: String = "test-schema",
+        fields: [UUID: FieldValue] = [:]
+    ) -> RecordContent {
+        var content = RecordContent(schemaId: schemaId)
+        for (key, value) in fields {
+            content[key] = value
+        }
+        return content
+    }
+
+    /// Test field UUIDs for merge tests
+    private static let firstId = UUID()
+    private static let lastId = UUID()
+    private static let fullNameId = UUID()
+
     @Test("Execute migration merges fields with concatenate")
     func executeMergeConcatenate() async throws {
         let mocks = makeMocks()
@@ -204,7 +420,7 @@ struct SchemaMigrationServiceExecuteTests {
 
         let content = makeTestContent(
             schemaId: "test-schema",
-            fields: ["first": .string("John"), "last": .string("Doe")]
+            fields: [Self.firstId: .string("John"), Self.lastId: .string("Doe")]
         )
         let record = try makeTestRecord(personId: personId, content: content)
         mocks.recordRepo.addRecord(record)
@@ -214,7 +430,7 @@ struct SchemaMigrationServiceExecuteTests {
             schemaId: "test-schema",
             fromVersion: 1,
             toVersion: 2,
-            transformations: [.merge(fieldId: "first", into: "fullName")]
+            transformations: [.merge(fieldId: Self.firstId.uuidString, into: Self.fullNameId.uuidString)]
         )
 
         let options = MigrationOptions(mergeStrategy: .concatenate(separator: " "))
@@ -238,7 +454,11 @@ struct SchemaMigrationServiceExecuteTests {
 
         let content = makeTestContent(
             schemaId: "test-schema",
-            fields: ["first": .string("John"), "last": .string("Doe"), "fullName": .string("Existing Name")]
+            fields: [
+                Self.firstId: .string("John"),
+                Self.lastId: .string("Doe"),
+                Self.fullNameId: .string("Existing Name")
+            ]
         )
         let record = try makeTestRecord(personId: personId, content: content)
         mocks.recordRepo.addRecord(record)
@@ -248,7 +468,7 @@ struct SchemaMigrationServiceExecuteTests {
             schemaId: "test-schema",
             fromVersion: 1,
             toVersion: 2,
-            transformations: [.merge(fieldId: "first", into: "fullName")]
+            transformations: [.merge(fieldId: Self.firstId.uuidString, into: Self.fullNameId.uuidString)]
         )
 
         let options = MigrationOptions(mergeStrategy: .preferTarget)
@@ -272,7 +492,11 @@ struct SchemaMigrationServiceExecuteTests {
 
         let content = makeTestContent(
             schemaId: "test-schema",
-            fields: ["first": .string("John"), "last": .string("Doe"), "fullName": .string("Existing Name")]
+            fields: [
+                Self.firstId: .string("John"),
+                Self.lastId: .string("Doe"),
+                Self.fullNameId: .string("Existing Name")
+            ]
         )
         let record = try makeTestRecord(personId: personId, content: content)
         mocks.recordRepo.addRecord(record)
@@ -282,7 +506,7 @@ struct SchemaMigrationServiceExecuteTests {
             schemaId: "test-schema",
             fromVersion: 1,
             toVersion: 2,
-            transformations: [.merge(fieldId: "first", into: "fullName")]
+            transformations: [.merge(fieldId: Self.firstId.uuidString, into: Self.fullNameId.uuidString)]
         )
 
         let options = MigrationOptions(mergeStrategy: .preferSource)
@@ -294,158 +518,6 @@ struct SchemaMigrationServiceExecuteTests {
         ) { _ in }
 
         #expect(result.isSuccess)
-    }
-
-    @Test("Execute migration creates and deletes checkpoint")
-    func executeCreatesAndDeletesCheckpoint() async throws {
-        let mocks = makeMocks()
-        let service = mocks.makeService()
-        let personId = UUID()
-        let primaryKey = SymmetricKey(size: .bits256)
-        mocks.fmkService.setFMK(SymmetricKey(size: .bits256), for: personId.uuidString)
-
-        let content = makeTestContent(schemaId: "test-schema", fields: ["field": .string("value")])
-        let record = try makeTestRecord(personId: personId, content: content)
-        mocks.recordRepo.addRecord(record)
-        mocks.contentService.setContent(content, for: record.encryptedContent)
-
-        let migration = try SchemaMigration(
-            schemaId: "test-schema", fromVersion: 1, toVersion: 2, transformations: [.remove(fieldId: "field")]
-        )
-
-        _ = try await service.executeMigration(
-            migration,
-            forPerson: personId,
-            primaryKey: primaryKey,
-            options: .default
-        ) { _ in }
-
-        #expect(mocks.checkpointService.createCheckpointCalled)
-        #expect(mocks.checkpointService.deleteCheckpointCalled)
-        #expect(!mocks.checkpointService.restoreCheckpointCalled)
-    }
-
-    @Test("Execute migration reports progress")
-    func executeReportsProgress() async throws {
-        let mocks = makeMocks()
-        let service = mocks.makeService()
-        let personId = UUID()
-        let primaryKey = SymmetricKey(size: .bits256)
-        mocks.fmkService.setFMK(SymmetricKey(size: .bits256), for: personId.uuidString)
-
-        for idx in 0 ..< 3 {
-            let content = makeTestContent(schemaId: "test-schema", fields: ["field\(idx)": .string("value\(idx)")])
-            let record = try makeTestRecord(personId: personId, content: content)
-            mocks.recordRepo.addRecord(record)
-            mocks.contentService.setContent(content, for: record.encryptedContent)
-        }
-
-        let migration = try SchemaMigration(
-            schemaId: "test-schema", fromVersion: 1, toVersion: 2, transformations: [.remove(fieldId: "field0")]
-        )
-
-        let progressCollector = ProgressCollector()
-        _ = try await service.executeMigration(
-            migration, forPerson: personId, primaryKey: primaryKey, options: .default
-        ) { progressCollector.add($0) }
-
-        #expect(progressCollector.count >= 3)
-        #expect(progressCollector.first?.totalRecords == 3)
-    }
-
-    @Test("Execute migration with no matching records succeeds with zero count")
-    func executeNoMatchingRecords() async throws {
-        let mocks = makeMocks()
-        let service = mocks.makeService()
-        let personId = UUID()
-        let primaryKey = SymmetricKey(size: .bits256)
-        mocks.fmkService.setFMK(SymmetricKey(size: .bits256), for: personId.uuidString)
-
-        let content = makeTestContent(schemaId: "other-schema", fields: ["field": .string("value")])
-        let record = try makeTestRecord(personId: personId, content: content)
-        mocks.recordRepo.addRecord(record)
-        mocks.contentService.setContent(content, for: record.encryptedContent)
-
-        let migration = try SchemaMigration(
-            schemaId: "test-schema", fromVersion: 1, toVersion: 2, transformations: [.remove(fieldId: "field")]
-        )
-
-        let result = try await service.executeMigration(
-            migration,
-            forPerson: personId,
-            primaryKey: primaryKey,
-            options: .default
-        ) { _ in }
-
-        #expect(result.isSuccess)
-        #expect(result.recordsProcessed == 0)
-    }
-
-    @Test("Type conversion failure keeps original value")
-    func typeConversionFailureKeepsOriginal() async throws {
-        let mocks = makeMocks()
-        let service = mocks.makeService()
-        let personId = UUID()
-        let primaryKey = SymmetricKey(size: .bits256)
-        mocks.fmkService.setFMK(SymmetricKey(size: .bits256), for: personId.uuidString)
-
-        let content = makeTestContent(schemaId: "test-schema", fields: ["number": .string("not a number")])
-        let record = try makeTestRecord(personId: personId, content: content)
-        mocks.recordRepo.addRecord(record)
-        mocks.contentService.setContent(content, for: record.encryptedContent)
-
-        let migration = try SchemaMigration(
-            schemaId: "test-schema",
-            fromVersion: 1,
-            toVersion: 2,
-            transformations: [.typeConvert(fieldId: "number", toType: .int)]
-        )
-
-        let result = try await service.executeMigration(
-            migration,
-            forPerson: personId,
-            primaryKey: primaryKey,
-            options: .default
-        ) { _ in }
-
-        #expect(result.isSuccess)
-    }
-
-    @Test("Execute migration with errors triggers rollback before delete")
-    func executeWithErrorsTriggersRollback() async throws {
-        let mocks = makeMocks()
-        let service = mocks.makeService()
-        let personId = UUID()
-        let primaryKey = SymmetricKey(size: .bits256)
-        mocks.fmkService.setFMK(SymmetricKey(size: .bits256), for: personId.uuidString)
-
-        let content = makeTestContent(schemaId: "test-schema", fields: ["field": .string("value")])
-        let record = try makeTestRecord(personId: personId, content: content)
-        mocks.recordRepo.addRecord(record)
-        mocks.contentService.setContent(content, for: record.encryptedContent)
-
-        // Configure the content service to fail on encrypt (simulates error during migration)
-        mocks.contentService.shouldFailEncrypt = true
-
-        let migration = try SchemaMigration(
-            schemaId: "test-schema", fromVersion: 1, toVersion: 2, transformations: [.remove(fieldId: "field")]
-        )
-
-        let result = try await service.executeMigration(
-            migration,
-            forPerson: personId,
-            primaryKey: primaryKey,
-            options: .default
-        ) { _ in }
-
-        // Migration should report the error
-        #expect(!result.isSuccess)
-        #expect(result.recordsFailed == 1)
-
-        // Checkpoint operations: create -> rollback -> delete
-        #expect(mocks.checkpointService.createCheckpointCalled)
-        #expect(mocks.checkpointService.restoreCheckpointCalled)
-        #expect(mocks.checkpointService.deleteCheckpointCalled)
     }
 }
 

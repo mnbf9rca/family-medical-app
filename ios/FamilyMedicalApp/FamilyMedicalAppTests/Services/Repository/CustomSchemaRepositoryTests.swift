@@ -3,8 +3,31 @@ import Foundation
 import Testing
 @testable import FamilyMedicalApp
 
+// swiftlint:disable type_body_length
+
 /// Tests for CustomSchemaRepository CRUD operations
 struct CustomSchemaRepositoryTests {
+    // MARK: - Test Person ID
+
+    // swiftlint:disable force_unwrapping
+    /// Stable UUID for test person (schemas are now per-Person)
+    private static let testPersonId = UUID(uuidString: "33333333-0000-0000-0000-000000000001")!
+
+    // MARK: - Test Field IDs
+
+    // Stable UUIDs for consistent field identity across tests
+    private static let titleFieldId = UUID(uuidString: "33333333-0001-0001-0000-000000000001")!
+    private static let descriptionFieldId = UUID(uuidString: "33333333-0001-0002-0000-000000000001")!
+    private static let nameFieldId = UUID(uuidString: "33333333-0001-0003-0000-000000000001")!
+    private static let stringFieldId = UUID(uuidString: "33333333-0002-0001-0000-000000000001")!
+    private static let intFieldId = UUID(uuidString: "33333333-0002-0002-0000-000000000001")!
+    private static let doubleFieldId = UUID(uuidString: "33333333-0002-0003-0000-000000000001")!
+    private static let dateFieldId = UUID(uuidString: "33333333-0002-0004-0000-000000000001")!
+    private static let boolFieldId = UUID(uuidString: "33333333-0002-0005-0000-000000000001")!
+    private static let stringsFieldId = UUID(uuidString: "33333333-0002-0006-0000-000000000001")!
+    private static let attachmentsFieldId = UUID(uuidString: "33333333-0002-0007-0000-000000000001")!
+    // swiftlint:enable force_unwrapping
+
     // MARK: - Test Fixtures
 
     struct TestFixtures {
@@ -44,15 +67,15 @@ struct CustomSchemaRepositoryTests {
             displayName: "Test Schema",
             iconSystemName: "doc.text",
             fields: [
-                FieldDefinition(
-                    id: "title",
+                .builtIn(
+                    id: Self.titleFieldId,
                     displayName: "Title",
                     fieldType: .string,
                     isRequired: true,
                     displayOrder: 1
                 ),
-                FieldDefinition(
-                    id: "description",
+                .builtIn(
+                    id: Self.descriptionFieldId,
                     displayName: "Description",
                     fieldType: .string,
                     isRequired: false,
@@ -65,7 +88,8 @@ struct CustomSchemaRepositoryTests {
         )
     }
 
-    let testPrimaryKey = SymmetricKey(size: .bits256)
+    let testPersonId = CustomSchemaRepositoryTests.testPersonId
+    let testFamilyMemberKey = SymmetricKey(size: .bits256)
 
     // MARK: - Save Tests
 
@@ -74,9 +98,13 @@ struct CustomSchemaRepositoryTests {
         let repo = makeRepository()
         let schema = try makeTestSchema()
 
-        try await repo.save(schema, primaryKey: testPrimaryKey)
+        try await repo.save(schema, forPerson: testPersonId, familyMemberKey: testFamilyMemberKey)
 
-        let fetched = try await repo.fetch(schemaId: schema.id, primaryKey: testPrimaryKey)
+        let fetched = try await repo.fetch(
+            schemaId: schema.id,
+            forPerson: testPersonId,
+            familyMemberKey: testFamilyMemberKey
+        )
         #expect(fetched != nil)
         #expect(fetched?.id == schema.id)
         #expect(fetched?.displayName == schema.displayName)
@@ -90,51 +118,74 @@ struct CustomSchemaRepositoryTests {
         let encryption = fixtures.encryptionService
         let schema = try makeTestSchema()
 
-        try await repo.save(schema, primaryKey: testPrimaryKey)
+        try await repo.save(schema, forPerson: testPersonId, familyMemberKey: testFamilyMemberKey)
 
         #expect(encryption.encryptCalls.count == 1)
     }
 
     @Test
-    func save_builtInSchemaId_throwsConflictError() async throws {
+    func save_builtInSchemaId_allowedForPerPersonStorage() async throws {
+        // Per-Person storage allows built-in schema IDs since each Person gets their own copy
         let repo = makeRepository()
 
         let schema = try RecordSchema(
             id: "vaccine",
-            displayName: "Custom Vaccine",
+            displayName: "Vaccine Records",
             iconSystemName: "syringe",
             fields: [
-                FieldDefinition(id: "name", displayName: "Name", fieldType: .string)
+                .builtIn(id: Self.nameFieldId, displayName: "Name", fieldType: .string)
+            ],
+            isBuiltIn: true,
+            version: 1
+        )
+
+        // Should not throw - built-in IDs are now allowed for per-Person storage
+        try await repo.save(schema, forPerson: testPersonId, familyMemberKey: testFamilyMemberKey)
+
+        let fetched = try await repo.fetch(
+            schemaId: "vaccine",
+            forPerson: testPersonId,
+            familyMemberKey: testFamilyMemberKey
+        )
+        #expect(fetched != nil)
+        #expect(fetched?.id == "vaccine")
+    }
+
+    @Test
+    func save_sameSchemaIdDifferentPersons_storedSeparately() async throws {
+        // swiftlint:disable:next force_unwrapping
+        let person2Id = UUID(uuidString: "33333333-0000-0000-0000-000000000002")!
+        let repo = makeRepository()
+        let schema1 = try makeTestSchema(id: "shared-schema", version: 1)
+
+        // Different display name for person 2's version
+        let schema2 = try RecordSchema(
+            id: "shared-schema",
+            displayName: "Person 2's Schema",
+            iconSystemName: "doc.text",
+            fields: [
+                .builtIn(id: Self.titleFieldId, displayName: "Title", fieldType: .string)
             ],
             isBuiltIn: false,
             version: 1
         )
 
-        await #expect(throws: RepositoryError.self) {
-            try await repo.save(schema, primaryKey: testPrimaryKey)
-        }
-    }
+        try await repo.save(schema1, forPerson: testPersonId, familyMemberKey: testFamilyMemberKey)
+        try await repo.save(schema2, forPerson: person2Id, familyMemberKey: testFamilyMemberKey)
 
-    @Test
-    func save_allBuiltInSchemaIds_throwsConflictError() async throws {
-        let repo = makeRepository()
+        let fetched1 = try await repo.fetch(
+            schemaId: "shared-schema",
+            forPerson: testPersonId,
+            familyMemberKey: testFamilyMemberKey
+        )
+        let fetched2 = try await repo.fetch(
+            schemaId: "shared-schema",
+            forPerson: person2Id,
+            familyMemberKey: testFamilyMemberKey
+        )
 
-        for builtInType in BuiltInSchemaType.allCases {
-            let schema = try RecordSchema(
-                id: builtInType.rawValue,
-                displayName: "Custom \(builtInType.displayName)",
-                iconSystemName: "doc",
-                fields: [
-                    FieldDefinition(id: "name", displayName: "Name", fieldType: .string)
-                ],
-                isBuiltIn: false,
-                version: 1
-            )
-
-            await #expect(throws: RepositoryError.schemaIdConflictsWithBuiltIn(builtInType.rawValue)) {
-                try await repo.save(schema, primaryKey: testPrimaryKey)
-            }
-        }
+        #expect(fetched1?.displayName == "Test Schema")
+        #expect(fetched2?.displayName == "Person 2's Schema")
     }
 
     @Test
@@ -142,7 +193,7 @@ struct CustomSchemaRepositoryTests {
         let repo = makeRepository()
         var schema = try makeTestSchema(version: 1)
 
-        try await repo.save(schema, primaryKey: testPrimaryKey)
+        try await repo.save(schema, forPerson: testPersonId, familyMemberKey: testFamilyMemberKey)
 
         schema = try RecordSchema(
             id: schema.id,
@@ -152,9 +203,13 @@ struct CustomSchemaRepositoryTests {
             isBuiltIn: false,
             version: 2
         )
-        try await repo.save(schema, primaryKey: testPrimaryKey)
+        try await repo.save(schema, forPerson: testPersonId, familyMemberKey: testFamilyMemberKey)
 
-        let fetched = try await repo.fetch(schemaId: schema.id, primaryKey: testPrimaryKey)
+        let fetched = try await repo.fetch(
+            schemaId: schema.id,
+            forPerson: testPersonId,
+            familyMemberKey: testFamilyMemberKey
+        )
         #expect(fetched?.displayName == "Updated Schema Name")
         #expect(fetched?.version == 2)
     }
@@ -169,7 +224,7 @@ struct CustomSchemaRepositoryTests {
         encryption.shouldFailEncryption = true
 
         await #expect(throws: RepositoryError.self) {
-            try await repo.save(schema, primaryKey: testPrimaryKey)
+            try await repo.save(schema, forPerson: testPersonId, familyMemberKey: testFamilyMemberKey)
         }
     }
 
@@ -180,8 +235,12 @@ struct CustomSchemaRepositoryTests {
         let repo = makeRepository()
         let schema = try makeTestSchema()
 
-        try await repo.save(schema, primaryKey: testPrimaryKey)
-        let fetched = try await repo.fetch(schemaId: schema.id, primaryKey: testPrimaryKey)
+        try await repo.save(schema, forPerson: testPersonId, familyMemberKey: testFamilyMemberKey)
+        let fetched = try await repo.fetch(
+            schemaId: schema.id,
+            forPerson: testPersonId,
+            familyMemberKey: testFamilyMemberKey
+        )
 
         #expect(fetched != nil)
         #expect(fetched?.id == schema.id)
@@ -195,7 +254,30 @@ struct CustomSchemaRepositoryTests {
     func fetch_nonExistentSchema_returnsNil() async throws {
         let repo = makeRepository()
 
-        let result = try await repo.fetch(schemaId: "non-existent", primaryKey: testPrimaryKey)
+        let result = try await repo.fetch(
+            schemaId: "non-existent",
+            forPerson: testPersonId,
+            familyMemberKey: testFamilyMemberKey
+        )
+
+        #expect(result == nil)
+    }
+
+    @Test
+    func fetch_wrongPerson_returnsNil() async throws {
+        // swiftlint:disable:next force_unwrapping
+        let person2Id = UUID(uuidString: "33333333-0000-0000-0000-000000000002")!
+        let repo = makeRepository()
+        let schema = try makeTestSchema()
+
+        try await repo.save(schema, forPerson: testPersonId, familyMemberKey: testFamilyMemberKey)
+
+        // Try to fetch with wrong person - should return nil
+        let result = try await repo.fetch(
+            schemaId: schema.id,
+            forPerson: person2Id,
+            familyMemberKey: testFamilyMemberKey
+        )
 
         #expect(result == nil)
     }
@@ -207,12 +289,16 @@ struct CustomSchemaRepositoryTests {
         let encryption = fixtures.encryptionService
         let schema = try makeTestSchema()
 
-        try await repo.save(schema, primaryKey: testPrimaryKey)
+        try await repo.save(schema, forPerson: testPersonId, familyMemberKey: testFamilyMemberKey)
 
         encryption.shouldFailDecryption = true
 
         await #expect(throws: RepositoryError.self) {
-            _ = try await repo.fetch(schemaId: schema.id, primaryKey: testPrimaryKey)
+            _ = try await repo.fetch(
+                schemaId: schema.id,
+                forPerson: testPersonId,
+                familyMemberKey: testFamilyMemberKey
+            )
         }
     }
 
@@ -225,11 +311,11 @@ struct CustomSchemaRepositoryTests {
         let schema2 = try makeTestSchema(id: "schema-b")
         let schema3 = try makeTestSchema(id: "schema-c")
 
-        try await repo.save(schema1, primaryKey: testPrimaryKey)
-        try await repo.save(schema2, primaryKey: testPrimaryKey)
-        try await repo.save(schema3, primaryKey: testPrimaryKey)
+        try await repo.save(schema1, forPerson: testPersonId, familyMemberKey: testFamilyMemberKey)
+        try await repo.save(schema2, forPerson: testPersonId, familyMemberKey: testFamilyMemberKey)
+        try await repo.save(schema3, forPerson: testPersonId, familyMemberKey: testFamilyMemberKey)
 
-        let all = try await repo.fetchAll(primaryKey: testPrimaryKey)
+        let all = try await repo.fetchAll(forPerson: testPersonId, familyMemberKey: testFamilyMemberKey)
 
         #expect(all.count == 3)
         #expect(all.contains { $0.id == schema1.id })
@@ -238,10 +324,36 @@ struct CustomSchemaRepositoryTests {
     }
 
     @Test
+    func fetchAll_onlyReturnsForSpecifiedPerson() async throws {
+        // swiftlint:disable:next force_unwrapping
+        let person2Id = UUID(uuidString: "33333333-0000-0000-0000-000000000002")!
+        let repo = makeRepository()
+        let schema1 = try makeTestSchema(id: "schema-a")
+        let schema2 = try makeTestSchema(id: "schema-b")
+
+        try await repo.save(schema1, forPerson: testPersonId, familyMemberKey: testFamilyMemberKey)
+        try await repo.save(schema2, forPerson: person2Id, familyMemberKey: testFamilyMemberKey)
+
+        let person1Schemas = try await repo.fetchAll(
+            forPerson: testPersonId,
+            familyMemberKey: testFamilyMemberKey
+        )
+        let person2Schemas = try await repo.fetchAll(
+            forPerson: person2Id,
+            familyMemberKey: testFamilyMemberKey
+        )
+
+        #expect(person1Schemas.count == 1)
+        #expect(person1Schemas.first?.id == "schema-a")
+        #expect(person2Schemas.count == 1)
+        #expect(person2Schemas.first?.id == "schema-b")
+    }
+
+    @Test
     func fetchAll_empty_returnsEmptyArray() async throws {
         let repo = makeRepository()
 
-        let all = try await repo.fetchAll(primaryKey: testPrimaryKey)
+        let all = try await repo.fetchAll(forPerson: testPersonId, familyMemberKey: testFamilyMemberKey)
 
         #expect(all.isEmpty)
     }
@@ -253,12 +365,12 @@ struct CustomSchemaRepositoryTests {
         let encryption = fixtures.encryptionService
         let schema = try makeTestSchema()
 
-        try await repo.save(schema, primaryKey: testPrimaryKey)
+        try await repo.save(schema, forPerson: testPersonId, familyMemberKey: testFamilyMemberKey)
 
         encryption.shouldFailDecryption = true
 
         await #expect(throws: RepositoryError.self) {
-            _ = try await repo.fetchAll(primaryKey: testPrimaryKey)
+            _ = try await repo.fetchAll(forPerson: testPersonId, familyMemberKey: testFamilyMemberKey)
         }
     }
 
@@ -269,13 +381,36 @@ struct CustomSchemaRepositoryTests {
         let repo = makeRepository()
         let schema = try makeTestSchema()
 
-        try await repo.save(schema, primaryKey: testPrimaryKey)
-        #expect(try await repo.exists(schemaId: schema.id))
+        try await repo.save(schema, forPerson: testPersonId, familyMemberKey: testFamilyMemberKey)
+        #expect(try await repo.exists(schemaId: schema.id, forPerson: testPersonId))
 
-        try await repo.delete(schemaId: schema.id)
+        try await repo.delete(schemaId: schema.id, forPerson: testPersonId)
 
-        let exists = try await repo.exists(schemaId: schema.id)
+        let exists = try await repo.exists(schemaId: schema.id, forPerson: testPersonId)
         #expect(!exists)
+    }
+
+    @Test
+    func delete_onlyDeletesForSpecifiedPerson() async throws {
+        // swiftlint:disable:next force_unwrapping
+        let person2Id = UUID(uuidString: "33333333-0000-0000-0000-000000000002")!
+        let repo = makeRepository()
+        let schema = try makeTestSchema(id: "shared-schema")
+
+        // Save same schema ID for both persons
+        try await repo.save(schema, forPerson: testPersonId, familyMemberKey: testFamilyMemberKey)
+        try await repo.save(schema, forPerson: person2Id, familyMemberKey: testFamilyMemberKey)
+
+        // Delete only for person 1
+        try await repo.delete(schemaId: schema.id, forPerson: testPersonId)
+
+        // Person 1 should no longer have it
+        let exists1 = try await repo.exists(schemaId: schema.id, forPerson: testPersonId)
+        #expect(!exists1)
+
+        // Person 2 should still have it
+        let exists2 = try await repo.exists(schemaId: schema.id, forPerson: person2Id)
+        #expect(exists2)
     }
 
     @Test
@@ -283,7 +418,7 @@ struct CustomSchemaRepositoryTests {
         let repo = makeRepository()
 
         await #expect(throws: RepositoryError.customSchemaNotFound("non-existent")) {
-            try await repo.delete(schemaId: "non-existent")
+            try await repo.delete(schemaId: "non-existent", forPerson: testPersonId)
         }
     }
 
@@ -294,9 +429,9 @@ struct CustomSchemaRepositoryTests {
         let repo = makeRepository()
         let schema = try makeTestSchema()
 
-        try await repo.save(schema, primaryKey: testPrimaryKey)
+        try await repo.save(schema, forPerson: testPersonId, familyMemberKey: testFamilyMemberKey)
 
-        let exists = try await repo.exists(schemaId: schema.id)
+        let exists = try await repo.exists(schemaId: schema.id, forPerson: testPersonId)
         #expect(exists)
     }
 
@@ -304,7 +439,20 @@ struct CustomSchemaRepositoryTests {
     func exists_nonExistentSchema_returnsFalse() async throws {
         let repo = makeRepository()
 
-        let exists = try await repo.exists(schemaId: "non-existent")
+        let exists = try await repo.exists(schemaId: "non-existent", forPerson: testPersonId)
+        #expect(!exists)
+    }
+
+    @Test
+    func exists_wrongPerson_returnsFalse() async throws {
+        // swiftlint:disable:next force_unwrapping
+        let person2Id = UUID(uuidString: "33333333-0000-0000-0000-000000000002")!
+        let repo = makeRepository()
+        let schema = try makeTestSchema()
+
+        try await repo.save(schema, forPerson: testPersonId, familyMemberKey: testFamilyMemberKey)
+
+        let exists = try await repo.exists(schemaId: schema.id, forPerson: person2Id)
         #expect(!exists)
     }
 
@@ -317,7 +465,7 @@ struct CustomSchemaRepositoryTests {
         let encryption = fixtures.encryptionService
         let schema = try makeTestSchema()
 
-        try await repo.save(schema, primaryKey: testPrimaryKey)
+        try await repo.save(schema, forPerson: testPersonId, familyMemberKey: testFamilyMemberKey)
 
         #expect(encryption.encryptCalls.count == 1)
         let encryptedData = encryption.encryptCalls.first?.data
@@ -339,10 +487,14 @@ struct CustomSchemaRepositoryTests {
         let encryption = fixtures.encryptionService
         let schema = try makeTestSchema()
 
-        try await repo.save(schema, primaryKey: testPrimaryKey)
+        try await repo.save(schema, forPerson: testPersonId, familyMemberKey: testFamilyMemberKey)
         let callsAfterSave = encryption.decryptCalls.count
 
-        _ = try await repo.fetch(schemaId: schema.id, primaryKey: testPrimaryKey)
+        _ = try await repo.fetch(
+            schemaId: schema.id,
+            forPerson: testPersonId,
+            familyMemberKey: testFamilyMemberKey
+        )
 
         #expect(encryption.decryptCalls.count == callsAfterSave + 1)
     }
@@ -357,14 +509,14 @@ struct CustomSchemaRepositoryTests {
             displayName: "All Types Schema",
             iconSystemName: "list.bullet",
             fields: [
-                FieldDefinition(id: "string-field", displayName: "String", fieldType: .string, displayOrder: 1),
-                FieldDefinition(id: "int-field", displayName: "Integer", fieldType: .int, displayOrder: 2),
-                FieldDefinition(id: "double-field", displayName: "Decimal", fieldType: .double, displayOrder: 3),
-                FieldDefinition(id: "date-field", displayName: "Date", fieldType: .date, displayOrder: 4),
-                FieldDefinition(id: "bool-field", displayName: "Boolean", fieldType: .bool, displayOrder: 5),
-                FieldDefinition(id: "strings-field", displayName: "Tags", fieldType: .stringArray, displayOrder: 6),
-                FieldDefinition(
-                    id: "attachments-field",
+                .builtIn(id: Self.stringFieldId, displayName: "String", fieldType: .string, displayOrder: 1),
+                .builtIn(id: Self.intFieldId, displayName: "Integer", fieldType: .int, displayOrder: 2),
+                .builtIn(id: Self.doubleFieldId, displayName: "Decimal", fieldType: .double, displayOrder: 3),
+                .builtIn(id: Self.dateFieldId, displayName: "Date", fieldType: .date, displayOrder: 4),
+                .builtIn(id: Self.boolFieldId, displayName: "Boolean", fieldType: .bool, displayOrder: 5),
+                .builtIn(id: Self.stringsFieldId, displayName: "Tags", fieldType: .stringArray, displayOrder: 6),
+                .builtIn(
+                    id: Self.attachmentsFieldId,
                     displayName: "Attachments",
                     fieldType: .attachmentIds,
                     displayOrder: 7
@@ -374,9 +526,13 @@ struct CustomSchemaRepositoryTests {
             version: 1
         )
 
-        try await repo.save(schema, primaryKey: testPrimaryKey)
+        try await repo.save(schema, forPerson: testPersonId, familyMemberKey: testFamilyMemberKey)
 
-        let fetched = try await repo.fetch(schemaId: schema.id, primaryKey: testPrimaryKey)
+        let fetched = try await repo.fetch(
+            schemaId: schema.id,
+            forPerson: testPersonId,
+            familyMemberKey: testFamilyMemberKey
+        )
         #expect(fetched?.fields.count == 7)
         #expect(fetched?.fields[0].fieldType == .string)
         #expect(fetched?.fields[1].fieldType == .int)
@@ -387,3 +543,5 @@ struct CustomSchemaRepositoryTests {
         #expect(fetched?.fields[6].fieldType == .attachmentIds)
     }
 }
+
+// swiftlint:enable type_body_length

@@ -4,6 +4,30 @@ import Testing
 @testable import FamilyMedicalApp
 
 struct RecordContentServiceTests {
+    // MARK: - Test Field IDs
+
+    /// Test UUIDs for field identification in encryption/decryption tests
+    private enum TestFieldIds {
+        static let name = UUID()
+        static let dosage = UUID()
+        static let age = UUID()
+        static let count = UUID()
+        static let temperature = UUID()
+        static let weight = UUID()
+        static let vaccinated = UUID()
+        static let allergies = UUID()
+        static let visitDate = UUID()
+        static let images = UUID()
+        static let tags = UUID()
+        static let diagnosis = UUID()
+        static let severity = UUID()
+        static let contagious = UUID()
+        static let onsetDate = UUID()
+        static let xrays = UUID()
+        static let symptoms = UUID()
+        static let field = UUID()
+    }
+
     // MARK: - Test Fixtures
 
     struct TestFixtures {
@@ -57,60 +81,60 @@ struct RecordContentServiceTests {
     func encrypt_decrypt_contentWithStringField_roundTrips() throws {
         let service = makeService()
         var content = RecordContent(schemaId: "medication")
-        content.setString("name", "Aspirin")
-        content.setString("dosage", "100mg")
+        content.setString(TestFieldIds.name, "Aspirin")
+        content.setString(TestFieldIds.dosage, "100mg")
 
         let encrypted = try service.encrypt(content, using: testFMK)
         let decrypted = try service.decrypt(encrypted, using: testFMK)
 
         #expect(decrypted == content)
-        #expect(decrypted.getString("name") == "Aspirin")
-        #expect(decrypted.getString("dosage") == "100mg")
+        #expect(decrypted.getString(TestFieldIds.name) == "Aspirin")
+        #expect(decrypted.getString(TestFieldIds.dosage) == "100mg")
     }
 
     @Test
     func encrypt_decrypt_contentWithIntField_roundTrips() throws {
         let service = makeService()
         var content = RecordContent()
-        content.setInt("age", 42)
-        content.setInt("count", 7)
+        content.setInt(TestFieldIds.age, 42)
+        content.setInt(TestFieldIds.count, 7)
 
         let encrypted = try service.encrypt(content, using: testFMK)
         let decrypted = try service.decrypt(encrypted, using: testFMK)
 
         #expect(decrypted == content)
-        #expect(decrypted.getInt("age") == 42)
-        #expect(decrypted.getInt("count") == 7)
+        #expect(decrypted.getInt(TestFieldIds.age) == 42)
+        #expect(decrypted.getInt(TestFieldIds.count) == 7)
     }
 
     @Test
     func encrypt_decrypt_contentWithDoubleField_roundTrips() throws {
         let service = makeService()
         var content = RecordContent()
-        content.setDouble("temperature", 98.6)
-        content.setDouble("weight", 150.5)
+        content.setDouble(TestFieldIds.temperature, 98.6)
+        content.setDouble(TestFieldIds.weight, 150.5)
 
         let encrypted = try service.encrypt(content, using: testFMK)
         let decrypted = try service.decrypt(encrypted, using: testFMK)
 
         #expect(decrypted == content)
-        #expect(decrypted.getDouble("temperature") == 98.6)
-        #expect(decrypted.getDouble("weight") == 150.5)
+        #expect(decrypted.getDouble(TestFieldIds.temperature) == 98.6)
+        #expect(decrypted.getDouble(TestFieldIds.weight) == 150.5)
     }
 
     @Test
     func encrypt_decrypt_contentWithBoolField_roundTrips() throws {
         let service = makeService()
         var content = RecordContent()
-        content.setBool("vaccinated", true)
-        content.setBool("allergies", false)
+        content.setBool(TestFieldIds.vaccinated, true)
+        content.setBool(TestFieldIds.allergies, false)
 
         let encrypted = try service.encrypt(content, using: testFMK)
         let decrypted = try service.decrypt(encrypted, using: testFMK)
 
         #expect(decrypted == content)
-        #expect(decrypted.getBool("vaccinated") == true)
-        #expect(decrypted.getBool("allergies") == false)
+        #expect(decrypted.getBool(TestFieldIds.vaccinated) == true)
+        #expect(decrypted.getBool(TestFieldIds.allergies) == false)
     }
 
     @Test
@@ -118,13 +142,13 @@ struct RecordContentServiceTests {
         let service = makeService()
         var content = RecordContent()
         let testDate = Date(timeIntervalSince1970: 1_234_567_890)
-        content.setDate("visitDate", testDate)
+        content.setDate(TestFieldIds.visitDate, testDate)
 
         let encrypted = try service.encrypt(content, using: testFMK)
         let decrypted = try service.decrypt(encrypted, using: testFMK)
 
         #expect(decrypted == content)
-        #expect(decrypted.getDate("visitDate") == testDate)
+        #expect(decrypted.getDate(TestFieldIds.visitDate) == testDate)
     }
 
     @Test
@@ -132,13 +156,13 @@ struct RecordContentServiceTests {
         let service = makeService()
         var content = RecordContent()
         let ids = [UUID(), UUID(), UUID()]
-        content.setAttachmentIds("images", ids)
+        content.setAttachmentIds(TestFieldIds.images, ids)
 
         let encrypted = try service.encrypt(content, using: testFMK)
         let decrypted = try service.decrypt(encrypted, using: testFMK)
 
         #expect(decrypted == content)
-        #expect(decrypted.getAttachmentIds("images") == ids)
+        #expect(decrypted.getAttachmentIds(TestFieldIds.images) == ids)
     }
 
     @Test
@@ -146,13 +170,13 @@ struct RecordContentServiceTests {
         let service = makeService()
         var content = RecordContent()
         let tags = ["urgent", "follow-up", "pediatric"]
-        content.setStringArray("tags", tags)
+        content.setStringArray(TestFieldIds.tags, tags)
 
         let encrypted = try service.encrypt(content, using: testFMK)
         let decrypted = try service.decrypt(encrypted, using: testFMK)
 
         #expect(decrypted == content)
-        #expect(decrypted.getStringArray("tags") == tags)
+        #expect(decrypted.getStringArray(TestFieldIds.tags) == tags)
     }
 
     @Test
@@ -160,26 +184,26 @@ struct RecordContentServiceTests {
         let service = makeService()
         var content = RecordContent(schemaId: "comprehensive-test")
 
-        content.setString("diagnosis", "Common Cold")
-        content.setInt("severity", 3)
-        content.setDouble("temperature", 100.4)
-        content.setBool("contagious", true)
-        content.setDate("onsetDate", Date(timeIntervalSince1970: 1_700_000_000))
-        content.setAttachmentIds("xrays", [UUID(), UUID()])
-        content.setStringArray("symptoms", ["cough", "fever", "fatigue"])
+        content.setString(TestFieldIds.diagnosis, "Common Cold")
+        content.setInt(TestFieldIds.severity, 3)
+        content.setDouble(TestFieldIds.temperature, 100.4)
+        content.setBool(TestFieldIds.contagious, true)
+        content.setDate(TestFieldIds.onsetDate, Date(timeIntervalSince1970: 1_700_000_000))
+        content.setAttachmentIds(TestFieldIds.xrays, [UUID(), UUID()])
+        content.setStringArray(TestFieldIds.symptoms, ["cough", "fever", "fatigue"])
 
         let encrypted = try service.encrypt(content, using: testFMK)
         let decrypted = try service.decrypt(encrypted, using: testFMK)
 
         #expect(decrypted == content)
         #expect(decrypted.schemaId == "comprehensive-test")
-        #expect(decrypted.getString("diagnosis") == "Common Cold")
-        #expect(decrypted.getInt("severity") == 3)
-        #expect(decrypted.getDouble("temperature") == 100.4)
-        #expect(decrypted.getBool("contagious") == true)
-        #expect(decrypted.getDate("onsetDate") == Date(timeIntervalSince1970: 1_700_000_000))
-        #expect(decrypted.getAttachmentIds("xrays")?.count == 2)
-        #expect(decrypted.getStringArray("symptoms") == ["cough", "fever", "fatigue"])
+        #expect(decrypted.getString(TestFieldIds.diagnosis) == "Common Cold")
+        #expect(decrypted.getInt(TestFieldIds.severity) == 3)
+        #expect(decrypted.getDouble(TestFieldIds.temperature) == 100.4)
+        #expect(decrypted.getBool(TestFieldIds.contagious) == true)
+        #expect(decrypted.getDate(TestFieldIds.onsetDate) == Date(timeIntervalSince1970: 1_700_000_000))
+        #expect(decrypted.getAttachmentIds(TestFieldIds.xrays)?.count == 2)
+        #expect(decrypted.getStringArray(TestFieldIds.symptoms) == ["cough", "fever", "fatigue"])
     }
 
     // MARK: - Encryption Error Tests
@@ -235,7 +259,7 @@ struct RecordContentServiceTests {
     func decrypt_corruptedData_throwsRepositoryError() throws {
         let service = makeService()
         var content = RecordContent(schemaId: "test")
-        content.setString("field", "value") // Add some data to make ciphertext larger
+        content.setString(TestFieldIds.field, "value") // Add some data to make ciphertext larger
 
         // Encrypt normally
         var encrypted = try service.encrypt(content, using: testFMK)

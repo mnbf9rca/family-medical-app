@@ -108,8 +108,8 @@ struct MedicalRecordRowView: View {
                 schema: RecordSchema.builtIn(.vaccine),
                 content: {
                     var content = RecordContent(schemaId: "vaccine")
-                    content.setString("vaccineName", "COVID-19 Pfizer")
-                    content.setDate("dateAdministered", Date())
+                    content.setString(BuiltInFieldIds.Vaccine.name, "COVID-19 Pfizer")
+                    content.setDate(BuiltInFieldIds.Vaccine.dateAdministered, Date())
                     return content
                 }()
             )
@@ -120,8 +120,8 @@ struct MedicalRecordRowView: View {
                 schema: RecordSchema.builtIn(.medication),
                 content: {
                     var content = RecordContent(schemaId: "medication")
-                    content.setString("medicationName", "Aspirin")
-                    content.setDate("startDate", Date())
+                    content.setString(BuiltInFieldIds.Medication.name, "Aspirin")
+                    content.setDate(BuiltInFieldIds.Medication.startDate, Date())
                     return content
                 }()
             )
@@ -132,8 +132,8 @@ struct MedicalRecordRowView: View {
                 schema: RecordSchema.builtIn(.condition),
                 content: {
                     var content = RecordContent(schemaId: "condition")
-                    content.setString("conditionName", "Asthma")
-                    content.setDate("diagnosedDate", Date())
+                    content.setString(BuiltInFieldIds.Condition.name, "Asthma")
+                    content.setDate(BuiltInFieldIds.Condition.diagnosedDate, Date())
                     return content
                 }()
             )

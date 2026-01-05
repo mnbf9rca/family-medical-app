@@ -3,10 +3,13 @@ import Foundation
 @testable import FamilyMedicalApp
 
 /// Mock implementation of CustomSchemaRepositoryProtocol for testing
+///
+/// Stores schemas per-Person to match the real repository behavior.
 final class MockCustomSchemaRepository: CustomSchemaRepositoryProtocol, @unchecked Sendable {
     // MARK: - Storage
 
-    private var schemas: [String: RecordSchema] = [:]
+    /// Schemas stored as [personId: [schemaId: RecordSchema]]
+    private var schemas: [UUID: [String: RecordSchema]] = [:]
 
     // MARK: - Test Configuration
 
@@ -25,64 +28,80 @@ final class MockCustomSchemaRepository: CustomSchemaRepositoryProtocol, @uncheck
     var existsCallCount = 0
 
     var lastSavedSchema: RecordSchema?
+    var lastSavedPersonId: UUID?
     var lastFetchedSchemaId: String?
+    var lastFetchedPersonId: UUID?
     var lastDeletedSchemaId: String?
+    var lastDeletedPersonId: UUID?
 
     // MARK: - CustomSchemaRepositoryProtocol
 
-    func save(_ schema: RecordSchema, primaryKey: SymmetricKey) async throws {
+    func save(_ schema: RecordSchema, forPerson personId: UUID, familyMemberKey: SymmetricKey) async throws {
         saveCallCount += 1
         lastSavedSchema = schema
+        lastSavedPersonId = personId
 
         if shouldFailSave {
             throw RepositoryError.saveFailed("Mock save failed")
         }
 
-        schemas[schema.id] = schema
+        if schemas[personId] == nil {
+            schemas[personId] = [:]
+        }
+        schemas[personId]?[schema.id] = schema
     }
 
-    func fetch(schemaId: String, primaryKey: SymmetricKey) async throws -> RecordSchema? {
+    func fetch(
+        schemaId: String,
+        forPerson personId: UUID,
+        familyMemberKey: SymmetricKey
+    ) async throws -> RecordSchema? {
         fetchCallCount += 1
         lastFetchedSchemaId = schemaId
+        lastFetchedPersonId = personId
 
         if shouldFailFetch {
             throw RepositoryError.fetchFailed("Mock fetch failed")
         }
 
-        return schemas[schemaId]
+        return schemas[personId]?[schemaId]
     }
 
-    func fetchAll(primaryKey: SymmetricKey) async throws -> [RecordSchema] {
+    func fetchAll(forPerson personId: UUID, familyMemberKey: SymmetricKey) async throws -> [RecordSchema] {
         fetchAllCallCount += 1
 
         if shouldFailFetchAll {
             throw RepositoryError.fetchFailed("Mock fetch all failed")
         }
 
-        return Array(schemas.values).sorted { $0.id < $1.id }
+        guard let personSchemas = schemas[personId] else {
+            return []
+        }
+        return Array(personSchemas.values).sorted { $0.id < $1.id }
     }
 
-    func delete(schemaId: String) async throws {
+    func delete(schemaId: String, forPerson personId: UUID) async throws {
         deleteCallCount += 1
         lastDeletedSchemaId = schemaId
+        lastDeletedPersonId = personId
 
         if shouldFailDelete {
             throw RepositoryError.deleteFailed("Mock delete failed")
         }
 
-        if schemas.removeValue(forKey: schemaId) == nil {
+        if schemas[personId]?.removeValue(forKey: schemaId) == nil {
             throw RepositoryError.customSchemaNotFound(schemaId)
         }
     }
 
-    func exists(schemaId: String) async throws -> Bool {
+    func exists(schemaId: String, forPerson personId: UUID) async throws -> Bool {
         existsCallCount += 1
 
         if shouldFailExists {
             throw RepositoryError.fetchFailed("Mock exists failed")
         }
 
-        return schemas[schemaId] != nil
+        return schemas[personId]?[schemaId] != nil
     }
 
     // MARK: - Test Helpers
@@ -101,17 +120,26 @@ final class MockCustomSchemaRepository: CustomSchemaRepositoryProtocol, @uncheck
         deleteCallCount = 0
         existsCallCount = 0
         lastSavedSchema = nil
+        lastSavedPersonId = nil
         lastFetchedSchemaId = nil
+        lastFetchedPersonId = nil
         lastDeletedSchemaId = nil
+        lastDeletedPersonId = nil
     }
 
-    /// Get all schemas (without requiring primary key)
-    func getAllSchemas() -> [RecordSchema] {
-        Array(schemas.values).sorted { $0.id < $1.id }
+    /// Get all schemas for a person (without requiring key)
+    func getAllSchemas(forPerson personId: UUID) -> [RecordSchema] {
+        guard let personSchemas = schemas[personId] else {
+            return []
+        }
+        return Array(personSchemas.values).sorted { $0.id < $1.id }
     }
 
-    /// Add a schema directly (for test setup)
-    func addSchema(_ schema: RecordSchema) {
-        schemas[schema.id] = schema
+    /// Add a schema directly for a person (for test setup)
+    func addSchema(_ schema: RecordSchema, forPerson personId: UUID) {
+        if schemas[personId] == nil {
+            schemas[personId] = [:]
+        }
+        schemas[personId]?[schema.id] = schema
     }
 }

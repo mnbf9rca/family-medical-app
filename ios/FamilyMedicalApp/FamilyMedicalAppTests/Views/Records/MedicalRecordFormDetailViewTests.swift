@@ -19,11 +19,14 @@ struct MedicalRecordFormDetailViewTests {
     /// Schema ID for the comprehensive example schema
     var testSchemaId: String { "comprehensive_example" }
 
-    /// Required string field ID in the comprehensive schema
-    var requiredStringFieldId: String { "exampleName" }
+    /// Required string field UUID in the comprehensive schema
+    var requiredStringFieldId: UUID { ExampleSchema.FieldIds.exampleName }
 
-    /// Required date field ID in the comprehensive schema
-    var requiredDateFieldId: String { "recordedDate" }
+    /// Required string field ID as string key for fieldValues dictionary access
+    var requiredStringFieldKey: String { ExampleSchema.FieldIds.exampleName.uuidString }
+
+    /// Required date field UUID in the comprehensive schema
+    var requiredDateFieldId: UUID { ExampleSchema.FieldIds.recordedDate }
 
     func makeTestPerson() throws -> Person {
         try Person(
@@ -82,9 +85,9 @@ struct MedicalRecordFormDetailViewTests {
         for schemaType in BuiltInSchemaType.allCases {
             var content = RecordContent(schemaId: schemaType.rawValue)
             // Add date fields that various schemas might have
-            content.setDate("dateAdministered", Date())
-            content.setDate("diagnosedDate", Date())
-            content.setDate("startDate", Date())
+            content.setDate(BuiltInFieldIds.Vaccine.dateAdministered, Date())
+            content.setDate(BuiltInFieldIds.Condition.diagnosedDate, Date())
+            content.setDate(BuiltInFieldIds.Medication.startDate, Date())
 
             let record = MedicalRecord(personId: person.id, encryptedContent: Data())
             let decryptedRecord = DecryptedRecord(record: record, content: content)
@@ -103,10 +106,10 @@ struct MedicalRecordFormDetailViewTests {
         let person = try makeTestPerson()
         // Use vaccine schema for this integration test
         var content = RecordContent(schemaId: "vaccine")
-        content.setString("vaccineName", "Test Vaccine")
-        content.setDate("dateAdministered", Date())
-        content.setString("provider", "Test Provider")
-        content.setInt("doseNumber", 2)
+        content.setString(BuiltInFieldIds.Vaccine.name, "Test Vaccine")
+        content.setDate(BuiltInFieldIds.Vaccine.dateAdministered, Date())
+        content.setString(BuiltInFieldIds.Vaccine.provider, "Test Provider")
+        content.setInt(BuiltInFieldIds.Vaccine.doseNumber, 2)
 
         let record = MedicalRecord(personId: person.id, encryptedContent: Data())
         let decryptedRecord = DecryptedRecord(record: record, content: content)
@@ -126,7 +129,7 @@ struct MedicalRecordFormDetailViewTests {
         let person = try makeTestPerson()
         // Create content without the primary field
         var content = RecordContent(schemaId: "vaccine")
-        content.setDate("dateAdministered", Date())
+        content.setDate(BuiltInFieldIds.Vaccine.dateAdministered, Date())
 
         let record = MedicalRecord(personId: person.id, encryptedContent: Data())
         let decryptedRecord = DecryptedRecord(record: record, content: content)
@@ -145,8 +148,8 @@ struct MedicalRecordFormDetailViewTests {
     func medicalRecordDetailViewRendersWithCallbacks() throws {
         let person = try makeTestPerson()
         var content = RecordContent(schemaId: "vaccine")
-        content.setString("vaccineName", "Test Vaccine")
-        content.setDate("dateAdministered", Date())
+        content.setString(BuiltInFieldIds.Vaccine.name, "Test Vaccine")
+        content.setDate(BuiltInFieldIds.Vaccine.dateAdministered, Date())
 
         let record = MedicalRecord(personId: person.id, encryptedContent: Data())
         let decryptedRecord = DecryptedRecord(record: record, content: content)
@@ -177,8 +180,8 @@ struct MedicalRecordFormDetailViewTests {
     func medicalRecordDetailViewRendersWithoutCallbacks() throws {
         let person = try makeTestPerson()
         var content = RecordContent(schemaId: "vaccine")
-        content.setString("vaccineName", "Test Vaccine")
-        content.setDate("dateAdministered", Date())
+        content.setString(BuiltInFieldIds.Vaccine.name, "Test Vaccine")
+        content.setDate(BuiltInFieldIds.Vaccine.dateAdministered, Date())
 
         let record = MedicalRecord(personId: person.id, encryptedContent: Data())
         let decryptedRecord = DecryptedRecord(record: record, content: content)
@@ -326,6 +329,6 @@ struct MedicalRecordFormDetailViewTests {
 
         _ = view.body
 
-        #expect(viewModel.fieldValues[requiredStringFieldId]?.stringValue == "Existing Record")
+        #expect(viewModel.fieldValues[requiredStringFieldKey]?.stringValue == "Existing Record")
     }
 }

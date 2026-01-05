@@ -5,6 +5,20 @@ import Testing
 
 /// Tests for schema evolution breaking change validation
 struct CustomSchemaEvolutionBreakingTests {
+    // MARK: - Test Person ID
+
+    // swiftlint:disable force_unwrapping
+    /// Stable UUID for test person
+    private static let testPersonId = UUID(uuidString: "11111111-0000-0000-0000-000000000001")!
+
+    // MARK: - Test Field IDs
+
+    // Stable UUIDs for consistent field identity across schema updates
+    private static let titleFieldId = UUID(uuidString: "11111111-0001-0001-0000-000000000001")!
+    private static let descriptionFieldId = UUID(uuidString: "11111111-0001-0002-0000-000000000001")!
+    private static let valueFieldId = UUID(uuidString: "11111111-0001-0003-0000-000000000001")!
+    // swiftlint:enable force_unwrapping
+
     // MARK: - Test Dependencies
 
     func makeRepository() -> CustomSchemaRepository {
@@ -22,15 +36,15 @@ struct CustomSchemaEvolutionBreakingTests {
             displayName: "Test Schema",
             iconSystemName: "doc.text",
             fields: [
-                FieldDefinition(
-                    id: "title",
+                .builtIn(
+                    id: Self.titleFieldId,
                     displayName: "Title",
                     fieldType: .string,
                     isRequired: true,
                     displayOrder: 1
                 ),
-                FieldDefinition(
-                    id: "description",
+                .builtIn(
+                    id: Self.descriptionFieldId,
                     displayName: "Description",
                     fieldType: .string,
                     displayOrder: 2,
@@ -42,7 +56,8 @@ struct CustomSchemaEvolutionBreakingTests {
         )
     }
 
-    let testPrimaryKey = SymmetricKey(size: .bits256)
+    let testPersonId = CustomSchemaEvolutionBreakingTests.testPersonId
+    let testFamilyMemberKey = SymmetricKey(size: .bits256)
 
     // MARK: - Version Validation Tests
 
@@ -51,7 +66,7 @@ struct CustomSchemaEvolutionBreakingTests {
         let repo = makeRepository()
         let schema = try makeTestSchema(version: 1)
 
-        try await repo.save(schema, primaryKey: testPrimaryKey)
+        try await repo.save(schema, forPerson: testPersonId, familyMemberKey: testFamilyMemberKey)
 
         let updatedSchema = try RecordSchema(
             id: schema.id,
@@ -63,7 +78,7 @@ struct CustomSchemaEvolutionBreakingTests {
         )
 
         await #expect(throws: RepositoryError.schemaVersionNotIncremented(current: 1, expected: 2)) {
-            try await repo.save(updatedSchema, primaryKey: testPrimaryKey)
+            try await repo.save(updatedSchema, forPerson: testPersonId, familyMemberKey: testFamilyMemberKey)
         }
     }
 
@@ -72,7 +87,7 @@ struct CustomSchemaEvolutionBreakingTests {
         let repo = makeRepository()
         let schema = try makeTestSchema(version: 5)
 
-        try await repo.save(schema, primaryKey: testPrimaryKey)
+        try await repo.save(schema, forPerson: testPersonId, familyMemberKey: testFamilyMemberKey)
 
         let updatedSchema = try RecordSchema(
             id: schema.id,
@@ -84,7 +99,7 @@ struct CustomSchemaEvolutionBreakingTests {
         )
 
         await #expect(throws: RepositoryError.schemaVersionNotIncremented(current: 5, expected: 6)) {
-            try await repo.save(updatedSchema, primaryKey: testPrimaryKey)
+            try await repo.save(updatedSchema, forPerson: testPersonId, familyMemberKey: testFamilyMemberKey)
         }
     }
 
@@ -98,31 +113,31 @@ struct CustomSchemaEvolutionBreakingTests {
             displayName: "Test Schema",
             iconSystemName: "doc",
             fields: [
-                FieldDefinition(id: "value", displayName: "Value", fieldType: .string, displayOrder: 1)
+                .builtIn(id: Self.valueFieldId, displayName: "Value", fieldType: .string, displayOrder: 1)
             ],
             isBuiltIn: false,
             version: 1
         )
 
-        try await repo.save(schema, primaryKey: testPrimaryKey)
+        try await repo.save(schema, forPerson: testPersonId, familyMemberKey: testFamilyMemberKey)
 
         let updatedSchema = try RecordSchema(
             id: schema.id,
             displayName: schema.displayName,
             iconSystemName: schema.iconSystemName,
             fields: [
-                FieldDefinition(id: "value", displayName: "Value", fieldType: .int, displayOrder: 1)
+                .builtIn(id: Self.valueFieldId, displayName: "Value", fieldType: .int, displayOrder: 1)
             ],
             isBuiltIn: false,
             version: 2
         )
 
         await #expect(throws: RepositoryError.fieldTypeChangeNotAllowed(
-            fieldId: "value",
+            fieldId: Self.valueFieldId.uuidString,
             from: .string,
             to: .int
         )) {
-            try await repo.save(updatedSchema, primaryKey: testPrimaryKey)
+            try await repo.save(updatedSchema, forPerson: testPersonId, familyMemberKey: testFamilyMemberKey)
         }
     }
 
@@ -134,31 +149,31 @@ struct CustomSchemaEvolutionBreakingTests {
             displayName: "Test Schema",
             iconSystemName: "doc",
             fields: [
-                FieldDefinition(id: "value", displayName: "Value", fieldType: .int, displayOrder: 1)
+                .builtIn(id: Self.valueFieldId, displayName: "Value", fieldType: .int, displayOrder: 1)
             ],
             isBuiltIn: false,
             version: 1
         )
 
-        try await repo.save(schema, primaryKey: testPrimaryKey)
+        try await repo.save(schema, forPerson: testPersonId, familyMemberKey: testFamilyMemberKey)
 
         let updatedSchema = try RecordSchema(
             id: schema.id,
             displayName: schema.displayName,
             iconSystemName: schema.iconSystemName,
             fields: [
-                FieldDefinition(id: "value", displayName: "Value", fieldType: .double, displayOrder: 1)
+                .builtIn(id: Self.valueFieldId, displayName: "Value", fieldType: .double, displayOrder: 1)
             ],
             isBuiltIn: false,
             version: 2
         )
 
         await #expect(throws: RepositoryError.fieldTypeChangeNotAllowed(
-            fieldId: "value",
+            fieldId: Self.valueFieldId.uuidString,
             from: .int,
             to: .double
         )) {
-            try await repo.save(updatedSchema, primaryKey: testPrimaryKey)
+            try await repo.save(updatedSchema, forPerson: testPersonId, familyMemberKey: testFamilyMemberKey)
         }
     }
 }

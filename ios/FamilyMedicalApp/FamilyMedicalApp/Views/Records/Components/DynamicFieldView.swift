@@ -289,11 +289,11 @@ struct DynamicFieldView: View {
     @Previewable @State var dateValue: FieldValue? = .date(Date())
     @Previewable @State var boolValue: FieldValue? = .bool(true)
 
-    return Form {
+    Form {
         Section("String Field (with capitalizationMode: .words)") {
             DynamicFieldView(
-                field: FieldDefinition(
-                    id: "vaccineName",
+                field: .builtIn(
+                    id: BuiltInFieldIds.Vaccine.name,
                     displayName: "Vaccine Name",
                     fieldType: .string,
                     isRequired: true,
@@ -308,8 +308,8 @@ struct DynamicFieldView: View {
 
         Section("Multiline Field (isMultiline: true)") {
             DynamicFieldView(
-                field: FieldDefinition(
-                    id: "notes",
+                field: .builtIn(
+                    id: BuiltInFieldIds.Vaccine.notes,
                     displayName: "Notes",
                     fieldType: .string,
                     isRequired: false,
@@ -324,8 +324,8 @@ struct DynamicFieldView: View {
 
         Section("Int Field") {
             DynamicFieldView(
-                field: FieldDefinition(
-                    id: "doseNumber",
+                field: .builtIn(
+                    id: BuiltInFieldIds.Vaccine.doseNumber,
                     displayName: "Dose Number",
                     fieldType: .int,
                     isRequired: false,
@@ -339,8 +339,8 @@ struct DynamicFieldView: View {
 
         Section("Date Field") {
             DynamicFieldView(
-                field: FieldDefinition(
-                    id: "dateAdministered",
+                field: .builtIn(
+                    id: BuiltInFieldIds.Vaccine.dateAdministered,
                     displayName: "Date Administered",
                     fieldType: .date,
                     isRequired: true,
@@ -353,8 +353,8 @@ struct DynamicFieldView: View {
 
         Section("Bool Field") {
             DynamicFieldView(
-                field: FieldDefinition(
-                    id: "isActive",
+                field: .builtIn(
+                    id: UUID(), // Random UUID for preview
                     displayName: "Is Active",
                     fieldType: .bool,
                     isRequired: false,
@@ -366,8 +366,8 @@ struct DynamicFieldView: View {
 
         Section("Attachments") {
             DynamicFieldView(
-                field: FieldDefinition(
-                    id: "attachmentIds",
+                field: .builtIn(
+                    id: BuiltInFieldIds.Vaccine.attachmentIds,
                     displayName: "Attachments",
                     fieldType: .attachmentIds,
                     isRequired: false,

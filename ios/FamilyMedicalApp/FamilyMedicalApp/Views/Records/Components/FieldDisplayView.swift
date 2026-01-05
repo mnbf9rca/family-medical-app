@@ -80,8 +80,8 @@ struct FieldDisplayView: View {
     List {
         Section("String Value") {
             FieldDisplayView(
-                field: FieldDefinition(
-                    id: "vaccineName",
+                field: .builtIn(
+                    id: BuiltInFieldIds.Vaccine.name,
                     displayName: "Vaccine Name",
                     fieldType: .string
                 ),
@@ -91,8 +91,8 @@ struct FieldDisplayView: View {
 
         Section("Int Value") {
             FieldDisplayView(
-                field: FieldDefinition(
-                    id: "doseNumber",
+                field: .builtIn(
+                    id: BuiltInFieldIds.Vaccine.doseNumber,
                     displayName: "Dose Number",
                     fieldType: .int
                 ),
@@ -102,8 +102,8 @@ struct FieldDisplayView: View {
 
         Section("Double Value") {
             FieldDisplayView(
-                field: FieldDefinition(
-                    id: "temperature",
+                field: .builtIn(
+                    id: UUID(), // Random UUID for preview
                     displayName: "Temperature",
                     fieldType: .double
                 ),
@@ -113,8 +113,8 @@ struct FieldDisplayView: View {
 
         Section("Bool Value - True") {
             FieldDisplayView(
-                field: FieldDefinition(
-                    id: "isActive",
+                field: .builtIn(
+                    id: UUID(), // Random UUID for preview
                     displayName: "Is Active",
                     fieldType: .bool
                 ),
@@ -124,8 +124,8 @@ struct FieldDisplayView: View {
 
         Section("Bool Value - False") {
             FieldDisplayView(
-                field: FieldDefinition(
-                    id: "isActive",
+                field: .builtIn(
+                    id: UUID(), // Random UUID for preview
                     displayName: "Is Active",
                     fieldType: .bool
                 ),
@@ -135,8 +135,8 @@ struct FieldDisplayView: View {
 
         Section("Date Value") {
             FieldDisplayView(
-                field: FieldDefinition(
-                    id: "dateAdministered",
+                field: .builtIn(
+                    id: BuiltInFieldIds.Vaccine.dateAdministered,
                     displayName: "Date Administered",
                     fieldType: .date
                 ),
@@ -146,8 +146,8 @@ struct FieldDisplayView: View {
 
         Section("Attachment IDs") {
             FieldDisplayView(
-                field: FieldDefinition(
-                    id: "attachmentIds",
+                field: .builtIn(
+                    id: BuiltInFieldIds.Vaccine.attachmentIds,
                     displayName: "Attachments",
                     fieldType: .attachmentIds
                 ),
@@ -157,8 +157,8 @@ struct FieldDisplayView: View {
 
         Section("String Array") {
             FieldDisplayView(
-                field: FieldDefinition(
-                    id: "tags",
+                field: .builtIn(
+                    id: UUID(), // Random UUID for preview
                     displayName: "Tags",
                     fieldType: .stringArray
                 ),
@@ -168,8 +168,8 @@ struct FieldDisplayView: View {
 
         Section("Empty Value") {
             FieldDisplayView(
-                field: FieldDefinition(
-                    id: "notes",
+                field: .builtIn(
+                    id: BuiltInFieldIds.Vaccine.notes,
                     displayName: "Notes",
                     fieldType: .string
                 ),

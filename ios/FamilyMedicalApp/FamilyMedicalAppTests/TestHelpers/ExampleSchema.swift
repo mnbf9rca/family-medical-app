@@ -3,6 +3,22 @@ import Foundation
 
 /// Example schema that exercises all field types for comprehensive test coverage
 enum ExampleSchema {
+    // MARK: - Field IDs for Test Schema
+
+    /// Hardcoded UUIDs for test schema fields (following BuiltInFieldIds pattern)
+    enum FieldIds {
+        // swiftlint:disable force_unwrapping
+        static let exampleName = UUID(uuidString: "00000001-FFFE-0001-0000-000000000000")!
+        static let quantity = UUID(uuidString: "00000001-FFFE-0002-0000-000000000000")!
+        static let measurement = UUID(uuidString: "00000001-FFFE-0003-0000-000000000000")!
+        static let isActive = UUID(uuidString: "00000001-FFFE-0004-0000-000000000000")!
+        static let recordedDate = UUID(uuidString: "00000001-FFFE-0005-0000-000000000000")!
+        static let tags = UUID(uuidString: "00000001-FFFE-0006-0000-000000000000")!
+        static let attachmentIds = UUID(uuidString: "00000001-FFFE-0007-0000-000000000000")!
+        static let notes = UUID(uuidString: "00000001-FFFE-0008-0000-000000000000")!
+        // swiftlint:enable force_unwrapping
+    }
+
     /// A comprehensive example schema containing all supported field types
     ///
     /// This schema is designed for testing purposes to ensure all field types
@@ -14,8 +30,8 @@ enum ExampleSchema {
             iconSystemName: "doc.text.magnifyingglass",
             fields: [
                 // String field (required, with .words capitalization)
-                FieldDefinition(
-                    id: "exampleName",
+                .builtIn(
+                    id: FieldIds.exampleName,
                     displayName: "Example Name",
                     fieldType: .string,
                     isRequired: true,
@@ -27,8 +43,8 @@ enum ExampleSchema {
                 ),
 
                 // Int field
-                FieldDefinition(
-                    id: "quantity",
+                .builtIn(
+                    id: FieldIds.quantity,
                     displayName: "Quantity",
                     fieldType: .int,
                     isRequired: false,
@@ -39,8 +55,8 @@ enum ExampleSchema {
                 ),
 
                 // Double field
-                FieldDefinition(
-                    id: "measurement",
+                .builtIn(
+                    id: FieldIds.measurement,
                     displayName: "Measurement",
                     fieldType: .double,
                     isRequired: false,
@@ -51,8 +67,8 @@ enum ExampleSchema {
                 ),
 
                 // Bool field
-                FieldDefinition(
-                    id: "isActive",
+                .builtIn(
+                    id: FieldIds.isActive,
                     displayName: "Is Active",
                     fieldType: .bool,
                     isRequired: false,
@@ -61,8 +77,8 @@ enum ExampleSchema {
                 ),
 
                 // Date field
-                FieldDefinition(
-                    id: "recordedDate",
+                .builtIn(
+                    id: FieldIds.recordedDate,
                     displayName: "Recorded Date",
                     fieldType: .date,
                     isRequired: true,
@@ -71,8 +87,8 @@ enum ExampleSchema {
                 ),
 
                 // StringArray field
-                FieldDefinition(
-                    id: "tags",
+                .builtIn(
+                    id: FieldIds.tags,
                     displayName: "Tags",
                     fieldType: .stringArray,
                     isRequired: false,
@@ -82,8 +98,8 @@ enum ExampleSchema {
                 ),
 
                 // AttachmentIds field
-                FieldDefinition(
-                    id: "attachmentIds",
+                .builtIn(
+                    id: FieldIds.attachmentIds,
                     displayName: "Attachments",
                     fieldType: .attachmentIds,
                     isRequired: false,
@@ -92,8 +108,8 @@ enum ExampleSchema {
                 ),
 
                 // Optional string field (multiline, for testing optional validation)
-                FieldDefinition(
-                    id: "notes",
+                .builtIn(
+                    id: FieldIds.notes,
                     displayName: "Notes",
                     fieldType: .string,
                     isRequired: false,
