@@ -41,10 +41,21 @@ final class ImageProcessingService: ImageProcessingServiceProtocol, @unchecked S
     /// Quality reduction step during iterative compression
     private let qualityStep: CGFloat = 0.1
 
+    // MARK: - Properties
+
+    private let logger: CategoryLoggerProtocol
+
+    // MARK: - Initialization
+
+    init(logger: CategoryLoggerProtocol? = nil) {
+        self.logger = logger ?? LoggingService.shared.logger(category: .storage)
+    }
+
     // MARK: - ImageProcessingServiceProtocol
 
     func compress(_ imageData: Data, maxSizeBytes: Int, maxDimension: Int) throws -> Data {
         guard let image = UIImage(data: imageData) else {
+            logger.error("Failed to create image from data")
             throw ModelError.imageProcessingFailed(reason: "Could not create image from data")
         }
 
@@ -53,14 +64,19 @@ final class ImageProcessingService: ImageProcessingServiceProtocol, @unchecked S
 
         // Then compress to meet size limit
         guard let compressedData = compressToSize(resizedImage, maxSizeBytes: maxSizeBytes) else {
+            logger.error("Failed to compress image to target size")
             throw ModelError.imageProcessingFailed(reason: "Could not compress image to target size")
         }
+
+        let ratio = Double(compressedData.count) / Double(imageData.count) * 100
+        logger.debug("Compressed image: \(imageData.count) → \(compressedData.count) bytes (\(Int(ratio))%)")
 
         return compressedData
     }
 
     func generateThumbnail(_ imageData: Data, maxDimension: Int) throws -> Data {
         guard let image = UIImage(data: imageData) else {
+            logger.error("Failed to create image for thumbnail")
             throw ModelError.imageProcessingFailed(reason: "Could not create image from data")
         }
 
@@ -69,8 +85,11 @@ final class ImageProcessingService: ImageProcessingServiceProtocol, @unchecked S
 
         // Convert to JPEG at thumbnail quality
         guard let thumbnailData = thumbnailImage.jpegData(compressionQuality: thumbnailCompressionQuality) else {
+            logger.error("Failed to generate thumbnail data")
             throw ModelError.imageProcessingFailed(reason: "Could not generate thumbnail data")
         }
+
+        logger.debug("Generated thumbnail: \(thumbnailData.count) bytes")
 
         return thumbnailData
     }

@@ -44,19 +44,22 @@ final class AttachmentFileStorageService: AttachmentFileStorageServiceProtocol, 
 
     private let fileManager: FileManager
     private let attachmentsDirectory: URL
+    private let logger: CategoryLoggerProtocol
 
     // MARK: - Initialization
 
     /// Initialize with default Application Support directory
-    init() throws {
+    init(logger: CategoryLoggerProtocol? = nil) throws {
         self.fileManager = FileManager.default
         self.attachmentsDirectory = try Self.createAttachmentsDirectory(fileManager: fileManager)
+        self.logger = logger ?? LoggingService.shared.logger(category: .storage)
     }
 
     /// Initialize with custom directory (for testing)
-    init(attachmentsDirectory: URL, fileManager: FileManager = .default) {
+    init(attachmentsDirectory: URL, fileManager: FileManager = .default, logger: CategoryLoggerProtocol? = nil) {
         self.fileManager = fileManager
         self.attachmentsDirectory = attachmentsDirectory
+        self.logger = logger ?? LoggingService.shared.logger(category: .storage)
     }
 
     // MARK: - AttachmentFileStorageServiceProtocol
@@ -71,8 +74,10 @@ final class AttachmentFileStorageService: AttachmentFileStorageServiceProtocol, 
 
         do {
             try encryptedData.write(to: fileURL, options: [.atomic, .completeFileProtection])
+            logger.debug("Stored attachment: \(encryptedData.count) bytes")
             return fileURL
         } catch {
+            logger.logError(error, context: "AttachmentFileStorageService.store")
             throw ModelError.attachmentStorageFailed(reason: error.localizedDescription)
         }
     }
@@ -81,12 +86,14 @@ final class AttachmentFileStorageService: AttachmentFileStorageServiceProtocol, 
         let fileURL = fileURL(for: contentHMAC)
 
         guard fileManager.fileExists(atPath: fileURL.path) else {
+            logger.error("Attachment file not found")
             throw ModelError.attachmentNotFound(attachmentId: UUID()) // Generic UUID since we only have HMAC
         }
 
         do {
             return try Data(contentsOf: fileURL)
         } catch {
+            logger.logError(error, context: "AttachmentFileStorageService.retrieve")
             throw ModelError.attachmentContentCorrupted
         }
     }
@@ -101,7 +108,9 @@ final class AttachmentFileStorageService: AttachmentFileStorageServiceProtocol, 
 
         do {
             try fileManager.removeItem(at: fileURL)
+            logger.debug("Deleted attachment file")
         } catch {
+            logger.logError(error, context: "AttachmentFileStorageService.delete")
             throw ModelError.attachmentStorageFailed(reason: error.localizedDescription)
         }
     }

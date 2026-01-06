@@ -69,6 +69,55 @@ print("ERROR: \(error)")
 - `.sync` - Cross-device synchronization
 - `.ui` - User interface and view operations
 
+### Service Layer Logging
+
+**✅ DO** inject loggers via initializer with default:
+
+```swift
+final class AttachmentService: AttachmentServiceProtocol, @unchecked Sendable {
+    private let logger: CategoryLoggerProtocol
+
+    init(
+        // ... other dependencies ...
+        logger: CategoryLoggerProtocol? = nil
+    ) {
+        self.logger = logger ?? LoggingService.shared.logger(category: .storage)
+    }
+
+    func addAttachment(_ input: AddAttachmentInput) async throws -> Attachment {
+        // Log operations at debug level (UUIDs, file names, MIME types are safe)
+        logger.debug("Adding attachment: \(input.fileName) (\(input.mimeType))")
+
+        // ... implementation ...
+
+        // Log errors with context
+        logger.logError(error, context: "AttachmentService.addAttachment")
+    }
+}
+```
+
+**Log Level Guidelines:**
+
+- `debug` - Routine operations, state changes (IDs, counts, file names)
+- `info` - Significant events (user actions, sync completed)
+- `notice` - Notable conditions that aren't errors (cache miss, retry)
+- `error` - Recoverable failures (network timeout, validation failed)
+- `fault` - Critical failures that indicate bugs (invariant violated)
+
+**Privacy-Safe to Log:**
+
+- UUIDs (person, record, attachment IDs)
+- File names and MIME types
+- Counts and timestamps
+- Operation names and states
+
+**Privacy-Sensitive (use `.private` or redact):**
+
+- File content or encrypted data
+- Encryption keys or HMACs
+- Error messages that may contain paths/data
+- Any medical information
+
 ### Known/Expected Errors
 
 For **validation errors** or **expected conditions**, provide specific guidance:
@@ -87,7 +136,7 @@ case DataError.invalidDate:
     errorMessage = "Please enter a valid date of birth."
 default:
     errorMessage = "Unable to save this member. Please try again."
-    print("ERROR: Unexpected error: \(error)")
+    logger.logError(error, context: "ViewModel.saveOperation")
 }
 ```
 

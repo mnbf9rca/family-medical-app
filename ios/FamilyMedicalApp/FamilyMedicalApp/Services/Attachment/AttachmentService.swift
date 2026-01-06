@@ -118,6 +118,7 @@ final class AttachmentService: AttachmentServiceProtocol, @unchecked Sendable {
     private let imageProcessor: ImageProcessingServiceProtocol
     private let encryptionService: EncryptionServiceProtocol
     private let fmkService: FamilyMemberKeyServiceProtocol
+    private let logger: CategoryLoggerProtocol
 
     // MARK: - Initialization
 
@@ -126,18 +127,22 @@ final class AttachmentService: AttachmentServiceProtocol, @unchecked Sendable {
         fileStorage: AttachmentFileStorageServiceProtocol,
         imageProcessor: ImageProcessingServiceProtocol,
         encryptionService: EncryptionServiceProtocol,
-        fmkService: FamilyMemberKeyServiceProtocol
+        fmkService: FamilyMemberKeyServiceProtocol,
+        logger: CategoryLoggerProtocol? = nil
     ) {
         self.attachmentRepository = attachmentRepository
         self.fileStorage = fileStorage
         self.imageProcessor = imageProcessor
         self.encryptionService = encryptionService
         self.fmkService = fmkService
+        self.logger = logger ?? LoggingService.shared.logger(category: .storage)
     }
 
     // MARK: - AttachmentServiceProtocol
 
     func addAttachment(_ input: AddAttachmentInput) async throws -> Attachment {
+        logger.debug("Adding attachment: \(input.fileName) (\(input.mimeType))")
+
         // Step 1: Validate MIME type and attachment count
         try await validateInput(input)
 
@@ -156,6 +161,7 @@ final class AttachmentService: AttachmentServiceProtocol, @unchecked Sendable {
             recordId: input.recordId,
             input: input
         ) {
+            logger.debug("Deduplication: reusing existing attachment \(existing.id)")
             return existing
         }
 
@@ -263,6 +269,7 @@ final class AttachmentService: AttachmentServiceProtocol, @unchecked Sendable {
             let payload = try EncryptedPayload(combined: encryptedData)
             return try encryptionService.decrypt(payload, using: fmk)
         } catch {
+            logger.logError(error, context: "AttachmentService.getContent.decrypt")
             throw ModelError.attachmentContentCorrupted
         }
     }
