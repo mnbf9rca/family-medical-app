@@ -46,10 +46,10 @@ private let fieldDisplayTestCases: [FieldDisplayTestCase] = [
         expectedText: "COVID-19 Vaccine"
     ),
     FieldDisplayTestCase(
-        name: "string displays empty string",
+        name: "string empty shows placeholder",
         fieldType: .string,
         value: .string(""),
-        expectedText: ""
+        expectedText: nil // Empty strings now show "-" placeholder (same as nil)
     ),
 
     // Int values

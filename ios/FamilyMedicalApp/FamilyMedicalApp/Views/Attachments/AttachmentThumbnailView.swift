@@ -4,6 +4,8 @@ import SwiftUI
 ///
 /// Shows the encrypted thumbnail image if available, or a file type icon
 /// for PDFs and files without thumbnails.
+///
+/// Uses `ThumbnailDisplayMode` for display logic, enabling unit testing.
 struct AttachmentThumbnailView: View {
     /// The attachment to display
     let attachment: Attachment
@@ -16,6 +18,11 @@ struct AttachmentThumbnailView: View {
 
     /// Size of the thumbnail
     var size: CGFloat = 80
+
+    /// Computed display mode for the attachment
+    private var displayMode: ThumbnailDisplayMode {
+        ThumbnailDisplayMode.from(attachment)
+    }
 
     var body: some View {
         Button(action: onTap) {
@@ -48,21 +55,25 @@ struct AttachmentThumbnailView: View {
     }
 
     @ViewBuilder private var thumbnailContent: some View {
-        if let thumbnailData = attachment.thumbnailData,
-           let uiImage = UIImage(data: thumbnailData) {
-            // Show actual thumbnail
-            Image(uiImage: uiImage)
-                .resizable()
-                .aspectRatio(contentMode: .fill)
-        } else if attachment.isPDF {
-            // PDF icon
-            fileIconView(systemName: "doc.fill", color: .red)
-        } else if attachment.isImage {
-            // Image placeholder (thumbnail not generated)
-            fileIconView(systemName: "photo.fill", color: .blue)
-        } else {
-            // Generic file icon
-            fileIconView(systemName: "doc.fill", color: .gray)
+        switch displayMode {
+        case let .thumbnail(thumbnailData):
+            if let uiImage = UIImage(data: thumbnailData) {
+                Image(uiImage: uiImage)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+            } else {
+                // Fallback if data can't be converted to image
+                fileIconView(systemName: "photo.fill", color: .blue)
+            }
+
+        case .pdfIcon:
+            fileIconView(systemName: displayMode.systemImageName, color: .red)
+
+        case .imageIcon:
+            fileIconView(systemName: displayMode.systemImageName, color: .blue)
+
+        case .genericFileIcon:
+            fileIconView(systemName: displayMode.systemImageName, color: .gray)
         }
     }
 

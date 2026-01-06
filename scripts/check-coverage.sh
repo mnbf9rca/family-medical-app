@@ -46,7 +46,7 @@ FILE_EXCEPTIONS = {
     "AttachmentViewerView.swift": 0.0,  # Full-screen viewer with PDFKit/UIImage - needs UIKit runtime
     "AttachmentThumbnailView.swift": 0.0,  # Thumbnail rendering with Image/AsyncImage - needs SwiftUI runtime
     "AttachmentPickerView.swift": 60.0,  # PhotosPicker/Menu integration - needs SwiftUI runtime
-    "FieldDisplayView.swift": 65.0,  # Attachment grid display - needs SwiftUI runtime
+    "FieldDisplayView.swift": 60.0,  # Logic extracted to FieldDisplayFormatter, body closure untestable
     # UIViewControllerRepresentables - makeUIViewController needs UIKit context
     "CameraRepresentable.swift": 64.0,  # UIImagePickerController wrapper - needs camera/UIKit
     "DocumentPickerRepresentable.swift": 66.0,  # UIDocumentPickerViewController wrapper - needs UIKit
