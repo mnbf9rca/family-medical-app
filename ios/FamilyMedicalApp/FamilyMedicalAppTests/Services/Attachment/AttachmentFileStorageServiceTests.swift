@@ -245,4 +245,66 @@ struct AttachmentFileStorageServiceTests {
 
         #expect(retrieved == originalData)
     }
+
+    // MARK: - Default Init Tests
+
+    @Test
+    func init_default_createsService() throws {
+        // This tests the default init that creates the Application Support/Attachments directory
+        let service = try AttachmentFileStorageService()
+
+        // Verify service is functional by storing and retrieving
+        let data = makeTestData()
+        let hmac = makeTestHMAC()
+
+        let url = try service.store(encryptedData: data, contentHMAC: hmac)
+        let retrieved = try service.retrieve(contentHMAC: hmac)
+
+        #expect(retrieved == data)
+
+        // Clean up
+        try service.delete(contentHMAC: hmac)
+        #expect(!FileManager.default.fileExists(atPath: url.path))
+    }
+
+    @Test
+    func init_default_usesApplicationSupportDirectory() throws {
+        let service = try AttachmentFileStorageService()
+        let data = makeTestData()
+        let hmac = makeTestHMAC()
+
+        let url = try service.store(encryptedData: data, contentHMAC: hmac)
+
+        // Verify the URL is in Application Support/Attachments
+        #expect(url.path.contains("Application Support"))
+        #expect(url.path.contains("Attachments"))
+
+        // Clean up
+        try service.delete(contentHMAC: hmac)
+    }
+
+    @Test
+    func init_default_createsDirectoryIfNotExists() throws {
+        // This tests that createAttachmentsDirectory is called and works
+        // The directory might already exist, so this just ensures no error
+        let service = try AttachmentFileStorageService()
+        #expect(service.exists(contentHMAC: makeTestHMAC()) == false)
+    }
+
+    // MARK: - Error Handling Tests
+
+    @Test
+    func store_emptyData_succeeds() throws {
+        let (service, tempDir) = try makeService()
+        defer { cleanupTempDir(tempDir) }
+
+        let emptyData = Data()
+        let hmac = makeTestHMAC()
+
+        let url = try service.store(encryptedData: emptyData, contentHMAC: hmac)
+        let retrieved = try service.retrieve(contentHMAC: hmac)
+
+        #expect(FileManager.default.fileExists(atPath: url.path))
+        #expect(retrieved.isEmpty)
+    }
 }

@@ -271,4 +271,96 @@ struct AttachmentViewerViewModelTests {
         #expect(fixtures.viewModel.errorMessage != nil)
         #expect(fixtures.viewModel.errorMessage?.isEmpty == false)
     }
+
+    // MARK: - Export Flow Tests
+
+    @Test
+    func requestExport_showsWarning() throws {
+        let fixtures = try makeFixtures()
+
+        fixtures.viewModel.requestExport()
+
+        #expect(fixtures.viewModel.showingExportWarning)
+        #expect(!fixtures.viewModel.showingShareSheet)
+    }
+
+    @Test
+    func confirmExport_hidesWarningShowsShareSheet() throws {
+        let fixtures = try makeFixtures()
+        fixtures.viewModel.showingExportWarning = true
+
+        fixtures.viewModel.confirmExport()
+
+        #expect(!fixtures.viewModel.showingExportWarning)
+        #expect(fixtures.viewModel.showingShareSheet)
+    }
+
+    @Test
+    func cancelExport_hidesWarning() throws {
+        let fixtures = try makeFixtures()
+        fixtures.viewModel.showingExportWarning = true
+
+        fixtures.viewModel.cancelExport()
+
+        #expect(!fixtures.viewModel.showingExportWarning)
+        #expect(!fixtures.viewModel.showingShareSheet)
+    }
+
+    // MARK: - Temporary File URL Tests
+
+    @Test
+    func getTemporaryFileURL_noData_returnsNil() throws {
+        let fixtures = try makeFixtures()
+
+        let url = fixtures.viewModel.getTemporaryFileURL()
+
+        #expect(url == nil)
+    }
+
+    @Test
+    func getTemporaryFileURL_withData_createsFile() async throws {
+        let fixtures = try makeFixtures()
+
+        await fixtures.viewModel.loadContent()
+        let url = try #require(fixtures.viewModel.getTemporaryFileURL())
+
+        #expect(FileManager.default.fileExists(atPath: url.path))
+
+        // Clean up
+        try? FileManager.default.removeItem(at: url)
+    }
+
+    @Test
+    func getTemporaryFileURL_usesCorrectFileName() async throws {
+        let fixtures = try makeFixtures(fileName: "my_medical_document.pdf")
+
+        await fixtures.viewModel.loadContent()
+        let url = try #require(fixtures.viewModel.getTemporaryFileURL())
+
+        #expect(url.lastPathComponent == "my_medical_document.pdf")
+
+        // Clean up
+        try? FileManager.default.removeItem(at: url)
+    }
+
+    @Test
+    func cleanupTemporaryFile_removesFile() async throws {
+        let fixtures = try makeFixtures()
+
+        await fixtures.viewModel.loadContent()
+        let url = try #require(fixtures.viewModel.getTemporaryFileURL())
+        #expect(FileManager.default.fileExists(atPath: url.path))
+
+        fixtures.viewModel.cleanupTemporaryFile()
+
+        #expect(!FileManager.default.fileExists(atPath: url.path))
+    }
+
+    @Test
+    func cleanupTemporaryFile_noFile_doesNotThrow() throws {
+        let fixtures = try makeFixtures()
+
+        // Should not throw even if file doesn't exist
+        fixtures.viewModel.cleanupTemporaryFile()
+    }
 }
