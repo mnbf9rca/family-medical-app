@@ -10,6 +10,31 @@ struct FieldDisplayView: View {
     let field: FieldDefinition
     let value: FieldValue?
 
+    /// Person ID for attachment viewing (required for .attachmentIds fields)
+    var personId: UUID?
+
+    /// Pre-loaded attachments for display
+    var attachments: [Attachment]
+
+    /// Callback when an attachment is tapped
+    var onAttachmentTap: ((Attachment) -> Void)?
+
+    // MARK: - Initialization
+
+    init(
+        field: FieldDefinition,
+        value: FieldValue?,
+        personId: UUID? = nil,
+        attachments: [Attachment] = [],
+        onAttachmentTap: ((Attachment) -> Void)? = nil
+    ) {
+        self.field = field
+        self.value = value
+        self.personId = personId
+        self.attachments = attachments
+        self.onAttachmentTap = onAttachmentTap
+    }
+
     // MARK: - Body
 
     var body: some View {
@@ -51,7 +76,11 @@ struct FieldDisplayView: View {
             case let .attachmentIds(ids):
                 if ids.isEmpty {
                     emptyValueView
+                } else if !attachments.isEmpty {
+                    // Show thumbnail grid when attachments are loaded
+                    attachmentThumbnailGrid
                 } else {
+                    // Fallback to count when attachments not loaded
                     Text("\(ids.count) attachment\(ids.count == 1 ? "" : "s")")
                 }
 
@@ -71,6 +100,24 @@ struct FieldDisplayView: View {
         Text("-")
             .foregroundStyle(.secondary)
             .italic()
+    }
+
+    /// Thumbnail grid for displaying attachments
+    private var attachmentThumbnailGrid: some View {
+        let columns = [GridItem(.adaptive(minimum: 50, maximum: 60), spacing: 6)]
+
+        return LazyVGrid(columns: columns, alignment: .trailing, spacing: 6) {
+            ForEach(attachments) { attachment in
+                AttachmentThumbnailView(
+                    attachment: attachment,
+                    onTap: {
+                        onAttachmentTap?(attachment)
+                    },
+                    onRemove: nil, // Read-only in display view
+                    size: 50
+                )
+            }
+        }
     }
 }
 

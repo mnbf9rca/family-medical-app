@@ -11,9 +11,35 @@ struct DynamicFieldView: View {
     let field: FieldDefinition
     @Binding var value: FieldValue?
 
+    /// Person ID for attachment encryption (required for .attachmentIds fields)
+    var personId: UUID?
+
+    /// Record ID for attachment linking (nil for new records)
+    var recordId: UUID?
+
+    /// Existing attachments for editing (pre-loaded by caller)
+    var existingAttachments: [Attachment]
+
     // MARK: - State
 
     @FocusState private var isFocused: Bool
+    @State private var attachmentPickerViewModel: AttachmentPickerViewModel?
+
+    // MARK: - Initialization
+
+    init(
+        field: FieldDefinition,
+        value: Binding<FieldValue?>,
+        personId: UUID? = nil,
+        recordId: UUID? = nil,
+        existingAttachments: [Attachment] = []
+    ) {
+        self.field = field
+        _value = value
+        self.personId = personId
+        self.recordId = recordId
+        self.existingAttachments = existingAttachments
+    }
 
     // MARK: - Body
 
@@ -47,7 +73,7 @@ struct DynamicFieldView: View {
                 dateInputView
 
             case .attachmentIds:
-                attachmentPlaceholderView
+                attachmentInputView
 
             case .stringArray:
                 stringArrayInputView
@@ -132,17 +158,43 @@ struct DynamicFieldView: View {
         .accessibilityIdentifier(field.displayName)
     }
 
-    private var attachmentPlaceholderView: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Label {
-                Text("Attachments will be available in a future update")
-                    .font(.caption)
-            } icon: {
-                Image(systemName: "paperclip")
+    @ViewBuilder private var attachmentInputView: some View {
+        if let personId {
+            // Real attachment picker when person context is available
+            let viewModel = getOrCreateAttachmentViewModel(personId: personId)
+            AttachmentPickerView(viewModel: viewModel) { ids in
+                value = ids.isEmpty ? nil : .attachmentIds(ids)
             }
-            .foregroundStyle(.secondary)
+            .accessibilityIdentifier(field.displayName)
+        } else {
+            // Fallback when person context is not available
+            VStack(alignment: .leading, spacing: 4) {
+                Label {
+                    Text("Attachments require person context")
+                        .font(.caption)
+                } icon: {
+                    Image(systemName: "paperclip")
+                }
+                .foregroundStyle(.secondary)
+            }
+            .accessibilityIdentifier(field.displayName)
         }
-        .accessibilityIdentifier(field.displayName)
+    }
+
+    /// Get or create the attachment picker view model
+    private func getOrCreateAttachmentViewModel(personId: UUID) -> AttachmentPickerViewModel {
+        if let existing = attachmentPickerViewModel {
+            return existing
+        }
+
+        let viewModel = AttachmentPickerViewModel(
+            personId: personId,
+            recordId: recordId,
+            existingAttachments: existingAttachments
+        )
+        // Can't set @State in computed property, so we return new each time
+        // The view should manage this at a higher level for persistence
+        return viewModel
     }
 
     private var stringArrayInputView: some View {

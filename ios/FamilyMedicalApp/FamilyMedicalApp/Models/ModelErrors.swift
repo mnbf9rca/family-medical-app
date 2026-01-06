@@ -25,6 +25,13 @@ enum ModelError: LocalizedError, Equatable {
     case fileNameTooLong(maxLength: Int)
     case mimeTypeTooLong(maxLength: Int)
     case invalidFileSize
+    case attachmentTooLarge(maxSizeMB: Int)
+    case unsupportedMimeType(mimeType: String)
+    case attachmentLimitExceeded(max: Int)
+    case attachmentNotFound(attachmentId: UUID)
+    case attachmentContentCorrupted
+    case attachmentStorageFailed(reason: String)
+    case imageProcessingFailed(reason: String)
 
     // MARK: - Schema Errors
 
@@ -86,6 +93,20 @@ enum ModelError: LocalizedError, Equatable {
             "MIME type cannot exceed \(maxLength) characters"
         case .invalidFileSize:
             "File size must be non-negative"
+        case let .attachmentTooLarge(maxSizeMB):
+            "File exceeds maximum size of \(maxSizeMB) MB"
+        case let .unsupportedMimeType(mimeType):
+            "File type '\(mimeType)' is not supported. Please use JPEG, PNG, or PDF"
+        case let .attachmentLimitExceeded(max):
+            "Maximum of \(max) attachments per record exceeded"
+        case let .attachmentNotFound(attachmentId):
+            "Attachment \(attachmentId) not found"
+        case .attachmentContentCorrupted:
+            "Attachment content could not be read"
+        case let .attachmentStorageFailed(reason):
+            "Failed to store attachment: \(reason)"
+        case let .imageProcessingFailed(reason):
+            "Failed to process image: \(reason)"
         // Schema errors
         case let .schemaNotFound(schemaId):
             "Schema '\(schemaId)' not found"
