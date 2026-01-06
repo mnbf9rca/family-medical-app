@@ -184,6 +184,38 @@ See [SwiftUI XCUITest Gotchas](swiftui-xcuitest-gotchas.md) for common issues.
 - Use accessibility identifiers for stable element selection
 - Use helper methods for reusable patterns
 
+**UI Test Infrastructure (FamilyMedicalAppUITests/):**
+
+UI tests provide coverage for SwiftUI Views that cannot be unit tested (view body closures don't execute in ViewInspector). Use these patterns:
+
+```swift
+// Setup: Use launchForUITesting + createAccount (avoids manual setup/teardown)
+app = XCUIApplication()
+app.launchForUITesting(resetState: true)  // Clears keychain + Core Data
+app.createAccount()                        // Creates user, navigates to HomeView
+
+// Navigation helpers on XCUIApplication (see UITestHelpers.swift)
+app.addPerson(name: "Test User")
+app.verifyPersonExists(name: "Test User")
+app.unlockApp(password: "...")
+```
+
+**Test File Organization:**
+
+- `UITestHelpers.swift` - Shared helpers on `XCUIApplication` extension
+- `*FlowUITests.swift` - Tests for specific feature flows (e.g., `MedicalRecordFlowUITests`)
+- Use single consolidated test methods for CRUD workflows (XCTest doesn't guarantee ordering)
+
+**When to Use UI Tests vs Unit Tests:**
+
+| Component Type | Test Approach |
+|----------------|---------------|
+| ViewModel logic | Unit tests (Swift Testing) with mocks |
+| SwiftUI View rendering | UI tests (XCTest) - body closures don't execute in unit tests |
+| UIViewControllerRepresentable | UI tests - `makeUIViewController` needs SwiftUI context |
+| Service layer | Unit tests with mocks |
+| Repository layer | Unit tests with mock Core Data stack |
+
 ---
 
 ## Security Practices

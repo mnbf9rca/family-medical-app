@@ -47,6 +47,9 @@ final class MockAttachmentService: AttachmentServiceProtocol, @unchecked Sendabl
     var shouldFailDeleteAttachment = false
     var shouldFailFetchAttachments = false
 
+    /// Custom error to throw when getContent fails (defaults to attachmentContentCorrupted)
+    var getContentError: Error = ModelError.attachmentContentCorrupted
+
     // MARK: - Call Tracking
 
     var addAttachmentCalls: [AddAttachmentCall] = []
@@ -101,7 +104,7 @@ final class MockAttachmentService: AttachmentServiceProtocol, @unchecked Sendabl
         getContentCalls.append(GetContentCall(attachment: attachment, personId: personId))
 
         if shouldFailGetContent {
-            throw ModelError.attachmentContentCorrupted
+            throw getContentError
         }
 
         guard let content = contentStorage[attachment.id] else {
@@ -170,6 +173,7 @@ final class MockAttachmentService: AttachmentServiceProtocol, @unchecked Sendabl
         shouldFailGetContent = false
         shouldFailDeleteAttachment = false
         shouldFailFetchAttachments = false
+        getContentError = ModelError.attachmentContentCorrupted
     }
 
     /// Add a pre-existing attachment for testing
