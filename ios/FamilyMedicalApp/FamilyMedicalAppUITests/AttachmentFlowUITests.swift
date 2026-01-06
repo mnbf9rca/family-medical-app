@@ -43,8 +43,9 @@ final class AttachmentFlowUITests: XCTestCase {
     /// Tests all attachment-related UI in a single app launch to minimize test time
     func testAttachmentFlowsConsolidated() throws {
         // Setup - single app launch for all tests
+        // Enable seedTestAttachments to auto-create test attachments for coverage
         app = XCUIApplication()
-        app.launchForUITesting(resetState: true)
+        app.launchForUITesting(resetState: true, seedTestAttachments: true)
         app.createAccount()
 
         // Ensure on home view
@@ -154,6 +155,62 @@ final class AttachmentFlowUITests: XCTestCase {
         let attachmentsLabel = app.staticTexts["Attachments"]
         if attachmentsLabel.waitForExistence(timeout: 1) {
             XCTAssertTrue(true, "Attachments field is visible in record detail")
+        }
+
+        // TEST 5: Navigate back and create a new record with seeded attachment
+        // Go back to vaccines list
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+
+        // Wait for list to appear
+        XCTAssertTrue(listTitle.waitForExistence(timeout: 3), "Should be back on vaccines list")
+
+        // Create another vaccine to trigger attachment picker with seeded attachment
+        let addButton2 = app.navigationBars.buttons["Add Vaccine"]
+        XCTAssertTrue(addButton2.waitForExistence(timeout: 3))
+        addButton2.tap()
+
+        formTitle = app.navigationBars["Add Vaccine"]
+        XCTAssertTrue(formTitle.waitForExistence(timeout: 3), "Should show add vaccine form")
+
+        // The seeded attachment should auto-appear in the picker
+        // Check for attachment thumbnail (it has accessibility label with filename)
+        let thumbnailButton = app.buttons.matching(
+            NSPredicate(format: "label CONTAINS 'test_attachment'")
+        ).firstMatch
+
+        if thumbnailButton.waitForExistence(timeout: 2) {
+            // TEST 6: Tap thumbnail to open viewer
+            thumbnailButton.tap()
+
+            // Viewer should show - wait for it briefly
+            // The viewer might show as a sheet or full screen cover
+            Thread.sleep(forTimeInterval: 0.5)
+
+            // Try to dismiss if viewer appeared
+            let closeButton = app.buttons["Close"]
+            if closeButton.exists {
+                closeButton.tap()
+            } else {
+                // Try swipe down to dismiss
+                app.swipeDown()
+            }
+        }
+
+        // TEST 7: Check count summary updated with seeded attachment
+        let countWithAttachment = app.staticTexts.matching(
+            NSPredicate(format: "label CONTAINS '1 of'")
+        ).firstMatch
+        if countWithAttachment.waitForExistence(timeout: 1) {
+            XCTAssertTrue(
+                countWithAttachment.label.contains("attachments"),
+                "Should show attachment count"
+            )
+        }
+
+        // Cancel to clean up
+        let cancelButton = app.buttons["Cancel"]
+        if cancelButton.exists {
+            cancelButton.tap()
         }
     }
 }

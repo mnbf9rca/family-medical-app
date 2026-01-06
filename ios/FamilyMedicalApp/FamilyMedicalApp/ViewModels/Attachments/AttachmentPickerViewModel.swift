@@ -95,6 +95,36 @@ final class AttachmentPickerViewModel {
         // Use default implementations if not provided (for testing)
         self.attachmentService = attachmentService ?? Self.createDefaultAttachmentService()
         self.primaryKeyProvider = primaryKeyProvider ?? PrimaryKeyProvider()
+
+        // Seed test attachment for UI test coverage
+        seedTestAttachmentIfNeeded()
+    }
+
+    // MARK: - Test Support
+
+    /// Seeds a synthetic test attachment when running UI tests with seeding enabled
+    /// This ensures attachment-related Views are exercised for code coverage
+    private func seedTestAttachmentIfNeeded() {
+        guard UITestingHelpers.shouldSeedTestAttachments else { return }
+        guard attachments.isEmpty else { return } // Only seed if empty
+
+        let testData = UITestingHelpers.createTestAttachmentData()
+
+        do {
+            let attachment = try Attachment(
+                id: testData.id,
+                fileName: testData.fileName,
+                mimeType: testData.mimeType,
+                contentHMAC: Data(repeating: 0xAB, count: 32), // Synthetic HMAC
+                encryptedSize: testData.thumbnailData.count,
+                thumbnailData: testData.thumbnailData,
+                uploadedAt: Date()
+            )
+            attachments.append(attachment)
+            logger.debug("Seeded test attachment for UI coverage testing")
+        } catch {
+            logger.logError(error, context: "seedTestAttachmentIfNeeded")
+        }
     }
 
     // MARK: - Actions

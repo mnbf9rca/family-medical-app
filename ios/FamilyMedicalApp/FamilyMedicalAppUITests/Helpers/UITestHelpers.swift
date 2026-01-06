@@ -54,14 +54,20 @@ extension XCUIApplication {
     }
 
     /// Launch app with UI testing flags
-    /// - Parameter resetState: If true, clears all app data (keychain + Core Data)
+    /// - Parameters:
+    ///   - resetState: If true, clears all app data (keychain + Core Data)
+    ///   - seedTestAttachments: If true, automatically creates test attachments for coverage
     /// - Note: For best results, ensure hardware keyboard is disabled in the simulator:
     ///   I/O → Keyboard → Connect Hardware Keyboard (should be unchecked)
-    func launchForUITesting(resetState: Bool = false) {
+    func launchForUITesting(resetState: Bool = false, seedTestAttachments: Bool = false) {
         launchArguments = ["--uitesting"]
 
         if resetState {
             launchArguments.append("--reset-state")
+        }
+
+        if seedTestAttachments {
+            launchArguments.append("--seed-test-attachments")
         }
 
         launch()
