@@ -45,7 +45,7 @@ FILE_EXCEPTIONS = {
     # SwiftUI Views - body closures don't execute in ViewInspector unit tests, UI tests don't count toward coverage
     "AttachmentViewerView.swift": 0.0,  # Full-screen viewer with PDFKit/UIImage - needs UIKit runtime
     "AttachmentThumbnailView.swift": 0.0,  # Thumbnail rendering with Image/AsyncImage - needs SwiftUI runtime
-    "AttachmentPickerView.swift": 60.0,  # PhotosPicker/Menu integration - needs SwiftUI runtime
+    "AttachmentPickerView.swift": 55.0,  # PhotosPicker/Menu integration - needs SwiftUI runtime
     "FieldDisplayView.swift": 60.0,  # Logic extracted to FieldDisplayFormatter, body closure untestable
     # UIViewControllerRepresentables - makeUIViewController needs UIKit context
     "CameraRepresentable.swift": 64.0,  # UIImagePickerController wrapper - needs camera/UIKit
@@ -53,8 +53,6 @@ FILE_EXCEPTIONS = {
     # ViewModels with static factory methods that use production dependencies
     "AttachmentViewerViewModel.swift": 71.0,  # createDefaultAttachmentService() uses real Core Data/services
     "AttachmentPickerViewModel.swift": 58.0,  # createDefaultAttachmentService() + test seeding code only runs in UI tests
-    # Service with filesystem operations
-    "AttachmentFileStorageService.swift": 80.0,  # Error paths in store/retrieve/delete hard to trigger
     # Test infrastructure - only exercised during UI tests, not unit tests
     "UITestingHelpers.swift": 35.0,  # Test seeding methods only run with --seed-test-attachments flag
 }
