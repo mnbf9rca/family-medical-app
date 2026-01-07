@@ -186,15 +186,21 @@ final class ExistingUserFlowUITests: XCTestCase {
         let appTitle = app.staticTexts["Family Medical App"]
         XCTAssertTrue(appTitle.waitForExistence(timeout: 5))
 
-        // If biometric button is shown
+        // This test only applies when biometric authentication is available
         let usePasswordButton = app.buttons["Use Password"]
-        if usePasswordButton.exists {
-            usePasswordButton.tap()
+        try XCTSkipUnless(
+            usePasswordButton.waitForExistence(timeout: 2),
+            "Test requires biometric to be available (Use Password button must be shown)"
+        )
 
-            // Password field should now appear
-            let passwordField = app.passwordField("Enter password")
-            XCTAssertTrue(passwordField.waitForExistence(timeout: 2), "Password field should appear after tapping 'Use Password'")
-        }
+        usePasswordButton.tap()
+
+        // Password field should now appear
+        let passwordField = app.passwordField("Enter password")
+        XCTAssertTrue(
+            passwordField.waitForExistence(timeout: 2),
+            "Password field should appear after tapping 'Use Password'"
+        )
     }
 }
 
