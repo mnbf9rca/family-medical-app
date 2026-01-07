@@ -114,9 +114,9 @@ final class MedicalRecordFlowUITests: XCTestCase {
     /// Navigate back to the vaccines list from a detail view
     private func navigateBackToList() {
         let backButton = app.navigationBars.buttons.element(boundBy: 0)
-        if backButton.exists {
-            backButton.tap()
-        }
+        XCTAssertTrue(backButton.waitForExistence(timeout: 3), "Back button should exist")
+        backButton.tap()
+
         let listTitle = app.navigationBars["\(testPersonName)'s Vaccine"]
         XCTAssertTrue(listTitle.waitForExistence(timeout: 3), "Should return to vaccines list")
     }
@@ -231,17 +231,28 @@ final class MedicalRecordFlowUITests: XCTestCase {
         let deleteButtonForCancel = app.navigationBars.buttons["Delete Vaccine"]
         deleteButtonForCancel.tap()
 
-        // Cancel deletion
+        // Cancel deletion - SwiftUI confirmationDialog may not expose Cancel button
+        // in accessibility tree. Verify dialog appeared, then dismiss by tapping outside.
+        let deleteConfirmButton = app.buttons["Delete"].firstMatch
+        XCTAssertTrue(
+            deleteConfirmButton.waitForExistence(timeout: 5),
+            "Delete confirmation dialog should appear"
+        )
+
+        // Try Cancel button first, fall back to tapping outside (both are valid cancel gestures)
         let cancelButton = app.buttons["Cancel"].firstMatch
-        if cancelButton.waitForExistence(timeout: 2) {
+        if cancelButton.waitForExistence(timeout: 1) {
             cancelButton.tap()
-            _ = cancelButton.waitForNonExistence(timeout: 2)
         } else {
-            // Dismiss by tapping outside the action sheet
+            // Dismiss by tapping outside the action sheet (standard cancel gesture)
             app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.3)).tap()
-            let deleteConfirmButton = app.buttons["Delete"]
-            _ = deleteConfirmButton.waitForNonExistence(timeout: 2)
         }
+
+        // Verify dialog dismissed
+        XCTAssertTrue(
+            deleteConfirmButton.waitForNonExistence(timeout: 3),
+            "Confirmation dialog should dismiss after cancel"
+        )
 
         // Should still be on detail view
         XCTAssertTrue(detailTitle.waitForExistence(timeout: 2), "Should remain on detail view after cancel")

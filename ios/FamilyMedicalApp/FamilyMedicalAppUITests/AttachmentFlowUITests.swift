@@ -84,44 +84,59 @@ final class AttachmentFlowUITests: XCTestCase {
         XCTAssertTrue(formTitle.waitForExistence(timeout: 3), "Should show add vaccine form")
 
         // TEST 1: Attachment picker shows add options
-        let addAttachmentButton = app.buttons["Add Attachment"]
-        if addAttachmentButton.waitForExistence(timeout: 2) {
-            addAttachmentButton.tap()
-
-            // At least one option should exist
-            let cameraOption = app.buttons["Camera"]
-            let photoLibraryOption = app.buttons["Photo Library"]
-            let filesOption = app.buttons["Files"]
-
-            let hasOptions = cameraOption.waitForExistence(timeout: 2)
-                || photoLibraryOption.exists
-                || filesOption.exists
-            XCTAssertTrue(hasOptions, "Attachment picker should show add options")
-
-            // Dismiss menu
-            let cancelButton = app.buttons["Cancel"]
-            if cancelButton.exists {
-                cancelButton.tap()
-            } else {
-                app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.3)).tap()
-            }
+        // The Attachments field is at the bottom of the form - need to scroll to see it
+        // First, find the "Attachments" section header and scroll to it
+        let attachmentsSection = app.staticTexts["Attachments"]
+        if !attachmentsSection.waitForExistence(timeout: 2) {
+            // Scroll down to find the Attachments section
+            app.swipeUp()
         }
+        XCTAssertTrue(
+            attachmentsSection.waitForExistence(timeout: 3),
+            "Attachments section should exist in form"
+        )
+
+        // Now find the add attachment button (use firstMatch for multiple matches)
+        let addAttachmentButton = app.buttons["addAttachmentButton"].firstMatch
+        XCTAssertTrue(
+            addAttachmentButton.waitForExistence(timeout: 3),
+            "Add attachment button should exist after scrolling"
+        )
+        addAttachmentButton.tap()
+
+        // At least one option should exist
+        // Menu labels from AttachmentPickerView: "Take Photo", "Choose from Library", "Choose File"
+        let cameraOption = app.buttons["Take Photo"]
+        let photoLibraryOption = app.buttons["Choose from Library"]
+        let filesOption = app.buttons["Choose File"]
+
+        let hasOptions = cameraOption.waitForExistence(timeout: 3)
+            || photoLibraryOption.exists
+            || filesOption.exists
+        XCTAssertTrue(hasOptions, "Attachment picker should show add options")
+
+        // Dismiss menu using helper (deterministic cleanup)
+        app.dismissCurrentView()
 
         // TEST 2: Count summary exists
         let countSummary = app.staticTexts.matching(
             NSPredicate(format: "label CONTAINS 'attachments'")
         ).firstMatch
-        if countSummary.waitForExistence(timeout: 1) {
-            let label = countSummary.label
-            XCTAssertTrue(
-                label.contains("of") && label.contains("attachments"),
-                "Count summary should show 'X of Y attachments' format"
-            )
-        }
+        XCTAssertTrue(
+            countSummary.waitForExistence(timeout: 3),
+            "Count summary should exist"
+        )
+        let label = countSummary.label
+        XCTAssertTrue(
+            label.contains("of") && label.contains("attachments"),
+            "Count summary should show 'X of Y attachments' format"
+        )
 
         // TEST 3: Fill vaccine name field (tests DynamicFieldView)
+        // Scroll back up to find the Vaccine Name field (was scrolled down for Attachments)
+        app.swipeDown()
         let nameField = app.textFields["Vaccine Name"]
-        XCTAssertTrue(nameField.waitForExistence(timeout: 2), "Vaccine Name field should exist")
+        XCTAssertTrue(nameField.waitForExistence(timeout: 3), "Vaccine Name field should exist")
         nameField.tap()
         nameField.typeText("Test Vaccine")
 
@@ -151,11 +166,8 @@ final class AttachmentFlowUITests: XCTestCase {
         let vaccineNameValue = app.staticTexts["Test Vaccine"]
         XCTAssertTrue(vaccineNameValue.exists, "Vaccine name value should be visible")
 
-        // Check attachments field is displayed
-        let attachmentsLabel = app.staticTexts["Attachments"]
-        if attachmentsLabel.waitForExistence(timeout: 1) {
-            XCTAssertTrue(true, "Attachments field is visible in record detail")
-        }
+        // Note: Attachments field only displays if record has attachments
+        // Since we saved without attachments, skip that check
 
         // TEST 5: Navigate back and create a new record with seeded attachment
         // Go back to vaccines list
@@ -173,44 +185,42 @@ final class AttachmentFlowUITests: XCTestCase {
         XCTAssertTrue(formTitle.waitForExistence(timeout: 3), "Should show add vaccine form")
 
         // The seeded attachment should auto-appear in the picker
+        // First scroll down to the Attachments section
+        let attachmentsLabel = app.staticTexts["Attachments"]
+        if !attachmentsLabel.waitForExistence(timeout: 2) {
+            app.swipeUp()
+        }
+
         // Check for attachment thumbnail (it has accessibility label with filename)
         let thumbnailButton = app.buttons.matching(
             NSPredicate(format: "label CONTAINS 'test_attachment'")
         ).firstMatch
 
-        if thumbnailButton.waitForExistence(timeout: 2) {
-            // TEST 6: Tap thumbnail to open viewer
-            thumbnailButton.tap()
+        XCTAssertTrue(
+            thumbnailButton.waitForExistence(timeout: 5),
+            "Seeded test attachment thumbnail should exist"
+        )
 
-            // Viewer should show - wait for it briefly
-            // The viewer might show as a sheet or full screen cover
-            Thread.sleep(forTimeInterval: 0.5)
-
-            // Try to dismiss if viewer appeared
-            let closeButton = app.buttons["Close"]
-            if closeButton.exists {
-                closeButton.tap()
-            } else {
-                // Try swipe down to dismiss
-                app.swipeDown()
-            }
-        }
+        // TEST 6: Viewer navigation not yet implemented (TODO in AttachmentPickerView)
+        // When implemented, this test should:
+        // - Tap thumbnail to open viewer
+        // - Verify viewer appears with Close button or navigation bar
+        // - Dismiss viewer
 
         // TEST 7: Check count summary updated with seeded attachment
         let countWithAttachment = app.staticTexts.matching(
             NSPredicate(format: "label CONTAINS '1 of'")
         ).firstMatch
-        if countWithAttachment.waitForExistence(timeout: 1) {
-            XCTAssertTrue(
-                countWithAttachment.label.contains("attachments"),
-                "Should show attachment count"
-            )
-        }
+        XCTAssertTrue(
+            countWithAttachment.waitForExistence(timeout: 3),
+            "Count summary with attachment should exist"
+        )
+        XCTAssertTrue(
+            countWithAttachment.label.contains("attachments"),
+            "Should show attachment count"
+        )
 
-        // Cancel to clean up
-        let cancelButton = app.buttons["Cancel"]
-        if cancelButton.exists {
-            cancelButton.tap()
-        }
+        // Dismiss form using helper (deterministic cleanup)
+        app.dismissCurrentView()
     }
 }

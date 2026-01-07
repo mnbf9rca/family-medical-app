@@ -148,9 +148,13 @@ struct AttachmentPickerView: View {
                     .foregroundStyle(.secondary)
             }
             .frame(width: 70, height: 70)
+            // Accessibility on label content for XCTest discoverability
+            .accessibilityElement(children: .ignore)
+            .accessibilityAddTraits(.isButton)
+            .accessibilityIdentifier("addAttachmentButton")
+            .accessibilityLabel("Add attachment")
+            .accessibilityHint("Opens menu to add photo or document")
         }
-        .accessibilityLabel("Add attachment")
-        .accessibilityHint("Opens menu to add photo or document")
     }
 }
 

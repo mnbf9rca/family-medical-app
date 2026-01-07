@@ -44,17 +44,17 @@ FILE_EXCEPTIONS = {
     "CoreDataStack.swift": 67.0,  # Test infrastructure methods (deleteAllData) difficult to test without mocking Core Data internals
     # SwiftUI Views - body closures don't execute in ViewInspector unit tests, UI tests don't count toward coverage
     "AttachmentViewerView.swift": 0.0,  # Full-screen viewer with PDFKit/UIImage - needs UIKit runtime
-    "AttachmentThumbnailView.swift": 0.0,  # Thumbnail rendering with Image/AsyncImage - needs SwiftUI runtime
-    "AttachmentPickerView.swift": 55.0,  # PhotosPicker/Menu integration - needs SwiftUI runtime
+    "AttachmentThumbnailView.swift": 61.0,  # Thumbnail rendering with Image/AsyncImage - needs SwiftUI runtime
+    "AttachmentPickerView.swift": 64.0,  # PhotosPicker/Menu integration - needs SwiftUI runtime (raised from 55% after fixing test determinism)
     "FieldDisplayView.swift": 60.0,  # Logic extracted to FieldDisplayFormatter, body closure untestable
     # UIViewControllerRepresentables - makeUIViewController needs UIKit context
     "CameraRepresentable.swift": 64.0,  # UIImagePickerController wrapper - needs camera/UIKit
     "DocumentPickerRepresentable.swift": 66.0,  # UIDocumentPickerViewController wrapper - needs UIKit
     # ViewModels with static factory methods that use production dependencies
     "AttachmentViewerViewModel.swift": 71.0,  # createDefaultAttachmentService() uses real Core Data/services
-    "AttachmentPickerViewModel.swift": 58.0,  # createDefaultAttachmentService() + test seeding code only runs in UI tests
-    # Test infrastructure - only exercised during UI tests, not unit tests
-    "UITestingHelpers.swift": 35.0,  # Test seeding methods only run with --seed-test-attachments flag
+    "AttachmentPickerViewModel.swift": 73.0,  # createDefaultAttachmentService() + test seeding code (raised from 58% after fixing test determinism)
+    # Services with file system operations that have error paths hard to trigger in tests
+    "AttachmentFileStorageService.swift": 81.0,  # File system error paths (disk full, permissions) hard to test
 }
 
 # Load coverage data

@@ -69,6 +69,10 @@ final class AddPersonFlowUITests: XCTestCase {
 
         // Ensure we're on home view with clean state
         // Access sharedApp directly to avoid capturing self in MainActor.assumeIsolated
+        //
+        // Note: Setup cleanup uses conditional logic intentionally - we're cleaning up
+        // any residual state from previous tests, not asserting expected behavior.
+        // The final navigation bar assertion ensures we're in the correct state.
         MainActor.assumeIsolated {
             // First dismiss any alerts (they block other UI)
             let alert = Self.sharedApp.alerts.firstMatch
@@ -84,17 +88,12 @@ final class AddPersonFlowUITests: XCTestCase {
                 _ = alert.waitForNonExistence(timeout: 2)
             }
 
-            // Then dismiss any open sheets
-            let cancelButton = Self.sharedApp.buttons["Cancel"]
-            if cancelButton.waitForExistence(timeout: 1) {
-                cancelButton.tap()
-                // Wait for sheet dismissal animation
-                _ = cancelButton.waitForNonExistence(timeout: 2)
-            }
+            // Then dismiss any open sheets using helper
+            Self.sharedApp.dismissCurrentView()
 
-            // Verify we're on home view
+            // Verify we're on home view - this IS an assertion (deterministic)
             let navTitle = Self.sharedApp.navigationBars["Members"]
-            XCTAssertTrue(navTitle.waitForExistence(timeout: 3), "Should be on Members view after cleanup")
+            XCTAssertTrue(navTitle.waitForExistence(timeout: 5), "Should be on Members view after cleanup")
         }
     }
 

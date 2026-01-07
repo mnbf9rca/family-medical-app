@@ -258,4 +258,36 @@ extension XCUIApplication {
         let personCell = cells.containing(.staticText, identifier: name).firstMatch
         return personCell.waitForExistence(timeout: timeout)
     }
+
+    /// Dismiss current modal/sheet/popover using multiple fallback strategies
+    /// Use this instead of conditional `if button.exists { button.tap() }` patterns
+    /// to ensure cleanup code always executes
+    func dismissCurrentView() {
+        // Strategy 1: Cancel button (most common for sheets/forms)
+        let cancelButton = buttons["Cancel"]
+        if cancelButton.waitForExistence(timeout: 1) {
+            cancelButton.tap()
+            return
+        }
+
+        // Strategy 2: Close button (for viewers/modals)
+        let closeButton = buttons["Close"]
+        if closeButton.waitForExistence(timeout: 0.5) {
+            closeButton.tap()
+            return
+        }
+
+        // Strategy 3: Done button (for some modal presentations)
+        let doneButton = buttons["Done"]
+        if doneButton.waitForExistence(timeout: 0.5) {
+            doneButton.tap()
+            return
+        }
+
+        // Strategy 4: Swipe down (for sheet presentations)
+        swipeDown()
+
+        // Strategy 5: Tap outside (for popovers/menus)
+        coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.1)).tap()
+    }
 }

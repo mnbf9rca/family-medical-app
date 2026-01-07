@@ -4,12 +4,101 @@ This document captures iOS testing patterns and solutions for common issues.
 
 ## Table of Contents
 
+- [Deterministic Element Checking](#deterministic-element-checking)
 - [XCTest Does NOT Guarantee Test Order](#xctest-does-not-guarantee-test-order)
 - [SwiftUI Toggle Not Responding to tap()](#swiftui-toggle-not-responding-to-tap)
 - [Password AutoFill Blocking Tests](#password-autofill-blocking-tests)
 - [Testing SwiftUI Bindings with ViewInspector](#testing-swiftui-bindings-with-viewinspector)
 - [UI Test Performance: Shared Setup Pattern](#ui-test-performance-shared-setup-pattern)
 - [Swift Testing Parameterization](#swift-testing-parameterization)
+
+## Deterministic Element Checking
+
+**⚠️ Critical:** Tests must be deterministic - they should either fully execute or fail, never silently skip sections.
+
+### Anti-Pattern: Conditional Assertions
+
+```swift
+// BAD: Silently skips assertions if element doesn't appear
+if button.waitForExistence(timeout: 2) {
+    button.tap()
+    XCTAssertTrue(result.exists)  // Never executes if button wasn't found!
+}
+
+// BAD: Silent skip, no assertion
+if cancelButton.exists {
+    cancelButton.tap()
+}
+```
+
+**Problem:** These patterns cause:
+
+- Different code coverage between CI and local runs (timing differences)
+- False confidence - tests pass even when critical functionality is broken
+- Flaky tests that sometimes pass, sometimes fail
+
+### Solution: Assert-First Pattern
+
+```swift
+// GOOD: Test fails immediately if button doesn't exist
+XCTAssertTrue(button.waitForExistence(timeout: 5), "Button should exist")
+button.tap()
+XCTAssertTrue(result.exists, "Result should appear")
+```
+
+### Solution: Dismiss Helper for Cleanup
+
+For dismissing modals/sheets/menus, use the `dismissCurrentView()` helper instead of conditional logic:
+
+```swift
+// BAD: Silent skip if Cancel doesn't exist
+if cancelButton.exists {
+    cancelButton.tap()
+}
+
+// GOOD: Helper tries multiple strategies
+app.dismissCurrentView()
+```
+
+The helper (`UITestHelpers.swift`) tries multiple dismiss strategies in order:
+
+1. Cancel button
+2. Close button
+3. Done button
+4. Swipe down (for sheets)
+5. Tap outside (for popovers)
+
+### When Conditional Logic IS Appropriate
+
+Conditional logic is acceptable in `setUp`/`tearDown` for cleanup, not assertions:
+
+```swift
+override func setUpWithError() throws {
+    // OK: Cleanup code - we're clearing residual state, not testing
+    if app.alerts.firstMatch.waitForExistence(timeout: 1) {
+        app.alerts.buttons["OK"].tap()
+    }
+
+    // REQUIRED: Final state assertion ensures deterministic starting point
+    XCTAssertTrue(app.navigationBars["Home"].waitForExistence(timeout: 5))
+}
+```
+
+### Timeout Guidelines
+
+CI environments are slower than local development machines. Use appropriate timeouts:
+
+| Scenario | Timeout |
+|----------|---------|
+| Critical elements (buttons, forms) | 5 seconds |
+| Secondary elements | 3 seconds |
+| Quick checks in fallback logic | 0.5-1 second |
+| Setup cleanup | 1-2 seconds |
+
+**References:**
+
+- Helper implementation: `FamilyMedicalAppUITests/Helpers/UITestHelpers.swift`
+- Example: `AttachmentFlowUITests.swift` - deterministic attachment flow testing
 
 ## XCTest Does NOT Guarantee Test Order
 
