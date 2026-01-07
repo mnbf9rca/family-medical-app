@@ -226,10 +226,9 @@ final class CategoryLogger: CategoryLoggerProtocol, @unchecked Sendable {
     // MARK: - Convenience Methods
 
     func logOperation(_ operation: String, state: String) {
+        let category = self.category.rawValue
         osLogger
-            .info(
-                "[\(self.category.rawValue, privacy: .public)] \(operation, privacy: .public): \(state, privacy: .public)"
-            )
+            .info("[\(category, privacy: .public)] \(operation, privacy: .public): \(state, privacy: .public)")
     }
 
     func logUserID(_ userID: String) {
@@ -250,9 +249,8 @@ final class CategoryLogger: CategoryLoggerProtocol, @unchecked Sendable {
     func logError(_ error: Error, context: String) {
         // Log context publicly, error type publicly, but details are private
         let errorType = String(describing: type(of: error))
+        let errorDesc = error.localizedDescription
         osLogger
-            .error(
-                "[\(context, privacy: .public)] \(errorType, privacy: .public): \(error.localizedDescription, privacy: .private)"
-            )
+            .error("[\(context, privacy: .public)] \(errorType, privacy: .public): \(errorDesc, privacy: .private)")
     }
 }
