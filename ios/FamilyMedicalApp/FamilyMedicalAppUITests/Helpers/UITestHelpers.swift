@@ -54,14 +54,20 @@ extension XCUIApplication {
     }
 
     /// Launch app with UI testing flags
-    /// - Parameter resetState: If true, clears all app data (keychain + Core Data)
+    /// - Parameters:
+    ///   - resetState: If true, clears all app data (keychain + Core Data)
+    ///   - seedTestAttachments: If true, automatically creates test attachments for coverage
     /// - Note: For best results, ensure hardware keyboard is disabled in the simulator:
     ///   I/O → Keyboard → Connect Hardware Keyboard (should be unchecked)
-    func launchForUITesting(resetState: Bool = false) {
+    func launchForUITesting(resetState: Bool = false, seedTestAttachments: Bool = false) {
         launchArguments = ["--uitesting"]
 
         if resetState {
             launchArguments.append("--reset-state")
+        }
+
+        if seedTestAttachments {
+            launchArguments.append("--seed-test-attachments")
         }
 
         launch()
@@ -251,5 +257,37 @@ extension XCUIApplication {
     func verifyPersonExists(name: String, timeout: TimeInterval = 3) -> Bool {
         let personCell = cells.containing(.staticText, identifier: name).firstMatch
         return personCell.waitForExistence(timeout: timeout)
+    }
+
+    /// Dismiss current modal/sheet/popover using multiple fallback strategies
+    /// Use this instead of conditional `if button.exists { button.tap() }` patterns
+    /// to ensure cleanup code always executes
+    func dismissCurrentView() {
+        // Strategy 1: Cancel button (most common for sheets/forms)
+        let cancelButton = buttons["Cancel"]
+        if cancelButton.waitForExistence(timeout: 1) {
+            cancelButton.tap()
+            return
+        }
+
+        // Strategy 2: Close button (for viewers/modals)
+        let closeButton = buttons["Close"]
+        if closeButton.waitForExistence(timeout: 0.5) {
+            closeButton.tap()
+            return
+        }
+
+        // Strategy 3: Done button (for some modal presentations)
+        let doneButton = buttons["Done"]
+        if doneButton.waitForExistence(timeout: 0.5) {
+            doneButton.tap()
+            return
+        }
+
+        // Strategy 4: Swipe down (for sheet presentations)
+        swipeDown()
+
+        // Strategy 5: Tap outside (for popovers/menus)
+        coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.1)).tap()
     }
 }

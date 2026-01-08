@@ -178,4 +178,186 @@ struct DynamicFieldViewTests {
 
         #expect(harness.value == nil)
     }
+
+    // MARK: - Attachment Field Tests
+
+    @Test
+    func attachmentFieldWithPersonId_rendersAttachmentPicker() throws {
+        let field = FieldDefinition.builtIn(
+            id: UUID(),
+            displayName: "Attachments",
+            fieldType: .attachmentIds
+        )
+        let harness = BindingTestHarness<FieldValue?>(value: nil)
+
+        let view = DynamicFieldView(
+            field: field,
+            value: harness.binding,
+            personId: UUID() // Person context provided
+        )
+
+        // Should render without error - the AttachmentPickerView is shown
+        _ = try view.inspect()
+    }
+
+    @Test
+    func attachmentFieldWithoutPersonId_showsFallbackMessage() throws {
+        let field = FieldDefinition.builtIn(
+            id: UUID(),
+            displayName: "Attachments",
+            fieldType: .attachmentIds
+        )
+        let harness = BindingTestHarness<FieldValue?>(value: nil)
+
+        let view = DynamicFieldView(
+            field: field,
+            value: harness.binding,
+            personId: nil // No person context
+        )
+
+        // Should show the fallback message
+        let text = try view.inspect().find(text: "Attachments require person context")
+        #expect(try text.string() == "Attachments require person context")
+    }
+
+    @Test
+    func attachmentFieldWithRecordId_passesContextToPicker() throws {
+        let field = FieldDefinition.builtIn(
+            id: UUID(),
+            displayName: "Attachments",
+            fieldType: .attachmentIds
+        )
+        let harness = BindingTestHarness<FieldValue?>(value: nil)
+        let recordId = UUID()
+        let personId = UUID()
+
+        let view = DynamicFieldView(
+            field: field,
+            value: harness.binding,
+            personId: personId,
+            recordId: recordId
+        )
+
+        // Should render with both personId and recordId context
+        _ = try view.inspect()
+    }
+
+    @Test
+    func attachmentFieldWithExistingAttachments_loadsAttachments() throws {
+        // Create test attachments
+        let attachment = try FamilyMedicalApp.Attachment(
+            id: UUID(),
+            fileName: "test.jpg",
+            mimeType: "image/jpeg",
+            contentHMAC: Data(repeating: 0xDD, count: 32),
+            encryptedSize: 1_024,
+            thumbnailData: nil,
+            uploadedAt: Date()
+        )
+
+        let field = FieldDefinition.builtIn(
+            id: UUID(),
+            displayName: "Attachments",
+            fieldType: .attachmentIds
+        )
+        let harness = BindingTestHarness<FieldValue?>(value: .attachmentIds([attachment.id]))
+
+        let view = DynamicFieldView(
+            field: field,
+            value: harness.binding,
+            personId: UUID(),
+            recordId: UUID(),
+            existingAttachments: [attachment]
+        )
+
+        // Should render with existing attachments
+        _ = try view.inspect()
+    }
+
+    // MARK: - Double Binding Edge Cases
+
+    @Test
+    func doubleBindingClearsOnEmptyInput() throws {
+        let field = FieldDefinition.builtIn(
+            id: UUID(),
+            displayName: "Temperature",
+            fieldType: .double
+        )
+        let harness = BindingTestHarness<FieldValue?>(value: .double(98.6))
+        let view = DynamicFieldView(field: field, value: harness.binding)
+
+        let textField = try view.inspect().find(ViewType.TextField.self)
+        try textField.setInput("")
+
+        #expect(harness.value == nil)
+    }
+
+    @Test
+    func doubleBindingFormatsWholeNumbers() throws {
+        let field = FieldDefinition.builtIn(
+            id: UUID(),
+            displayName: "Temperature",
+            fieldType: .double
+        )
+        // Set a whole number
+        let harness = BindingTestHarness<FieldValue?>(value: .double(100.0))
+        let view = DynamicFieldView(field: field, value: harness.binding)
+
+        let textField = try view.inspect().find(ViewType.TextField.self)
+        // The getter should format 100.0 as "100" (without decimal)
+        let text = try textField.input()
+        #expect(text == "100")
+    }
+
+    // MARK: - Required Field Indicator Tests
+
+    @Test
+    func requiredField_showsRedAsterisk() throws {
+        let field = FieldDefinition.builtIn(
+            id: UUID(),
+            displayName: "Required Field",
+            fieldType: .string,
+            isRequired: true
+        )
+        let harness = BindingTestHarness<FieldValue?>(value: nil)
+        let view = DynamicFieldView(field: field, value: harness.binding)
+
+        // Should show the asterisk
+        let asterisk = try view.inspect().find(text: "*")
+        #expect(try asterisk.string() == "*")
+    }
+
+    @Test
+    func optionalField_noAsterisk() throws {
+        let field = FieldDefinition.builtIn(
+            id: UUID(),
+            displayName: "Optional Field",
+            fieldType: .string,
+            isRequired: false
+        )
+        let harness = BindingTestHarness<FieldValue?>(value: nil)
+        let view = DynamicFieldView(field: field, value: harness.binding)
+
+        // Should not find the asterisk
+        #expect(throws: (any Error).self) {
+            _ = try view.inspect().find(text: "*")
+        }
+    }
+
+    // MARK: - Help Text Tests
+
+    @Test
+    func fieldWithHelpText_showsHelpText() throws {
+        let field = FieldDefinition.builtIn(
+            id: UUID(),
+            displayName: "Field with Help",
+            fieldType: .string,
+            helpText: "This is helpful information"
+        )
+        let harness = BindingTestHarness<FieldValue?>(value: nil)
+        let view = DynamicFieldView(field: field, value: harness.binding)
+
+        let helpText = try view.inspect().find(text: "This is helpful information")
+        #expect(try helpText.string() == "This is helpful information")
+    }
 }

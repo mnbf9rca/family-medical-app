@@ -68,6 +68,40 @@ protocol AttachmentRepositoryProtocol: Sendable {
     /// - Returns: true if attachment exists, false otherwise
     /// - Throws: RepositoryError if check fails
     func exists(id: UUID) async throws -> Bool
+
+    /// Fetch all attachments linked to a specific record
+    ///
+    /// - Parameters:
+    ///   - recordId: The medical record ID
+    ///   - personId: Person ID for FMK lookup (decryption context)
+    ///   - primaryKey: Primary key to unwrap FMK
+    /// - Returns: Array of attachments linked to the record
+    /// - Throws: RepositoryError if fetch or decryption fails
+    func fetchForRecord(recordId: UUID, personId: UUID, primaryKey: SymmetricKey) async throws -> [Attachment]
+
+    /// Unlink an attachment from a record (does not delete the attachment itself)
+    ///
+    /// - Parameters:
+    ///   - attachmentId: The attachment ID to unlink
+    ///   - recordId: The record ID to unlink from
+    /// - Throws: RepositoryError if unlink fails
+    func unlinkFromRecord(attachmentId: UUID, recordId: UUID) async throws
+
+    /// Count how many records are linked to this attachment
+    ///
+    /// Used to determine if an attachment is orphaned and can be deleted.
+    ///
+    /// - Parameter attachmentId: The attachment ID
+    /// - Returns: Number of records linked to this attachment
+    /// - Throws: RepositoryError if count fails
+    func linkCount(attachmentId: UUID) async throws -> Int
+
+    /// Count attachments linked to a record
+    ///
+    /// - Parameter recordId: The record ID
+    /// - Returns: Number of attachments linked to this record
+    /// - Throws: RepositoryError if count fails
+    func attachmentCountForRecord(recordId: UUID) async throws -> Int
 }
 
 final class AttachmentRepository: AttachmentRepositoryProtocol, @unchecked Sendable {
@@ -235,6 +269,85 @@ final class AttachmentRepository: AttachmentRepositoryProtocol, @unchecked Senda
 
             let count = try context.count(for: request)
             return count > 0
+        }
+    }
+
+    func fetchForRecord(recordId: UUID, personId: UUID, primaryKey: SymmetricKey) async throws -> [Attachment] {
+        let context = coreDataStack.viewContext
+
+        return try await context.perform {
+            // First, get all attachment IDs linked to this record
+            let joinRequest: NSFetchRequest<RecordAttachmentEntity> = RecordAttachmentEntity.fetchRequest()
+            joinRequest.predicate = NSPredicate(format: "recordId == %@", recordId as CVarArg)
+
+            let joinEntities = try context.fetch(joinRequest)
+            let attachmentIds = joinEntities.compactMap(\.attachmentId)
+
+            guard !attachmentIds.isEmpty else {
+                return []
+            }
+
+            // Fetch all attachment entities
+            let attachmentRequest: NSFetchRequest<AttachmentEntity> = AttachmentEntity.fetchRequest()
+            attachmentRequest.predicate = NSPredicate(format: "id IN %@", attachmentIds)
+
+            let entities = try context.fetch(attachmentRequest)
+
+            // Map to models (decrypt metadata)
+            return try entities.compactMap { entity in
+                try self.mapEntityToModel(entity, personId: personId, primaryKey: primaryKey)
+            }
+        }
+    }
+
+    func unlinkFromRecord(attachmentId: UUID, recordId: UUID) async throws {
+        let context = coreDataStack.viewContext
+
+        try await context.perform {
+            let request: NSFetchRequest<RecordAttachmentEntity> = RecordAttachmentEntity.fetchRequest()
+            request.predicate = NSPredicate(
+                format: "attachmentId == %@ AND recordId == %@",
+                attachmentId as CVarArg,
+                recordId as CVarArg
+            )
+            request.fetchLimit = 1
+
+            guard let linkEntity = try context.fetch(request).first else {
+                // Link doesn't exist, nothing to do (idempotent)
+                return
+            }
+
+            context.delete(linkEntity)
+
+            do {
+                try context.save()
+            } catch {
+                throw RepositoryError.deleteFailed(error.localizedDescription)
+            }
+        }
+    }
+
+    func linkCount(attachmentId: UUID) async throws -> Int {
+        let context = coreDataStack.viewContext
+
+        return try await context.perform {
+            let request: NSFetchRequest<NSFetchRequestResult> = RecordAttachmentEntity.fetchRequest()
+            request.predicate = NSPredicate(format: "attachmentId == %@", attachmentId as CVarArg)
+            request.resultType = .countResultType
+
+            return try context.count(for: request)
+        }
+    }
+
+    func attachmentCountForRecord(recordId: UUID) async throws -> Int {
+        let context = coreDataStack.viewContext
+
+        return try await context.perform {
+            let request: NSFetchRequest<NSFetchRequestResult> = RecordAttachmentEntity.fetchRequest()
+            request.predicate = NSPredicate(format: "recordId == %@", recordId as CVarArg)
+            request.resultType = .countResultType
+
+            return try context.count(for: request)
         }
     }
 

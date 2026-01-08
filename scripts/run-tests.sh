@@ -117,13 +117,28 @@ rm -rf test-results* DerivedData/TestResults.xcresult
 # Configure simulator for UI testing
 # Disable hardware keyboard to prevent password autofill prompts from blocking XCUITest automation
 echo "Configuring simulator for UI testing..."
-UDID=$(defaults read com.apple.iphonesimulator CurrentDeviceUDID 2>/dev/null || echo "")
+
+# Extract device name from destination (e.g., "iPhone 17 Pro" from "platform=iOS Simulator,name=iPhone 17 Pro")
+DEVICE_NAME=$(echo "$DESTINATION" | sed -n 's/.*name=\([^,]*\).*/\1/p')
+
+# Find UDID for the device from simctl list
+if [ -n "$DEVICE_NAME" ]; then
+  # Match exact device name with " (" suffix to avoid "iPhone 17 Pro" matching "iPhone 17 Pro Max"
+  # Uses last match since devices are listed oldest iOS first, newest last
+  UDID=$(xcrun simctl list devices available 2>/dev/null | grep -F "$DEVICE_NAME (" | tail -1 | sed 's/.*(\([A-F0-9-]*\)).*/\1/' || echo "")
+fi
+
+# If still no UDID, try reading from simulator preferences (works when simulator was previously launched)
+if [ -z "$UDID" ]; then
+  UDID=$(defaults read com.apple.iphonesimulator CurrentDeviceUDID 2>/dev/null || echo "")
+fi
+
 if [ -n "$UDID" ]; then
   /usr/libexec/PlistBuddy -c "Set :DevicePreferences:$UDID:ConnectHardwareKeyboard false" \
     ~/Library/Preferences/com.apple.iphonesimulator.plist 2>/dev/null || \
   /usr/libexec/PlistBuddy -c "Add :DevicePreferences:$UDID:ConnectHardwareKeyboard bool false" \
     ~/Library/Preferences/com.apple.iphonesimulator.plist
-  echo "  ✓ Hardware keyboard disabled for simulator $UDID"
+  echo "  ✓ Hardware keyboard disabled for simulator $UDID ($DEVICE_NAME)"
 else
   echo "  ⚠ Could not determine simulator UDID, hardware keyboard setting not changed"
 fi

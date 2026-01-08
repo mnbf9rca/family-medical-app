@@ -104,8 +104,9 @@ final class SchemaMigrationService: SchemaMigrationServiceProtocol, @unchecked S
                         if let value = content[fieldUUID] {
                             let converted = FieldValueConverter.convert(value, to: toType)
                             if converted == nil {
+                                let typeName = toType.displayName
                                 warnings.append(
-                                    "Record \(record.id) has field '\(fieldId)' that cannot be converted to \(toType.displayName)"
+                                    "Record \(record.id) field '\(fieldId)' cannot convert to \(typeName)"
                                 )
                             }
                         }

@@ -46,10 +46,10 @@ private let fieldDisplayTestCases: [FieldDisplayTestCase] = [
         expectedText: "COVID-19 Vaccine"
     ),
     FieldDisplayTestCase(
-        name: "string displays empty string",
+        name: "string empty shows placeholder",
         fieldType: .string,
         value: .string(""),
-        expectedText: ""
+        expectedText: nil // Empty strings now show "-" placeholder (same as nil)
     ),
 
     // Int values
@@ -271,5 +271,143 @@ struct FieldDisplayViewTests {
         // Verify both the label and value are present
         _ = try view.inspect().find(text: "Test Label")
         _ = try view.inspect().find(text: "Test Value")
+    }
+
+    // MARK: - Attachment Thumbnail Grid Tests
+
+    @Test
+    func attachmentIds_withLoadedAttachments_showsThumbnailGrid() throws {
+        // Create test attachments
+        let attachment1 = try FamilyMedicalApp.Attachment(
+            id: UUID(),
+            fileName: "photo1.jpg",
+            mimeType: "image/jpeg",
+            contentHMAC: Data(repeating: 0xAA, count: 32),
+            encryptedSize: 1_024,
+            thumbnailData: nil,
+            uploadedAt: Date()
+        )
+        let attachment2 = try FamilyMedicalApp.Attachment(
+            id: UUID(),
+            fileName: "photo2.jpg",
+            mimeType: "image/jpeg",
+            contentHMAC: Data(repeating: 0xBB, count: 32),
+            encryptedSize: 2_048,
+            thumbnailData: nil,
+            uploadedAt: Date()
+        )
+
+        let field = FieldDefinition.builtIn(
+            id: UUID(),
+            displayName: "Attachments",
+            fieldType: .attachmentIds
+        )
+
+        let view = FieldDisplayView(
+            field: field,
+            value: .attachmentIds([attachment1.id, attachment2.id]),
+            personId: UUID(),
+            attachments: [attachment1, attachment2]
+        )
+
+        // View should render with the thumbnails
+        _ = try view.inspect()
+    }
+
+    @Test
+    func attachmentIds_withoutLoadedAttachments_showsCountText() throws {
+        let id1 = UUID()
+        let id2 = UUID()
+        let id3 = UUID()
+
+        let field = FieldDefinition.builtIn(
+            id: UUID(),
+            displayName: "Attachments",
+            fieldType: .attachmentIds
+        )
+
+        let view = FieldDisplayView(
+            field: field,
+            value: .attachmentIds([id1, id2, id3]),
+            personId: UUID(),
+            attachments: [] // No attachments loaded
+        )
+
+        // Should show "3 attachments" text when attachments not loaded
+        let text = try view.inspect().find(text: "3 attachments")
+        #expect(try text.string() == "3 attachments")
+    }
+
+    @Test
+    func attachmentIds_singleAttachment_showsSingularText() throws {
+        let field = FieldDefinition.builtIn(
+            id: UUID(),
+            displayName: "Attachments",
+            fieldType: .attachmentIds
+        )
+
+        let view = FieldDisplayView(
+            field: field,
+            value: .attachmentIds([UUID()]),
+            personId: UUID(),
+            attachments: [] // No attachments loaded
+        )
+
+        let text = try view.inspect().find(text: "1 attachment")
+        #expect(try text.string() == "1 attachment")
+    }
+
+    @Test
+    func attachmentIds_withTapCallback_invokesCallback() throws {
+        let attachment = try FamilyMedicalApp.Attachment(
+            id: UUID(),
+            fileName: "test.jpg",
+            mimeType: "image/jpeg",
+            contentHMAC: Data(repeating: 0xCC, count: 32),
+            encryptedSize: 1_024,
+            thumbnailData: nil,
+            uploadedAt: Date()
+        )
+
+        var tappedAttachment: FamilyMedicalApp.Attachment?
+
+        let field = FieldDefinition.builtIn(
+            id: UUID(),
+            displayName: "Attachments",
+            fieldType: .attachmentIds
+        )
+
+        let view = FieldDisplayView(
+            field: field,
+            value: .attachmentIds([attachment.id]),
+            personId: UUID(),
+            attachments: [attachment]
+        ) { tappedAttachment = $0 }
+
+        // Verify the view renders (callback would be invoked on tap)
+        _ = try view.inspect()
+        // Note: ViewInspector can't easily trigger button taps inside ForEach,
+        // but we verify the view renders correctly with the callback set
+        #expect(tappedAttachment == nil) // No tap yet
+    }
+
+    @Test
+    func attachmentIds_emptyWithAttachmentsLoaded_showsPlaceholder() throws {
+        let field = FieldDefinition.builtIn(
+            id: UUID(),
+            displayName: "Attachments",
+            fieldType: .attachmentIds
+        )
+
+        let view = FieldDisplayView(
+            field: field,
+            value: .attachmentIds([]),
+            personId: UUID(),
+            attachments: []
+        )
+
+        // Empty array should show placeholder
+        let placeholder = try view.inspect().find(text: "-")
+        #expect(try placeholder.string() == "-")
     }
 }

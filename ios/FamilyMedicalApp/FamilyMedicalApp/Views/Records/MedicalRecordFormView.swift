@@ -55,7 +55,9 @@ struct MedicalRecordFormView: View {
                                 set: { newValue in
                                     viewModel.fieldValues[field.id.uuidString] = newValue
                                 }
-                            )
+                            ),
+                            personId: person.id,
+                            recordId: existingRecord?.id
                         )
                     }
                 }

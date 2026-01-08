@@ -59,6 +59,20 @@ extension ModelError {
             return "MIME type must be no more than \(maxLength) character\(maxLength == 1 ? "" : "s")."
         case .invalidFileSize:
             return "File size is invalid."
+        case let .attachmentTooLarge(maxSizeMB):
+            return "File is too large. Maximum size is \(maxSizeMB) MB."
+        case let .unsupportedMimeType(mimeType):
+            return "File type '\(mimeType)' is not supported. Please use JPEG, PNG, or PDF."
+        case let .attachmentLimitExceeded(max):
+            return "Maximum of \(max) attachments per record reached."
+        case .attachmentNotFound:
+            return "Attachment not found."
+        case .attachmentContentCorrupted:
+            return "Unable to read attachment content."
+        case let .attachmentStorageFailed(reason):
+            return "Failed to save attachment: \(reason)"
+        case let .imageProcessingFailed(reason):
+            return "Failed to process image: \(reason)"
         // Schema errors
         case let .schemaNotFound(schemaId):
             return "Schema '\(schemaId)' not found."

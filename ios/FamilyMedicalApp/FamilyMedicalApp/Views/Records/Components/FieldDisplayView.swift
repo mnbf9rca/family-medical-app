@@ -4,11 +4,43 @@ import SwiftUI
 ///
 /// This component renders field values for viewing in detail screens.
 /// It uses `LabeledContent` for consistent formatting across the app.
+///
+/// Uses `FieldDisplayFormatter` for formatting logic, enabling unit testing.
 struct FieldDisplayView: View {
     // MARK: - Properties
 
     let field: FieldDefinition
     let value: FieldValue?
+
+    /// Person ID for attachment viewing (required for .attachmentIds fields)
+    var personId: UUID?
+
+    /// Pre-loaded attachments for display
+    var attachments: [Attachment]
+
+    /// Callback when an attachment is tapped
+    var onAttachmentTap: ((Attachment) -> Void)?
+
+    // MARK: - Initialization
+
+    init(
+        field: FieldDefinition,
+        value: FieldValue?,
+        personId: UUID? = nil,
+        attachments: [Attachment] = [],
+        onAttachmentTap: ((Attachment) -> Void)? = nil
+    ) {
+        self.field = field
+        self.value = value
+        self.personId = personId
+        self.attachments = attachments
+        self.onAttachmentTap = onAttachmentTap
+    }
+
+    /// Computed formatted value using FieldDisplayFormatter
+    private var formattedValue: FormattedFieldValue {
+        FieldDisplayFormatter.format(value, attachments: attachments)
+    }
 
     // MARK: - Body
 
@@ -26,43 +58,28 @@ struct FieldDisplayView: View {
     // MARK: - Value Views
 
     @ViewBuilder private var valueView: some View {
-        if let value {
-            switch value {
-            case let .string(str):
-                Text(str)
+        switch formattedValue {
+        case let .text(str):
+            Text(str)
 
-            case let .int(num):
-                Text("\(num)")
-
-            case let .double(num):
-                Text(num, format: .number.precision(.fractionLength(0 ... 2)))
-
-            case let .bool(flag):
-                Label {
-                    Text(flag ? "Yes" : "No")
-                } icon: {
-                    Image(systemName: flag ? "checkmark.circle.fill" : "xmark.circle")
-                        .foregroundStyle(flag ? .green : .secondary)
-                }
-
-            case let .date(date):
-                Text(date, style: .date)
-
-            case let .attachmentIds(ids):
-                if ids.isEmpty {
-                    emptyValueView
-                } else {
-                    Text("\(ids.count) attachment\(ids.count == 1 ? "" : "s")")
-                }
-
-            case let .stringArray(array):
-                if array.isEmpty {
-                    emptyValueView
-                } else {
-                    Text(array.joined(separator: ", "))
-                }
+        case let .boolDisplay(text, isTrue):
+            Label {
+                Text(text)
+            } icon: {
+                Image(systemName: isTrue ? "checkmark.circle.fill" : "xmark.circle")
+                    .foregroundStyle(isTrue ? .green : .secondary)
             }
-        } else {
+
+        case let .date(date):
+            Text(date, style: .date)
+
+        case let .attachmentCount(count):
+            Text(FieldDisplayFormatter.attachmentCountText(count))
+
+        case .attachmentGrid:
+            attachmentThumbnailGrid
+
+        case .empty:
             emptyValueView
         }
     }
@@ -71,6 +88,24 @@ struct FieldDisplayView: View {
         Text("-")
             .foregroundStyle(.secondary)
             .italic()
+    }
+
+    /// Thumbnail grid for displaying attachments
+    private var attachmentThumbnailGrid: some View {
+        let columns = [GridItem(.adaptive(minimum: 50, maximum: 60), spacing: 6)]
+
+        return LazyVGrid(columns: columns, alignment: .trailing, spacing: 6) {
+            ForEach(attachments) { attachment in
+                AttachmentThumbnailView(
+                    attachment: attachment,
+                    onTap: {
+                        onAttachmentTap?(attachment)
+                    },
+                    onRemove: nil, // Read-only in display view
+                    size: 50
+                )
+            }
+        }
     }
 }
 
