@@ -19,20 +19,17 @@ extension XCTestCase {
     ///     setupPasswordAutofillHandler()
     /// }
     /// ```
-    @MainActor
     func setupPasswordAutofillHandler() {
         addUIInterruptionMonitor(withDescription: "Password Autofill") { alert in
-            return MainActor.assumeIsolated {
-                if alert.buttons["Not Now"].exists {
-                    alert.buttons["Not Now"].tap()
-                    return true
-                }
-                if alert.buttons["Cancel"].exists {
-                    alert.buttons["Cancel"].tap()
-                    return true
-                }
-                return false
+            if alert.buttons["Not Now"].exists {
+                alert.buttons["Not Now"].tap()
+                return true
             }
+            if alert.buttons["Cancel"].exists {
+                alert.buttons["Cancel"].tap()
+                return true
+            }
+            return false
         }
     }
 
