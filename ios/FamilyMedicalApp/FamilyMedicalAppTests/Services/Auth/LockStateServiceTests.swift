@@ -98,9 +98,10 @@ struct LockStateServiceTests {
         // Set a short timeout for testing
         service.lockTimeoutSeconds = 1 // 1 second
 
-        // Manually set background time to 2 seconds ago
-        let twoSecondsAgo = Date().timeIntervalSince1970 - 2
-        userDefaults.set(twoSecondsAgo, forKey: "com.family-medical-app.background-time")
+        // Set background time far enough in the past (10 seconds) to always exceed
+        // the 1-second timeout, regardless of minor timing variations
+        let tenSecondsAgo = Date().timeIntervalSince1970 - 10
+        userDefaults.set(tenSecondsAgo, forKey: "com.family-medical-app.background-time")
 
         let shouldLock = service.shouldLockOnForeground()
         #expect(shouldLock == true)

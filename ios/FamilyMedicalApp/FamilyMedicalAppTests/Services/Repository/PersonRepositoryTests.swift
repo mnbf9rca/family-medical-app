@@ -44,8 +44,7 @@ struct PersonRepositoryTests {
     }
 
     func makeTestPerson() throws -> Person {
-        try Person(
-            id: UUID(),
+        try PersonTestHelper.makeTestPerson(
             name: "Alice Johnson",
             dateOfBirth: Date(timeIntervalSince1970: 0),
             labels: ["child", "dependent"],

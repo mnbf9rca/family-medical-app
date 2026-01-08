@@ -13,13 +13,7 @@ struct MedicalRecordListViewModelTests {
     // MARK: - Test Helpers
 
     func makeTestPerson() throws -> Person {
-        try Person(
-            id: UUID(),
-            name: "Test Person",
-            dateOfBirth: Date(),
-            labels: ["Self"],
-            notes: nil
-        )
+        try PersonTestHelper.makeTestPerson()
     }
 
     func makeTestRecord(personId: UUID, schemaId: String, dateFieldId: UUID, date: Date) -> MedicalRecord {

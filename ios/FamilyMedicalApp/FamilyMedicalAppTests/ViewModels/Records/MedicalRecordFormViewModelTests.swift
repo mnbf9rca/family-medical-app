@@ -1,4 +1,5 @@
 import CryptoKit
+import Dependencies
 import Foundation
 import Testing
 @testable import FamilyMedicalApp
@@ -9,15 +10,12 @@ import Testing
 struct MedicalRecordFormViewModelTests {
     // MARK: - Test Helpers
 
+    /// Fixed test date for deterministic testing
+    let testDate = Date(timeIntervalSinceReferenceDate: 1_234_567_890)
+
     /// Creates a test person for use in tests
     func makeTestPerson() throws -> Person {
-        try Person(
-            id: UUID(),
-            name: "Test Person",
-            dateOfBirth: Date(),
-            labels: ["Self"],
-            notes: nil
-        )
+        try PersonTestHelper.makeTestPerson()
     }
 
     /// Returns the comprehensive example schema that exercises all field types
@@ -34,6 +32,33 @@ struct MedicalRecordFormViewModelTests {
     /// Required date field ID in the comprehensive schema (UUID string key for fieldValues)
     var requiredDateFieldId: String { ExampleSchema.FieldIds.recordedDate.uuidString }
 
+    /// Creates a ViewModel wrapped with test dependencies
+    func makeViewModel(
+        person: Person,
+        schema: RecordSchema,
+        existingRecord: MedicalRecord? = nil,
+        existingContent: RecordContent? = nil,
+        medicalRecordRepository: MockMedicalRecordRepository? = nil,
+        recordContentService: MockRecordContentService? = nil,
+        primaryKeyProvider: MockPrimaryKeyProvider? = nil,
+        fmkService: MockFamilyMemberKeyService? = nil
+    ) -> MedicalRecordFormViewModel {
+        withDependencies {
+            $0.date = .constant(testDate)
+        } operation: {
+            MedicalRecordFormViewModel(
+                person: person,
+                schema: schema,
+                existingRecord: existingRecord,
+                existingContent: existingContent,
+                medicalRecordRepository: medicalRecordRepository,
+                recordContentService: recordContentService,
+                primaryKeyProvider: primaryKeyProvider,
+                fmkService: fmkService
+            )
+        }
+    }
+
     // MARK: - Initialization Tests
 
     @Test
@@ -41,10 +66,7 @@ struct MedicalRecordFormViewModelTests {
         let person = try makeTestPerson()
         let schema = makeTestSchema()
 
-        let viewModel = MedicalRecordFormViewModel(
-            person: person,
-            schema: schema
-        )
+        let viewModel = makeViewModel(person: person, schema: schema)
 
         #expect(viewModel.person.id == person.id)
         #expect(viewModel.schema.id == schema.id)
@@ -57,21 +79,21 @@ struct MedicalRecordFormViewModelTests {
     func initializesDateFieldsWithTodayForNewRecord() throws {
         let person = try makeTestPerson()
         let schema = makeTestSchema()
+        let fixedDate = Date(timeIntervalSinceReferenceDate: 1_234_567_890)
 
-        let viewModel = MedicalRecordFormViewModel(
-            person: person,
-            schema: schema
-        )
-
-        // Date fields should be pre-initialized with today's date
-        let dateValue = viewModel.fieldValues[requiredDateFieldId]?.dateValue
-        #expect(dateValue != nil)
-
-        // Should be within the last second (essentially "now")
-        if let date = dateValue {
-            let timeDifference = abs(date.timeIntervalSinceNow)
-            #expect(timeDifference < 1.0)
+        // Use withDependencies for deterministic date
+        let viewModel = withDependencies {
+            $0.date = .constant(fixedDate)
+        } operation: {
+            MedicalRecordFormViewModel(
+                person: person,
+                schema: schema
+            )
         }
+
+        // Date fields should be pre-initialized with the controlled date
+        let dateValue = viewModel.fieldValues[requiredDateFieldId]?.dateValue
+        #expect(dateValue == fixedDate)
     }
 
     @Test
@@ -88,7 +110,7 @@ struct MedicalRecordFormViewModelTests {
             encryptedContent: Data()
         )
 
-        let viewModel = MedicalRecordFormViewModel(
+        let viewModel = makeViewModel(
             person: person,
             schema: schema,
             existingRecord: record,
@@ -107,10 +129,7 @@ struct MedicalRecordFormViewModelTests {
         let person = try makeTestPerson()
         let schema = makeTestSchema()
 
-        let viewModel = MedicalRecordFormViewModel(
-            person: person,
-            schema: schema
-        )
+        let viewModel = makeViewModel(person: person, schema: schema)
 
         // Set required fields
         viewModel.fieldValues[requiredStringFieldId] = .string("Test Value")
@@ -127,10 +146,7 @@ struct MedicalRecordFormViewModelTests {
         let person = try makeTestPerson()
         let schema = makeTestSchema()
 
-        let viewModel = MedicalRecordFormViewModel(
-            person: person,
-            schema: schema
-        )
+        let viewModel = makeViewModel(person: person, schema: schema)
 
         // Missing required string field (date is pre-initialized)
         let result = viewModel.validate()
@@ -144,10 +160,7 @@ struct MedicalRecordFormViewModelTests {
         let person = try makeTestPerson()
         let schema = makeTestSchema()
 
-        let viewModel = MedicalRecordFormViewModel(
-            person: person,
-            schema: schema
-        )
+        let viewModel = makeViewModel(person: person, schema: schema)
 
         // Set required fields but with invalid string (empty violates minLength(1))
         viewModel.fieldValues[requiredStringFieldId] = .string("")
@@ -173,7 +186,7 @@ struct MedicalRecordFormViewModelTests {
         mockPrimaryKeyProvider.primaryKey = SymmetricKey(size: .bits256)
         mockFMKService.setFMK(SymmetricKey(size: .bits256), for: person.id.uuidString)
 
-        let viewModel = MedicalRecordFormViewModel(
+        let viewModel = makeViewModel(
             person: person,
             schema: schema,
             medicalRecordRepository: mockRepo,
@@ -216,7 +229,7 @@ struct MedicalRecordFormViewModelTests {
         existingContent.setString(ExampleSchema.FieldIds.exampleName, "Original Value")
         existingContent.setDate(ExampleSchema.FieldIds.recordedDate, Date())
 
-        let viewModel = MedicalRecordFormViewModel(
+        let viewModel = makeViewModel(
             person: person,
             schema: schema,
             existingRecord: existingRecord,
@@ -242,7 +255,7 @@ struct MedicalRecordFormViewModelTests {
         let schema = makeTestSchema()
         let mockRepo = MockMedicalRecordRepository()
 
-        let viewModel = MedicalRecordFormViewModel(
+        let viewModel = makeViewModel(
             person: person,
             schema: schema,
             medicalRecordRepository: mockRepo
@@ -269,7 +282,7 @@ struct MedicalRecordFormViewModelTests {
         mockFMKService.setFMK(SymmetricKey(size: .bits256), for: person.id.uuidString)
         mockContentService.shouldFailEncrypt = true
 
-        let viewModel = MedicalRecordFormViewModel(
+        let viewModel = makeViewModel(
             person: person,
             schema: schema,
             medicalRecordRepository: mockRepo,
@@ -294,7 +307,7 @@ struct MedicalRecordFormViewModelTests {
     func validateReturnsTrueWhenAllRequiredFieldsPresent() throws {
         let person = try makeTestPerson()
         let schema = makeTestSchema()
-        let viewModel = MedicalRecordFormViewModel(person: person, schema: schema)
+        let viewModel = makeViewModel(person: person, schema: schema)
 
         // Set required fields
         viewModel.fieldValues[requiredStringFieldId] = .string("Test Value")
@@ -310,7 +323,7 @@ struct MedicalRecordFormViewModelTests {
     func validateReturnsFalseWhenRequiredFieldMissing() throws {
         let person = try makeTestPerson()
         let schema = makeTestSchema()
-        let viewModel = MedicalRecordFormViewModel(person: person, schema: schema)
+        let viewModel = makeViewModel(person: person, schema: schema)
 
         // Only set one required field (string)
         viewModel.fieldValues[requiredStringFieldId] = .string("Test Value")
@@ -327,7 +340,7 @@ struct MedicalRecordFormViewModelTests {
     func validateSetsAppropriateErrorMessage() throws {
         let person = try makeTestPerson()
         let schema = makeTestSchema()
-        let viewModel = MedicalRecordFormViewModel(person: person, schema: schema)
+        let viewModel = makeViewModel(person: person, schema: schema)
 
         // Missing required string field
         let result = viewModel.validate()
@@ -340,7 +353,7 @@ struct MedicalRecordFormViewModelTests {
     func validateClearsErrorMessageOnSuccess() throws {
         let person = try makeTestPerson()
         let schema = makeTestSchema()
-        let viewModel = MedicalRecordFormViewModel(person: person, schema: schema)
+        let viewModel = makeViewModel(person: person, schema: schema)
 
         // First cause a validation error
         _ = viewModel.validate()
@@ -362,7 +375,7 @@ struct MedicalRecordFormViewModelTests {
         let person = try makeTestPerson()
         let schema = makeTestSchema()
 
-        let viewModel = MedicalRecordFormViewModel(person: person, schema: schema)
+        let viewModel = makeViewModel(person: person, schema: schema)
 
         #expect(viewModel.title == "Add Comprehensive Example")
     }
@@ -373,7 +386,7 @@ struct MedicalRecordFormViewModelTests {
         let schema = makeTestSchema()
         let existingRecord = MedicalRecord(personId: person.id, encryptedContent: Data())
 
-        let viewModel = MedicalRecordFormViewModel(
+        let viewModel = makeViewModel(
             person: person,
             schema: schema,
             existingRecord: existingRecord

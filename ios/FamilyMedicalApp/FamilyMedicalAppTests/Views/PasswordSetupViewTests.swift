@@ -1,5 +1,6 @@
 import SwiftUI
 import Testing
+import ViewInspector
 @testable import FamilyMedicalApp
 
 /// Tests for PasswordSetupView rendering logic
@@ -14,18 +15,22 @@ struct PasswordSetupViewTests {
     // MARK: - View Body Tests
 
     @Test
-    func passwordSetupViewRendersInitialState() {
+    func passwordSetupViewRendersInitialState() throws {
         let authService = MockAuthenticationService(isSetUp: false)
         let viewModel = AuthenticationViewModel(authService: authService)
 
         let view = PasswordSetupView(viewModel: viewModel)
 
-        // Access body to execute view code for coverage
-        _ = view.body
+        // Verify core structure renders
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.ScrollView.self)
+        _ = try inspected.find(text: "Secure Your Medical Records")
+        _ = try inspected.find(text: "Username")
+        _ = try inspected.find(text: "Password")
     }
 
     @Test
-    func passwordSetupViewRendersWithBiometricAvailable() {
+    func passwordSetupViewRendersWithBiometricAvailable() throws {
         let biometricService = MockViewModelBiometricService(isAvailable: true, biometryType: .faceID)
         let authService = MockAuthenticationService(isSetUp: false)
         let viewModel = AuthenticationViewModel(
@@ -35,12 +40,14 @@ struct PasswordSetupViewTests {
 
         let view = PasswordSetupView(viewModel: viewModel)
 
-        // Access body to execute view code for coverage
-        _ = view.body
+        // Verify biometric toggle is present when available
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.Toggle.self)
+        _ = try inspected.find(text: "Enable Face ID")
     }
 
     @Test
-    func passwordSetupViewRendersWithTouchID() {
+    func passwordSetupViewRendersWithTouchID() throws {
         let biometricService = MockViewModelBiometricService(isAvailable: true, biometryType: .touchID)
         let authService = MockAuthenticationService(isSetUp: false)
         let viewModel = AuthenticationViewModel(
@@ -50,12 +57,14 @@ struct PasswordSetupViewTests {
 
         let view = PasswordSetupView(viewModel: viewModel)
 
-        // Access body to execute view code for coverage
-        _ = view.body
+        // Verify Touch ID text appears
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.Toggle.self)
+        _ = try inspected.find(text: "Enable Touch ID")
     }
 
     @Test
-    func passwordSetupViewRendersWithPasswordEntered() {
+    func passwordSetupViewRendersWithPasswordEntered() throws {
         let authService = MockAuthenticationService(isSetUp: false)
         let viewModel = AuthenticationViewModel(authService: authService)
         viewModel.username = "testuser"
@@ -64,12 +73,13 @@ struct PasswordSetupViewTests {
 
         let view = PasswordSetupView(viewModel: viewModel)
 
-        // Access body to execute view code for coverage
-        _ = view.body
+        // Verify form renders with password strength indicator
+        let inspected = try view.inspect()
+        _ = try inspected.find(PasswordStrengthIndicator.self)
     }
 
     @Test
-    func passwordSetupViewRendersWithValidationErrors() {
+    func passwordSetupViewRendersWithValidationErrors() throws {
         let authService = MockAuthenticationService(isSetUp: false)
         let viewModel = AuthenticationViewModel(authService: authService)
         viewModel.username = "testuser"
@@ -79,31 +89,63 @@ struct PasswordSetupViewTests {
 
         let view = PasswordSetupView(viewModel: viewModel)
 
-        // Access body to execute view code for coverage
-        _ = view.body
+        // Verify validation error UI is present (ForEach with Label)
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.Label.self)
     }
 
     @Test
-    func passwordSetupViewRendersWithError() {
+    func passwordSetupViewRendersWithError() throws {
         let authService = MockAuthenticationService(isSetUp: false)
         let viewModel = AuthenticationViewModel(authService: authService)
         viewModel.errorMessage = "Test error"
 
         let view = PasswordSetupView(viewModel: viewModel)
 
-        // Access body to execute view code for coverage
-        _ = view.body
+        // Verify error message text is displayed
+        let inspected = try view.inspect()
+        let errorText = try inspected.find(text: "Test error")
+        #expect(try errorText.string() == "Test error")
     }
 
     @Test
-    func passwordSetupViewRendersLoading() {
+    func passwordSetupViewRendersLoading() throws {
         let authService = MockAuthenticationService(isSetUp: false)
         let viewModel = AuthenticationViewModel(authService: authService)
         viewModel.isLoading = true
 
         let view = PasswordSetupView(viewModel: viewModel)
 
-        // Access body to execute view code for coverage
-        _ = view.body
+        // Verify ProgressView is shown when loading
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.ProgressView.self)
+    }
+
+    @Test
+    func passwordSetupViewHidesProgressViewWhenNotLoading() throws {
+        let authService = MockAuthenticationService(isSetUp: false)
+        let viewModel = AuthenticationViewModel(authService: authService)
+        viewModel.isLoading = false
+
+        let view = PasswordSetupView(viewModel: viewModel)
+
+        // Verify ProgressView is NOT shown when not loading
+        let inspected = try view.inspect()
+        #expect(throws: (any Error).self) {
+            _ = try inspected.find(ViewType.ProgressView.self)
+        }
+    }
+
+    @Test
+    func passwordSetupViewShowsContinueButton() throws {
+        let authService = MockAuthenticationService(isSetUp: false)
+        let viewModel = AuthenticationViewModel(authService: authService)
+        viewModel.isLoading = false
+
+        let view = PasswordSetupView(viewModel: viewModel)
+
+        // Verify Continue button text is shown when not loading
+        let inspected = try view.inspect()
+        _ = try inspected.find(text: "Continue")
     }
 }

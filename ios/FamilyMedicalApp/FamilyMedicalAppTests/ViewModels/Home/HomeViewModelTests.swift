@@ -20,13 +20,7 @@ struct HomeViewModelTests {
     }
 
     func createTestPerson(name: String = "Test Person") throws -> Person {
-        try Person(
-            id: UUID(),
-            name: name,
-            dateOfBirth: Date(),
-            labels: ["Self"],
-            notes: nil
-        )
+        try PersonTestHelper.makeTestPerson(name: name)
     }
 
     func makeViewModel(
@@ -117,15 +111,9 @@ struct HomeViewModelTests {
         // Before loading
         #expect(ctx.viewModel.isLoading == false)
 
-        // Start loading
-        let loadTask = Task {
-            await ctx.viewModel.loadPersons()
-        }
-
-        // Give the task a moment to start
-        try? await Task.sleep(nanoseconds: 10_000_000) // 10ms
-
-        await loadTask.value
+        // Load and verify final state (intermediate isLoading=true state
+        // cannot be reliably tested without introducing flakiness)
+        await ctx.viewModel.loadPersons()
 
         // After loading
         #expect(ctx.viewModel.isLoading == false)

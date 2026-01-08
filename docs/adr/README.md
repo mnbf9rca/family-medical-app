@@ -77,6 +77,11 @@ ADRs document significant architectural decisions, their context, and consequenc
   - `@unchecked Sendable` for manual thread safety (NSLock-based services)
   - `@unchecked Sendable` for test mocks with protocol conformance constraints
   - `nonisolated(unsafe)` for non-isolated protocol methods
+- [ADR-0010: Deterministic Testing Architecture](adr-0010-deterministic-testing-architecture.md) - **Accepted** (2026-01-08)
+  - swift-dependencies for controllable Date, UUID, Clock
+  - Eliminates test flakiness from non-deterministic system dependencies
+  - Coexists with ADR-0008 optional parameter pattern (system vs application dependencies)
+  - Security constraint: crypto services excluded from swift-dependencies
 
 ### UI/UX Architecture
 <!-- Add ADRs related to SwiftUI patterns, navigation, accessibility -->

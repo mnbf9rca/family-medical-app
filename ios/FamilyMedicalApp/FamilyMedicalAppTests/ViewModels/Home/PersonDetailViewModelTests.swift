@@ -11,13 +11,7 @@ struct PersonDetailViewModelTests {
     let testFMK = SymmetricKey(size: .bits256)
 
     func createTestPerson() throws -> Person {
-        try Person(
-            id: UUID(),
-            name: "Test Person",
-            dateOfBirth: Date(),
-            labels: ["Self"],
-            notes: nil
-        )
+        try PersonTestHelper.makeTestPerson()
     }
 
     func createTestRecord(person: Person, schemaId: String) throws -> MedicalRecord {

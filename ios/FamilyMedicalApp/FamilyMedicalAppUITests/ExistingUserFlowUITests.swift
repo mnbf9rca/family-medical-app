@@ -64,21 +64,7 @@ final class ExistingUserFlowUITests: XCTestCase {
 
     override func setUpWithError() throws {
         continueAfterFailure = false
-
-        // Add UI interruption monitor to handle password autofill prompts
-        addUIInterruptionMonitor(withDescription: "Password Autofill") { alert in
-            return MainActor.assumeIsolated {
-                if alert.buttons["Not Now"].exists {
-                    alert.buttons["Not Now"].tap()
-                    return true
-                }
-                if alert.buttons["Cancel"].exists {
-                    alert.buttons["Cancel"].tap()
-                    return true
-                }
-                return false
-            }
-        }
+        setupPasswordAutofillHandler()
 
         // Relaunch app for each test (keeps account from class setUp)
         MainActor.assumeIsolated {
@@ -173,8 +159,12 @@ final class ExistingUserFlowUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Family Medical App"].waitForExistence(timeout: 5))
 
         // Either biometric button or password field should exist
-        let hasBiometricButton = app.buttons.matching(NSPredicate(format: "label CONTAINS 'Unlock with'")).firstMatch.exists
-        let hasPasswordField = app.passwordField("Enter password").exists
+        // Use waitForExistence with timeout for CI reliability (elements may load slowly)
+        let biometricButton = app.buttons.matching(NSPredicate(format: "label CONTAINS 'Unlock with'")).firstMatch
+        let passwordField = app.passwordField("Enter password")
+
+        let hasBiometricButton = biometricButton.waitForExistence(timeout: 2)
+        let hasPasswordField = passwordField.waitForExistence(timeout: 2)
 
         XCTAssertTrue(
             hasBiometricButton || hasPasswordField,

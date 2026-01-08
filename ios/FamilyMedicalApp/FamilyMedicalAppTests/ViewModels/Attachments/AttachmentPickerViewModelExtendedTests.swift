@@ -1,4 +1,5 @@
 import CryptoKit
+import Dependencies
 import Foundation
 import Testing
 import UIKit
@@ -8,6 +9,9 @@ import UIKit
 @MainActor
 struct AttachmentPickerViewModelExtendedTests {
     // MARK: - Test Fixtures
+
+    /// Fixed test date for deterministic testing
+    let testDate = Date(timeIntervalSinceReferenceDate: 1_234_567_890)
 
     struct TestFixtures {
         let viewModel: AttachmentPickerViewModel
@@ -25,13 +29,18 @@ struct AttachmentPickerViewModelExtendedTests {
         let personId = UUID()
         let recordIdToUse = recordId ?? UUID()
 
-        let viewModel = AttachmentPickerViewModel(
-            personId: personId,
-            recordId: recordIdToUse,
-            existingAttachments: existingAttachments,
-            attachmentService: attachmentService,
-            primaryKeyProvider: primaryKeyProvider
-        )
+        let viewModel = withDependencies {
+            $0.date = .constant(testDate)
+            $0.uuid = .incrementing
+        } operation: {
+            AttachmentPickerViewModel(
+                personId: personId,
+                recordId: recordIdToUse,
+                existingAttachments: existingAttachments,
+                attachmentService: attachmentService,
+                primaryKeyProvider: primaryKeyProvider
+            )
+        }
 
         return TestFixtures(
             viewModel: viewModel,
@@ -47,15 +56,7 @@ struct AttachmentPickerViewModelExtendedTests {
         fileName: String = "test.jpg",
         mimeType: String = "image/jpeg"
     ) throws -> FamilyMedicalApp.Attachment {
-        try FamilyMedicalApp.Attachment(
-            id: UUID(),
-            fileName: fileName,
-            mimeType: mimeType,
-            contentHMAC: Data(repeating: UInt8.random(in: 0 ... 255), count: 32),
-            encryptedSize: 1_024,
-            thumbnailData: nil,
-            uploadedAt: Date()
-        )
+        try AttachmentTestHelper.makeTestAttachment(fileName: fileName, mimeType: mimeType)
     }
 
     // MARK: - Document Picker Tests
@@ -252,12 +253,17 @@ struct AttachmentPickerViewModelExtendedTests {
         let attachmentService = MockAttachmentService()
         let primaryKeyProvider = MockPrimaryKeyProvider(shouldFail: true)
 
-        let viewModel = AttachmentPickerViewModel(
-            personId: UUID(),
-            recordId: UUID(),
-            attachmentService: attachmentService,
-            primaryKeyProvider: primaryKeyProvider
-        )
+        let viewModel = withDependencies {
+            $0.date = .constant(testDate)
+            $0.uuid = .incrementing
+        } operation: {
+            AttachmentPickerViewModel(
+                personId: UUID(),
+                recordId: UUID(),
+                attachmentService: attachmentService,
+                primaryKeyProvider: primaryKeyProvider
+            )
+        }
 
         let tempDir = FileManager.default.temporaryDirectory
         let pdfURL = tempDir.appendingPathComponent("test_pk_fail_\(UUID().uuidString).pdf")

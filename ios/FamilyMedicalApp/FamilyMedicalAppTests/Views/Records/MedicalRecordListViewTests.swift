@@ -12,13 +12,7 @@ struct MedicalRecordListViewTests {
     let testFMK = SymmetricKey(size: .bits256)
 
     func makeTestPerson() throws -> Person {
-        try Person(
-            id: UUID(),
-            name: "Test Person",
-            dateOfBirth: Date(),
-            labels: ["Self"],
-            notes: nil
-        )
+        try PersonTestHelper.makeTestPerson()
     }
 
     func makeTestDecryptedRecord(personId: UUID? = nil) -> DecryptedRecord {

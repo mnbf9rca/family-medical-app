@@ -1,4 +1,5 @@
 import CryptoKit
+import Dependencies
 import SwiftUI
 import Testing
 import ViewInspector
@@ -8,19 +9,27 @@ import ViewInspector
 struct AttachmentPickerViewTests {
     // MARK: - Test Fixtures
 
+    /// Fixed test date for deterministic testing
+    let testDate = Date(timeIntervalSinceReferenceDate: 1_234_567_890)
+
     func makeViewModel(
         existingAttachments: [FamilyMedicalApp.Attachment] = []
     ) -> AttachmentPickerViewModel {
         let attachmentService = MockAttachmentService()
         let primaryKeyProvider = MockPrimaryKeyProvider(primaryKey: SymmetricKey(size: .bits256))
 
-        return AttachmentPickerViewModel(
-            personId: UUID(),
-            recordId: UUID(),
-            existingAttachments: existingAttachments,
-            attachmentService: attachmentService,
-            primaryKeyProvider: primaryKeyProvider
-        )
+        return withDependencies {
+            $0.date = .constant(testDate)
+            $0.uuid = .incrementing
+        } operation: {
+            AttachmentPickerViewModel(
+                personId: UUID(),
+                recordId: UUID(),
+                existingAttachments: existingAttachments,
+                attachmentService: attachmentService,
+                primaryKeyProvider: primaryKeyProvider
+            )
+        }
     }
 
     func makeTestAttachment(

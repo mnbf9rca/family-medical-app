@@ -78,6 +78,20 @@ disabled_rules:
   - todo  # Allow TODOs during development
 
 # Rule configurations
+
+# Attributes rule: @Dependency has arguments but should stay on same line as variable
+attributes:
+  always_on_same_line:
+    - "@IBAction"
+    - "@IBOutlet"
+    - "@IBDesignable"
+    - "@IBInspectable"
+    - "@GKInspectable"
+    - "@IBSegueAction"
+    - "@NSManaged"
+    - "@Dependency"
+    - "@ObservationIgnored"
+
 line_length:
   warning: 120
   error: 150

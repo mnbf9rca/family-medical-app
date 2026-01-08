@@ -9,6 +9,32 @@ import XCTest
 
 /// Helper functions for UI testing with SwiftUI Toggles
 extension XCTestCase {
+    /// Sets up an interruption monitor to dismiss password autofill prompts.
+    /// Call this in `setUpWithError()` to handle iOS password autofill system alerts.
+    ///
+    /// Example:
+    /// ```swift
+    /// override func setUpWithError() throws {
+    ///     continueAfterFailure = false
+    ///     setupPasswordAutofillHandler()
+    /// }
+    /// ```
+    func setupPasswordAutofillHandler() {
+        addUIInterruptionMonitor(withDescription: "Password Autofill") { alert in
+            MainActor.assumeIsolated {
+                if alert.buttons["Not Now"].exists {
+                    alert.buttons["Not Now"].tap()
+                    return true
+                }
+                if alert.buttons["Cancel"].exists {
+                    alert.buttons["Cancel"].tap()
+                    return true
+                }
+                return false
+            }
+        }
+    }
+
     /// Turn a SwiftUI Toggle on
     /// - Parameter toggle: The toggle element to turn on
     /// - Note: SwiftUI Toggle tap() doesn't work - must tap inner switch coordinate

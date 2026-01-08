@@ -20,17 +20,7 @@ final class AttachmentFlowUITests: XCTestCase {
 
     override func setUpWithError() throws {
         continueAfterFailure = false
-
-        // Handle password autofill prompts
-        addUIInterruptionMonitor(withDescription: "Password Autofill") { alert in
-            return MainActor.assumeIsolated {
-                if alert.buttons["Not Now"].exists {
-                    alert.buttons["Not Now"].tap()
-                    return true
-                }
-                return false
-            }
-        }
+        setupPasswordAutofillHandler()
     }
 
     override func tearDownWithError() throws {
@@ -54,10 +44,8 @@ final class AttachmentFlowUITests: XCTestCase {
             "Should be on Members view"
         )
 
-        // Create test person
-        if !app.verifyPersonExists(name: testPersonName, timeout: 1) {
-            app.addPerson(name: testPersonName)
-        }
+        // Create test person (unconditional - resetState: true ensures fresh state)
+        app.addPerson(name: testPersonName)
 
         // Navigate to person detail
         let personCell = app.cells.containing(.staticText, identifier: testPersonName).firstMatch
@@ -167,8 +155,14 @@ final class AttachmentFlowUITests: XCTestCase {
         // Since we saved without attachments, skip that check
 
         // TEST 5: Navigate back and create a new record with seeded attachment
-        // Go back to vaccines list
-        app.navigationBars.buttons.element(boundBy: 0).tap()
+        // Go back to vaccines list using the navigation bar back button
+        let backButton = app.navigationBars.buttons["\(testPersonName)'s Vaccine"]
+        if backButton.exists {
+            backButton.tap()
+        } else {
+            // Fallback to Back button if title-based button doesn't exist
+            app.navigationBars.buttons["Back"].tap()
+        }
 
         // Wait for list to appear
         XCTAssertTrue(listTitle.waitForExistence(timeout: 3), "Should be back on vaccines list")

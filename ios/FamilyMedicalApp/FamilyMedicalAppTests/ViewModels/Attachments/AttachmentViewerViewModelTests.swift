@@ -26,14 +26,9 @@ struct AttachmentViewerViewModelTests {
         let primaryKeyProvider = MockPrimaryKeyProvider(primaryKey: primaryKey)
         let personId = UUID()
 
-        let attachment = try FamilyMedicalApp.Attachment(
-            id: UUID(),
+        let attachment = try AttachmentTestHelper.makeTestAttachmentDeterministic(
             fileName: fileName,
-            mimeType: mimeType,
-            contentHMAC: Data(repeating: 0xAB, count: 32),
-            encryptedSize: 1_024,
-            thumbnailData: nil,
-            uploadedAt: Date()
+            mimeType: mimeType
         )
 
         attachmentService.addTestAttachment(

@@ -12,13 +12,7 @@ struct PersonRowViewTests {
         dateOfBirth: Date? = Date(),
         labels: [String] = ["Self"]
     ) throws -> Person {
-        try Person(
-            id: UUID(),
-            name: name,
-            dateOfBirth: dateOfBirth,
-            labels: labels,
-            notes: nil
-        )
+        try PersonTestHelper.makeTestPerson(name: name, dateOfBirth: dateOfBirth, labels: labels)
     }
 
     // MARK: - Content Tests
