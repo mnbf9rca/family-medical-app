@@ -58,26 +58,14 @@ struct AttachmentPickerViewModelDocumentTests {
     }
 
     func makeTestImage(size: CGSize = CGSize(width: 100, height: 100)) -> UIImage {
-        let renderer = UIGraphicsImageRenderer(size: size)
-        return renderer.image { ctx in
-            UIColor.blue.setFill()
-            ctx.fill(CGRect(origin: .zero, size: size))
-        }
+        AttachmentTestHelper.makeTestImage(size: size)
     }
 
     func makeTestAttachment(
         fileName: String = "test.jpg",
         mimeType: String = "image/jpeg"
     ) throws -> FamilyMedicalApp.Attachment {
-        try FamilyMedicalApp.Attachment(
-            id: UUID(),
-            fileName: fileName,
-            mimeType: mimeType,
-            contentHMAC: Data(repeating: UInt8.random(in: 0 ... 255), count: 32),
-            encryptedSize: 1_024,
-            thumbnailData: nil,
-            uploadedAt: Date()
-        )
+        try AttachmentTestHelper.makeTestAttachment(fileName: fileName, mimeType: mimeType)
     }
 
     // MARK: - Add from Document Picker Tests

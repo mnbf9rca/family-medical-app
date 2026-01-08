@@ -51,21 +51,7 @@ final class AddPersonFlowUITests: XCTestCase {
 
     override func setUpWithError() throws {
         continueAfterFailure = false
-
-        // Add UI interruption monitor to handle password autofill prompts
-        addUIInterruptionMonitor(withDescription: "Password Autofill") { alert in
-            return MainActor.assumeIsolated {
-                if alert.buttons["Not Now"].exists {
-                    alert.buttons["Not Now"].tap()
-                    return true
-                }
-                if alert.buttons["Cancel"].exists {
-                    alert.buttons["Cancel"].tap()
-                    return true
-                }
-                return false
-            }
-        }
+        setupPasswordAutofillHandler()
 
         // Ensure we're on home view with clean state
         // Access sharedApp directly to avoid capturing self in MainActor.assumeIsolated

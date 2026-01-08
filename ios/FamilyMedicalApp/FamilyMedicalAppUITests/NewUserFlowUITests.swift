@@ -34,21 +34,7 @@ final class NewUserFlowUITests: XCTestCase {
 
     override func setUpWithError() throws {
         continueAfterFailure = false
-
-        // Add UI interruption monitor to handle password autofill prompts
-        addUIInterruptionMonitor(withDescription: "Password Autofill") { alert in
-            return MainActor.assumeIsolated {
-                if alert.buttons["Not Now"].exists {
-                    alert.buttons["Not Now"].tap()
-                    return true
-                }
-                if alert.buttons["Cancel"].exists {
-                    alert.buttons["Cancel"].tap()
-                    return true
-                }
-                return false
-            }
-        }
+        setupPasswordAutofillHandler()
     }
 
     override func tearDownWithError() throws {

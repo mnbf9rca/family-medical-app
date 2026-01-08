@@ -15,13 +15,7 @@ struct MedicalRecordFormViewModelTests {
 
     /// Creates a test person for use in tests
     func makeTestPerson() throws -> Person {
-        try Person(
-            id: UUID(),
-            name: "Test Person",
-            dateOfBirth: Date(),
-            labels: ["Self"],
-            notes: nil
-        )
+        try PersonTestHelper.makeTestPerson()
     }
 
     /// Returns the comprehensive example schema that exercises all field types

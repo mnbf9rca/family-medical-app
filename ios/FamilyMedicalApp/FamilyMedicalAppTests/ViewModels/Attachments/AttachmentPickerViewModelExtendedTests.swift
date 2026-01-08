@@ -56,15 +56,7 @@ struct AttachmentPickerViewModelExtendedTests {
         fileName: String = "test.jpg",
         mimeType: String = "image/jpeg"
     ) throws -> FamilyMedicalApp.Attachment {
-        try FamilyMedicalApp.Attachment(
-            id: UUID(),
-            fileName: fileName,
-            mimeType: mimeType,
-            contentHMAC: Data(repeating: UInt8.random(in: 0 ... 255), count: 32),
-            encryptedSize: 1_024,
-            thumbnailData: nil,
-            uploadedAt: Date()
-        )
+        try AttachmentTestHelper.makeTestAttachment(fileName: fileName, mimeType: mimeType)
     }
 
     // MARK: - Document Picker Tests

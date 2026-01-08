@@ -20,13 +20,7 @@ struct HomeViewModelTests {
     }
 
     func createTestPerson(name: String = "Test Person") throws -> Person {
-        try Person(
-            id: UUID(),
-            name: name,
-            dateOfBirth: Date(),
-            labels: ["Self"],
-            notes: nil
-        )
+        try PersonTestHelper.makeTestPerson(name: name)
     }
 
     func makeViewModel(

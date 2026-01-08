@@ -30,13 +30,7 @@ struct MedicalRecordFormDetailViewTests {
     var requiredDateFieldId: UUID { ExampleSchema.FieldIds.recordedDate }
 
     func makeTestPerson() throws -> Person {
-        try Person(
-            id: UUID(),
-            name: "Test Person",
-            dateOfBirth: Date(),
-            labels: ["Self"],
-            notes: nil
-        )
+        try PersonTestHelper.makeTestPerson()
     }
 
     func makeTestDecryptedRecord(personId: UUID? = nil) -> DecryptedRecord {

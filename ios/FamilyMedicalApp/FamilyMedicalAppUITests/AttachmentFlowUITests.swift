@@ -20,17 +20,7 @@ final class AttachmentFlowUITests: XCTestCase {
 
     override func setUpWithError() throws {
         continueAfterFailure = false
-
-        // Handle password autofill prompts
-        addUIInterruptionMonitor(withDescription: "Password Autofill") { alert in
-            return MainActor.assumeIsolated {
-                if alert.buttons["Not Now"].exists {
-                    alert.buttons["Not Now"].tap()
-                    return true
-                }
-                return false
-            }
-        }
+        setupPasswordAutofillHandler()
     }
 
     override func tearDownWithError() throws {

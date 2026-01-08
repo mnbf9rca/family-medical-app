@@ -8,13 +8,7 @@ struct ComprehensiveSchemaTests {
     // MARK: - Test Helpers
 
     private func makeTestPerson() throws -> Person {
-        try Person(
-            id: UUID(),
-            name: "Test Person",
-            dateOfBirth: Date(),
-            labels: ["Test"],
-            notes: nil
-        )
+        try PersonTestHelper.makeTestPerson(labels: ["Test"])
     }
 
     // MARK: - Schema Validation Tests
