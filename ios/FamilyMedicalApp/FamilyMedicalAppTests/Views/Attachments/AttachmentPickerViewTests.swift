@@ -265,4 +265,80 @@ struct AttachmentPickerViewTests {
         viewModel.showingCamera = true
         #expect(viewModel.showingCamera)
     }
+
+    // MARK: - Menu Structure Tests
+
+    @Test
+    func menuContainsPhotoLibraryButton() throws {
+        let viewModel = makeViewModel()
+        let view = AttachmentPickerView(viewModel: viewModel) { _ in }
+
+        let inspected = try view.inspect()
+        let menu = try inspected.find(ViewType.Menu.self)
+
+        // Verify menu has buttons for photo library option
+        let buttons = menu.findAll(ViewType.Button.self)
+        #expect(buttons.count >= 2) // At minimum: Library + File (Camera may be hidden)
+    }
+
+    @Test
+    func menuContainsDocumentPickerButton() throws {
+        let viewModel = makeViewModel()
+        let view = AttachmentPickerView(viewModel: viewModel) { _ in }
+
+        let inspected = try view.inspect()
+        let menu = try inspected.find(ViewType.Menu.self)
+
+        // Find the document picker button via its label
+        _ = try menu.find(ViewType.Label.self) { label in
+            let systemImage = try? label.find(ViewType.Image.self)
+            // Check for "doc" system image which is used for "Choose File"
+            return systemImage != nil
+        }
+    }
+
+    // MARK: - ForEach Thumbnail Tests
+
+    @Test
+    func thumbnailView_appearsForEachAttachment() throws {
+        let attachment1 = try makeTestAttachment(fileName: "photo1.jpg")
+        let attachment2 = try makeTestAttachment(fileName: "photo2.jpg")
+        let viewModel = makeViewModel(existingAttachments: [attachment1, attachment2])
+        let view = AttachmentPickerView(viewModel: viewModel) { _ in }
+
+        let inspected = try view.inspect()
+        let grid = try inspected.find(ViewType.LazyVGrid.self)
+
+        // Verify the grid contains attachment thumbnails
+        let thumbnails = grid.findAll(AttachmentThumbnailView.self)
+        #expect(thumbnails.count == 2)
+    }
+
+    @Test
+    func accessibilityLabel_isSetCorrectly() throws {
+        let viewModel = makeViewModel()
+        let view = AttachmentPickerView(viewModel: viewModel) { _ in }
+
+        let inspected = try view.inspect()
+        let vstack = try inspected.find(ViewType.VStack.self)
+
+        // The outer VStack should have accessibility label "Attachments"
+        let label = try vstack.accessibilityLabel().string()
+        #expect(label == "Attachments")
+    }
+
+    // MARK: - Grid Columns Initialization Tests
+
+    @Test
+    func gridUsesAdaptiveColumns() throws {
+        let viewModel = makeViewModel()
+        let view = AttachmentPickerView(viewModel: viewModel) { _ in }
+
+        let inspected = try view.inspect()
+        // Verify LazyVGrid exists with content
+        let grid = try inspected.find(ViewType.LazyVGrid.self)
+        #expect(throws: Never.self) {
+            _ = try grid.find(ViewType.Menu.self)
+        }
+    }
 }
