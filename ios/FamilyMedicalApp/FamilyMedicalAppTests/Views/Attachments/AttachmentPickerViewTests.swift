@@ -119,9 +119,26 @@ struct AttachmentPickerViewTests {
 
         let view = AttachmentPickerView(viewModel: viewModel) { _ in }
 
-        _ = try view.inspect()
-        // Error message should be set on viewModel
-        #expect(viewModel.errorMessage == "Test error message")
+        // Find the error text in the view hierarchy to exercise the conditional branch
+        let inspected = try view.inspect()
+        let errorText = try inspected.find(text: "Test error message")
+        #expect(try errorText.string() == "Test error message")
+    }
+
+    @Test
+    func viewHidesErrorWhenNil() throws {
+        let viewModel = makeViewModel()
+        viewModel.errorMessage = nil
+
+        let view = AttachmentPickerView(viewModel: viewModel) { _ in }
+
+        // Error text should not be present when errorMessage is nil
+        let inspected = try view.inspect()
+        #expect(throws: (any Error).self) {
+            _ = try inspected.find(ViewType.Text.self) { text in
+                try text.string().contains("error")
+            }
+        }
     }
 
     // MARK: - Loading State Tests
@@ -133,7 +150,23 @@ struct AttachmentPickerViewTests {
 
         let view = AttachmentPickerView(viewModel: viewModel) { _ in }
 
-        _ = try view.inspect()
+        // Find the ProgressView to exercise the loading overlay branch
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.ProgressView.self)
+    }
+
+    @Test
+    func viewHidesLoadingWhenNotLoading() throws {
+        let viewModel = makeViewModel()
+        viewModel.isLoading = false
+
+        let view = AttachmentPickerView(viewModel: viewModel) { _ in }
+
+        // ProgressView should not be present when not loading
+        let inspected = try view.inspect()
+        #expect(throws: (any Error).self) {
+            _ = try inspected.find(ViewType.ProgressView.self)
+        }
     }
 
     // MARK: - Grid Layout Tests
@@ -149,5 +182,87 @@ struct AttachmentPickerViewTests {
 
         _ = try view.inspect()
         #expect(viewModel.attachments.count == 3)
+    }
+
+    // MARK: - Add Button Menu Tests
+
+    @Test
+    func addButtonExists_whenBelowLimit() throws {
+        let viewModel = makeViewModel()
+        let view = AttachmentPickerView(viewModel: viewModel) { _ in }
+
+        // Verify add button exists via accessibility identifier
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.Menu.self)
+    }
+
+    @Test
+    func addButtonHidden_whenAtLimit() throws {
+        var attachments: [FamilyMedicalApp.Attachment] = []
+        for index in 0 ..< AttachmentPickerViewModel.maxAttachments {
+            try attachments.append(makeTestAttachment(fileName: "file\(index).jpg"))
+        }
+
+        let viewModel = makeViewModel(existingAttachments: attachments)
+        let view = AttachmentPickerView(viewModel: viewModel) { _ in }
+
+        // Menu should not exist when at attachment limit
+        let inspected = try view.inspect()
+        #expect(throws: (any Error).self) {
+            _ = try inspected.find(ViewType.Menu.self)
+        }
+    }
+
+    // MARK: - Thumbnail Interaction Coverage Tests
+
+    @Test
+    func thumbnailGrid_rendersForEachAttachment() throws {
+        let attachment = try makeTestAttachment(fileName: "test_photo.jpg")
+        let viewModel = makeViewModel(existingAttachments: [attachment])
+        let view = AttachmentPickerView(viewModel: viewModel) { _ in }
+
+        // Find LazyVGrid to exercise ForEach rendering
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.LazyVGrid.self)
+    }
+
+    @Test
+    func emptyGrid_rendersWithOnlyAddButton() throws {
+        let viewModel = makeViewModel(existingAttachments: [])
+        let view = AttachmentPickerView(viewModel: viewModel) { _ in }
+
+        // Grid should exist with just the add button
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.LazyVGrid.self)
+        #expect(viewModel.attachments.isEmpty)
+    }
+
+    // MARK: - Picker Sheet State Tests
+
+    @Test
+    func photoPickerBinding_updatesViewModel() throws {
+        let viewModel = makeViewModel()
+        #expect(!viewModel.showingPhotoLibrary)
+
+        viewModel.showingPhotoLibrary = true
+        #expect(viewModel.showingPhotoLibrary)
+    }
+
+    @Test
+    func documentPickerBinding_updatesViewModel() throws {
+        let viewModel = makeViewModel()
+        #expect(!viewModel.showingDocumentPicker)
+
+        viewModel.showingDocumentPicker = true
+        #expect(viewModel.showingDocumentPicker)
+    }
+
+    @Test
+    func cameraBinding_updatesViewModel() throws {
+        let viewModel = makeViewModel()
+        #expect(!viewModel.showingCamera)
+
+        viewModel.showingCamera = true
+        #expect(viewModel.showingCamera)
     }
 }
