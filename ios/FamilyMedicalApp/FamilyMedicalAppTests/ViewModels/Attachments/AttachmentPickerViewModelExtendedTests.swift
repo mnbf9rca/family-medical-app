@@ -66,21 +66,20 @@ struct AttachmentPickerViewModelExtendedTests {
 
         // Create a temporary PDF file
         let tempDir = FileManager.default.temporaryDirectory
-        let pdfURL = tempDir.appendingPathComponent("test_document.pdf")
+        let pdfURL = tempDir.appendingPathComponent("test_document_\(UUID().uuidString).pdf")
 
         // Write minimal PDF data
         let pdfData = Data("%PDF-1.4 minimal".utf8)
         try pdfData.write(to: pdfURL)
         defer { try? FileManager.default.removeItem(at: pdfURL) }
 
-        // Since we're not using a security-scoped URL, this will fail early
-        // but we're testing the URL processing path
+        // Test the URL processing path - security-scoped access may succeed or fail in simulator
         await fixtures.viewModel.addFromDocumentPicker([pdfURL])
 
-        // The security-scoped access will fail for non-picker URLs
-        // Either we get an error or (unlikely) it succeeds
-        // Both outcomes are acceptable - we're testing the code path
-        #expect(fixtures.viewModel.errorMessage != nil || !fixtures.viewModel.isLoading)
+        // Either processing succeeds (attachment added) or fails (error set), but loading completes
+        #expect(!fixtures.viewModel.isLoading)
+        let processedSomehow = !fixtures.viewModel.attachments.isEmpty || fixtures.viewModel.errorMessage != nil
+        #expect(processedSomehow)
     }
 
     @Test
@@ -93,13 +92,14 @@ struct AttachmentPickerViewModelExtendedTests {
         let fixtures = makeFixtures(existingAttachments: attachments)
 
         let tempDir = FileManager.default.temporaryDirectory
-        let pdfURL = tempDir.appendingPathComponent("test.pdf")
+        let pdfURL = tempDir.appendingPathComponent("test_limit_\(UUID().uuidString).pdf")
         let pdfData = Data("%PDF-1.4 minimal".utf8)
         try pdfData.write(to: pdfURL)
         defer { try? FileManager.default.removeItem(at: pdfURL) }
 
         await fixtures.viewModel.addFromDocumentPicker([pdfURL])
 
+        // Expect error because already at limit
         #expect(fixtures.viewModel.errorMessage != nil)
         #expect(fixtures.viewModel.attachments.count == AttachmentPickerViewModel.maxAttachments)
     }
@@ -127,9 +127,10 @@ struct AttachmentPickerViewModelExtendedTests {
 
         // Try to add multiple files
         let tempDir = FileManager.default.temporaryDirectory
+        let testId = UUID().uuidString
         var urls: [URL] = []
         for index in 0 ..< 3 {
-            let url = tempDir.appendingPathComponent("doc\(index).pdf")
+            let url = tempDir.appendingPathComponent("doc_multi_\(testId)_\(index).pdf")
             try Data("%PDF-1.4 test".utf8).write(to: url)
             urls.append(url)
         }
@@ -141,9 +142,10 @@ struct AttachmentPickerViewModelExtendedTests {
 
         await fixtures.viewModel.addFromDocumentPicker(urls)
 
-        // Should have limit error after first successful add (or security failure)
-        let atOrBelowLimit = fixtures.viewModel.attachments.count <= AttachmentPickerViewModel.maxAttachments
-        #expect(fixtures.viewModel.errorMessage != nil || atOrBelowLimit)
+        // May add one file before hitting limit, or security access may fail
+        // Either way, should not exceed max attachments
+        #expect(fixtures.viewModel.attachments.count <= AttachmentPickerViewModel.maxAttachments)
+        #expect(!fixtures.viewModel.isLoading)
     }
 
     // MARK: - Photo Library Tests
@@ -178,9 +180,9 @@ struct AttachmentPickerViewModelExtendedTests {
     func mimeTypeDetection_forJPEGExtension() async throws {
         let fixtures = makeFixtures()
 
-        // Create temp JPEG file
+        // Create temp JPEG file with unique name
         let tempDir = FileManager.default.temporaryDirectory
-        let jpegURL = tempDir.appendingPathComponent("photo.jpeg")
+        let jpegURL = tempDir.appendingPathComponent("photo_\(UUID().uuidString).jpeg")
         let jpegData = Data([0xFF, 0xD8, 0xFF, 0xE0]) // JPEG magic bytes
         try jpegData.write(to: jpegURL)
         defer { try? FileManager.default.removeItem(at: jpegURL) }
@@ -188,8 +190,8 @@ struct AttachmentPickerViewModelExtendedTests {
         // URL extension is .jpeg - tests mimeType(for:) private method
         await fixtures.viewModel.addFromDocumentPicker([jpegURL])
 
-        // Security will fail, but we exercised the URL extension detection
-        #expect(true) // Path was exercised
+        // Code path exercised - may succeed (attachment added) or fail (error set)
+        #expect(!fixtures.viewModel.isLoading)
     }
 
     @Test
@@ -197,7 +199,7 @@ struct AttachmentPickerViewModelExtendedTests {
         let fixtures = makeFixtures()
 
         let tempDir = FileManager.default.temporaryDirectory
-        let pngURL = tempDir.appendingPathComponent("image.png")
+        let pngURL = tempDir.appendingPathComponent("image_\(UUID().uuidString).png")
         // PNG magic bytes
         let pngData = Data([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A])
         try pngData.write(to: pngURL)
@@ -205,7 +207,8 @@ struct AttachmentPickerViewModelExtendedTests {
 
         await fixtures.viewModel.addFromDocumentPicker([pngURL])
 
-        #expect(true) // Path was exercised
+        // Code path exercised - may succeed (attachment added) or fail (error set)
+        #expect(!fixtures.viewModel.isLoading)
     }
 
     @Test
@@ -213,13 +216,15 @@ struct AttachmentPickerViewModelExtendedTests {
         let fixtures = makeFixtures()
 
         let tempDir = FileManager.default.temporaryDirectory
-        let unknownURL = tempDir.appendingPathComponent("file.xyz")
+        let unknownURL = tempDir.appendingPathComponent("file_\(UUID().uuidString).xyz")
         try Data("unknown format".utf8).write(to: unknownURL)
         defer { try? FileManager.default.removeItem(at: unknownURL) }
 
         await fixtures.viewModel.addFromDocumentPicker([unknownURL])
 
-        #expect(true) // Path was exercised
+        // Code path exercised - unknown extension should result in error (unsupported MIME type)
+        // or security access failure
+        #expect(!fixtures.viewModel.isLoading)
     }
 
     // MARK: - Service Failure Tests
@@ -230,14 +235,15 @@ struct AttachmentPickerViewModelExtendedTests {
         fixtures.attachmentService.shouldFailAddAttachment = true
 
         let tempDir = FileManager.default.temporaryDirectory
-        let pdfURL = tempDir.appendingPathComponent("test_service_fail.pdf")
+        let pdfURL = tempDir.appendingPathComponent("test_service_fail_\(UUID().uuidString).pdf")
         try Data("%PDF-1.4".utf8).write(to: pdfURL)
         defer { try? FileManager.default.removeItem(at: pdfURL) }
 
         await fixtures.viewModel.addFromDocumentPicker([pdfURL])
 
-        // Error should be set (either from security or service failure)
-        // Either way, attachments should be empty
+        // Service is set to fail, so if security access succeeds, service failure sets error
+        // Either way, attachments remain empty and loading completes
+        #expect(!fixtures.viewModel.isLoading)
         #expect(fixtures.viewModel.attachments.isEmpty)
     }
 
@@ -254,13 +260,15 @@ struct AttachmentPickerViewModelExtendedTests {
         )
 
         let tempDir = FileManager.default.temporaryDirectory
-        let pdfURL = tempDir.appendingPathComponent("test_pk_fail.pdf")
+        let pdfURL = tempDir.appendingPathComponent("test_pk_fail_\(UUID().uuidString).pdf")
         try Data("%PDF-1.4".utf8).write(to: pdfURL)
         defer { try? FileManager.default.removeItem(at: pdfURL) }
 
         await viewModel.addFromDocumentPicker([pdfURL])
 
-        // Should have error (from security scoping or primary key)
+        // Primary key provider is set to fail, so if security access succeeds, key failure sets error
+        // Either way, attachments remain empty and loading completes
+        #expect(!viewModel.isLoading)
         #expect(viewModel.attachments.isEmpty)
     }
 }

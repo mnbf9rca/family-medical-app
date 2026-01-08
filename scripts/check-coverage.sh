@@ -33,7 +33,7 @@ import sys
 import json
 
 THRESHOLD = 85  # Individual file threshold
-OVERALL_THRESHOLD = 87  # Overall project threshold (lowered from 90% due to SwiftUI View body limitations)
+OVERALL_THRESHOLD = 90  # Overall project threshold
 DETAILED_MODE = "${DETAILED_MODE}" == "true"
 FUNCTION_LIMIT = int("${FUNCTION_LIMIT}")
 
@@ -43,8 +43,8 @@ FILE_EXCEPTIONS = {
     "EncryptionService.swift": 80.0,  # Defensive catch blocks unreachable without mocking CryptoKit
     "CoreDataStack.swift": 67.0,  # Test infrastructure methods (deleteAllData) difficult to test without mocking Core Data internals
     # SwiftUI Views - body closures don't execute in ViewInspector unit tests, UI tests don't count toward coverage
-    "AttachmentViewerView.swift": 0.0,  # Full-screen viewer with PDFKit/UIImage - needs UIKit runtime
-    "AttachmentPickerView.swift": 63.0,  # PhotosPicker/Menu/sheet closures - CI has ~5% variance from local due to UI test timing
+    "AttachmentViewerView.swift": 55.0,  # Full-screen viewer with PDFKit/UIImage - thin closures call ViewModel methods
+    "AttachmentPickerView.swift": 67.0,  # PhotosPicker/Menu/sheet closures - thin closures call ViewModel methods
     "FieldDisplayView.swift": 60.0,  # Logic extracted to FieldDisplayFormatter, body closure untestable
     # UIViewControllerRepresentables - makeUIViewController needs UIKit context
     "CameraRepresentable.swift": 64.0,  # UIImagePickerController wrapper - needs camera/UIKit

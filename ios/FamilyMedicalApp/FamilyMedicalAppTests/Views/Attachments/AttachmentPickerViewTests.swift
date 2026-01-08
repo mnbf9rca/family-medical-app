@@ -45,7 +45,9 @@ struct AttachmentPickerViewTests {
         let viewModel = makeViewModel()
         let view = AttachmentPickerView(viewModel: viewModel) { _ in }
 
-        _ = try view.inspect()
+        // Use find() for deterministic coverage - forces body evaluation
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.VStack.self)
     }
 
     @Test
@@ -54,7 +56,9 @@ struct AttachmentPickerViewTests {
         let viewModel = makeViewModel(existingAttachments: [attachment])
         let view = AttachmentPickerView(viewModel: viewModel) { _ in }
 
-        _ = try view.inspect()
+        // Use find() for deterministic coverage
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.LazyVGrid.self)
     }
 
     @Test
@@ -74,7 +78,8 @@ struct AttachmentPickerViewTests {
 
         // Should have add button when below limit
         #expect(viewModel.canAddMore)
-        _ = try view.inspect()
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.Menu.self)
     }
 
     @Test
@@ -87,9 +92,12 @@ struct AttachmentPickerViewTests {
         let viewModel = makeViewModel(existingAttachments: attachments)
         let view = AttachmentPickerView(viewModel: viewModel) { _ in }
 
-        // Cannot add more when at limit
+        // Cannot add more when at limit - verify Menu is NOT rendered
         #expect(!viewModel.canAddMore)
-        _ = try view.inspect()
+        let inspected = try view.inspect()
+        #expect(throws: (any Error).self) {
+            _ = try inspected.find(ViewType.Menu.self)
+        }
     }
 
     // MARK: - onChange Callback Tests
@@ -180,7 +188,9 @@ struct AttachmentPickerViewTests {
         let viewModel = makeViewModel(existingAttachments: [attachment1, attachment2, attachment3])
         let view = AttachmentPickerView(viewModel: viewModel) { _ in }
 
-        _ = try view.inspect()
+        // Use find() for deterministic coverage
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.LazyVGrid.self)
         #expect(viewModel.attachments.count == 3)
     }
 

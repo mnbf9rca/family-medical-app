@@ -75,7 +75,9 @@ struct AttachmentViewerViewTests {
         let viewModel = try makeViewModel()
         let view = AttachmentViewerView(viewModel: viewModel)
 
-        _ = try view.inspect()
+        // Use find() for deterministic coverage
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.NavigationStack.self)
     }
 
     @Test
@@ -83,7 +85,9 @@ struct AttachmentViewerViewTests {
         let viewModel = try makeViewModel(mimeType: "image/jpeg")
         let view = AttachmentViewerView(viewModel: viewModel)
 
-        _ = try view.inspect()
+        // Use find() for deterministic coverage
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.NavigationStack.self)
         #expect(viewModel.isImage)
     }
 
@@ -92,7 +96,9 @@ struct AttachmentViewerViewTests {
         let viewModel = try makeViewModel(fileName: "document.pdf", mimeType: "application/pdf")
         let view = AttachmentViewerView(viewModel: viewModel)
 
-        _ = try view.inspect()
+        // Use find() for deterministic coverage
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.NavigationStack.self)
         #expect(viewModel.isPDF)
     }
 
@@ -105,7 +111,9 @@ struct AttachmentViewerViewTests {
 
         let view = AttachmentViewerView(viewModel: viewModel)
 
-        _ = try view.inspect()
+        // Find ProgressView to exercise loading branch
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.ProgressView.self)
     }
 
     @Test
@@ -115,7 +123,9 @@ struct AttachmentViewerViewTests {
 
         let view = AttachmentViewerView(viewModel: viewModel)
 
-        _ = try view.inspect()
+        // Find error message text to exercise error branch
+        let inspected = try view.inspect()
+        _ = try inspected.find(text: "Failed to load content")
     }
 
     // MARK: - Content Display Tests
@@ -127,7 +137,8 @@ struct AttachmentViewerViewTests {
         await viewModel.loadContent()
 
         let view = AttachmentViewerView(viewModel: viewModel)
-        _ = try view.inspect()
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.NavigationStack.self)
 
         #expect(viewModel.hasContent)
     }
@@ -137,7 +148,9 @@ struct AttachmentViewerViewTests {
         let viewModel = try makeViewModel(fileName: "medical_report.jpg")
         let view = AttachmentViewerView(viewModel: viewModel)
 
-        _ = try view.inspect()
+        // Use find() for deterministic coverage - verify view structure renders
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.NavigationStack.self)
         #expect(viewModel.displayFileName == "medical_report.jpg")
     }
 
@@ -146,7 +159,9 @@ struct AttachmentViewerViewTests {
         let viewModel = try makeViewModel()
         let view = AttachmentViewerView(viewModel: viewModel)
 
-        _ = try view.inspect()
+        // Use find() for deterministic coverage - verify view structure renders
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.NavigationStack.self)
         #expect(!viewModel.displayFileSize.isEmpty)
     }
 
@@ -157,7 +172,9 @@ struct AttachmentViewerViewTests {
         let viewModel = try makeViewModel(mimeType: "image/jpeg")
         let view = AttachmentViewerView(viewModel: viewModel)
 
-        _ = try view.inspect()
+        // Use find() for deterministic coverage
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.NavigationStack.self)
         #expect(viewModel.isImage)
     }
 
@@ -168,7 +185,9 @@ struct AttachmentViewerViewTests {
         let viewModel = try makeViewModel(fileName: "doc.pdf", mimeType: "application/pdf")
         let view = AttachmentViewerView(viewModel: viewModel)
 
-        _ = try view.inspect()
+        // Use find() for deterministic coverage
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.NavigationStack.self)
         #expect(viewModel.isPDF)
         #expect(!viewModel.isImage)
     }
@@ -182,7 +201,9 @@ struct AttachmentViewerViewTests {
 
         let view = AttachmentViewerView(viewModel: viewModel)
 
-        _ = try view.inspect()
+        // Use find() for deterministic coverage
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.NavigationStack.self)
     }
 
     // MARK: - Share Sheet Tests
@@ -194,6 +215,8 @@ struct AttachmentViewerViewTests {
 
         let view = AttachmentViewerView(viewModel: viewModel)
 
-        _ = try view.inspect()
+        // Use find() for deterministic coverage
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.NavigationStack.self)
     }
 }

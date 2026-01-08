@@ -170,7 +170,7 @@ See [ADR-0006: Test Coverage Requirements](adr/adr-0006-test-coverage-requiremen
 
 **Summary:**
 
-- Overall: 87% minimum
+- Overall: 90% minimum
 - Per-file: 85% minimum (with documented exceptions)
 - Security-critical code: Unit tests + failure cases mandatory
 

@@ -27,12 +27,10 @@ We need a coverage policy that enforces high quality while allowing practical ex
 
 ### Dual Threshold System
 
-1. **Overall Project Coverage: 87% minimum**
+1. **Overall Project Coverage: 90% minimum**
    - Measures aggregate coverage across all application code
    - Ensures the codebase as a whole maintains high quality
    - Prevents coverage "holes" from accumulating
-   - Note: Originally 90%, lowered to 87% due to SwiftUI View body closure limitations
-     (see "SwiftUI Coverage Limitations" below)
 
 2. **Individual File Coverage: 85% minimum**
    - Each file must meet 85% coverage independently

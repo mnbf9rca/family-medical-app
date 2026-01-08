@@ -23,7 +23,9 @@ struct ExportWarningDialogTests {
                 onCancel: { wasCancelled = true }
             )
 
-        _ = try content.inspect()
+        // Use find() for deterministic coverage
+        let inspected = try content.inspect()
+        _ = try inspected.find(text: "Test Content")
 
         #expect(!wasConfirmed)
         #expect(!wasCancelled)
@@ -43,7 +45,9 @@ struct ExportWarningDialogTests {
                 onCancel: {}
             )
 
-        _ = try content.inspect()
+        // Use find() for deterministic coverage
+        let inspected = try content.inspect()
+        _ = try inspected.find(text: "Main Content")
     }
 
     @Test
@@ -60,7 +64,9 @@ struct ExportWarningDialogTests {
                 onCancel: {}
             )
 
-        _ = try content.inspect()
+        // Use find() for deterministic coverage
+        let inspected = try content.inspect()
+        _ = try inspected.find(text: "Main Content")
     }
 
     // MARK: - Default Cancel Callback Tests
@@ -78,7 +84,9 @@ struct ExportWarningDialogTests {
                 // onCancel uses default empty closure
             ) {}
 
-        _ = try content.inspect()
+        // Use find() for deterministic coverage
+        let inspected = try content.inspect()
+        _ = try inspected.find(text: "Content")
     }
 
     // MARK: - Callback Invocation Tests
@@ -92,7 +100,9 @@ struct ExportWarningDialogTests {
                 isPresented: .constant(true)
             ) { wasConfirmed = true }
 
-        _ = try content.inspect()
+        // Use find() for deterministic coverage
+        let inspected = try content.inspect()
+        _ = try inspected.find(text: "Content")
         // Callback is stored but not invoked until user taps Export
         #expect(!wasConfirmed)
     }
@@ -108,7 +118,9 @@ struct ExportWarningDialogTests {
                 onCancel: { wasCancelled = true }
             )
 
-        _ = try content.inspect()
+        // Use find() for deterministic coverage
+        let inspected = try content.inspect()
+        _ = try inspected.find(text: "Content")
         // Callback is stored but not invoked until user taps Cancel
         #expect(!wasCancelled)
     }
@@ -129,7 +141,9 @@ struct ExportWarningDialogTests {
             )
         ) {}
 
-        _ = try content.inspect()
+        // Use find() for deterministic coverage
+        let inspected = try content.inspect()
+        _ = try inspected.find(ViewType.Button.self)
     }
 
     @Test
@@ -139,7 +153,9 @@ struct ExportWarningDialogTests {
                 isPresented: .constant(false)
             ) {}
 
-        _ = try content.inspect()
+        // Use find() for deterministic coverage
+        let inspected = try content.inspect()
+        _ = try inspected.find(ViewType.Image.self)
     }
 
     @Test
@@ -152,7 +168,10 @@ struct ExportWarningDialogTests {
             isPresented: .constant(false)
         ) {}
 
-        _ = try content.inspect()
+        // Use find() for deterministic coverage
+        let inspected = try content.inspect()
+        _ = try inspected.find(text: "Header")
+        _ = try inspected.find(text: "Body")
     }
 
     // MARK: - State Management Tests
@@ -171,7 +190,9 @@ struct ExportWarningDialogTests {
                 isPresented: binding
             ) {}
 
-        _ = try content.inspect()
+        // Use find() for deterministic coverage
+        let inspected = try content.inspect()
+        _ = try inspected.find(text: "Content")
 
         // Simulate showing dialog
         isPresented = true
