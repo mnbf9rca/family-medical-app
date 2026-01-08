@@ -5,11 +5,11 @@ This document captures iOS testing patterns and solutions for common issues.
 ## Table of Contents
 
 - [Deterministic Element Checking](#deterministic-element-checking)
-- [XCTest Does NOT Guarantee Test Order](#xctest-does-not-guarantee-test-order)
+- [UI Test Structure](#ui-test-structure)
+- [SwiftUI View Testing Strategy](#swiftui-view-testing-strategy)
 - [SwiftUI Toggle Not Responding to tap()](#swiftui-toggle-not-responding-to-tap)
 - [Password AutoFill Blocking Tests](#password-autofill-blocking-tests)
 - [Testing SwiftUI Bindings with ViewInspector](#testing-swiftui-bindings-with-viewinspector)
-- [UI Test Performance: Shared Setup Pattern](#ui-test-performance-shared-setup-pattern)
 - [Swift Testing Parameterization](#swift-testing-parameterization)
 
 ## Deterministic Element Checking
@@ -100,36 +100,28 @@ CI environments are slower than local development machines. Use appropriate time
 - Helper implementation: `FamilyMedicalAppUITests/Helpers/UITestHelpers.swift`
 - Example: `AttachmentFlowUITests.swift` - deterministic attachment flow testing
 
-## XCTest Does NOT Guarantee Test Order
+## UI Test Structure
+
+### XCTest Does NOT Guarantee Test Order
 
 **⚠️ Critical:** XCTest does NOT guarantee test execution order. Numeric prefixes like `test1_`, `test2_`, `test3_` do NOT ensure tests run in that sequence.
 
-**Root Cause:** XCTest may run tests in any order depending on:
-
-- Parallel execution settings
-- Environment configuration
-- Xcode version and simulator state
-
-**What Breaks:**
+XCTest may run tests in any order depending on parallel execution settings, environment configuration, and Xcode version.
 
 ```swift
 // BAD: These tests depend on execution order that isn't guaranteed
 func test1_CreateRecord() throws {
-    Self.createdRecordId = createRecord()  // Creates state for test2
+    Self.createdRecordId = createRecord()
 }
 
 func test2_ViewRecord() throws {
-    // WILL FAIL if test1 hasn't run yet!
-    viewRecord(id: Self.createdRecordId)
-}
-
-func test3_DeleteRecord() throws {
-    // WILL FAIL if test1 or test2 haven't run!
-    deleteRecord(id: Self.createdRecordId)
+    viewRecord(id: Self.createdRecordId)  // WILL FAIL if test1 hasn't run!
 }
 ```
 
-**Solution:** Consolidate interdependent operations into a single test method:
+### Pattern 1: Consolidated Workflow (Dependent Tests)
+
+For tests that must run in sequence, consolidate into one method:
 
 ```swift
 // GOOD: All CRUD operations in one method - guaranteed execution order
@@ -148,82 +140,89 @@ func testRecordCRUDWorkflow() throws {
 }
 ```
 
-**Benefits:**
+### Pattern 2: Shared Class Setup (Independent Tests)
 
-- ✅ Guaranteed execution order within the method
-- ✅ No shared mutable state between tests
-- ✅ Clear test intent (tests a complete workflow)
+For tests that don't depend on each other but share expensive setup (e.g., account creation):
 
-**Trade-offs:**
+```swift
+@MainActor
+final class MyUITests: XCTestCase {
+    nonisolated(unsafe) static var sharedApp: XCUIApplication!
+    var app: XCUIApplication { Self.sharedApp }
 
-- ❌ Single test failure stops the entire workflow
-- ❌ Longer individual test duration
-- ❌ Less granular test reporting
+    nonisolated override class func setUp() {
+        super.setUp()
+        MainActor.assumeIsolated {
+            sharedApp = XCUIApplication()
+            sharedApp.launchForUITesting(resetState: true)
+            sharedApp.createAccount()  // Expensive operation done once
+        }
+    }
+
+    func testFeatureA() throws {
+        // Uses shared account, tests independently
+    }
+
+    func testFeatureB() throws {
+        // Uses shared account, tests independently
+    }
+}
+```
+
+### Trade-offs
+
+| Pattern | Pros | Cons |
+|---------|------|------|
+| Consolidated workflow | Guaranteed order, no shared state | Single failure stops workflow, less granular reporting |
+| Shared class setup | ~60% faster, reuses expensive setup | If setUp fails, all tests fail |
 
 **When to use:**
 
-- CRUD operation tests that naturally chain together
-- Workflow tests where later steps require earlier steps
-- Any scenario where tests share mutable state
+- Consolidated: CRUD workflows, tests that share mutable state
+- Shared setup: Independent tests with expensive common setup
 
 **References:**
 
-- `NewUserFlowUITests.swift` - `testPasswordSetupValidation()` consolidates 5 validation checks
-- `MedicalRecordFlowUITests.swift` - `testMedicalRecordCRUDWorkflow()` consolidates 5 CRUD operations
+- Consolidated: `MedicalRecordFlowUITests.swift`, `NewUserFlowUITests.swift`
+- Shared setup: `ExistingUserFlowUITests.swift`, `AddPersonFlowUITests.swift`
 
-## SwiftUI Toggle Not Responding to tap()
+## SwiftUI View Testing Strategy
 
-**Problem:** Calling `toggle.tap()` on a SwiftUI `Toggle` element doesn't change its state.
+### The Problem
 
-**Root Cause:** SwiftUI Toggle elements render with the text label in the center. The default `tap()` method taps the center of the element's frame, which hits the label text, not the actual UISwitch control.
+SwiftUI view coverage varies between local and CI environments (often 5-10% lower in CI) because:
 
-**Solution:** Use the helper methods in `UITestHelpers.swift`:
+1. **Body closures execute during rendering** - timing differs between environments
+2. **Sheet/button closures are untestable** - they only execute when SwiftUI presents UI at runtime
+3. **UI tests run in separate process** - coverage depends on what actually renders
+
+### Architecture: Keep Closures Thin
+
+Closures inside `.sheet()`, `.fullScreenCover()`, and `Button { }` cannot be tested with ViewInspector. Keep them to 1-3 lines that only call ViewModel methods:
 
 ```swift
-// Turn toggle ON
-let toggle = app.switches["myToggleIdentifier"]
-turnSwitchOn(toggle)
+// BAD: Complex logic in closure - untestable
+.sheet(isPresented: $viewModel.showingPicker) {
+    DocumentPicker(onPicked: { urls in
+        for url in urls {
+            let data = try? Data(contentsOf: url)  // ← Can't test this
+            let processed = processData(data)       // ← Or this
+            viewModel.items.append(processed)       // ← Or this
+        }
+    })
+}
 
-// Turn toggle OFF
-turnSwitchOff(toggle)
+// GOOD: Thin closure, logic in ViewModel
+.sheet(isPresented: $viewModel.showingPicker) {
+    DocumentPicker(onPicked: { urls in
+        Task { await viewModel.addFromDocumentPicker(urls) }  // ← Tested in VM
+    })
+}
 ```
 
-**Implementation Details:**
+### Technique: Use ViewInspector find()
 
-1. Tap the toggle element first (required to "activate" it)
-2. Find the inner `.switch` descendant
-3. Tap the center coordinate of that inner switch
-4. Wait for the value to update using NSPredicate expectation
-
-**References:**
-
-- [UI Tests and Toggle on iOS/iPadOS](https://www.sylvaingamel.fr/en/blog/2023/23-02-12_ios-toggle-uitest/)
-- [GitHub: suiToggle-ui-testing](https://github.com/sylvaingml/suiToggle-ui-testing)
-- Helper implementation: `ios/FamilyMedicalApp/FamilyMedicalAppUITests/Helpers/UITestHelpers.swift`
-
-## Password AutoFill Blocking Tests
-
-**Problem:** iOS password autofill prompts appear during tests and block automation.
-
-**Solution:** Multi-layered approach:
-
-1. Disable hardware keyboard in simulator via `run-tests.sh` (uses PlistBuddy)
-2. Conditionally use `TextField` instead of `SecureField` in UI testing mode
-3. Add UI interruption monitors in test setUp as fallback
-
-See `UITestingHelpers.swift` for the `isUITesting` flag implementation.
-
-## Deterministic Code Coverage for SwiftUI Views
-
-**Problem:** UI test code coverage for SwiftUI views varies between local and CI environments (often 5-10% lower in CI).
-
-**Root Cause:** SwiftUI body closures execute during rendering, and rendering timing differs between environments:
-
-- Local development: Faster rendering, more intermediate states captured
-- CI environment: Slower, fewer render cycles, lower coverage
-- UI tests run in a separate process from the app
-
-**Solution:** Use ViewInspector unit tests to exercise view body branches deterministically:
+For conditional view elements, use `find()` not just `inspect()` to verify branches executed:
 
 ```swift
 // BAD: Just calls inspect() without exercising branches
@@ -258,20 +257,64 @@ func viewHidesLoadingWhenNotLoading() throws {
 }
 ```
 
-**Key insight:** ViewInspector's `find()` method forces the view to evaluate its body immediately and synchronously. This provides deterministic coverage that doesn't depend on UI rendering timing.
+**Key insight:** ViewInspector's `find()` forces the view to evaluate its body immediately and synchronously - no timing dependency.
 
-**When to use:**
+### When Coverage Exceptions Are Acceptable
 
-- Conditional view elements (if/else in body)
-- Error message displays
-- Loading indicators
-- Any SwiftUI view with branches that have inconsistent coverage
+If a view's coverage is below 85% but:
+
+1. The uncovered code is only thin closures (1-3 lines)
+2. Those closures only call ViewModel methods
+3. The ViewModel methods are tested (75-100% coverage)
+
+Then add a coverage exception in `scripts/check-coverage.sh` with a comment explaining why.
 
 **References:**
 
 - [Swift by Sundell: Writing testable code with SwiftUI](https://www.swiftbysundell.com/articles/writing-testable-code-when-using-swiftui/)
-- [Point-Free: Reliably testing async code](https://www.pointfree.co/blog/posts/110-reliably-testing-async-code-in-swift)
-- Example: `AttachmentPickerViewTests.swift` - deterministic view coverage tests
+- [SwiftUI Testing: A Pragmatic Approach](https://betterprogramming.pub/swiftui-testing-a-pragmatic-approach-aeb832107fe7)
+- Example: `AttachmentPickerViewTests.swift`, `AttachmentPickerView.swift`
+
+## SwiftUI Toggle Not Responding to tap()
+
+**Problem:** Calling `toggle.tap()` on a SwiftUI `Toggle` element doesn't change its state.
+
+**Root Cause:** SwiftUI Toggle elements render with the text label in the center. The default `tap()` method taps the center of the element's frame, which hits the label text, not the actual UISwitch control.
+
+**Solution:** Use the helper methods in `UITestHelpers.swift`:
+
+```swift
+// Turn toggle ON
+let toggle = app.switches["myToggleIdentifier"]
+turnSwitchOn(toggle)
+
+// Turn toggle OFF
+turnSwitchOff(toggle)
+```
+
+**Implementation Details:**
+
+1. Tap the toggle element first (required to "activate" it)
+2. Find the inner `.switch` descendant
+3. Tap the center coordinate of that inner switch
+4. Wait for the value to update using NSPredicate expectation
+
+**References:**
+
+- [UI Tests and Toggle on iOS/iPadOS](https://www.sylvaingamel.fr/en/blog/2023/23-02-12_ios-toggle-uitest/)
+- Helper implementation: `ios/FamilyMedicalApp/FamilyMedicalAppUITests/Helpers/UITestHelpers.swift`
+
+## Password AutoFill Blocking Tests
+
+**Problem:** iOS password autofill prompts appear during tests and block automation.
+
+**Solution:** Multi-layered approach:
+
+1. Disable hardware keyboard in simulator via `run-tests.sh` (uses PlistBuddy)
+2. Conditionally use `TextField` instead of `SecureField` in UI testing mode
+3. Add UI interruption monitors in test setUp as fallback
+
+See `UITestingHelpers.swift` for the `isUITesting` flag implementation.
 
 ## Testing SwiftUI Bindings with ViewInspector
 
@@ -313,74 +356,6 @@ final class BindingTestHarness<Value> {
     }
 }
 ```
-
-## UI Test Performance: Shared Setup Pattern
-
-**Problem:** UI tests are slow when each test independently creates accounts and navigates.
-
-**Solution:** Use class-level shared setup for independent tests, and consolidate interdependent tests.
-
-**⚠️ Important:** Do NOT rely on `test1_`, `test2_` prefixes for ordering - see [XCTest Does NOT Guarantee Test Order](#xctest-does-not-guarantee-test-order).
-
-### Pattern 1: Shared Class Setup (Independent Tests)
-
-For tests that don't depend on each other but share expensive setup (e.g., account creation):
-
-```swift
-@MainActor
-final class MyUITests: XCTestCase {
-    nonisolated(unsafe) static var sharedApp: XCUIApplication!
-    var app: XCUIApplication { Self.sharedApp }
-
-    nonisolated override class func setUp() {
-        super.setUp()
-        MainActor.assumeIsolated {
-            sharedApp = XCUIApplication()
-            sharedApp.launchForUITesting(resetState: true)
-            sharedApp.createAccount()  // Expensive operation done once
-        }
-    }
-
-    func testFeatureA() throws {
-        // Uses shared account, tests independently
-    }
-
-    func testFeatureB() throws {
-        // Uses shared account, tests independently
-    }
-}
-```
-
-### Pattern 2: Consolidated Workflow (Dependent Tests)
-
-For tests that must run in sequence, consolidate into one method:
-
-```swift
-func testCompleteWorkflow() throws {
-    // All steps execute in guaranteed order
-    let record = createRecord()
-    verifyRecord(record)
-    editRecord(record)
-    deleteRecord(record)
-}
-```
-
-**Trade-offs:**
-
-- ✅ ~60% faster execution with shared setup
-- ✅ Guaranteed order with consolidated tests
-- ❌ Shared setup: if setUp fails, all tests fail
-- ❌ Consolidated tests: less granular reporting
-
-**When to use:**
-
-- Shared setup: Independent tests with expensive common setup
-- Consolidated: Tests that must run in sequence
-
-**References:**
-
-- Shared setup: `ExistingUserFlowUITests.swift`, `AddPersonFlowUITests.swift`
-- Consolidated: `MedicalRecordFlowUITests.swift`, `NewUserFlowUITests.swift`
 
 ## Swift Testing Parameterization
 

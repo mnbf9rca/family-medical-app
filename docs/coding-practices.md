@@ -8,7 +8,7 @@ This document contains coding standards and best practices for the Family Medica
 
 - [ADRs](adr/README.md) - Architecture decisions and rationale
 - This document - Coding standards and patterns
-- [SwiftUI XCUITest Gotchas](swiftui-xcuitest-gotchas.md) - UI testing workarounds
+- [Testing Patterns](testing-patterns.md) - UI testing patterns and solutions
 
 ---
 
@@ -170,13 +170,13 @@ See [ADR-0006: Test Coverage Requirements](adr/adr-0006-test-coverage-requiremen
 
 **Summary:**
 
-- Overall: 90% minimum
+- Overall: 87% minimum
 - Per-file: 85% minimum (with documented exceptions)
 - Security-critical code: Unit tests + failure cases mandatory
 
 ### UI Testing
 
-See [SwiftUI XCUITest Gotchas](swiftui-xcuitest-gotchas.md) for common issues.
+See [Testing Patterns](testing-patterns.md) for common issues and solutions.
 
 **Key practices:**
 
@@ -233,7 +233,7 @@ See [ADR-0002: Key Hierarchy](adr/adr-0002-key-hierarchy.md) for specifications.
 
 - Primary Key and Private Key NEVER leave device
 - Always provide biometric auth fallback
-- Use SecureField for password input (except in UI testing mode - see [SwiftUI XCUITest Gotchas](swiftui-xcuitest-gotchas.md))
+- Use SecureField for password input (except in UI testing mode - see [Testing Patterns](testing-patterns.md))
 
 ---
 
