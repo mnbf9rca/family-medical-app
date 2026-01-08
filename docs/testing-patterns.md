@@ -469,6 +469,52 @@ func initializesDateFieldsWithTodayForNewRecord() throws {
 }
 ```
 
+### Testing with continuousClock
+
+For ViewModels that use `Task.sleep` for debouncing, delays, or animations, use `@Dependency(\.continuousClock)` to make tests instant:
+
+**ViewModel Implementation:**
+
+```swift
+import Dependencies
+
+@MainActor
+@Observable
+final class SearchViewModel {
+    @ObservationIgnored @Dependency(\.continuousClock) private var clock
+
+    func search(query: String) async {
+        // Debounce: wait before executing search
+        try? await clock.sleep(for: .milliseconds(300))
+        await performSearch(query)
+    }
+}
+```
+
+**Test with ImmediateClock:**
+
+```swift
+@Test
+func searchExecutesAfterDebounce() async throws {
+    let viewModel = withDependencies {
+        $0.continuousClock = ImmediateClock()  // Makes sleep instant!
+    } operation: {
+        SearchViewModel()
+    }
+
+    await viewModel.search(query: "test")
+
+    // No actual waiting - ImmediateClock makes sleep return immediately
+    #expect(viewModel.searchResults.isEmpty == false)
+}
+```
+
+**Benefits:**
+
+- Tests run instantly instead of waiting for real delays
+- Eliminates timing-based flakiness
+- Tests are deterministic across local/CI environments
+
 ### Alternative: Await Async Operations Directly
 
 For tests that use `Task.sleep` to wait for async operations, prefer calling the ViewModel method directly:
