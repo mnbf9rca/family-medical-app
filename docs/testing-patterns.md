@@ -213,6 +213,66 @@ turnSwitchOff(toggle)
 
 See `UITestingHelpers.swift` for the `isUITesting` flag implementation.
 
+## Deterministic Code Coverage for SwiftUI Views
+
+**Problem:** UI test code coverage for SwiftUI views varies between local and CI environments (often 5-10% lower in CI).
+
+**Root Cause:** SwiftUI body closures execute during rendering, and rendering timing differs between environments:
+
+- Local development: Faster rendering, more intermediate states captured
+- CI environment: Slower, fewer render cycles, lower coverage
+- UI tests run in a separate process from the app
+
+**Solution:** Use ViewInspector unit tests to exercise view body branches deterministically:
+
+```swift
+// BAD: Just calls inspect() without exercising branches
+@Test
+func viewRendersWhileLoading() throws {
+    let viewModel = makeViewModel()
+    viewModel.isLoading = true
+    let view = MyView(viewModel: viewModel)
+    _ = try view.inspect()  // Only verifies no crash
+}
+
+// GOOD: Finds the element to verify the branch executed
+@Test
+func viewRendersWhileLoading() throws {
+    let viewModel = makeViewModel()
+    viewModel.isLoading = true
+    let view = MyView(viewModel: viewModel)
+    let inspected = try view.inspect()
+    _ = try inspected.find(ViewType.ProgressView.self)  // Branch verified!
+}
+
+// GOOD: Also test the negative case
+@Test
+func viewHidesLoadingWhenNotLoading() throws {
+    let viewModel = makeViewModel()
+    viewModel.isLoading = false
+    let view = MyView(viewModel: viewModel)
+    let inspected = try view.inspect()
+    #expect(throws: (any Error).self) {
+        _ = try inspected.find(ViewType.ProgressView.self)  // Should NOT exist
+    }
+}
+```
+
+**Key insight:** ViewInspector's `find()` method forces the view to evaluate its body immediately and synchronously. This provides deterministic coverage that doesn't depend on UI rendering timing.
+
+**When to use:**
+
+- Conditional view elements (if/else in body)
+- Error message displays
+- Loading indicators
+- Any SwiftUI view with branches that have inconsistent coverage
+
+**References:**
+
+- [Swift by Sundell: Writing testable code with SwiftUI](https://www.swiftbysundell.com/articles/writing-testable-code-when-using-swiftui/)
+- [Point-Free: Reliably testing async code](https://www.pointfree.co/blog/posts/110-reliably-testing-async-code-in-swift)
+- Example: `AttachmentPickerViewTests.swift` - deterministic view coverage tests
+
 ## Testing SwiftUI Bindings with ViewInspector
 
 **Problem:** Using `.constant()` bindings in unit tests only verifies view rendering, not two-way data flow.
