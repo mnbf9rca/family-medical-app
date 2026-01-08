@@ -1,4 +1,3 @@
-import CryptoKit
 import Foundation
 import Testing
 import UIKit
@@ -6,93 +5,12 @@ import UIKit
 
 /// Tests for AttachmentService content retrieval, deduplication, and MIME type validation
 struct AttachmentServiceContentTests {
-    // MARK: - Test Fixtures
-
-    struct TestFixtures {
-        let service: AttachmentService
-        let repository: MockAttachmentRepository
-        let fileStorage: MockAttachmentFileStorageService
-        let imageProcessor: MockImageProcessingService
-        let encryptionService: MockEncryptionService
-        let fmkService: MockFamilyMemberKeyService
-        let primaryKey: SymmetricKey
-        let fmk: SymmetricKey
-        let personId: UUID
-        let recordId: UUID
-
-        func makeInput(
-            data: Data,
-            fileName: String,
-            mimeType: String,
-            recordId: UUID? = nil
-        ) -> AddAttachmentInput {
-            AddAttachmentInput(
-                data: data,
-                fileName: fileName,
-                mimeType: mimeType,
-                recordId: recordId ?? self.recordId,
-                personId: personId,
-                primaryKey: primaryKey
-            )
-        }
-    }
-
-    func makeFixtures() -> TestFixtures {
-        let repository = MockAttachmentRepository()
-        let fileStorage = MockAttachmentFileStorageService()
-        let imageProcessor = MockImageProcessingService()
-        let encryptionService = MockEncryptionService()
-        let fmkService = MockFamilyMemberKeyService()
-
-        let primaryKey = SymmetricKey(size: .bits256)
-        let fmk = SymmetricKey(size: .bits256)
-        let personId = UUID()
-
-        fmkService.storedFMKs[personId.uuidString] = fmk
-
-        let service = AttachmentService(
-            attachmentRepository: repository,
-            fileStorage: fileStorage,
-            imageProcessor: imageProcessor,
-            encryptionService: encryptionService,
-            fmkService: fmkService
-        )
-
-        return TestFixtures(
-            service: service,
-            repository: repository,
-            fileStorage: fileStorage,
-            imageProcessor: imageProcessor,
-            encryptionService: encryptionService,
-            fmkService: fmkService,
-            primaryKey: primaryKey,
-            fmk: fmk,
-            personId: personId,
-            recordId: UUID()
-        )
-    }
-
-    func makeTestJPEGData(seed: Int = 0) -> Data {
-        let size = CGSize(width: 10, height: 10)
-        let format = UIGraphicsImageRendererFormat()
-        format.scale = 1.0
-        let renderer = UIGraphicsImageRenderer(size: size, format: format)
-        let colors: [UIColor] = [.blue, .red, .green, .yellow, .orange, .purple]
-        let color = colors[seed % colors.count]
-        let image = renderer.image { ctx in
-            color.setFill()
-            ctx.fill(CGRect(origin: .zero, size: size))
-        }
-        // swiftlint:disable:next force_unwrapping
-        return image.jpegData(compressionQuality: 0.5)!
-    }
-
     // MARK: - Deduplication Tests
 
     @Test
     func addAttachment_duplicateContent_reusesExisting() async throws {
-        let fixtures = makeFixtures()
-        let imageData = makeTestJPEGData()
+        let fixtures = AttachmentServiceTestFixtures.make()
+        let imageData = AttachmentServiceTestFixtures.makeTestJPEGData()
 
         let first = try await fixtures.service.addAttachment(
             fixtures.makeInput(data: imageData, fileName: "first.jpg", mimeType: "image/jpeg")
@@ -117,8 +35,8 @@ struct AttachmentServiceContentTests {
 
     @Test
     func getContent_validAttachment_returnsDecryptedData() async throws {
-        let fixtures = makeFixtures()
-        let originalData = makeTestJPEGData()
+        let fixtures = AttachmentServiceTestFixtures.make()
+        let originalData = AttachmentServiceTestFixtures.makeTestJPEGData()
 
         let attachment = try await fixtures.service.addAttachment(
             fixtures.makeInput(data: originalData, fileName: "test.jpg", mimeType: "image/jpeg")
@@ -135,7 +53,7 @@ struct AttachmentServiceContentTests {
 
     @Test
     func getContent_nonExistentContent_throwsError() async throws {
-        let fixtures = makeFixtures()
+        let fixtures = AttachmentServiceTestFixtures.make()
         fixtures.fileStorage.shouldFailRetrieve = true
 
         let attachment = try Attachment(
@@ -161,8 +79,8 @@ struct AttachmentServiceContentTests {
 
     @Test
     func addAttachment_jpegUppercase_accepted() async throws {
-        let fixtures = makeFixtures()
-        let imageData = makeTestJPEGData()
+        let fixtures = AttachmentServiceTestFixtures.make()
+        let imageData = AttachmentServiceTestFixtures.makeTestJPEGData()
 
         let attachment = try await fixtures.service.addAttachment(
             fixtures.makeInput(data: imageData, fileName: "test.jpg", mimeType: "IMAGE/JPEG")
@@ -173,7 +91,7 @@ struct AttachmentServiceContentTests {
 
     @Test
     func addAttachment_pngSupported() async throws {
-        let fixtures = makeFixtures()
+        let fixtures = AttachmentServiceTestFixtures.make()
 
         let size = CGSize(width: 10, height: 10)
         let renderer = UIGraphicsImageRenderer(size: size)

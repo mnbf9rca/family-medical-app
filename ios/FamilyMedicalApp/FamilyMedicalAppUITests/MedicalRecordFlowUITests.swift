@@ -42,10 +42,8 @@ final class MedicalRecordFlowUITests: XCTestCase {
             "Should be on Members view"
         )
 
-        // Create test person if doesn't exist
-        if !app.verifyPersonExists(name: testPersonName, timeout: 1) {
-            app.addPerson(name: testPersonName)
-        }
+        // Create test person (unconditional - resetState: true ensures fresh state)
+        app.addPerson(name: testPersonName)
 
         // Navigate to person detail
         let personCell = app.cells.containing(.staticText, identifier: testPersonName).firstMatch
@@ -103,12 +101,20 @@ final class MedicalRecordFlowUITests: XCTestCase {
 
     /// Navigate back to the vaccines list from a detail view
     private func navigateBackToList() {
-        let backButton = app.navigationBars.buttons.element(boundBy: 0)
-        XCTAssertTrue(backButton.waitForExistence(timeout: 3), "Back button should exist")
-        backButton.tap()
+        // Use named back button (SwiftUI shows parent view title) instead of fragile index
+        let listTitle = "\(testPersonName)'s Vaccine"
+        let backButton = app.navigationBars.buttons[listTitle]
+        if backButton.waitForExistence(timeout: 2) {
+            backButton.tap()
+        } else {
+            // Fallback to "Back" button if title-based doesn't exist
+            let genericBack = app.navigationBars.buttons["Back"]
+            XCTAssertTrue(genericBack.waitForExistence(timeout: 2), "Back button should exist")
+            genericBack.tap()
+        }
 
-        let listTitle = app.navigationBars["\(testPersonName)'s Vaccine"]
-        XCTAssertTrue(listTitle.waitForExistence(timeout: 3), "Should return to vaccines list")
+        let navTitle = app.navigationBars[listTitle]
+        XCTAssertTrue(navTitle.waitForExistence(timeout: 3), "Should return to vaccines list")
     }
 
     // MARK: - CRUD Workflow Test

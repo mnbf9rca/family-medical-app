@@ -83,61 +83,24 @@ struct FieldValueTests {
 
     // MARK: - Codable Tests
 
-    @Test
-    func codable_stringRoundTrip() throws {
-        let original = FieldValue.string("test value")
-        let encoded = try JSONEncoder().encode(original)
-        let decoded = try JSONDecoder().decode(FieldValue.self, from: encoded)
-        #expect(decoded == original)
-    }
+    /// Test data for parameterized codable round-trip tests
+    /// Uses deterministic values (fixed UUIDs, timestamps) for reproducible tests
+    static let codableTestCases: [FieldValue] = [
+        .string("test value"),
+        .int(42),
+        .double(3.14159),
+        .bool(true),
+        .date(Date(timeIntervalSince1970: 1_000_000)),
+        // swiftlint:disable:next force_unwrapping
+        .attachmentIds([UUID(uuidString: "12345678-1234-1234-1234-123456789012")!]),
+        .stringArray(["one", "two", "three"])
+    ]
 
-    @Test
-    func codable_intRoundTrip() throws {
-        let original = FieldValue.int(42)
-        let encoded = try JSONEncoder().encode(original)
+    @Test(arguments: codableTestCases)
+    func codable_roundTrip(value: FieldValue) throws {
+        let encoded = try JSONEncoder().encode(value)
         let decoded = try JSONDecoder().decode(FieldValue.self, from: encoded)
-        #expect(decoded == original)
-    }
-
-    @Test
-    func codable_doubleRoundTrip() throws {
-        let original = FieldValue.double(3.14159)
-        let encoded = try JSONEncoder().encode(original)
-        let decoded = try JSONDecoder().decode(FieldValue.self, from: encoded)
-        #expect(decoded == original)
-    }
-
-    @Test
-    func codable_boolRoundTrip() throws {
-        let original = FieldValue.bool(true)
-        let encoded = try JSONEncoder().encode(original)
-        let decoded = try JSONDecoder().decode(FieldValue.self, from: encoded)
-        #expect(decoded == original)
-    }
-
-    @Test
-    func codable_dateRoundTrip() throws {
-        let original = FieldValue.date(Date(timeIntervalSince1970: 1_000_000))
-        let encoded = try JSONEncoder().encode(original)
-        let decoded = try JSONDecoder().decode(FieldValue.self, from: encoded)
-        #expect(decoded == original)
-    }
-
-    @Test
-    func codable_attachmentIdsRoundTrip() throws {
-        let ids = [UUID(), UUID(), UUID()]
-        let original = FieldValue.attachmentIds(ids)
-        let encoded = try JSONEncoder().encode(original)
-        let decoded = try JSONDecoder().decode(FieldValue.self, from: encoded)
-        #expect(decoded == original)
-    }
-
-    @Test
-    func codable_stringArrayRoundTrip() throws {
-        let original = FieldValue.stringArray(["one", "two", "three"])
-        let encoded = try JSONEncoder().encode(original)
-        let decoded = try JSONDecoder().decode(FieldValue.self, from: encoded)
-        #expect(decoded == original)
+        #expect(decoded == value)
     }
 
     // MARK: - Equatable Tests
