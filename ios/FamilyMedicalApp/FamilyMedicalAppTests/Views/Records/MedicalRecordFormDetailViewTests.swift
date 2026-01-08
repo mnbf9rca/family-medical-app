@@ -1,4 +1,5 @@
 import CryptoKit
+import Dependencies
 import SwiftUI
 import Testing
 import ViewInspector
@@ -51,6 +52,9 @@ struct MedicalRecordFormDetailViewTests {
         return DecryptedRecord(record: record, content: content)
     }
 
+    /// Fixed test date for deterministic testing
+    let testDate = Date(timeIntervalSinceReferenceDate: 1_234_567_890)
+
     func createFormViewModel(
         person: Person,
         existingRecord: MedicalRecord? = nil,
@@ -62,16 +66,21 @@ struct MedicalRecordFormDetailViewTests {
         let mockFMKService = MockFamilyMemberKeyService()
         mockFMKService.setFMK(testFMK, for: person.id.uuidString)
 
-        return MedicalRecordFormViewModel(
-            person: person,
-            schema: testSchema,
-            existingRecord: existingRecord,
-            existingContent: existingContent,
-            medicalRecordRepository: mockRecordRepo,
-            recordContentService: mockContentService,
-            primaryKeyProvider: mockKeyProvider,
-            fmkService: mockFMKService
-        )
+        // Use withDependencies to provide test values for @Dependency properties
+        return withDependencies {
+            $0.date = .constant(testDate)
+        } operation: {
+            MedicalRecordFormViewModel(
+                person: person,
+                schema: testSchema,
+                existingRecord: existingRecord,
+                existingContent: existingContent,
+                medicalRecordRepository: mockRecordRepo,
+                recordContentService: mockContentService,
+                primaryKeyProvider: mockKeyProvider,
+                fmkService: mockFMKService
+            )
+        }
     }
 
     // MARK: - MedicalRecordDetailView Integration Tests
@@ -202,10 +211,14 @@ struct MedicalRecordFormDetailViewTests {
     func medicalRecordFormViewRendersForAdd() throws {
         let person = try makeTestPerson()
 
-        let view = MedicalRecordFormView(
-            person: person,
-            schema: testSchema
-        )
+        let view = withDependencies {
+            $0.date = .constant(testDate)
+        } operation: {
+            MedicalRecordFormView(
+                person: person,
+                schema: testSchema
+            )
+        }
 
         _ = view.body
 
@@ -217,12 +230,16 @@ struct MedicalRecordFormDetailViewTests {
         let person = try makeTestPerson()
         let decryptedRecord = makeTestDecryptedRecord()
 
-        let view = MedicalRecordFormView(
-            person: person,
-            schema: testSchema,
-            existingRecord: decryptedRecord.record,
-            existingContent: decryptedRecord.content
-        )
+        let view = withDependencies {
+            $0.date = .constant(testDate)
+        } operation: {
+            MedicalRecordFormView(
+                person: person,
+                schema: testSchema,
+                existingRecord: decryptedRecord.record,
+                existingContent: decryptedRecord.content
+            )
+        }
 
         _ = view.body
 
@@ -298,7 +315,11 @@ struct MedicalRecordFormDetailViewTests {
 
         for schemaType in BuiltInSchemaType.allCases {
             let schema = RecordSchema.builtIn(schemaType)
-            let view = MedicalRecordFormView(person: person, schema: schema)
+            let view = withDependencies {
+                $0.date = .constant(testDate)
+            } operation: {
+                MedicalRecordFormView(person: person, schema: schema)
+            }
             _ = view.body
         }
     }

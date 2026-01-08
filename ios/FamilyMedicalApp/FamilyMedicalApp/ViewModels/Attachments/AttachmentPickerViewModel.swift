@@ -1,4 +1,5 @@
 import CryptoKit
+import Dependencies
 import Foundation
 import Observation
 import PhotosUI
@@ -49,6 +50,11 @@ final class AttachmentPickerViewModel {
     static let maxFileSizeBytes = AttachmentService.maxFileSizeBytes
 
     // MARK: - Dependencies
+
+    /// Controllable date for deterministic testing
+    @ObservationIgnored @Dependency(\.date) private var date
+    /// Controllable UUID for deterministic testing
+    @ObservationIgnored @Dependency(\.uuid) private var uuid
 
     private let attachmentService: AttachmentServiceProtocol
     private let primaryKeyProvider: PrimaryKeyProviderProtocol
@@ -118,7 +124,7 @@ final class AttachmentPickerViewModel {
                 contentHMAC: Data(repeating: 0xAB, count: 32), // Synthetic HMAC
                 encryptedSize: testData.thumbnailData.count,
                 thumbnailData: testData.thumbnailData,
-                uploadedAt: Date()
+                uploadedAt: date.now
             )
             attachments.append(attachment)
             logger.debug("Seeded test attachment for UI coverage testing")
@@ -295,7 +301,7 @@ final class AttachmentPickerViewModel {
 
         // For new records (no recordId), we need a temporary ID
         // The actual linking happens when the record is saved
-        let targetRecordId = recordId ?? UUID()
+        let targetRecordId = recordId ?? uuid()
 
         let input = AddAttachmentInput(
             data: data,
@@ -312,7 +318,7 @@ final class AttachmentPickerViewModel {
     private func formatTimestamp() -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyyMMdd_HHmmss"
-        return formatter.string(from: Date())
+        return formatter.string(from: date.now)
     }
 
     /// Detect MIME type from image data magic bytes

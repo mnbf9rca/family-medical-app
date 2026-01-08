@@ -11,6 +11,7 @@ This document captures iOS testing patterns and solutions for common issues.
 - [Password AutoFill Blocking Tests](#password-autofill-blocking-tests)
 - [Testing SwiftUI Bindings with ViewInspector](#testing-swiftui-bindings-with-viewinspector)
 - [Swift Testing Parameterization](#swift-testing-parameterization)
+- [Deterministic Testing with swift-dependencies](#deterministic-testing-with-swift-dependencies)
 
 ## Deterministic Element Checking
 
@@ -389,3 +390,114 @@ func testSchemaType(_ schemaType: SchemaType) {
 - Better test reporting in Xcode and CI
 
 **Note:** This requires Swift Testing framework (`import Testing`), not XCTest.
+
+## Deterministic Testing with swift-dependencies
+
+**Problem:** Tests that depend on `Date()`, `UUID()`, or `Task.sleep` timing are non-deterministic - they may pass locally but fail in CI due to timing differences.
+
+```swift
+// BAD: Non-deterministic date comparison
+let viewModel = MedicalRecordFormViewModel(person: person, schema: schema)
+let dateValue = viewModel.fieldValues[dateFieldId]?.dateValue
+let timeDifference = abs(dateValue!.timeIntervalSinceNow)
+#expect(timeDifference < 1.0)  // Flaky! Could fail if system is slow
+
+// BAD: Timing dependency with Task.sleep
+view.deletePerson(at: offsets)
+try await Task.sleep(for: .milliseconds(100))  // Flaky! May not be enough
+#expect(viewModel.persons.count == 1)
+```
+
+**Solution:** Use `swift-dependencies` library to inject controllable system dependencies.
+
+### ViewModels: Using @Dependency
+
+Add controllable dependencies to ViewModels:
+
+```swift
+import Dependencies
+
+@MainActor
+@Observable
+final class MedicalRecordFormViewModel {
+    // Use @ObservationIgnored to prevent observation tracking of dependency
+    @ObservationIgnored @Dependency(\.date) private var date
+
+    init(/* ... */) {
+        // Initialize all stored properties FIRST
+        self.medicalRecordRepository = medicalRecordRepository ?? MedicalRecordRepository()
+        // ... other properties
+
+        // THEN access dependencies (after self is fully initialized)
+        for field in schema.fields where field.fieldType == .date {
+            initialValues[field.id.uuidString] = .date(date.now)
+        }
+    }
+}
+```
+
+**⚠️ Swift Initialization Rule:** You must initialize all stored properties before accessing `@Dependency` because property wrappers require `self` to be available.
+
+### Available Dependencies
+
+| Dependency | Usage | Test Value |
+|------------|-------|------------|
+| `@Dependency(\.date)` | `date.now` for current date | `.constant(fixedDate)` |
+| `@Dependency(\.uuid)` | `uuid()` for new UUID | `.incrementing` |
+| `@Dependency(\.continuousClock)` | `clock.sleep(for:)` instead of `Task.sleep` | `.immediate` |
+
+### Tests: Using withDependencies
+
+Override dependencies for deterministic testing:
+
+```swift
+import Dependencies
+
+@Test
+func initializesDateFieldsWithTodayForNewRecord() throws {
+    let fixedDate = Date(timeIntervalSinceReferenceDate: 1_234_567_890)
+
+    let viewModel = withDependencies {
+        $0.date = .constant(fixedDate)
+    } operation: {
+        MedicalRecordFormViewModel(person: person, schema: schema)
+    }
+
+    // Now we can assert exact equality!
+    let dateValue = viewModel.fieldValues[requiredDateFieldId]?.dateValue
+    #expect(dateValue == fixedDate)
+}
+```
+
+### Alternative: Await Async Operations Directly
+
+For tests that use `Task.sleep` to wait for async operations, prefer calling the ViewModel method directly:
+
+```swift
+// BAD: Sleep hoping async operation completes
+view.deletePerson(at: offsets)
+try await Task.sleep(for: .milliseconds(100))
+#expect(viewModel.persons.count == 1)
+
+// GOOD: Call ViewModel directly and await
+let personToDelete = viewModel.persons[0]
+await viewModel.deletePerson(id: personToDelete.id)
+#expect(viewModel.persons.count == 1)
+```
+
+### Security Constraint
+
+**⚠️ Do NOT wrap crypto services with swift-dependencies.**
+
+Per ADR-0002 through ADR-0005, only wrap system dependencies:
+
+- ✅ Date, UUID, Clock
+- ❌ EncryptionService, FamilyMemberKeyService, PrimaryKeyProvider
+
+Crypto services must use the existing optional-parameter DI pattern per ADR-0008.
+
+**References:**
+
+- [swift-dependencies GitHub](https://github.com/pointfreeco/swift-dependencies)
+- ADR-0010: Deterministic Testing Architecture
+- Example: `MedicalRecordFormViewModelTests.swift`, `HomeViewTests.swift`

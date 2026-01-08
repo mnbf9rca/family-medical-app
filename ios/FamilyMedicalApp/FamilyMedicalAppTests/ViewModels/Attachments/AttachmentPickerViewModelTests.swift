@@ -1,4 +1,5 @@
 import CryptoKit
+import Dependencies
 import Foundation
 import Testing
 import UIKit
@@ -17,6 +18,9 @@ struct AttachmentPickerViewModelTests {
         let primaryKey: SymmetricKey
     }
 
+    /// Fixed test date for deterministic testing
+    let testDate = Date(timeIntervalSinceReferenceDate: 1_234_567_890)
+
     func makeFixtures(recordId: UUID? = nil, existingAttachments: [FamilyMedicalApp.Attachment] = []) -> TestFixtures {
         let attachmentService = MockAttachmentService()
         let primaryKey = SymmetricKey(size: .bits256)
@@ -24,13 +28,19 @@ struct AttachmentPickerViewModelTests {
         let personId = UUID()
         let recordIdToUse = recordId ?? UUID()
 
-        let viewModel = AttachmentPickerViewModel(
-            personId: personId,
-            recordId: recordIdToUse,
-            existingAttachments: existingAttachments,
-            attachmentService: attachmentService,
-            primaryKeyProvider: primaryKeyProvider
-        )
+        // Use withDependencies to provide test values for @Dependency properties
+        let viewModel = withDependencies {
+            $0.date = .constant(testDate)
+            $0.uuid = .incrementing
+        } operation: {
+            AttachmentPickerViewModel(
+                personId: personId,
+                recordId: recordIdToUse,
+                existingAttachments: existingAttachments,
+                attachmentService: attachmentService,
+                primaryKeyProvider: primaryKeyProvider
+            )
+        }
 
         return TestFixtures(
             viewModel: viewModel,
@@ -263,13 +273,18 @@ struct AttachmentPickerViewModelTests {
         let attachmentService = MockAttachmentService()
         let primaryKeyProvider = MockPrimaryKeyProvider(primaryKey: SymmetricKey(size: .bits256))
 
-        let viewModel = AttachmentPickerViewModel(
-            personId: UUID(),
-            recordId: nil, // No record ID
-            existingAttachments: [attachment],
-            attachmentService: attachmentService,
-            primaryKeyProvider: primaryKeyProvider
-        )
+        let viewModel = withDependencies {
+            $0.date = .constant(testDate)
+            $0.uuid = .incrementing
+        } operation: {
+            AttachmentPickerViewModel(
+                personId: UUID(),
+                recordId: nil, // No record ID
+                existingAttachments: [attachment],
+                attachmentService: attachmentService,
+                primaryKeyProvider: primaryKeyProvider
+            )
+        }
 
         await viewModel.removeAttachment(attachment)
 
@@ -307,12 +322,17 @@ struct AttachmentPickerViewModelTests {
         let attachmentService = MockAttachmentService()
         let primaryKeyProvider = MockPrimaryKeyProvider(shouldFail: true)
 
-        let viewModel = AttachmentPickerViewModel(
-            personId: UUID(),
-            recordId: UUID(),
-            attachmentService: attachmentService,
-            primaryKeyProvider: primaryKeyProvider
-        )
+        let viewModel = withDependencies {
+            $0.date = .constant(testDate)
+            $0.uuid = .incrementing
+        } operation: {
+            AttachmentPickerViewModel(
+                personId: UUID(),
+                recordId: UUID(),
+                attachmentService: attachmentService,
+                primaryKeyProvider: primaryKeyProvider
+            )
+        }
 
         let image = makeTestImage()
         await viewModel.addFromCamera(image)

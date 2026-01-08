@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		D40AC5A42F0332AD00564AAD /* ViewInspector in Frameworks */ = {isa = PBXBuildFile; productRef = D40AC5A32F0332AD00564AAD /* ViewInspector */; };
+		D40AC5B32F03500000564AAD /* Dependencies in Frameworks */ = {isa = PBXBuildFile; productRef = D40AC5B12F03500000564AAD /* Dependencies */; };
+		D40AC5B42F03500000564AAD /* Dependencies in Frameworks */ = {isa = PBXBuildFile; productRef = D40AC5B22F03500000564AAD /* Dependencies */; };
 		D445F7DE2EFB435900E07F78 /* Clibsodium in Frameworks */ = {isa = PBXBuildFile; productRef = D445F7DD2EFB435900E07F78 /* Clibsodium */; };
 		D445F7E02EFB435900E07F78 /* Sodium in Frameworks */ = {isa = PBXBuildFile; productRef = D445F7DF2EFB435900E07F78 /* Sodium */; };
 /* End PBXBuildFile section */
@@ -59,6 +61,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D40AC5B32F03500000564AAD /* Dependencies in Frameworks */,
 				D445F7DE2EFB435900E07F78 /* Clibsodium in Frameworks */,
 				D445F7E02EFB435900E07F78 /* Sodium in Frameworks */,
 			);
@@ -68,6 +71,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D40AC5B42F03500000564AAD /* Dependencies in Frameworks */,
 				D40AC5A42F0332AD00564AAD /* ViewInspector in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -123,6 +127,7 @@
 			);
 			name = FamilyMedicalApp;
 			packageProductDependencies = (
+				D40AC5B12F03500000564AAD /* Dependencies */,
 				D445F7DD2EFB435900E07F78 /* Clibsodium */,
 				D445F7DF2EFB435900E07F78 /* Sodium */,
 			);
@@ -148,6 +153,7 @@
 			);
 			name = FamilyMedicalAppTests;
 			packageProductDependencies = (
+				D40AC5B22F03500000564AAD /* Dependencies */,
 				D40AC5A32F0332AD00564AAD /* ViewInspector */,
 			);
 			productName = FamilyMedicalAppTests;
@@ -210,6 +216,7 @@
 			mainGroup = D445F7912EF7E93C00E07F78;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
+				D40AC5B02F03500000564AAD /* XCRemoteSwiftPackageReference "swift-dependencies" */,
 				D445F7DC2EFB435900E07F78 /* XCRemoteSwiftPackageReference "swift-sodium" */,
 				D40AC5A22F0332AD00564AAD /* XCRemoteSwiftPackageReference "ViewInspector" */,
 			);
@@ -610,6 +617,14 @@
 				minimumVersion = 0.10.3;
 			};
 		};
+		D40AC5B02F03500000564AAD /* XCRemoteSwiftPackageReference "swift-dependencies" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/pointfreeco/swift-dependencies";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.0;
+			};
+		};
 		D445F7DC2EFB435900E07F78 /* XCRemoteSwiftPackageReference "swift-sodium" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/jedisct1/swift-sodium.git";
@@ -625,6 +640,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = D40AC5A22F0332AD00564AAD /* XCRemoteSwiftPackageReference "ViewInspector" */;
 			productName = ViewInspector;
+		};
+		D40AC5B12F03500000564AAD /* Dependencies */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D40AC5B02F03500000564AAD /* XCRemoteSwiftPackageReference "swift-dependencies" */;
+			productName = Dependencies;
+		};
+		D40AC5B22F03500000564AAD /* Dependencies */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D40AC5B02F03500000564AAD /* XCRemoteSwiftPackageReference "swift-dependencies" */;
+			productName = Dependencies;
 		};
 		D445F7DD2EFB435900E07F78 /* Clibsodium */ = {
 			isa = XCSwiftPackageProductDependency;

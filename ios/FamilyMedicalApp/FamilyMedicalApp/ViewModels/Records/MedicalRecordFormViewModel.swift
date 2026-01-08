@@ -1,4 +1,5 @@
 import CryptoKit
+import Dependencies
 import Foundation
 import Observation
 
@@ -20,6 +21,9 @@ final class MedicalRecordFormViewModel {
     var didSaveSuccessfully = false
 
     // MARK: - Dependencies
+
+    /// Controllable date for deterministic testing
+    @ObservationIgnored @Dependency(\.date) private var date
 
     private let medicalRecordRepository: MedicalRecordRepositoryProtocol
     private let recordContentService: RecordContentServiceProtocol
@@ -64,21 +68,8 @@ final class MedicalRecordFormViewModel {
         self.schema = schema
         self.existingRecord = existingRecord
 
-        // Initialize field values from existing content if editing,
-        // or pre-populate date fields with today's date for new records
-        if let content = existingContent {
-            self.fieldValues = content.allFields
-        } else {
-            // For new records, initialize date fields with today's date
-            // This ensures DatePicker's visual default matches the actual value
-            var initialValues: [String: FieldValue] = [:]
-            for field in schema.fields where field.fieldType == .date {
-                initialValues[field.id.uuidString] = .date(Date())
-            }
-            self.fieldValues = initialValues
-        }
-
         // Use optional parameter pattern per ADR-0008
+        // Initialize these FIRST so self is fully initialized before accessing @Dependency
         self.medicalRecordRepository = medicalRecordRepository ?? MedicalRecordRepository(
             coreDataStack: CoreDataStack.shared
         )
@@ -87,6 +78,21 @@ final class MedicalRecordFormViewModel {
         )
         self.primaryKeyProvider = primaryKeyProvider ?? PrimaryKeyProvider()
         self.fmkService = fmkService ?? FamilyMemberKeyService()
+
+        // Initialize field values from existing content if editing,
+        // or pre-populate date fields with today's date for new records
+        // NOTE: Must be after all stored properties are set to access @Dependency
+        if let content = existingContent {
+            self.fieldValues = content.allFields
+        } else {
+            // For new records, initialize date fields with today's date
+            // This ensures DatePicker's visual default matches the actual value
+            var initialValues: [String: FieldValue] = [:]
+            for field in schema.fields where field.fieldType == .date {
+                initialValues[field.id.uuidString] = .date(date.now)
+            }
+            self.fieldValues = initialValues
+        }
     }
 
     // MARK: - Validation
@@ -145,7 +151,7 @@ final class MedicalRecordFormViewModel {
                     personId: person.id,
                     encryptedContent: encryptedData,
                     createdAt: existingRecord.createdAt,
-                    updatedAt: Date(),
+                    updatedAt: date.now,
                     version: existingRecord.version + 1,
                     previousVersionId: nil
                 )
