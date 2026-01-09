@@ -196,8 +196,9 @@ struct DynamicFieldViewTests {
             personId: UUID() // Person context provided
         )
 
-        // Should render without error - the AttachmentPickerView is shown
-        _ = try view.inspect()
+        // With personId, AttachmentPickerView is shown
+        let inspected = try view.inspect()
+        _ = try inspected.find(AttachmentPickerView.self)
     }
 
     @Test
@@ -238,8 +239,9 @@ struct DynamicFieldViewTests {
             recordId: recordId
         )
 
-        // Should render with both personId and recordId context
-        _ = try view.inspect()
+        // With both personId and recordId, AttachmentPickerView is shown
+        let inspected = try view.inspect()
+        _ = try inspected.find(AttachmentPickerView.self)
     }
 
     @Test
@@ -270,8 +272,9 @@ struct DynamicFieldViewTests {
             existingAttachments: [attachment]
         )
 
-        // Should render with existing attachments
-        _ = try view.inspect()
+        // With existing attachments, AttachmentPickerView is shown
+        let inspected = try view.inspect()
+        _ = try inspected.find(AttachmentPickerView.self)
     }
 
     // MARK: - Double Binding Edge Cases

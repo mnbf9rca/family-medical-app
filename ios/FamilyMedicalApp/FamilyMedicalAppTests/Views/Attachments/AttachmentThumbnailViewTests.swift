@@ -46,7 +46,10 @@ struct AttachmentThumbnailViewTests {
             onRemove: nil
         )
 
-        _ = try view.inspect()
+        // Use find() for deterministic coverage - verify Button and ZStack render
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.Button.self)
+        _ = try inspected.find(ViewType.ZStack.self)
     }
 
     @Test
@@ -60,7 +63,10 @@ struct AttachmentThumbnailViewTests {
             onRemove: nil
         )
 
-        _ = try view.inspect()
+        // With thumbnail data, should render Image
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.Button.self)
+        _ = try inspected.find(ViewType.Image.self)
     }
 
     @Test
@@ -73,7 +79,10 @@ struct AttachmentThumbnailViewTests {
             size: 100
         )
 
-        _ = try view.inspect()
+        // Custom size still renders the same structure
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.Button.self)
+        _ = try inspected.find(ViewType.ZStack.self)
     }
 
     // MARK: - MIME Type Icon Tests
@@ -87,7 +96,10 @@ struct AttachmentThumbnailViewTests {
             onRemove: nil
         )
 
-        _ = try view.inspect()
+        // JPEG without thumbnail shows image icon and extension text
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.Image.self)
+        _ = try inspected.find(text: "JPG")
     }
 
     @Test
@@ -99,7 +111,10 @@ struct AttachmentThumbnailViewTests {
             onRemove: nil
         )
 
-        _ = try view.inspect()
+        // PNG without thumbnail shows image icon and extension text
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.Image.self)
+        _ = try inspected.find(text: "PNG")
     }
 
     @Test
@@ -111,7 +126,10 @@ struct AttachmentThumbnailViewTests {
             onRemove: nil
         )
 
-        _ = try view.inspect()
+        // PDF shows doc icon and extension text
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.Image.self)
+        _ = try inspected.find(text: "PDF")
     }
 
     // MARK: - Callback Tests
@@ -127,7 +145,9 @@ struct AttachmentThumbnailViewTests {
             onRemove: nil
         )
 
-        _ = try view.inspect()
+        // Verify view renders with tap callback set
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.Button.self)
         #expect(!tapped) // Not tapped yet
     }
 
@@ -142,7 +162,10 @@ struct AttachmentThumbnailViewTests {
             onRemove: { removed = true }
         )
 
-        _ = try view.inspect()
+        // With remove callback, there should be 2 buttons (tap + remove)
+        let inspected = try view.inspect()
+        let buttons = inspected.findAll(ViewType.Button.self)
+        #expect(buttons.count == 2)
         #expect(!removed) // Not removed yet
     }
 
@@ -158,7 +181,10 @@ struct AttachmentThumbnailViewTests {
             onRemove: { removed = true }
         )
 
-        _ = try view.inspect()
+        // With both callbacks, should have 2 buttons
+        let inspected = try view.inspect()
+        let buttons = inspected.findAll(ViewType.Button.self)
+        #expect(buttons.count == 2)
         #expect(!tapped)
         #expect(!removed)
     }
@@ -175,8 +201,10 @@ struct AttachmentThumbnailViewTests {
             onRemove: {}
         )
 
-        // View should render with remove button overlay
-        _ = try view.inspect()
+        // With remove callback, should have 2 buttons
+        let inspected = try view.inspect()
+        let buttons = inspected.findAll(ViewType.Button.self)
+        #expect(buttons.count == 2)
     }
 
     @Test
@@ -189,7 +217,10 @@ struct AttachmentThumbnailViewTests {
             onRemove: nil // No remove callback
         )
 
-        _ = try view.inspect()
+        // Without remove callback, should only have 1 button (main tap)
+        let inspected = try view.inspect()
+        let buttons = inspected.findAll(ViewType.Button.self)
+        #expect(buttons.count == 1)
     }
 
     // MARK: - Thumbnail Content Tests
@@ -209,7 +240,9 @@ struct AttachmentThumbnailViewTests {
             onRemove: nil
         )
 
-        _ = try view.inspect()
+        // With thumbnail data, Image is rendered
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.Image.self)
     }
 
     @Test
@@ -226,7 +259,10 @@ struct AttachmentThumbnailViewTests {
             onRemove: nil
         )
 
-        _ = try view.inspect()
+        // Without thumbnail, shows fallback icon with extension
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.Image.self)
+        _ = try inspected.find(text: "JPG")
     }
 
     @Test
@@ -243,6 +279,9 @@ struct AttachmentThumbnailViewTests {
             onRemove: nil
         )
 
-        _ = try view.inspect()
+        // PDF shows doc icon with PDF extension
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.Image.self)
+        _ = try inspected.find(text: "PDF")
     }
 }

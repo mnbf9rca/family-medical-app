@@ -30,7 +30,9 @@ struct HomeViewTests {
         let viewModel = createViewModel()
         let view = HomeView(viewModel: viewModel)
 
-        _ = try view.inspect()
+        // Use find() for deterministic coverage - verify Group renders
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.Group.self)
     }
 
     @Test
@@ -38,8 +40,9 @@ struct HomeViewTests {
         let viewModel = createViewModel()
         let view = HomeView(viewModel: viewModel)
 
-        // Should render empty state when no persons
-        _ = try view.inspect()
+        // Empty state shows EmptyMembersView
+        let inspected = try view.inspect()
+        _ = try inspected.find(EmptyMembersView.self)
     }
 
     @Test
@@ -57,7 +60,9 @@ struct HomeViewTests {
         await viewModel.loadPersons()
 
         let view = HomeView(viewModel: viewModel)
-        _ = try view.inspect()
+        // With persons, should show List
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.List.self)
     }
 
     // MARK: - Error State Tests
@@ -74,7 +79,9 @@ struct HomeViewTests {
         )
 
         let view = HomeView(viewModel: viewModel)
-        _ = try view.inspect()
+        // Error state still renders the Group (alert is separate)
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.Group.self)
     }
 
     // MARK: - Loading State Tests
@@ -82,9 +89,12 @@ struct HomeViewTests {
     @Test
     func viewRendersWhileLoading() throws {
         let viewModel = createViewModel()
-        let view = HomeView(viewModel: viewModel)
+        viewModel.isLoading = true
 
-        _ = try view.inspect()
+        let view = HomeView(viewModel: viewModel)
+        // Loading state shows ProgressView overlay
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.ProgressView.self)
     }
 
     // MARK: - Delete Tests

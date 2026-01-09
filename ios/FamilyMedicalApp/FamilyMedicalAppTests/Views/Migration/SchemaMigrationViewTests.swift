@@ -1,18 +1,18 @@
 import CryptoKit
 import SwiftUI
 import Testing
+import ViewInspector
 @testable import FamilyMedicalApp
 
-/// Tests for SchemaMigrationView
-@MainActor
-struct SchemaMigrationViewTests {
-    // MARK: - Test Helpers
+// MARK: - Shared Test Helpers
 
-    private func makePerson() throws -> Person {
+@MainActor
+enum SchemaMigrationTestHelpers {
+    static func makePerson() throws -> Person {
         try Person(name: "Test Person")
     }
 
-    private func makeMigration() throws -> SchemaMigration {
+    static func makeMigration() throws -> SchemaMigration {
         try SchemaMigration(
             schemaId: "test-schema",
             fromVersion: 1,
@@ -21,7 +21,7 @@ struct SchemaMigrationViewTests {
         )
     }
 
-    private func makeMigrationWithMerge() throws -> SchemaMigration {
+    static func makeMigrationWithMerge() throws -> SchemaMigration {
         try SchemaMigration(
             schemaId: "test-schema",
             fromVersion: 1,
@@ -30,7 +30,7 @@ struct SchemaMigrationViewTests {
         )
     }
 
-    private func makeMigrationWithTypeConvert() throws -> SchemaMigration {
+    static func makeMigrationWithTypeConvert() throws -> SchemaMigration {
         try SchemaMigration(
             schemaId: "test-schema",
             fromVersion: 1,
@@ -39,9 +39,7 @@ struct SchemaMigrationViewTests {
         )
     }
 
-    private func makeViewModel(
-        migration: SchemaMigration? = nil
-    ) throws -> SchemaMigrationViewModel {
+    static func makeViewModel(migration: SchemaMigration? = nil) throws -> SchemaMigrationViewModel {
         let person = try makePerson()
         let mig = try migration ?? makeMigration()
         let mockService = MockSchemaMigrationService()
@@ -53,75 +51,87 @@ struct SchemaMigrationViewTests {
             primaryKeyProvider: mockKeyProvider
         )
     }
+}
 
-    // MARK: - Initialization Tests
+// MARK: - Initialization & Basic Phase Tests
 
+@MainActor
+@Suite("SchemaMigrationView Initialization")
+struct SchemaMigrationViewInitializationTests {
     @Test("View initializes correctly")
     func viewInitializes() throws {
-        let person = try makePerson()
-        let migration = try makeMigration()
+        let person = try SchemaMigrationTestHelpers.makePerson()
+        let migration = try SchemaMigrationTestHelpers.makeMigration()
 
         let view = SchemaMigrationView(person: person, migration: migration)
-        _ = view.body
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.NavigationStack.self)
     }
 
     @Test("View initializes with ViewModel")
     func viewInitializesWithViewModel() throws {
-        let viewModel = try makeViewModel()
+        let viewModel = try SchemaMigrationTestHelpers.makeViewModel()
         let view = SchemaMigrationView(viewModel: viewModel)
-        _ = view.body
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.NavigationStack.self)
     }
 
     @Test("View initializes with completion handler")
     func viewInitializesWithCompletion() throws {
-        let viewModel = try makeViewModel()
+        let viewModel = try SchemaMigrationTestHelpers.makeViewModel()
         var completionCalled = false
 
         let view = SchemaMigrationView(viewModel: viewModel) {
             completionCalled = true
         }
 
-        _ = view.body
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.NavigationStack.self)
         #expect(!completionCalled)
     }
 
-    // MARK: - Idle Phase Tests
-
     @Test("View renders idle phase as loading")
     func viewRendersIdlePhase() throws {
-        let viewModel = try makeViewModel()
+        let viewModel = try SchemaMigrationTestHelpers.makeViewModel()
         #expect(viewModel.phase == .idle)
 
         let view = SchemaMigrationView(viewModel: viewModel)
-        _ = view.body
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.ProgressView.self)
     }
-
-    // MARK: - Loading Preview Phase Tests
 
     @Test("View renders loading preview phase")
     func viewRendersLoadingPreviewPhase() throws {
-        let viewModel = try makeViewModel()
+        let viewModel = try SchemaMigrationTestHelpers.makeViewModel()
         viewModel.phase = .loadingPreview
 
         let view = SchemaMigrationView(viewModel: viewModel)
-        _ = view.body
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.ProgressView.self)
+        _ = try inspected.find(text: "Loading preview...")
     }
+}
 
-    // MARK: - Showing Preview Phase Tests
+// MARK: - Preview Phase Tests
 
+@MainActor
+@Suite("SchemaMigrationView Preview Phase")
+struct SchemaMigrationViewPreviewTests {
     @Test("View renders showing preview phase")
     func viewRendersShowingPreviewPhase() throws {
-        let viewModel = try makeViewModel()
+        let viewModel = try SchemaMigrationTestHelpers.makeViewModel()
         viewModel.phase = .showingPreview
         viewModel.preview = MigrationPreview(recordCount: 5, sampleRecordId: UUID(), warnings: [])
 
         let view = SchemaMigrationView(viewModel: viewModel)
-        _ = view.body
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.Form.self)
+        _ = try inspected.find(text: "Migration Summary")
     }
 
     @Test("View renders preview with warnings")
     func viewRendersPreviewWithWarnings() throws {
-        let viewModel = try makeViewModel()
+        let viewModel = try SchemaMigrationTestHelpers.makeViewModel()
         viewModel.phase = .showingPreview
         viewModel.preview = MigrationPreview(
             recordCount: 10,
@@ -130,83 +140,110 @@ struct SchemaMigrationViewTests {
         )
 
         let view = SchemaMigrationView(viewModel: viewModel)
-        _ = view.body
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.Form.self)
+        _ = try inspected.find(text: "Warnings")
+        _ = try inspected.find(text: "Warning 1")
     }
 
     @Test("View renders preview with zero records")
     func viewRendersPreviewWithZeroRecords() throws {
-        let viewModel = try makeViewModel()
+        let viewModel = try SchemaMigrationTestHelpers.makeViewModel()
         viewModel.phase = .showingPreview
         viewModel.preview = MigrationPreview(recordCount: 0, sampleRecordId: nil, warnings: [])
 
         let view = SchemaMigrationView(viewModel: viewModel)
-        _ = view.body
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.Form.self)
+        _ = try inspected.find(text: "0")
     }
 
     @Test("View renders preview with merge options")
     func viewRendersPreviewWithMergeOptions() throws {
-        let migration = try makeMigrationWithMerge()
-        let viewModel = try makeViewModel(migration: migration)
+        let migration = try SchemaMigrationTestHelpers.makeMigrationWithMerge()
+        let viewModel = try SchemaMigrationTestHelpers.makeViewModel(migration: migration)
         viewModel.phase = .showingPreview
         viewModel.preview = MigrationPreview(recordCount: 3, sampleRecordId: UUID(), warnings: [])
 
         #expect(viewModel.hasMerges)
         let view = SchemaMigrationView(viewModel: viewModel)
-        _ = view.body
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.Form.self)
+        _ = try inspected.find(text: "Merge Options")
     }
 
     @Test("View renders preview with concatenate strategy")
     func viewRendersPreviewWithConcatenateStrategy() throws {
-        let migration = try makeMigrationWithMerge()
-        let viewModel = try makeViewModel(migration: migration)
+        let migration = try SchemaMigrationTestHelpers.makeMigrationWithMerge()
+        let viewModel = try SchemaMigrationTestHelpers.makeViewModel(migration: migration)
         viewModel.phase = .showingPreview
         viewModel.mergeStrategy = .concatenate(separator: ", ")
         viewModel.preview = MigrationPreview(recordCount: 3, sampleRecordId: UUID(), warnings: [])
 
         let view = SchemaMigrationView(viewModel: viewModel)
-        _ = view.body
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.Form.self)
+        _ = try inspected.find(ViewType.TextField.self)
     }
-
-    // MARK: - Confirming Phase Tests
 
     @Test("View renders confirming phase as preview")
     func viewRendersConfirmingPhase() throws {
-        let viewModel = try makeViewModel()
+        let viewModel = try SchemaMigrationTestHelpers.makeViewModel()
         viewModel.phase = .confirming
         viewModel.preview = MigrationPreview(recordCount: 5, sampleRecordId: UUID(), warnings: [])
 
         let view = SchemaMigrationView(viewModel: viewModel)
-        _ = view.body
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.Form.self)
+        _ = try inspected.find(text: "Migration Summary")
     }
+}
 
-    // MARK: - Migrating Phase Tests
+// MARK: - Migrating & Completed Phase Tests
 
+@MainActor
+@Suite("SchemaMigrationView Migrating & Completed Phases")
+struct SchemaMigrationViewMigratingCompletedTests {
     @Test("View renders migrating phase with progress")
     func viewRendersMigratingPhase() throws {
-        let viewModel = try makeViewModel()
+        let viewModel = try SchemaMigrationTestHelpers.makeViewModel()
         viewModel.phase = .migrating
         viewModel.progress = MigrationProgress(totalRecords: 10, processedRecords: 5, currentRecordId: UUID())
 
         let view = SchemaMigrationView(viewModel: viewModel)
-        _ = view.body
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.ProgressView.self)
+        _ = try inspected.find(text: "Migrating records...")
+        _ = try inspected.find(text: "5 of 10")
     }
 
     @Test("View renders migrating phase without progress")
     func viewRendersMigratingPhaseWithoutProgress() throws {
-        let viewModel = try makeViewModel()
+        let viewModel = try SchemaMigrationTestHelpers.makeViewModel()
         viewModel.phase = .migrating
         viewModel.progress = nil
 
         let view = SchemaMigrationView(viewModel: viewModel)
-        _ = view.body
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.ProgressView.self)
+        _ = try inspected.find(text: "Migrating records...")
     }
 
-    // MARK: - Completed Phase Tests
+    @Test("View reflects migrating phase as loading")
+    func viewReflectsMigratingPhaseAsLoading() throws {
+        let viewModel = try SchemaMigrationTestHelpers.makeViewModel()
+        viewModel.phase = .migrating
+
+        let view = SchemaMigrationView(viewModel: viewModel)
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.ProgressView.self)
+        _ = try inspected.find(text: "Please wait. Do not close the app.")
+    }
 
     @Test("View renders completed phase with success")
     func viewRendersCompletedPhaseWithSuccess() throws {
-        let migration = try makeMigration()
-        let viewModel = try makeViewModel(migration: migration)
+        let migration = try SchemaMigrationTestHelpers.makeMigration()
+        let viewModel = try SchemaMigrationTestHelpers.makeViewModel(migration: migration)
         viewModel.phase = .completed
         viewModel.result = MigrationResult(
             migration: migration,
@@ -219,13 +256,16 @@ struct SchemaMigrationViewTests {
         )
 
         let view = SchemaMigrationView(viewModel: viewModel)
-        _ = view.body
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.Image.self)
+        _ = try inspected.find(text: "Migration Complete")
+        _ = try inspected.find(text: "10 records migrated successfully")
     }
 
     @Test("View renders completed phase with failures")
     func viewRendersCompletedPhaseWithFailures() throws {
-        let migration = try makeMigration()
-        let viewModel = try makeViewModel(migration: migration)
+        let migration = try SchemaMigrationTestHelpers.makeMigration()
+        let viewModel = try SchemaMigrationTestHelpers.makeViewModel(migration: migration)
         viewModel.phase = .completed
         viewModel.result = MigrationResult(
             migration: migration,
@@ -241,35 +281,47 @@ struct SchemaMigrationViewTests {
         )
 
         let view = SchemaMigrationView(viewModel: viewModel)
-        _ = view.body
+        let inspected = try view.inspect()
+        _ = try inspected.find(text: "Migration Complete")
+        _ = try inspected.find(text: "8 records migrated successfully")
+        _ = try inspected.find(text: "2 records failed")
     }
 
     @Test("View renders completed phase without result")
     func viewRendersCompletedPhaseWithoutResult() throws {
-        let viewModel = try makeViewModel()
+        let viewModel = try SchemaMigrationTestHelpers.makeViewModel()
         viewModel.phase = .completed
         viewModel.result = nil
 
         let view = SchemaMigrationView(viewModel: viewModel)
-        _ = view.body
+        let inspected = try view.inspect()
+        _ = try inspected.find(text: "Migration Complete")
+        _ = try inspected.find(ViewType.Button.self)
     }
+}
 
-    // MARK: - Failed Phase Tests
+// MARK: - Failed Phase & Strategy Tests
 
+@MainActor
+@Suite("SchemaMigrationView Failed Phase & Strategies")
+struct SchemaMigrationViewFailedStrategyTests {
     @Test("View renders failed phase with error message")
     func viewRendersFailedPhaseWithError() throws {
-        let viewModel = try makeViewModel()
+        let viewModel = try SchemaMigrationTestHelpers.makeViewModel()
         viewModel.phase = .failed
         viewModel.errorMessage = "Something went wrong"
 
         let view = SchemaMigrationView(viewModel: viewModel)
-        _ = view.body
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.Image.self)
+        _ = try inspected.find(text: "Migration Failed")
+        _ = try inspected.find(text: "Something went wrong")
     }
 
     @Test("View renders failed phase with error list")
     func viewRendersFailedPhaseWithErrorList() throws {
-        let migration = try makeMigration()
-        let viewModel = try makeViewModel(migration: migration)
+        let migration = try SchemaMigrationTestHelpers.makeMigration()
+        let viewModel = try SchemaMigrationTestHelpers.makeViewModel(migration: migration)
         viewModel.phase = .failed
         viewModel.errorMessage = "Migration failed"
         viewModel.result = MigrationResult(
@@ -290,68 +342,69 @@ struct SchemaMigrationViewTests {
         )
 
         let view = SchemaMigrationView(viewModel: viewModel)
-        _ = view.body
+        let inspected = try view.inspect()
+        _ = try inspected.find(text: "Migration Failed")
+        _ = try inspected.find(text: "• Error 1")
+        _ = try inspected.find(text: "... and 1 more errors")
     }
 
     @Test("View renders failed phase without error message")
     func viewRendersFailedPhaseWithoutErrorMessage() throws {
-        let viewModel = try makeViewModel()
+        let viewModel = try SchemaMigrationTestHelpers.makeViewModel()
         viewModel.phase = .failed
         viewModel.errorMessage = nil
 
         let view = SchemaMigrationView(viewModel: viewModel)
-        _ = view.body
+        let inspected = try view.inspect()
+        _ = try inspected.find(text: "Migration Failed")
+        _ = try inspected.find(text: "Try Again")
     }
-
-    // MARK: - Type Conversion Tests
 
     @Test("View renders with type conversion migration")
     func viewRendersWithTypeConversion() throws {
-        let migration = try makeMigrationWithTypeConvert()
-        let viewModel = try makeViewModel(migration: migration)
+        let migration = try SchemaMigrationTestHelpers.makeMigrationWithTypeConvert()
+        let viewModel = try SchemaMigrationTestHelpers.makeViewModel(migration: migration)
         viewModel.phase = .showingPreview
         viewModel.preview = MigrationPreview(recordCount: 5, sampleRecordId: UUID(), warnings: [])
 
         #expect(viewModel.hasTypeConversions)
         let view = SchemaMigrationView(viewModel: viewModel)
-        _ = view.body
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.Form.self)
+        _ = try inspected.find(text: "Migration Summary")
     }
-
-    // MARK: - MergeStrategy Variations
 
     @Test("View renders with preferSource strategy")
     func viewRendersWithPreferSourceStrategy() throws {
-        let migration = try makeMigrationWithMerge()
-        let viewModel = try makeViewModel(migration: migration)
+        let migration = try SchemaMigrationTestHelpers.makeMigrationWithMerge()
+        let viewModel = try SchemaMigrationTestHelpers.makeViewModel(migration: migration)
         viewModel.phase = .showingPreview
         viewModel.mergeStrategy = .preferSource
         viewModel.preview = MigrationPreview(recordCount: 3, sampleRecordId: UUID(), warnings: [])
 
         let view = SchemaMigrationView(viewModel: viewModel)
-        _ = view.body
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.Form.self)
+        _ = try inspected.find(text: "Merge Options")
+        #expect(throws: (any Error).self) {
+            _ = try inspected.find(ViewType.TextField.self)
+        }
     }
 
     @Test("View renders with preferTarget strategy")
     func viewRendersWithPreferTargetStrategy() throws {
-        let migration = try makeMigrationWithMerge()
-        let viewModel = try makeViewModel(migration: migration)
+        let migration = try SchemaMigrationTestHelpers.makeMigrationWithMerge()
+        let viewModel = try SchemaMigrationTestHelpers.makeViewModel(migration: migration)
         viewModel.phase = .showingPreview
         viewModel.mergeStrategy = .preferTarget
         viewModel.preview = MigrationPreview(recordCount: 3, sampleRecordId: UUID(), warnings: [])
 
         let view = SchemaMigrationView(viewModel: viewModel)
-        _ = view.body
-    }
-
-    // MARK: - Loading State Tests
-
-    @Test("View reflects migrating phase as loading")
-    func viewReflectsMigratingPhaseAsLoading() throws {
-        let viewModel = try makeViewModel()
-        viewModel.phase = .migrating
-
-        // Migrating phase should be reflected in the view
-        let view = SchemaMigrationView(viewModel: viewModel)
-        _ = view.body
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.Form.self)
+        _ = try inspected.find(text: "Merge Options")
+        #expect(throws: (any Error).self) {
+            _ = try inspected.find(ViewType.TextField.self)
+        }
     }
 }

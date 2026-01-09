@@ -35,7 +35,9 @@ struct AddPersonViewTests {
         let viewModel = createViewModel()
         let view = AddPersonView(viewModel: viewModel)
 
-        _ = try view.inspect()
+        // Use find() for deterministic coverage
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.NavigationStack.self)
     }
 
     @Test
@@ -71,14 +73,19 @@ struct AddPersonViewTests {
         )
 
         let view = AddPersonView(viewModel: viewModel)
-        _ = try view.inspect()
+        // Error state still renders the Form structure
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.Form.self)
     }
 
     @Test
     func viewRendersWhileViewModelLoading() throws {
         let viewModel = createViewModel()
-        let view = AddPersonView(viewModel: viewModel)
+        viewModel.isLoading = true
 
-        _ = try view.inspect()
+        let view = AddPersonView(viewModel: viewModel)
+        // Loading state still renders the Form structure
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.Form.self)
     }
 }

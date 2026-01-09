@@ -81,27 +81,27 @@ struct MedicalRecordFormDetailViewTests {
     // Note: MedicalRecordDetailView requires BuiltInSchemaType, so these are integration tests
     // that verify all built-in schemas render correctly.
 
-    @Test
-    func medicalRecordDetailViewRendersForAllSchemaTypes() throws {
+    @Test(arguments: BuiltInSchemaType.allCases)
+    func medicalRecordDetailViewRendersForSchemaType(_ schemaType: BuiltInSchemaType) throws {
         let person = try makeTestPerson()
 
-        for schemaType in BuiltInSchemaType.allCases {
-            var content = RecordContent(schemaId: schemaType.rawValue)
-            // Add date fields that various schemas might have
-            content.setDate(BuiltInFieldIds.Vaccine.dateAdministered, Date())
-            content.setDate(BuiltInFieldIds.Condition.diagnosedDate, Date())
-            content.setDate(BuiltInFieldIds.Medication.startDate, Date())
+        var content = RecordContent(schemaId: schemaType.rawValue)
+        // Add date fields that various schemas might have
+        content.setDate(BuiltInFieldIds.Vaccine.dateAdministered, Date())
+        content.setDate(BuiltInFieldIds.Condition.diagnosedDate, Date())
+        content.setDate(BuiltInFieldIds.Medication.startDate, Date())
 
-            let record = MedicalRecord(personId: person.id, encryptedContent: Data())
-            let decryptedRecord = DecryptedRecord(record: record, content: content)
+        let record = MedicalRecord(personId: person.id, encryptedContent: Data())
+        let decryptedRecord = DecryptedRecord(record: record, content: content)
 
-            let view = MedicalRecordDetailView(
-                person: person,
-                schemaType: schemaType,
-                decryptedRecord: decryptedRecord
-            )
-            _ = view.body
-        }
+        let view = MedicalRecordDetailView(
+            person: person,
+            schemaType: schemaType,
+            decryptedRecord: decryptedRecord
+        )
+        // Use find() for deterministic coverage
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.List.self)
     }
 
     @Test
@@ -143,8 +143,9 @@ struct MedicalRecordFormDetailViewTests {
             decryptedRecord: decryptedRecord
         )
 
-        _ = view.body
-        // Should handle gracefully with "Untitled" fallback
+        // Use find() for deterministic coverage
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.List.self)
     }
 
     @Test
@@ -172,7 +173,9 @@ struct MedicalRecordFormDetailViewTests {
             }
         )
 
-        _ = view.body
+        // Use find() for deterministic coverage
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.List.self)
 
         // Callbacks are provided but not triggered during render
         #expect(deleteCallbackProvided == false)
@@ -196,7 +199,9 @@ struct MedicalRecordFormDetailViewTests {
             decryptedRecord: decryptedRecord
         )
 
-        _ = view.body
+        // Use find() for deterministic coverage
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.List.self)
     }
 
     // MARK: - MedicalRecordFormView Tests (using generic schema)
@@ -214,7 +219,9 @@ struct MedicalRecordFormDetailViewTests {
             )
         }
 
-        _ = view.body
+        // Use find() for deterministic coverage
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.NavigationStack.self)
 
         #expect(testSchema.id == testSchemaId)
     }
@@ -235,7 +242,9 @@ struct MedicalRecordFormDetailViewTests {
             )
         }
 
-        _ = view.body
+        // Use find() for deterministic coverage
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.NavigationStack.self)
 
         #expect(decryptedRecord.content.getString(requiredStringFieldId) == "Test Record")
     }
@@ -299,23 +308,25 @@ struct MedicalRecordFormDetailViewTests {
             viewModel: viewModel
         )
 
-        _ = try view.inspect()
+        // Error state still renders the NavigationStack structure
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.NavigationStack.self)
         #expect(viewModel.errorMessage == "Validation failed")
     }
 
-    @Test
-    func medicalRecordFormViewRendersForAllSchemaTypes() throws {
+    @Test(arguments: BuiltInSchemaType.allCases)
+    func medicalRecordFormViewRendersForSchemaType(_ schemaType: BuiltInSchemaType) throws {
         let person = try makeTestPerson()
 
-        for schemaType in BuiltInSchemaType.allCases {
-            let schema = RecordSchema.builtIn(schemaType)
-            let view = withDependencies {
-                $0.date = .constant(testDate)
-            } operation: {
-                MedicalRecordFormView(person: person, schema: schema)
-            }
-            _ = view.body
+        let schema = RecordSchema.builtIn(schemaType)
+        let view = withDependencies {
+            $0.date = .constant(testDate)
+        } operation: {
+            MedicalRecordFormView(person: person, schema: schema)
         }
+        // Use find() for deterministic coverage
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.NavigationStack.self)
     }
 
     @Test
@@ -342,7 +353,9 @@ struct MedicalRecordFormDetailViewTests {
             viewModel: viewModel
         )
 
-        _ = view.body
+        // Use find() for deterministic coverage
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.NavigationStack.self)
 
         #expect(viewModel.fieldValues[requiredStringFieldKey]?.stringValue == "Existing Record")
     }

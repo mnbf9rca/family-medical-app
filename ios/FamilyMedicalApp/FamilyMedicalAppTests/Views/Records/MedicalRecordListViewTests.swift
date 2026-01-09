@@ -52,7 +52,9 @@ struct MedicalRecordListViewTests {
         let person = try makeTestPerson()
         let view = MedicalRecordListView(person: person, schemaType: .vaccine)
 
-        _ = view.body
+        // Use find() for deterministic coverage
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.Group.self)
 
         #expect(person.name == "Test Person")
     }
@@ -161,17 +163,19 @@ struct MedicalRecordListViewTests {
             viewModel: viewModel
         )
 
-        _ = try view.inspect()
+        // Error state still renders the Group structure
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.Group.self)
         #expect(viewModel.errorMessage == "Test error message")
     }
 
-    @Test
-    func medicalRecordListViewRendersForAllSchemaTypes() throws {
+    @Test(arguments: BuiltInSchemaType.allCases)
+    func medicalRecordListViewRendersForSchemaType(_ schemaType: BuiltInSchemaType) throws {
         let person = try makeTestPerson()
+        let view = MedicalRecordListView(person: person, schemaType: schemaType)
 
-        for schemaType in BuiltInSchemaType.allCases {
-            let view = MedicalRecordListView(person: person, schemaType: schemaType)
-            _ = view.body
-        }
+        // Use find() for deterministic coverage
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.Group.self)
     }
 }
