@@ -9,7 +9,11 @@ struct AttachmentFileStorageServiceTests {
         let tempDir = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
-        let service = AttachmentFileStorageService(attachmentsDirectory: tempDir)
+        // Inject mock logger to avoid LoggingService.shared singleton timing dependencies
+        let service = AttachmentFileStorageService(
+            attachmentsDirectory: tempDir,
+            logger: MockCategoryLogger(category: .storage)
+        )
         return (service, tempDir)
     }
 
