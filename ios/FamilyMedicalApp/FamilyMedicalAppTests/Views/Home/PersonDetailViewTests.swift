@@ -50,8 +50,9 @@ struct PersonDetailViewTests {
         let viewModel = createViewModel(person: person)
         let view = PersonDetailView(person: person, viewModel: viewModel)
 
-        _ = try view.inspect()
-        // View should render with person's name in navigation title
+        // Use find() for deterministic coverage
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.Group.self)
     }
 
     @Test
@@ -102,7 +103,9 @@ struct PersonDetailViewTests {
         )
 
         let view = PersonDetailView(person: person, viewModel: viewModel)
-        _ = try view.inspect()
+        // Error state still renders the Group structure
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.Group.self)
     }
 
     @Test
@@ -183,7 +186,8 @@ struct PersonDetailViewTests {
 
         let view = PersonDetailView(person: person, viewModel: viewModel)
         // View should still render when error is present
-        _ = try view.inspect()
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.Group.self)
 
         // Verify error message is set
         #expect(viewModel.errorMessage == "Test error")

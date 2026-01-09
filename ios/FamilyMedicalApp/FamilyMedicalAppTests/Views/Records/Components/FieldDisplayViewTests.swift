@@ -310,8 +310,9 @@ struct FieldDisplayViewTests {
             attachments: [attachment1, attachment2]
         )
 
-        // View should render with the thumbnails
-        _ = try view.inspect()
+        // With loaded attachments, should show LazyVGrid with thumbnails
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.LazyVGrid.self)
     }
 
     @Test
@@ -384,8 +385,9 @@ struct FieldDisplayViewTests {
             attachments: [attachment]
         ) { tappedAttachment = $0 }
 
-        // Verify the view renders (callback would be invoked on tap)
-        _ = try view.inspect()
+        // With callback, should still render LazyVGrid
+        let inspected = try view.inspect()
+        _ = try inspected.find(ViewType.LazyVGrid.self)
         // Note: ViewInspector can't easily trigger button taps inside ForEach,
         // but we verify the view renders correctly with the callback set
         #expect(tappedAttachment == nil) // No tap yet
