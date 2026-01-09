@@ -127,9 +127,11 @@ jobs:
           DESTINATION: ${{ matrix.destination }}
         run: ./scripts/run-tests.sh --destination "$DESTINATION"
 
-      - name: Generate code coverage report
+      - name: Generate coverage JSON
         if: matrix.destination == 'platform=iOS Simulator,name=iPhone 17 Pro'
-        run: ./scripts/check-coverage.sh
+        run: |
+          cd ios/FamilyMedicalApp
+          xcrun xccov view --report --json test-results/TestResults.xcresult > test-results/coverage.json
 
       - name: Upload coverage reports
         if: matrix.destination == 'platform=iOS Simulator,name=iPhone 17 Pro'
@@ -138,6 +140,10 @@ jobs:
           name: coverage-report
           path: ios/FamilyMedicalApp/test-results/coverage.json
           retention-days: 30
+
+      - name: Check coverage thresholds
+        if: matrix.destination == 'platform=iOS Simulator,name=iPhone 17 Pro'
+        run: ./scripts/check-coverage.sh
 
   security-scan:
     name: Security Scan
