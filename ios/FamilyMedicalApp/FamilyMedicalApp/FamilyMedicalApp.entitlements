@@ -4,7 +4,7 @@
 <dict>
 	<key>com.apple.developer.associated-domains</key>
 	<array>
-		<string>webcredentials:cynexia.com</string>
+		<string>webcredentials:family-medical.cynexia.com</string>
 	</array>
 </dict>
 </plist>
