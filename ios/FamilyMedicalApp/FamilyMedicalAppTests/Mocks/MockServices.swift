@@ -10,6 +10,7 @@ final class MockAuthenticationService: AuthenticationServiceProtocol {
     var failedAttemptCount: Int
     var isLockedOut: Bool
     var lockoutRemainingSeconds: Int
+    var storedEmail: String?
 
     var shouldFailUnlock: Bool
     var shouldFailLogout: Bool
@@ -22,6 +23,7 @@ final class MockAuthenticationService: AuthenticationServiceProtocol {
         failedAttemptCount: Int = 0,
         isLockedOut: Bool = false,
         lockoutRemainingSeconds: Int = 0,
+        storedEmail: String? = nil,
         shouldFailUnlock: Bool = false,
         shouldFailLogout: Bool = false,
         biometricService: BiometricServiceProtocol? = nil
@@ -31,13 +33,15 @@ final class MockAuthenticationService: AuthenticationServiceProtocol {
         self.failedAttemptCount = failedAttemptCount
         self.isLockedOut = isLockedOut
         self.lockoutRemainingSeconds = lockoutRemainingSeconds
+        self.storedEmail = storedEmail
         self.shouldFailUnlock = shouldFailUnlock
         self.shouldFailLogout = shouldFailLogout
         self.biometricService = biometricService
     }
 
-    func setUp(password: String, enableBiometric: Bool) async throws {
+    func setUp(password: String, email: String, enableBiometric: Bool) async throws {
         isSetUp = true
+        storedEmail = email
         if enableBiometric {
             if let biometricService {
                 try await biometricService.authenticate(reason: "Enable biometric")
@@ -88,6 +92,7 @@ final class MockAuthenticationService: AuthenticationServiceProtocol {
         isSetUp = false
         isBiometricEnabled = false
         failedAttemptCount = 0
+        storedEmail = nil
     }
 }
 
@@ -151,6 +156,36 @@ final class MockLockStateService: LockStateServiceProtocol {
 
     func unlock() {
         isLocked = false
+    }
+}
+
+// MARK: - Mock Email Verification Service
+
+final class MockEmailVerificationService: EmailVerificationServiceProtocol, @unchecked Sendable {
+    var sendCodeCallCount = 0
+    var sendCodeEmail: String?
+    var sendCodeShouldThrow: AuthenticationError?
+
+    var verifyCodeCallCount = 0
+    var verifyCodeInput: (code: String, email: String)?
+    var verifyCodeResult = EmailVerificationResult(isValid: true, isReturningUser: false)
+    var verifyCodeShouldThrow: AuthenticationError?
+
+    func sendVerificationCode(to email: String) async throws {
+        sendCodeCallCount += 1
+        sendCodeEmail = email
+        if let error = sendCodeShouldThrow {
+            throw error
+        }
+    }
+
+    func verifyCode(_ code: String, for email: String) async throws -> EmailVerificationResult {
+        verifyCodeCallCount += 1
+        verifyCodeInput = (code, email)
+        if let error = verifyCodeShouldThrow {
+            throw error
+        }
+        return verifyCodeResult
     }
 }
 
