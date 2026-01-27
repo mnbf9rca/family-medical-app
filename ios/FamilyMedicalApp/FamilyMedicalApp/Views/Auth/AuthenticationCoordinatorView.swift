@@ -11,14 +11,29 @@ struct AuthenticationCoordinatorView: View {
 
     var body: some View {
         Group {
-            if !viewModel.isSetUp {
-                // First-time setup
-                PasswordSetupView(viewModel: viewModel)
-            } else if !viewModel.isAuthenticated {
-                // Unlock screen
+            switch viewModel.flowState {
+            case .emailEntry:
+                EmailEntryView(viewModel: viewModel)
+
+            case let .codeVerification(email):
+                CodeVerificationView(viewModel: viewModel, email: email)
+
+            case let .passphraseCreation(email):
+                PassphraseCreationView(viewModel: viewModel, email: email)
+
+            case let .passphraseConfirmation(email, passphrase):
+                PassphraseConfirmView(viewModel: viewModel, email: email, passphrase: passphrase)
+
+            case let .passphraseEntry(email, _):
+                PassphraseEntryView(viewModel: viewModel, email: email)
+
+            case let .biometricSetup(email, passphrase):
+                BiometricSetupView(viewModel: viewModel, email: email, passphrase: passphrase)
+
+            case .unlock:
                 UnlockView(viewModel: viewModel)
-            } else {
-                // Main app content
+
+            case .authenticated:
                 MainAppView(viewModel: viewModel)
             }
         }
