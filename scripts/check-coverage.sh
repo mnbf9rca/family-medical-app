@@ -52,6 +52,7 @@ FILE_EXCEPTIONS = {
     "SchemaEditorView.swift": 64.0,  # Form with sheet/alert/swipe closures - delegates to SchemaEditorViewModel (95%+)
     "SchemaListView.swift": 69.0,  # List with navigation/delete closures - delegates to SchemaListViewModel (98%+)
     "PersonDetailView.swift": 72.0,  # Sheet/onChange closures - delegates to PersonDetailViewModel (100%)
+    "UnlockView.swift": 80.0,  # Form with conditional closures/Timer - delegates to AuthenticationViewModel (97%+)
     # UIViewControllerRepresentables - makeUIViewController needs UIKit context
     "CameraRepresentable.swift": 64.0,  # UIImagePickerController wrapper - needs camera/UIKit
     "DocumentPickerRepresentable.swift": 66.0,  # UIDocumentPickerViewController wrapper - needs UIKit

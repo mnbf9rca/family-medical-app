@@ -19,7 +19,7 @@ struct AuthenticationServiceTests {
 
         #expect(service.isSetUp == false)
 
-        try await service.setUp(password: "MySecurePassword123!", enableBiometric: false)
+        try await service.setUp(password: "MySecurePassword123!", email: "test@example.com", enableBiometric: false)
 
         #expect(service.isSetUp == true)
         #expect(userDefaults.data(forKey: "com.family-medical-app.salt") != nil)
@@ -36,7 +36,7 @@ struct AuthenticationServiceTests {
             userDefaults: userDefaults
         )
 
-        try await service.setUp(password: "MySecurePassword123!", enableBiometric: false)
+        try await service.setUp(password: "MySecurePassword123!", email: "test@example.com", enableBiometric: false)
 
         let publicKeyData = userDefaults.data(forKey: "com.family-medical-app.identity-public-key")
         #expect(publicKeyData != nil)
@@ -52,7 +52,7 @@ struct AuthenticationServiceTests {
             userDefaults: userDefaults
         )
 
-        try await service.setUp(password: "MySecurePassword123!", enableBiometric: true)
+        try await service.setUp(password: "MySecurePassword123!", email: "test@example.com", enableBiometric: true)
 
         #expect(service.isBiometricEnabled == true)
     }
@@ -66,9 +66,48 @@ struct AuthenticationServiceTests {
             userDefaults: userDefaults
         )
 
-        try await service.setUp(password: "MySecurePassword123!", enableBiometric: true)
+        try await service.setUp(password: "MySecurePassword123!", email: "test@example.com", enableBiometric: true)
 
         #expect(service.isBiometricEnabled == false)
+    }
+
+    @Test
+    func setUpStoresEmail() async throws {
+        let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        let service = AuthenticationService(
+            keychainService: MockKeychainService(),
+            userDefaults: userDefaults
+        )
+
+        try await service.setUp(password: "MySecurePassword123!", email: "user@example.com", enableBiometric: false)
+
+        #expect(service.storedEmail == "user@example.com")
+    }
+
+    @Test
+    func storedEmailReturnsNilBeforeSetup() async throws {
+        let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        let service = AuthenticationService(
+            keychainService: MockKeychainService(),
+            userDefaults: userDefaults
+        )
+
+        #expect(service.storedEmail == nil)
+    }
+
+    @Test
+    func logoutClearsEmail() async throws {
+        let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        let service = AuthenticationService(
+            keychainService: MockKeychainService(),
+            userDefaults: userDefaults
+        )
+
+        try await service.setUp(password: "MySecurePassword123!", email: "user@example.com", enableBiometric: false)
+        #expect(service.storedEmail == "user@example.com")
+
+        try service.logout()
+        #expect(service.storedEmail == nil)
     }
 
     // MARK: - Password Unlock Tests
@@ -82,7 +121,7 @@ struct AuthenticationServiceTests {
         )
 
         let password = "MySecurePassword123!"
-        try await service.setUp(password: password, enableBiometric: false)
+        try await service.setUp(password: password, email: "test@example.com", enableBiometric: false)
         try await service.unlockWithPassword(password)
         // No error thrown means success
     }
@@ -95,7 +134,7 @@ struct AuthenticationServiceTests {
             userDefaults: userDefaults
         )
 
-        try await service.setUp(password: "CorrectPassword123!", enableBiometric: false)
+        try await service.setUp(password: "CorrectPassword123!", email: "test@example.com", enableBiometric: false)
 
         await #expect(throws: AuthenticationError.wrongPassword) {
             try await service.unlockWithPassword("WrongPassword123!")
@@ -125,7 +164,7 @@ struct AuthenticationServiceTests {
             userDefaults: userDefaults
         )
 
-        try await service.setUp(password: "CorrectPassword123!", enableBiometric: false)
+        try await service.setUp(password: "CorrectPassword123!", email: "test@example.com", enableBiometric: false)
 
         // First two failures don't lock
         for _ in 1 ... 2 {
@@ -158,7 +197,7 @@ struct AuthenticationServiceTests {
         )
 
         let password = "CorrectPassword123!"
-        try await service.setUp(password: password, enableBiometric: false)
+        try await service.setUp(password: password, email: "test@example.com", enableBiometric: false)
 
         // Trigger lockout
         for _ in 1 ... 3 {
@@ -189,7 +228,7 @@ struct AuthenticationServiceTests {
         )
 
         let password = "CorrectPassword123!"
-        try await service.setUp(password: password, enableBiometric: false)
+        try await service.setUp(password: password, email: "test@example.com", enableBiometric: false)
 
         // Two failed attempts
         for _ in 1 ... 2 {
@@ -215,7 +254,7 @@ struct AuthenticationServiceTests {
             userDefaults: userDefaults
         )
 
-        try await service.setUp(password: "MyPassword123!", enableBiometric: true)
+        try await service.setUp(password: "MyPassword123!", email: "test@example.com", enableBiometric: true)
 
         try await service.unlockWithBiometric()
         // No error thrown means success
@@ -229,7 +268,7 @@ struct AuthenticationServiceTests {
             userDefaults: userDefaults
         )
 
-        try await service.setUp(password: "MyPassword123!", enableBiometric: false)
+        try await service.setUp(password: "MyPassword123!", email: "test@example.com", enableBiometric: false)
 
         await #expect(throws: AuthenticationError.biometricNotAvailable) {
             try await service.unlockWithBiometric()
@@ -245,7 +284,7 @@ struct AuthenticationServiceTests {
             userDefaults: userDefaults
         )
 
-        try await service.setUp(password: "MyPassword123!", enableBiometric: true)
+        try await service.setUp(password: "MyPassword123!", email: "test@example.com", enableBiometric: true)
 
         // Create failed attempts
         for _ in 1 ... 2 {
@@ -301,7 +340,7 @@ struct AuthenticationServiceTests {
             userDefaults: userDefaults
         )
 
-        try await service.setUp(password: "MyPassword123!", enableBiometric: true)
+        try await service.setUp(password: "MyPassword123!", email: "test@example.com", enableBiometric: true)
 
         #expect(service.isBiometricEnabled == true)
 
@@ -321,7 +360,7 @@ struct AuthenticationServiceTests {
             userDefaults: userDefaults
         )
 
-        try await service.setUp(password: "MyPassword123!", enableBiometric: true)
+        try await service.setUp(password: "MyPassword123!", email: "test@example.com", enableBiometric: true)
 
         #expect(service.isSetUp == true)
 

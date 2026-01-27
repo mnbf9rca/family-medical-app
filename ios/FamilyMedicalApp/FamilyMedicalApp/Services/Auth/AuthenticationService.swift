@@ -19,12 +19,16 @@ protocol AuthenticationServiceProtocol {
     /// Remaining seconds until lockout expires
     var lockoutRemainingSeconds: Int { get }
 
+    /// Stored email address for display on unlock screen
+    var storedEmail: String? { get }
+
     /// Set up user account with password
     /// - Parameters:
     ///   - password: User's password
+    ///   - email: User's email address (for autofill association)
     ///   - enableBiometric: Whether to enable biometric authentication
     /// - Throws: AuthenticationError if setup fails
-    func setUp(password: String, enableBiometric: Bool) async throws
+    func setUp(password: String, email: String, enableBiometric: Bool) async throws
 
     /// Unlock with password
     /// - Parameter password: User's password
@@ -59,6 +63,7 @@ final class AuthenticationService: AuthenticationServiceProtocol {
     private static let identityPublicKeyIdentifier = "com.family-medical-app.identity-public-key"
     private static let verificationTokenIdentifier = "com.family-medical-app.verification-token"
     private static let saltKey = "com.family-medical-app.salt"
+    private static let emailKey = "com.family-medical-app.email"
     private static let biometricEnabledKey = "com.family-medical-app.biometric-enabled"
     private static let failedAttemptsKey = "com.family-medical-app.failed-attempts"
     private static let lockoutEndTimeKey = "com.family-medical-app.lockout-end-time"
@@ -108,6 +113,10 @@ final class AuthenticationService: AuthenticationServiceProtocol {
         userDefaults.bool(forKey: Self.biometricEnabledKey)
     }
 
+    var storedEmail: String? {
+        userDefaults.string(forKey: Self.emailKey)
+    }
+
     // MARK: - Initialization
 
     @MainActor
@@ -129,7 +138,7 @@ final class AuthenticationService: AuthenticationServiceProtocol {
 
     // MARK: - AuthenticationServiceProtocol
 
-    func setUp(password: String, enableBiometric: Bool) async throws {
+    func setUp(password: String, email: String, enableBiometric: Bool) async throws {
         logger.logOperation("setUp", state: "started")
 
         // Generate salt
@@ -176,6 +185,9 @@ final class AuthenticationService: AuthenticationServiceProtocol {
 
         // Store salt in UserDefaults (not sensitive per ADR-0002)
         userDefaults.set(salt, forKey: Self.saltKey)
+
+        // Store email in UserDefaults (not sensitive, needed for autofill)
+        userDefaults.set(email, forKey: Self.emailKey)
 
         // Set biometric preference
         userDefaults.set(enableBiometric && biometricService.isBiometricAvailable, forKey: Self.biometricEnabledKey)
@@ -291,6 +303,7 @@ final class AuthenticationService: AuthenticationServiceProtocol {
 
         // Clear UserDefaults
         userDefaults.removeObject(forKey: Self.saltKey)
+        userDefaults.removeObject(forKey: Self.emailKey)
         userDefaults.removeObject(forKey: Self.identityPublicKeyIdentifier)
         userDefaults.removeObject(forKey: Self.biometricEnabledKey)
         userDefaults.removeObject(forKey: Self.failedAttemptsKey)
