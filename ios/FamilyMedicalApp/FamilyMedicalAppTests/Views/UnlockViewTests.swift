@@ -15,10 +15,10 @@ struct UnlockViewTestCase: Sendable {
     let errorMessage: String?
 
     // Expected UI state
-    let expectPasswordField: Bool
+    let expectPassphraseField: Bool
     let expectBiometricButton: Bool
-    let expectUseBiometricButton: Bool // "Use Face ID/Touch ID" button in password mode
-    let expectUsePasswordButton: Bool
+    let expectUseBiometricButton: Bool // "Use Face ID/Touch ID" button in passphrase mode
+    let expectUsePassphraseButton: Bool
     let expectFailedAttemptsText: Bool
     let expectLockoutMessage: Bool
     let expectErrorMessage: Bool
@@ -31,7 +31,7 @@ extension UnlockViewTestCase: CustomTestStringConvertible {
 /// Test cases for UnlockView - defined at module level to avoid actor isolation issues with @Test(arguments:)
 private let unlockViewTestCases: [UnlockViewTestCase] = [
     UnlockViewTestCase(
-        name: "Password-only auth (no biometric)",
+        name: "Passphrase-only auth (no biometric)",
         isBiometricEnabled: false,
         biometryType: .none,
         showBiometricPrompt: false,
@@ -39,10 +39,10 @@ private let unlockViewTestCases: [UnlockViewTestCase] = [
         isLockedOut: false,
         lockoutRemainingSeconds: 0,
         errorMessage: nil,
-        expectPasswordField: true,
+        expectPassphraseField: true,
         expectBiometricButton: false,
         expectUseBiometricButton: false,
-        expectUsePasswordButton: false,
+        expectUsePassphraseButton: false,
         expectFailedAttemptsText: false,
         expectLockoutMessage: false,
         expectErrorMessage: false
@@ -56,10 +56,10 @@ private let unlockViewTestCases: [UnlockViewTestCase] = [
         isLockedOut: false,
         lockoutRemainingSeconds: 0,
         errorMessage: nil,
-        expectPasswordField: false,
+        expectPassphraseField: false,
         expectBiometricButton: true,
         expectUseBiometricButton: false,
-        expectUsePasswordButton: true,
+        expectUsePassphraseButton: true,
         expectFailedAttemptsText: false,
         expectLockoutMessage: false,
         expectErrorMessage: false
@@ -73,10 +73,10 @@ private let unlockViewTestCases: [UnlockViewTestCase] = [
         isLockedOut: false,
         lockoutRemainingSeconds: 0,
         errorMessage: nil,
-        expectPasswordField: false,
+        expectPassphraseField: false,
         expectBiometricButton: true,
         expectUseBiometricButton: false,
-        expectUsePasswordButton: true,
+        expectUsePassphraseButton: true,
         expectFailedAttemptsText: false,
         expectLockoutMessage: false,
         expectErrorMessage: false
@@ -90,10 +90,10 @@ private let unlockViewTestCases: [UnlockViewTestCase] = [
         isLockedOut: false,
         lockoutRemainingSeconds: 0,
         errorMessage: nil,
-        expectPasswordField: true,
+        expectPassphraseField: true,
         expectBiometricButton: false,
         expectUseBiometricButton: false,
-        expectUsePasswordButton: false,
+        expectUsePassphraseButton: false,
         expectFailedAttemptsText: true,
         expectLockoutMessage: false,
         expectErrorMessage: false
@@ -107,10 +107,10 @@ private let unlockViewTestCases: [UnlockViewTestCase] = [
         isLockedOut: true,
         lockoutRemainingSeconds: 30,
         errorMessage: nil,
-        expectPasswordField: true,
+        expectPassphraseField: true,
         expectBiometricButton: false,
         expectUseBiometricButton: false,
-        expectUsePasswordButton: false,
+        expectUsePassphraseButton: false,
         expectFailedAttemptsText: false, // Hidden during lockout
         expectLockoutMessage: true,
         expectErrorMessage: false
@@ -124,16 +124,16 @@ private let unlockViewTestCases: [UnlockViewTestCase] = [
         isLockedOut: false,
         lockoutRemainingSeconds: 0,
         errorMessage: "Wrong password",
-        expectPasswordField: true,
+        expectPassphraseField: true,
         expectBiometricButton: false,
         expectUseBiometricButton: false,
-        expectUsePasswordButton: false,
+        expectUsePassphraseButton: false,
         expectFailedAttemptsText: false,
         expectLockoutMessage: false,
         expectErrorMessage: true
     ),
     UnlockViewTestCase(
-        name: "Both auth methods available - password mode with biometric fallback",
+        name: "Both auth methods available - passphrase mode with biometric fallback",
         isBiometricEnabled: true,
         biometryType: .touchID,
         showBiometricPrompt: false,
@@ -141,10 +141,10 @@ private let unlockViewTestCases: [UnlockViewTestCase] = [
         isLockedOut: false,
         lockoutRemainingSeconds: 0,
         errorMessage: nil,
-        expectPasswordField: true,
+        expectPassphraseField: true,
         expectBiometricButton: false,
         expectUseBiometricButton: true,
-        expectUsePasswordButton: false,
+        expectUsePassphraseButton: false,
         expectFailedAttemptsText: false,
         expectLockoutMessage: false,
         expectErrorMessage: false
@@ -158,10 +158,10 @@ private let unlockViewTestCases: [UnlockViewTestCase] = [
         isLockedOut: true,
         lockoutRemainingSeconds: 60,
         errorMessage: "This should not show",
-        expectPasswordField: true,
+        expectPassphraseField: true,
         expectBiometricButton: false,
         expectUseBiometricButton: false,
-        expectUsePasswordButton: false,
+        expectUsePassphraseButton: false,
         expectFailedAttemptsText: false,
         expectLockoutMessage: true,
         expectErrorMessage: false // Error hidden during lockout per UnlockView line 121
@@ -202,13 +202,13 @@ struct UnlockViewTests {
         let view = UnlockView(viewModel: viewModel)
         let inspectedView = try view.inspect()
 
-        // Verify password field presence
-        if testCase.expectPasswordField {
-            // Find password field by accessibility identifier (more robust than text matching)
-            let passwordField = try? inspectedView.find(viewWithAccessibilityIdentifier: "passwordField")
-            #expect(passwordField != nil, "Expected password field to be present")
+        // Verify passphrase field presence
+        if testCase.expectPassphraseField {
+            // Find passphrase field by accessibility identifier (more robust than text matching)
+            let passphraseField = try? inspectedView.find(viewWithAccessibilityIdentifier: "passphraseField")
+            #expect(passphraseField != nil, "Expected passphrase field to be present")
 
-            // Verify "Unlock" button is present with password field
+            // Verify "Unlock" button is present with passphrase field
             let unlockButton = try? inspectedView.find(viewWithAccessibilityIdentifier: "unlockButton")
             #expect(unlockButton != nil, "Expected Unlock button to be present")
         }
@@ -225,13 +225,13 @@ struct UnlockViewTests {
             #expect(labelText != nil, "Expected biometric button with label 'Unlock with \(expectedLabel)'")
         }
 
-        // Verify "Use Password" button presence (in biometric mode)
-        if testCase.expectUsePasswordButton {
-            let usePasswordButton = try? inspectedView.find(viewWithAccessibilityIdentifier: "usePasswordButton")
-            #expect(usePasswordButton != nil, "Expected 'Use Password' button to be present")
+        // Verify "Use Passphrase" button presence (in biometric mode)
+        if testCase.expectUsePassphraseButton {
+            let usePassphraseButton = try? inspectedView.find(viewWithAccessibilityIdentifier: "usePassphraseButton")
+            #expect(usePassphraseButton != nil, "Expected 'Use Passphrase' button to be present")
         }
 
-        // Verify "Use Face ID/Touch ID" button presence (in password mode when biometric available)
+        // Verify "Use Face ID/Touch ID" button presence (in passphrase mode when biometric available)
         if testCase.expectUseBiometricButton {
             let useBiometricButton = try? inspectedView.find(viewWithAccessibilityIdentifier: "useBiometricButton")
             #expect(useBiometricButton != nil, "Expected 'Use Biometric' button to be present")
@@ -283,7 +283,7 @@ struct UnlockViewTests {
     }
 
     @Test
-    func passwordFieldIsDisabledDuringLockout() throws {
+    func passphraseFieldIsDisabledDuringLockout() throws {
         let authService = MockAuthenticationService(
             isSetUp: true,
             isLockedOut: true,
@@ -296,9 +296,9 @@ struct UnlockViewTests {
         let inspectedView = try view.inspect()
 
         // Verify the view renders correctly with lockout state
-        // The password field should exist (password mode is shown)
-        let passwordField = try? inspectedView.find(viewWithAccessibilityIdentifier: "passwordField")
-        #expect(passwordField != nil, "Expected password field to be present during lockout")
+        // The passphrase field should exist (passphrase mode is shown)
+        let passphraseField = try? inspectedView.find(viewWithAccessibilityIdentifier: "passphraseField")
+        #expect(passphraseField != nil, "Expected passphrase field to be present during lockout")
 
         // Verify lockout message is shown
         let lockoutLabel = try? inspectedView.find(viewWithAccessibilityIdentifier: "lockoutLabel")

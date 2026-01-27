@@ -101,12 +101,12 @@ extension XCUIApplication {
 
     /// Create a new user account through the setup flow
     /// - Parameters:
-    ///   - username: Username to create (default: "testuser")
+    ///   - email: Email address for the account (default: "test@example.com")
     ///   - password: Password to use (default: "unique-horse-battery-staple-2024")
     ///   - timeout: Max wait time for UI elements and account creation (default: 15s for encryption operations)
     /// - Note: Password autofill prompts may appear. Ensure hardware keyboard is disabled in simulator.
     func createAccount(
-        username: String = "testuser",
+        email: String = "test@example.com",
         password: String = "unique-horse-battery-staple-2024",
         timeout: TimeInterval = 15
     ) {
@@ -114,11 +114,11 @@ extension XCUIApplication {
         let headerText = staticTexts["Secure Your Medical Records"]
         XCTAssertTrue(headerText.waitForExistence(timeout: timeout), "Setup view should appear")
 
-        // Fill in username
-        let usernameField = textFields["Choose a username"]
-        XCTAssertTrue(usernameField.waitForExistence(timeout: timeout))
-        usernameField.tap()
-        usernameField.typeText(username)
+        // Fill in email
+        let emailField = textFields["Email address"]
+        XCTAssertTrue(emailField.waitForExistence(timeout: timeout), "Email field should exist")
+        emailField.tap()
+        emailField.typeText(email)
 
         // Fill in password
         let pwdField = passwordField("Enter password")
@@ -178,32 +178,32 @@ extension XCUIApplication {
         XCTAssertTrue(navTitle.waitForExistence(timeout: timeout), "Should navigate to main app")
     }
 
-    /// Unlock app with password (for returning user)
+    /// Unlock app with passphrase (for returning user)
     /// - Parameters:
-    ///   - password: Password to use (default: "unique-horse-battery-staple-2024")
+    ///   - passphrase: Passphrase to use (default: "unique-horse-battery-staple-2024")
     ///   - timeout: Max wait time for UI elements
-    func unlockApp(password: String = "unique-horse-battery-staple-2024", timeout: TimeInterval = 5) {
+    func unlockApp(passphrase: String = "unique-horse-battery-staple-2024", timeout: TimeInterval = 5) {
         // Wait for UnlockView to appear
         let appTitle = staticTexts["Family Medical App"]
         XCTAssertTrue(appTitle.waitForExistence(timeout: timeout), "Unlock view should appear")
 
         // Check if biometric button is shown (might auto-show)
-        let usePasswordButton = buttons["Use Password"]
-        if usePasswordButton.exists {
-            usePasswordButton.tap()
+        let usePassphraseButton = buttons["Use Passphrase"]
+        if usePassphraseButton.exists {
+            usePassphraseButton.tap()
         }
 
-        // Enter password
-        let pwdField = passwordField("Enter password")
-        XCTAssertTrue(pwdField.waitForExistence(timeout: timeout))
-        pwdField.tap()
-        pwdField.typeText(password)
+        // Enter passphrase
+        let passphraseField = passwordField("Passphrase")
+        XCTAssertTrue(passphraseField.waitForExistence(timeout: timeout))
+        passphraseField.tap()
+        passphraseField.typeText(passphrase)
 
-        // Tap Unlock button
-        let unlockButton = buttons["Unlock"]
-        XCTAssertTrue(unlockButton.exists)
-        XCTAssertTrue(unlockButton.isEnabled, "Unlock button should be enabled")
-        unlockButton.tap()
+        // Tap Sign In button
+        let signInButton = buttons["Sign In"]
+        XCTAssertTrue(signInButton.exists)
+        XCTAssertTrue(signInButton.isEnabled, "Sign In button should be enabled")
+        signInButton.tap()
 
         // Wait for HomeView to appear
         let navTitle = navigationBars["Members"]

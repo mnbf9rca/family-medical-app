@@ -35,8 +35,8 @@ final class ExistingUserFlowUITests: XCTestCase {
     /// Instance accessor
     var app: XCUIApplication { Self.sharedApp }
 
-    /// Password used to create the test account
-    static let testPassword = "unique-horse-battery-staple-2024"
+    /// Passphrase used to create the test account
+    static let testPassphrase = "unique-horse-battery-staple-2024"
 
     // MARK: - Class Setup / Teardown
 
@@ -47,7 +47,7 @@ final class ExistingUserFlowUITests: XCTestCase {
         MainActor.assumeIsolated {
             sharedApp = XCUIApplication()
             sharedApp.launchForUITesting(resetState: true)
-            sharedApp.createAccount(password: testPassword)
+            sharedApp.createAccount(password: testPassphrase)
             sharedApp.terminate()
         }
     }
@@ -81,44 +81,44 @@ final class ExistingUserFlowUITests: XCTestCase {
 
     // MARK: - Unlock Tests
 
-    func testUnlockWithCorrectPassword() throws {
+    func testUnlockWithCorrectPassphrase() throws {
         // Verify UnlockView appears (account was created in class setUp)
         let appTitle = app.staticTexts["Family Medical App"]
         XCTAssertTrue(appTitle.waitForExistence(timeout: 5), "Unlock view should appear")
 
         // Unlock
-        app.unlockApp(password: Self.testPassword)
+        app.unlockApp(passphrase: Self.testPassphrase)
 
         // Verify we're on HomeView
         let navTitle = app.navigationBars["Members"]
         XCTAssertTrue(navTitle.exists, "Should be on main app after unlock")
     }
 
-    func testUnlockWithIncorrectPassword() throws {
+    func testUnlockWithIncorrectPassphrase() throws {
         let appTitle = app.staticTexts["Family Medical App"]
         XCTAssertTrue(appTitle.waitForExistence(timeout: 5))
 
         // Skip biometric if shown
-        let usePasswordButton = app.buttons["Use Password"]
-        if usePasswordButton.exists {
-            usePasswordButton.tap()
+        let usePassphraseButton = app.buttons["Use Passphrase"]
+        if usePassphraseButton.exists {
+            usePassphraseButton.tap()
         }
 
-        // Enter WRONG password
-        let passwordField = app.passwordField("Enter password")
-        XCTAssertTrue(passwordField.waitForExistence(timeout: 2))
-        passwordField.tap()
-        passwordField.typeText("WrongPassword123")
+        // Enter WRONG passphrase
+        let passphraseField = app.passwordField("Passphrase")
+        XCTAssertTrue(passphraseField.waitForExistence(timeout: 2))
+        passphraseField.tap()
+        passphraseField.typeText("WrongPassphrase123")
 
-        // Tap Unlock
-        let unlockButton = app.buttons["Unlock"]
-        unlockButton.tap()
+        // Tap Sign In
+        let signInButton = app.buttons["Sign In"]
+        signInButton.tap()
 
         // Should see failed attempts counter
         let failedAttemptText = app.staticTexts.matching(NSPredicate(format: "label CONTAINS 'failed attempt'")).firstMatch
         XCTAssertTrue(
             failedAttemptText.waitForExistence(timeout: 2),
-            "Failed attempts counter should appear after wrong password"
+            "Failed attempts counter should appear after wrong passphrase"
         )
     }
 
@@ -127,27 +127,27 @@ final class ExistingUserFlowUITests: XCTestCase {
         XCTAssertTrue(appTitle.waitForExistence(timeout: 5))
 
         // Skip biometric if shown
-        let usePasswordButton = app.buttons["Use Password"]
-        if usePasswordButton.exists {
-            usePasswordButton.tap()
+        let usePassphraseButton = app.buttons["Use Passphrase"]
+        if usePassphraseButton.exists {
+            usePassphraseButton.tap()
         }
 
         // First failed attempt
-        let passwordField = app.passwordField("Enter password")
-        XCTAssertTrue(passwordField.waitForExistence(timeout: 2))
-        passwordField.tap()
-        passwordField.typeText("Wrong1")
-        app.buttons["Unlock"].tap()
+        let passphraseField = app.passwordField("Passphrase")
+        XCTAssertTrue(passphraseField.waitForExistence(timeout: 2))
+        passphraseField.tap()
+        passphraseField.typeText("Wrong1")
+        app.buttons["Sign In"].tap()
 
         // Check counter shows "1 failed attempt"
         let failedAttempt1 = app.staticTexts["1 failed attempt"]
         XCTAssertTrue(failedAttempt1.waitForExistence(timeout: 2), "Should show 1 failed attempt")
 
-        // Clear password field and try again
-        passwordField.tap()
-        passwordField.clearText()
-        passwordField.typeText("Wrong2")
-        app.buttons["Unlock"].tap()
+        // Clear passphrase field and try again
+        passphraseField.tap()
+        passphraseField.clearText()
+        passphraseField.typeText("Wrong2")
+        app.buttons["Sign In"].tap()
 
         // Check counter shows "2 failed attempts"
         let failedAttempt2 = app.staticTexts["2 failed attempts"]
@@ -158,38 +158,38 @@ final class ExistingUserFlowUITests: XCTestCase {
         // Verify all expected elements exist
         XCTAssertTrue(app.staticTexts["Family Medical App"].waitForExistence(timeout: 5))
 
-        // Either biometric button or password field should exist
+        // Either biometric button or passphrase field should exist
         // Use waitForExistence with timeout for CI reliability (elements may load slowly)
         let biometricButton = app.buttons.matching(NSPredicate(format: "label CONTAINS 'Unlock with'")).firstMatch
-        let passwordField = app.passwordField("Enter password")
+        let passphraseField = app.passwordField("Passphrase")
 
         let hasBiometricButton = biometricButton.waitForExistence(timeout: 2)
-        let hasPasswordField = passwordField.waitForExistence(timeout: 2)
+        let hasPassphraseField = passphraseField.waitForExistence(timeout: 2)
 
         XCTAssertTrue(
-            hasBiometricButton || hasPasswordField,
-            "Should show either biometric button or password field"
+            hasBiometricButton || hasPassphraseField,
+            "Should show either biometric button or passphrase field"
         )
     }
 
-    func testSwitchFromBiometricToPassword() throws {
+    func testSwitchFromBiometricToPassphrase() throws {
         let appTitle = app.staticTexts["Family Medical App"]
         XCTAssertTrue(appTitle.waitForExistence(timeout: 5))
 
         // This test only applies when biometric authentication is available
-        let usePasswordButton = app.buttons["Use Password"]
+        let usePassphraseButton = app.buttons["Use Passphrase"]
         try XCTSkipUnless(
-            usePasswordButton.waitForExistence(timeout: 2),
-            "Test requires biometric to be available (Use Password button must be shown)"
+            usePassphraseButton.waitForExistence(timeout: 2),
+            "Test requires biometric to be available (Use Passphrase button must be shown)"
         )
 
-        usePasswordButton.tap()
+        usePassphraseButton.tap()
 
-        // Password field should now appear
-        let passwordField = app.passwordField("Enter password")
+        // Passphrase field should now appear
+        let passphraseField = app.passwordField("Passphrase")
         XCTAssertTrue(
-            passwordField.waitForExistence(timeout: 2),
-            "Password field should appear after tapping 'Use Password'"
+            passphraseField.waitForExistence(timeout: 2),
+            "Passphrase field should appear after tapping 'Use Passphrase'"
         )
     }
 }
