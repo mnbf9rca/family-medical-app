@@ -99,78 +99,86 @@ extension XCUIApplication {
         launch()
     }
 
-    /// Create a new user account through the setup flow
+    /// Create a new user account through the multi-step setup flow
     /// - Parameters:
     ///   - email: Email address for the account (default: "test@example.com")
-    ///   - password: Password to use (default: "unique-horse-battery-staple-2024")
+    ///   - passphrase: Passphrase to use (default: "unique-horse-battery-staple-2024")
+    ///   - enableBiometric: Whether to enable biometric auth (default: false for testing)
     ///   - timeout: Max wait time for UI elements and account creation (default: 15s for encryption operations)
-    /// - Note: Password autofill prompts may appear. Ensure hardware keyboard is disabled in simulator.
+    /// - Note: Uses test@example.com which bypasses email verification in DEBUG builds
     func createAccount(
         email: String = "test@example.com",
-        password: String = "unique-horse-battery-staple-2024",
+        password passphrase: String = "unique-horse-battery-staple-2024",
+        enableBiometric: Bool = false,
         timeout: TimeInterval = 15
     ) {
-        // Wait for PasswordSetupView to appear
-        let headerText = staticTexts["Secure Your Medical Records"]
-        XCTAssertTrue(headerText.waitForExistence(timeout: timeout), "Setup view should appear")
+        // Step 1: Email Entry
+        let emailEntryHeader = staticTexts["Family Medical"]
+        XCTAssertTrue(emailEntryHeader.waitForExistence(timeout: timeout), "Email entry view should appear")
 
-        // Fill in email
         let emailField = textFields["Email address"]
         XCTAssertTrue(emailField.waitForExistence(timeout: timeout), "Email field should exist")
         emailField.tap()
         emailField.typeText(email)
 
-        // Fill in password
-        let pwdField = passwordField("Enter password")
-        XCTAssertTrue(pwdField.exists)
-        pwdField.tap()
-        pwdField.typeText(password)
+        let emailContinueButton = buttons["Continue"]
+        XCTAssertTrue(emailContinueButton.waitForExistence(timeout: 2) && emailContinueButton.isEnabled)
+        emailContinueButton.tap()
 
-        // Fill in confirm password
-        let confirmPwdField = passwordField("Confirm password")
-        XCTAssertTrue(confirmPwdField.exists)
-        confirmPwdField.tap()
-        confirmPwdField.typeText(password)
-
-        // Tap somewhere to dismiss keyboard and trigger binding updates
-        // This ensures SwiftUI reactive bindings update properly
-        staticTexts["Secure Your Medical Records"].tap()
-
-        // Disable biometric (toggle is ON by default if biometric available)
-        let biometricToggle = switches.firstMatch
-        if biometricToggle.exists {
-            let toggleValue = (biometricToggle.value as? String) == "1"
-            if toggleValue {
-                biometricToggle.tap() // Turn off biometric
+        // Step 2: Code Verification (auto-bypassed for test@example.com in DEBUG)
+        let codeHeader = staticTexts["Enter verification code"]
+        if codeHeader.waitForExistence(timeout: 3) {
+            // If code entry appears, enter test code (bypassed in DEBUG)
+            let codeField = textFields["codeField"]
+            if codeField.exists {
+                codeField.tap()
+                codeField.typeText("123456")
+            }
+            let verifyButton = buttons["Verify"]
+            if verifyButton.exists && verifyButton.isEnabled {
+                verifyButton.tap()
             }
         }
 
-        // Wait for Continue button to become enabled
-        let continueButton = buttons["Continue"]
-        XCTAssertTrue(continueButton.exists)
+        // Step 3: Passphrase Creation
+        let passphraseHeader = staticTexts["Create your passphrase"]
+        XCTAssertTrue(passphraseHeader.waitForExistence(timeout: timeout), "Passphrase creation should appear")
 
-        // Wait for button to enable (reactive updates from SwiftUI)
-        let buttonEnabled = continueButton.waitForExistence(timeout: 2) && continueButton.isEnabled
-        XCTAssertTrue(buttonEnabled, "Continue button should be enabled after filling valid fields")
+        let passphraseField = passwordField("Enter passphrase")
+        XCTAssertTrue(passphraseField.waitForExistence(timeout: timeout))
+        passphraseField.tap()
+        passphraseField.typeText(passphrase)
 
-        continueButton.tap()
+        let passphraseContinueButton = buttons["Continue"]
+        XCTAssertTrue(passphraseContinueButton.waitForExistence(timeout: 2) && passphraseContinueButton.isEnabled)
+        passphraseContinueButton.tap()
 
-        // Check for error alerts - if one appears, the navigation won't succeed
-        // and the test will fail with a more specific message
-        if alerts.count > 0 {
-            let alert = alerts.firstMatch
-            if alert.exists {
-                print("❌ Error alert appeared: \(alert.label)")
-                // Print all static texts in the alert for debugging
-                alert.staticTexts.allElementsBoundByIndex.forEach { element in
-                    print("  Alert text: \(element.label)")
-                }
-                // Try to dismiss
-                if alert.buttons["OK"].exists {
-                    alert.buttons["OK"].tap()
-                }
-                XCTFail("Account creation failed with error alert")
+        // Step 4: Passphrase Confirmation
+        let confirmHeader = staticTexts["Confirm your passphrase"]
+        XCTAssertTrue(confirmHeader.waitForExistence(timeout: timeout), "Passphrase confirmation should appear")
+
+        let confirmField = passwordField("Confirm passphrase")
+        XCTAssertTrue(confirmField.waitForExistence(timeout: timeout))
+        confirmField.tap()
+        confirmField.typeText(passphrase)
+
+        let confirmContinueButton = buttons["Continue"]
+        XCTAssertTrue(confirmContinueButton.waitForExistence(timeout: 2) && confirmContinueButton.isEnabled)
+        confirmContinueButton.tap()
+
+        // Step 5: Biometric Setup
+        let biometricHeader = staticTexts.matching(NSPredicate(format: "label CONTAINS 'Enable'")).firstMatch
+        XCTAssertTrue(biometricHeader.waitForExistence(timeout: timeout), "Biometric setup should appear")
+
+        if enableBiometric {
+            let enableButton = buttons["enableBiometricButton"]
+            if enableButton.exists && enableButton.isEnabled {
+                enableButton.tap()
             }
+        } else {
+            let skipButton = buttons["Skip for now"]
+            XCTAssertTrue(skipButton.exists)
+            skipButton.tap()
         }
 
         // Wait for HomeView to appear

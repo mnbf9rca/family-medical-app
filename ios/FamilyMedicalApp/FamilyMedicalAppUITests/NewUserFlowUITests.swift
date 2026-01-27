@@ -2,20 +2,18 @@
 //  NewUserFlowUITests.swift
 //  FamilyMedicalAppUITests
 //
-//  Tests for new user account creation flow including password validation
+//  Tests for new user account creation flow with multi-step authentication
 //
 //  ## Test Organization
 //  - Independent tests: `testCompleteNewUserJourney`, `testNewUserWithCustomCredentials`
 //    These require fresh app state and test complete account creation flows.
 //
-//  - Validation test: `testPasswordSetupValidation`
-//    Tests all password validation rules in a single method (field presence,
-//    button states, strength indicator, password matching).
+//  - Validation test: `testPassphraseSetupValidation`
+//    Tests passphrase validation rules (field presence, button states, strength indicator).
 //
 //  ## Note on XCTest Ordering
-//  XCTest does NOT guarantee test execution order. Previously, tests were named
-//  `test1_`, `test2_`, etc. to imply ordering, but this is not reliable.
-//  Validation checks are now consolidated into a single test method.
+//  XCTest does NOT guarantee test execution order. Validation checks are consolidated
+//  into single test methods where ordering matters.
 //
 //  - Note: Ensure hardware keyboard is disabled in simulator:
 //    I/O -> Keyboard -> Connect Hardware Keyboard (unchecked)
@@ -42,47 +40,6 @@ final class NewUserFlowUITests: XCTestCase {
         app = nil
     }
 
-    // MARK: - Helper Methods
-
-    /// Clear all form fields to reset state
-    private func clearFormFields() {
-        // Clear username field
-        let usernameField = app.textFields["Choose a username"]
-        if usernameField.exists {
-            usernameField.tap()
-            if let text = usernameField.value as? String, !text.isEmpty, text != "Choose a username" {
-                let deleteString = String(repeating: XCUIKeyboardKey.delete.rawValue, count: text.count)
-                usernameField.typeText(deleteString)
-            }
-        }
-
-        // Clear password field
-        let passwordField = app.passwordField("Enter password")
-        if passwordField.exists {
-            passwordField.tap()
-            if let text = passwordField.value as? String, !text.isEmpty, text != "Enter password" {
-                let deleteString = String(repeating: XCUIKeyboardKey.delete.rawValue, count: text.count)
-                passwordField.typeText(deleteString)
-            }
-        }
-
-        // Clear confirm password field
-        let confirmPasswordField = app.passwordField("Confirm password")
-        if confirmPasswordField.exists {
-            confirmPasswordField.tap()
-            if let text = confirmPasswordField.value as? String, !text.isEmpty, text != "Confirm password" {
-                let deleteString = String(repeating: XCUIKeyboardKey.delete.rawValue, count: text.count)
-                confirmPasswordField.typeText(deleteString)
-            }
-        }
-
-        // Tap header to dismiss keyboard
-        let header = app.staticTexts["Secure Your Medical Records"]
-        if header.exists {
-            header.tap()
-        }
-    }
-
     // MARK: - Independent Tests (Fresh App Launch Required)
 
     func testCompleteNewUserJourney() throws {
@@ -90,16 +47,16 @@ final class NewUserFlowUITests: XCTestCase {
         app = XCUIApplication()
         app.launchForUITesting(resetState: true)
 
-        // Verify PasswordSetupView appears
-        let header = app.staticTexts["Secure Your Medical Records"]
-        XCTAssertTrue(header.exists, "Setup screen should appear for new user")
+        // Verify EmailEntryView appears
+        let header = app.staticTexts["Family Medical"]
+        XCTAssertTrue(header.waitForExistence(timeout: 5), "Email entry screen should appear for new user")
 
-        // Create account
+        // Create account using the helper (goes through all steps)
         app.createAccount()
 
         // Verify we're on HomeView with empty state
         let emptyStateText = app.staticTexts["No Members"]
-        XCTAssertTrue(emptyStateText.exists, "Empty state should appear after account creation")
+        XCTAssertTrue(emptyStateText.waitForExistence(timeout: 5), "Empty state should appear after account creation")
 
         // Terminate this independent test's app
         app.terminate()
@@ -109,10 +66,10 @@ final class NewUserFlowUITests: XCTestCase {
         app = XCUIApplication()
         app.launchForUITesting(resetState: true)
 
-        let customUsername = "myusername"
-        let customPassword = "unique-good-pass-1234"
+        let customEmail = "custom@test.example.com"
+        let customPassphrase = "unique-good-pass-1234"
 
-        app.createAccount(username: customUsername, password: customPassword)
+        app.createAccount(email: customEmail, password: customPassphrase)
 
         // Verify successful creation
         let navTitle = app.navigationBars["Members"]
@@ -122,59 +79,195 @@ final class NewUserFlowUITests: XCTestCase {
         app.terminate()
     }
 
-    // MARK: - Password Setup Validation Test
-    //
-    // This test consolidates all password validation checks into a single method.
-    // XCTest does NOT guarantee test ordering, so chained tests with `test1_`, `test2_`
-    // prefixes are unreliable. This single method tests all validation rules sequentially.
+    // MARK: - Email Entry Validation Test
 
-    func testPasswordSetupValidation() throws {
-        // Launch app with fresh state
+    func testEmailEntryValidation() throws {
         app = XCUIApplication()
         app.launchForUITesting(resetState: true)
 
-        // Wait for setup view
-        let headerText = app.staticTexts["Secure Your Medical Records"]
-        XCTAssertTrue(headerText.waitForExistence(timeout: 5), "Setup screen should appear")
+        // Wait for email entry view
+        let headerText = app.staticTexts["Family Medical"]
+        XCTAssertTrue(headerText.waitForExistence(timeout: 5), "Email entry screen should appear")
 
-        // --- Step 1: Verify all required fields appear ---
-        XCTAssertTrue(app.textFields["Choose a username"].exists, "Username field should exist")
-        XCTAssertTrue(app.passwordField("Enter password").exists, "Password field should exist")
-        XCTAssertTrue(app.passwordField("Confirm password").exists, "Confirm password field should exist")
-        XCTAssertTrue(app.buttons["Continue"].exists, "Continue button should exist")
+        // Verify email field exists
+        let emailField = app.textFields["Email address"]
+        XCTAssertTrue(emailField.exists, "Email field should exist")
 
-        // --- Step 2: Empty fields should disable continue button ---
+        // Continue button should be disabled with empty email
         let continueButton = app.buttons["Continue"]
-        XCTAssertFalse(continueButton.isEnabled, "Continue should be disabled with empty fields")
+        XCTAssertTrue(continueButton.exists, "Continue button should exist")
+        XCTAssertFalse(continueButton.isEnabled, "Continue should be disabled with empty email")
 
-        // --- Step 3: Partially filled fields should disable continue button ---
-        let usernameField = app.textFields["Choose a username"]
-        usernameField.tap()
-        usernameField.typeText("testuser")
-        XCTAssertFalse(continueButton.isEnabled, "Continue should be disabled with only username")
+        // Enter invalid email
+        emailField.tap()
+        emailField.typeText("invalid-email")
+        XCTAssertFalse(continueButton.isEnabled, "Continue should be disabled with invalid email")
 
-        // --- Step 4: Weak password should show strength indicator ---
-        let passwordField = app.passwordField("Enter password")
-        passwordField.tap()
-        passwordField.typeText("weak")
+        // Clear and enter valid email
+        emailField.tap()
+        let deleteString = String(repeating: XCUIKeyboardKey.delete.rawValue, count: "invalid-email".count)
+        emailField.typeText(deleteString)
+        emailField.typeText("test@example.com")
+
+        // Continue should now be enabled
+        XCTAssertTrue(
+            continueButton.waitForExistence(timeout: 2) && continueButton.isEnabled,
+            "Continue should be enabled with valid email"
+        )
+
+        app.terminate()
+    }
+
+    // MARK: - Passphrase Setup Validation Test
+
+    func testPassphraseSetupValidation() throws {
+        app = XCUIApplication()
+        app.launchForUITesting(resetState: true)
+
+        // Navigate to passphrase creation (through email entry)
+        let emailField = app.textFields["Email address"]
+        XCTAssertTrue(emailField.waitForExistence(timeout: 5))
+        emailField.tap()
+        emailField.typeText("test@example.com")
+
+        let emailContinueButton = app.buttons["Continue"]
+        XCTAssertTrue(emailContinueButton.waitForExistence(timeout: 2) && emailContinueButton.isEnabled)
+        emailContinueButton.tap()
+
+        // Skip code verification (auto-bypassed for test email)
+        let codeHeader = app.staticTexts["Enter verification code"]
+        if codeHeader.waitForExistence(timeout: 3) {
+            let codeField = app.textFields["codeField"]
+            if codeField.exists {
+                codeField.tap()
+                codeField.typeText("123456")
+            }
+            let verifyButton = app.buttons["Verify"]
+            if verifyButton.exists && verifyButton.isEnabled {
+                verifyButton.tap()
+            }
+        }
+
+        // Wait for passphrase creation view
+        let passphraseHeader = app.staticTexts["Create your passphrase"]
+        XCTAssertTrue(passphraseHeader.waitForExistence(timeout: 5), "Passphrase creation should appear")
+
+        // Verify passphrase field exists
+        let passphraseField = app.passwordField("Enter passphrase")
+        XCTAssertTrue(passphraseField.exists, "Passphrase field should exist")
+
+        // Continue button should be disabled with empty passphrase
+        let continueButton = app.buttons["Continue"]
+        XCTAssertFalse(continueButton.isEnabled, "Continue should be disabled with empty passphrase")
+
+        // Enter weak passphrase - should show strength indicator
+        passphraseField.tap()
+        passphraseField.typeText("weak")
 
         let weakText = app.staticTexts["Weak"]
-        XCTAssertTrue(weakText.waitForExistence(timeout: 2), "Strength indicator showing 'Weak' should appear for weak password")
+        XCTAssertTrue(
+            weakText.waitForExistence(timeout: 2),
+            "Strength indicator showing 'Weak' should appear for weak passphrase"
+        )
 
-        // Clear fields for next test
-        clearFormFields()
+        // Continue should still be disabled for weak passphrase
+        XCTAssertFalse(continueButton.isEnabled, "Continue should be disabled with weak passphrase")
 
-        // --- Step 5: Mismatched passwords should disable continue button ---
-        usernameField.tap()
-        usernameField.typeText("testuser")
+        // Clear and enter strong passphrase
+        passphraseField.tap()
+        let deleteString = String(repeating: XCUIKeyboardKey.delete.rawValue, count: "weak".count)
+        passphraseField.typeText(deleteString)
+        passphraseField.typeText("unique-horse-battery-staple-2024")
 
-        passwordField.tap()
-        passwordField.typeText("unique-horse-battery-staple-2024")
+        let strongText = app.staticTexts["Strong"]
+        XCTAssertTrue(
+            strongText.waitForExistence(timeout: 2),
+            "Strength indicator showing 'Strong' should appear for strong passphrase"
+        )
 
-        let confirmPasswordField = app.passwordField("Confirm password")
-        confirmPasswordField.tap()
-        confirmPasswordField.typeText("unique-good-pass-1234")
+        // Continue should now be enabled
+        XCTAssertTrue(
+            continueButton.waitForExistence(timeout: 2) && continueButton.isEnabled,
+            "Continue should be enabled with strong passphrase"
+        )
 
-        XCTAssertFalse(continueButton.isEnabled, "Continue should be disabled with mismatched passwords")
+        app.terminate()
+    }
+
+    // MARK: - Passphrase Confirmation Validation Test
+
+    func testPassphraseConfirmationValidation() throws {
+        app = XCUIApplication()
+        app.launchForUITesting(resetState: true)
+
+        let passphrase = "unique-horse-battery-staple-2024"
+
+        // Navigate through email entry
+        let emailField = app.textFields["Email address"]
+        XCTAssertTrue(emailField.waitForExistence(timeout: 5))
+        emailField.tap()
+        emailField.typeText("test@example.com")
+        app.buttons["Continue"].tap()
+
+        // Skip code verification
+        let codeHeader = app.staticTexts["Enter verification code"]
+        if codeHeader.waitForExistence(timeout: 3) {
+            let codeField = app.textFields["codeField"]
+            if codeField.exists {
+                codeField.tap()
+                codeField.typeText("123456")
+            }
+            let verifyButton = app.buttons["Verify"]
+            if verifyButton.exists && verifyButton.isEnabled {
+                verifyButton.tap()
+            }
+        }
+
+        // Navigate through passphrase creation
+        let passphraseHeader = app.staticTexts["Create your passphrase"]
+        XCTAssertTrue(passphraseHeader.waitForExistence(timeout: 5))
+        let passphraseField = app.passwordField("Enter passphrase")
+        passphraseField.tap()
+        passphraseField.typeText(passphrase)
+        app.buttons["Continue"].tap()
+
+        // Now on passphrase confirmation
+        let confirmHeader = app.staticTexts["Confirm your passphrase"]
+        XCTAssertTrue(confirmHeader.waitForExistence(timeout: 5), "Passphrase confirmation should appear")
+
+        let confirmField = app.passwordField("Confirm passphrase")
+        XCTAssertTrue(confirmField.exists, "Confirm passphrase field should exist")
+
+        // Continue button should be disabled with empty confirmation
+        let continueButton = app.buttons["Continue"]
+        XCTAssertFalse(continueButton.isEnabled, "Continue should be disabled with empty confirmation")
+
+        // Enter mismatched passphrase
+        confirmField.tap()
+        confirmField.typeText("different-passphrase-123")
+
+        // Continue should still be disabled (mismatched)
+        XCTAssertFalse(continueButton.isEnabled, "Continue should be disabled with mismatched passphrase")
+
+        // Clear and enter matching passphrase
+        confirmField.tap()
+        let deleteString = String(
+            repeating: XCUIKeyboardKey.delete.rawValue,
+            count: "different-passphrase-123".count
+        )
+        confirmField.typeText(deleteString)
+        confirmField.typeText(passphrase)
+
+        // Match indicator should appear
+        let matchText = app.staticTexts["Passphrases match"]
+        XCTAssertTrue(matchText.waitForExistence(timeout: 2), "Match indicator should appear")
+
+        // Continue should now be enabled
+        XCTAssertTrue(
+            continueButton.waitForExistence(timeout: 2) && continueButton.isEnabled,
+            "Continue should be enabled with matching passphrase"
+        )
+
+        app.terminate()
     }
 }
