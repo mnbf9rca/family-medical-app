@@ -5,6 +5,7 @@
 	<key>com.apple.developer.associated-domains</key>
 	<array>
 		<string>webcredentials:family-medical.cynexia.com</string>
+		<string>applinks:family-medical.cynexia.com</string>
 	</array>
 </dict>
 </plist>
