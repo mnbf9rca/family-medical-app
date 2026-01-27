@@ -10,12 +10,23 @@ final class AuthenticationViewModel {
     var isAuthenticated = false
     var isSetUp = false
 
-    // MARK: - Password Setup State
+    // MARK: - Flow State
 
-    var username = ""
+    var flowState: AuthenticationFlowState = .emailEntry
+
+    // MARK: - Email Verification State
+
+    var verificationCode = ""
+    var passphrase = ""
+    var confirmPassphrase = ""
+
+    // MARK: - Password Setup State (legacy, kept for backward compatibility)
+
+    var email = ""
     var password = ""
     var confirmPassword = ""
     var hasAttemptedSetup = false // Track if user has tried to submit
+    var hasConfirmFieldLostFocus = false // Track if confirm field has lost focus for validation
 
     var passwordStrength: PasswordStrength {
         passwordValidator.passwordStrength(password)
@@ -30,11 +41,39 @@ final class AuthenticationViewModel {
         hasAttemptedSetup ? passwordValidationErrors : []
     }
 
+    // Show password mismatch only after confirm field loses focus or has content
+    var shouldShowPasswordMismatch: Bool {
+        (hasConfirmFieldLostFocus || !confirmPassword.isEmpty) &&
+            !password.isEmpty &&
+            password != confirmPassword
+    }
+
+    // Email validation (basic check for @ and .)
+    var isEmailValid: Bool {
+        let trimmedEmail = email.trimmingCharacters(in: .whitespaces)
+        return trimmedEmail.contains("@") && trimmedEmail.contains(".")
+    }
+
+    var emailValidationError: String? {
+        let trimmedEmail = email.trimmingCharacters(in: .whitespaces)
+        if trimmedEmail.isEmpty {
+            return nil // Don't show error for empty (show on submit)
+        }
+        if !isEmailValid {
+            return "Please enter a valid email address"
+        }
+        return nil
+    }
+
     var enableBiometric = false
 
     // MARK: - Unlock State
 
     var unlockPassword = ""
+    var storedEmail: String {
+        authService.storedEmail ?? ""
+    }
+
     var failedAttempts: Int {
         authService.failedAttemptCount
     }
@@ -72,6 +111,7 @@ final class AuthenticationViewModel {
     private let authService: AuthenticationServiceProtocol
     private let biometricService: BiometricServiceProtocol
     private let passwordValidator: PasswordValidationServiceProtocol
+    private let emailVerificationService: EmailVerificationServiceProtocol
     let lockStateService: LockStateServiceProtocol
 
     // MARK: - Initialization
@@ -80,15 +120,24 @@ final class AuthenticationViewModel {
         authService: AuthenticationServiceProtocol? = nil,
         biometricService: BiometricServiceProtocol? = nil,
         passwordValidator: PasswordValidationServiceProtocol = PasswordValidationService(),
-        lockStateService: LockStateServiceProtocol = LockStateService()
+        lockStateService: LockStateServiceProtocol = LockStateService(),
+        emailVerificationService: EmailVerificationServiceProtocol? = nil
     ) {
         self.authService = authService ?? AuthenticationService()
         self.biometricService = biometricService ?? BiometricService()
         self.passwordValidator = passwordValidator
         self.lockStateService = lockStateService
+        self.emailVerificationService = emailVerificationService ?? EmailVerificationService()
 
         // Initialize setup state from authService
         isSetUp = self.authService.isSetUp
+
+        // Set initial flow state based on setup status
+        if self.authService.isSetUp {
+            flowState = .unlock
+        } else {
+            flowState = .emailEntry
+        }
 
         // Show biometric prompt on launch if enabled
         showBiometricPrompt = self.authService.isSetUp && self.authService.isBiometricEnabled
@@ -101,9 +150,14 @@ final class AuthenticationViewModel {
         // Mark that user has attempted setup (enables error display)
         hasAttemptedSetup = true
 
-        // Validate username
-        guard !username.trimmingCharacters(in: .whitespaces).isEmpty else {
-            errorMessage = "Please enter a username"
+        // Validate email
+        let trimmedEmail = email.trimmingCharacters(in: .whitespaces)
+        guard !trimmedEmail.isEmpty else {
+            errorMessage = "Please enter an email address"
+            return
+        }
+        guard isEmailValid else {
+            errorMessage = "Please enter a valid email address"
             return
         }
 
@@ -123,15 +177,16 @@ final class AuthenticationViewModel {
         errorMessage = nil
 
         do {
-            try await authService.setUp(password: password, enableBiometric: enableBiometric)
+            try await authService.setUp(password: password, email: trimmedEmail, enableBiometric: enableBiometric)
             isSetUp = true // Update stored property to trigger view update
             isAuthenticated = true
 
             // Clear fields
-            username = ""
+            email = ""
             password = ""
             confirmPassword = ""
             hasAttemptedSetup = false
+            hasConfirmFieldLostFocus = false
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -255,5 +310,36 @@ final class AuthenticationViewModel {
                 errorMessage = error.localizedDescription
             }
         }
+    }
+
+    // MARK: - Internal Helpers for Extension
+
+    func performSendVerificationCode(to email: String) async throws {
+        try await emailVerificationService.sendVerificationCode(to: email)
+    }
+
+    func performVerifyCode(_ code: String, for email: String) async throws -> EmailVerificationResult {
+        try await emailVerificationService.verifyCode(code, for: email)
+    }
+
+    func validatePassphrase(_ passphrase: String) -> [AuthenticationError] {
+        passwordValidator.validate(passphrase)
+    }
+
+    func performUnlockWithPassword(_ password: String) async throws {
+        try await authService.unlockWithPassword(password)
+    }
+
+    func performSetUp(password: String, email: String, enableBiometric: Bool) async throws {
+        try await authService.setUp(password: password, email: email, enableBiometric: enableBiometric)
+    }
+
+    func clearSensitiveFields() {
+        email = ""
+        verificationCode = ""
+        passphrase = ""
+        confirmPassphrase = ""
+        password = ""
+        confirmPassword = ""
     }
 }
