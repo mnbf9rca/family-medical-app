@@ -36,6 +36,16 @@ final class AuthenticationViewModel {
         passwordValidator.validate(password)
     }
 
+    // MARK: - Passphrase Validation (for new flow)
+
+    var passphraseStrength: PasswordStrength {
+        passwordValidator.passwordStrength(passphrase)
+    }
+
+    var passphraseValidationErrors: [AuthenticationError] {
+        passwordValidator.validate(passphrase)
+    }
+
     // Only show validation errors after user attempts setup
     var displayedValidationErrors: [AuthenticationError] {
         hasAttemptedSetup ? passwordValidationErrors : []
