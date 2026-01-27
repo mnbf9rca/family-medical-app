@@ -20,6 +20,12 @@ enum AuthenticationError: LocalizedError, Equatable, Hashable {
     case verificationFailed
     case keychainError(String)
 
+    // Email verification errors
+    case emailVerificationFailed
+    case invalidVerificationCode
+    case verificationCodeExpired
+    case tooManyVerificationAttempts
+
     var errorDescription: String? {
         switch self {
         // Biometric errors
@@ -55,6 +61,15 @@ enum AuthenticationError: LocalizedError, Equatable, Hashable {
             return "Authentication verification failed"
         case let .keychainError(message):
             return "Keychain error: \(message)"
+        // Email verification errors
+        case .emailVerificationFailed:
+            return "Unable to send verification code. Please try again."
+        case .invalidVerificationCode:
+            return "Invalid code. Please check and try again."
+        case .verificationCodeExpired:
+            return "Code expired. Please request a new one."
+        case .tooManyVerificationAttempts:
+            return "Too many attempts. Please wait before trying again."
         }
     }
 }
