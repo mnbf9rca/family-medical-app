@@ -178,7 +178,7 @@ final class SchemaEditorViewModel {
             visibility: .active,
             createdBy: .zero, // Will be set properly when device identity is implemented
             createdAt: now,
-            updatedBy: .zero,
+            updatedBy: .zero, // Will be set properly when device identity is implemented
             updatedAt: now
         )
     }
