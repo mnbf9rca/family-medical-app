@@ -57,7 +57,7 @@ enum BuiltInSchemaType: String, Codable, CaseIterable, Sendable {
 /// - Field IDs are UUIDs for collision-free multi-device support
 /// - Each Person has their own copy of schemas
 /// - Schemas are encrypted with Person's FMK
-struct RecordSchema: Codable, Equatable, Identifiable, Sendable {
+struct RecordSchema: Codable, Equatable, Hashable, Identifiable, Sendable {
     // MARK: - Properties
 
     /// Unique identifier for this schema (e.g., "vaccine", "medication", "my-custom-type")

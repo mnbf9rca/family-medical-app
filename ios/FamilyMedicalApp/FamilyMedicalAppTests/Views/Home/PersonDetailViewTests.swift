@@ -238,4 +238,28 @@ struct PersonDetailViewTests {
             _ = try forEach.navigationLink(index)
         }
     }
+
+    // MARK: - Schema Manager Tests
+
+    @Test
+    func viewHasManageRecordTypesButton() throws {
+        let person = try createTestPerson()
+        let viewModel = createViewModel(person: person)
+        let view = PersonDetailView(person: person, viewModel: viewModel)
+
+        let inspectedView = try view.inspect()
+        // The toolbar button should exist
+        _ = try inspectedView.find(ViewType.Button.self)
+    }
+
+    @Test
+    func viewRendersWithSchemaManagerSheet() throws {
+        let person = try createTestPerson()
+        let viewModel = createViewModel(person: person)
+        let view = PersonDetailView(person: person, viewModel: viewModel)
+
+        // View should render successfully even with sheet modifier
+        let inspectedView = try view.inspect()
+        _ = try inspectedView.group()
+    }
 }
