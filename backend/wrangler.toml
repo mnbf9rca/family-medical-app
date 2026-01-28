@@ -2,10 +2,8 @@ name = "recordwell-api"
 main = "src/index.ts"
 compatibility_date = "2024-01-01"
 
-# Routes
-routes = [
-  { pattern = "api.recordwell.app/*", zone_name = "recordwell.app" }
-]
+# Route managed via Cloudflare for SaaS (Custom Hostnames) in dashboard:
+# api.recordwell.app/* -> recordwell-api worker
 
 # KV Namespaces - OPAQUE Authentication
 [[kv_namespaces]]
@@ -27,5 +25,8 @@ id = "5d519620a3c341bc8821fc568ce67beb"
 [vars]
 ENVIRONMENT = "production"
 
-# Secrets (set with `wrangler secret put <NAME>`):
-# - OPAQUE_SERVER_SETUP: stored as recordwell_OPAQUE_SERVER_SETUP in secrets store
+# Secrets Store binding for OPAQUE server setup
+[[secrets_store_secrets]]
+binding = "OPAQUE_SERVER_SETUP"
+secret_name = "recordwell_OPAQUE_SERVER_SETUP"
+store_id = "9ff53e3094b54ddeb4de44cfa3471119"

@@ -62,16 +62,16 @@ export default {
     // Route handling
     if (request.method === 'POST') {
       // OPAQUE authentication routes
-      if (path === '/api/auth/opaque/register/start') {
+      if (path === '/auth/opaque/register/start') {
         return handleOpaqueRegisterStart(request, env);
       }
-      if (path === '/api/auth/opaque/register/finish') {
+      if (path === '/auth/opaque/register/finish') {
         return handleOpaqueRegisterFinish(request, env);
       }
-      if (path === '/api/auth/opaque/login/start') {
+      if (path === '/auth/opaque/login/start') {
         return handleOpaqueLoginStart(request, env);
       }
-      if (path === '/api/auth/opaque/login/finish') {
+      if (path === '/auth/opaque/login/finish') {
         return handleOpaqueLoginFinish(request, env);
       }
     }
