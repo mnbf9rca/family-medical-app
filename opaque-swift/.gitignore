@@ -2,3 +2,4 @@
 Cargo.lock
 *.xcframework
 generated/
+# Keep Sources/ - it's generated but needed for the Swift package

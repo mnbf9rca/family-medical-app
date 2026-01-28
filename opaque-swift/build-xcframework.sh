@@ -29,32 +29,30 @@ lipo -create \
     target/x86_64-apple-ios/release/libopaque_swift.a \
     -output target/ios-simulator-universal/release/libopaque_swift.a
 
-# Create XCFramework
+# Create XCFramework (library only, no headers to avoid conflicts)
 echo "Creating XCFramework..."
 rm -rf OpaqueSwift.xcframework
 
-# Create module maps for the headers
-mkdir -p target/aarch64-apple-ios/release/include
-mkdir -p target/ios-simulator-universal/release/include
+xcodebuild -create-xcframework \
+    -library target/aarch64-apple-ios/release/libopaque_swift.a \
+    -library target/ios-simulator-universal/release/libopaque_swift.a \
+    -output OpaqueSwift.xcframework
 
-cp generated/opaque_swiftFFI.h target/aarch64-apple-ios/release/include/
-cp generated/opaque_swiftFFI.h target/ios-simulator-universal/release/include/
-
-cat > target/aarch64-apple-ios/release/include/module.modulemap << 'EOF'
+# Set up the FFI module for Swift Package
+echo "Setting up FFI module..."
+mkdir -p Sources/OpaqueSwiftFFI
+cp generated/opaque_swiftFFI.h Sources/OpaqueSwiftFFI/
+cat > Sources/OpaqueSwiftFFI/module.modulemap << 'EOF'
 module opaque_swiftFFI {
     header "opaque_swiftFFI.h"
+    link "opaque_swift"
     export *
 }
 EOF
 
-cp target/aarch64-apple-ios/release/include/module.modulemap target/ios-simulator-universal/release/include/
-
-xcodebuild -create-xcframework \
-    -library target/aarch64-apple-ios/release/libopaque_swift.a \
-    -headers target/aarch64-apple-ios/release/include \
-    -library target/ios-simulator-universal/release/libopaque_swift.a \
-    -headers target/ios-simulator-universal/release/include \
-    -output OpaqueSwift.xcframework
+# Copy Swift bindings
+mkdir -p Sources/OpaqueSwift
+cp generated/opaque_swift.swift Sources/OpaqueSwift/
 
 echo "Done! OpaqueSwift.xcframework created"
 echo ""

@@ -1,0 +1,5 @@
+module opaque_swiftFFI {
+    header "opaque_swiftFFI.h"
+    link "opaque_swift"
+    export *
+}
