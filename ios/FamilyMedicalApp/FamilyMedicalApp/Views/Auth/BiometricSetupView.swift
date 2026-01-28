@@ -6,7 +6,7 @@ import SwiftUI
 /// Allows enabling Face ID or Touch ID for convenient daily unlock.
 struct BiometricSetupView: View {
     @Bindable var viewModel: AuthenticationViewModel
-    let email: String
+    let username: String
     let passphrase: String
 
     var body: some View {
@@ -118,7 +118,7 @@ struct BiometricSetupView: View {
 #Preview {
     BiometricSetupView(
         viewModel: AuthenticationViewModel(),
-        email: "test@example.com",
+        username: "testuser",
         passphrase: "test-passphrase-123"
     )
 }

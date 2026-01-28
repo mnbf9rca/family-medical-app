@@ -1,23 +1,22 @@
 import Testing
 @testable import FamilyMedicalApp
 
-/// Tests for AuthenticationViewModel email verification flow
+/// Tests for AuthenticationViewModel OPAQUE-based authentication flow
 @MainActor
 struct AuthenticationViewModelFlowTests {
     // MARK: - Test Constants
 
-    private let validEmail = "test@example.com"
-    private let validCode = "123456"
+    private let validUsername = "testuser"
     private let validPassphrase = "valid-test-passphrase-123"
 
     // MARK: - Initial Flow State Tests
 
     @Test
-    func initialFlowStateIsEmailEntryWhenNotSetUp() {
+    func initialFlowStateIsUsernameEntryWhenNotSetUp() {
         let authService = MockAuthenticationService(isSetUp: false)
         let viewModel = AuthenticationViewModel(authService: authService)
 
-        #expect(viewModel.flowState == .emailEntry)
+        #expect(viewModel.flowState == .usernameEntry)
     }
 
     @Test
@@ -28,146 +27,40 @@ struct AuthenticationViewModelFlowTests {
         #expect(viewModel.flowState == .unlock)
     }
 
-    // MARK: - Submit Email Tests
+    // MARK: - Submit Username Tests
 
     @Test
-    func submitEmailTransitionsToCodeVerification() async {
-        let mockEmailService = MockEmailVerificationService()
+    func submitUsernameTransitionsToPassphraseCreationForNewUser() async {
         let authService = MockAuthenticationService(isSetUp: false)
-        let viewModel = AuthenticationViewModel(
-            authService: authService,
-            emailVerificationService: mockEmailService
-        )
-        viewModel.email = validEmail
+        let viewModel = AuthenticationViewModel(authService: authService)
+        viewModel.username = validUsername
 
-        await viewModel.submitEmail()
+        await viewModel.submitUsername()
 
-        #expect(viewModel.flowState == .codeVerification(email: validEmail))
-        #expect(mockEmailService.sendCodeCallCount == 1)
-        #expect(mockEmailService.sendCodeEmail == validEmail)
+        #expect(viewModel.flowState == .passphraseCreation(username: validUsername))
     }
 
     @Test
-    func submitEmailShowsErrorForInvalidEmail() async {
-        let mockEmailService = MockEmailVerificationService()
+    func submitUsernameShowsErrorForInvalidUsername() async {
         let authService = MockAuthenticationService(isSetUp: false)
-        let viewModel = AuthenticationViewModel(
-            authService: authService,
-            emailVerificationService: mockEmailService
-        )
-        viewModel.email = "not-an-email"
+        let viewModel = AuthenticationViewModel(authService: authService)
+        viewModel.username = "ab" // Too short
 
-        await viewModel.submitEmail()
+        await viewModel.submitUsername()
 
-        #expect(viewModel.flowState == .emailEntry)
-        #expect(viewModel.errorMessage != nil)
-        #expect(mockEmailService.sendCodeCallCount == 0)
-    }
-
-    @Test
-    func submitEmailHandlesServiceError() async {
-        let mockEmailService = MockEmailVerificationService()
-        mockEmailService.sendCodeShouldThrow = .emailVerificationFailed
-        let authService = MockAuthenticationService(isSetUp: false)
-        let viewModel = AuthenticationViewModel(
-            authService: authService,
-            emailVerificationService: mockEmailService
-        )
-        viewModel.email = validEmail
-
-        await viewModel.submitEmail()
-
-        #expect(viewModel.flowState == .emailEntry)
+        #expect(viewModel.flowState == .usernameEntry)
         #expect(viewModel.errorMessage != nil)
     }
 
     @Test
-    func submitEmailHandlesRateLimiting() async {
-        let mockEmailService = MockEmailVerificationService()
-        mockEmailService.sendCodeShouldThrow = .tooManyVerificationAttempts
+    func proceedAsReturningUserTransitionsToPassphraseEntry() {
         let authService = MockAuthenticationService(isSetUp: false)
-        let viewModel = AuthenticationViewModel(
-            authService: authService,
-            emailVerificationService: mockEmailService
-        )
-        viewModel.email = validEmail
+        let viewModel = AuthenticationViewModel(authService: authService)
+        viewModel.username = validUsername
 
-        await viewModel.submitEmail()
+        viewModel.proceedAsReturningUser()
 
-        #expect(viewModel.flowState == .emailEntry)
-        #expect(viewModel.errorMessage?.contains("many") == true || viewModel.errorMessage?.contains("wait") == true)
-    }
-
-    // MARK: - Submit Verification Code Tests
-
-    @Test
-    func submitCodeTransitionsToPassphraseCreationForNewUser() async {
-        let mockEmailService = MockEmailVerificationService()
-        mockEmailService.verifyCodeResult = EmailVerificationResult(isValid: true, isReturningUser: false)
-        let authService = MockAuthenticationService(isSetUp: false)
-        let viewModel = AuthenticationViewModel(
-            authService: authService,
-            emailVerificationService: mockEmailService
-        )
-        viewModel.flowState = .codeVerification(email: validEmail)
-        viewModel.verificationCode = validCode
-
-        await viewModel.submitVerificationCode()
-
-        #expect(viewModel.flowState == .passphraseCreation(email: validEmail))
-        #expect(mockEmailService.verifyCodeCallCount == 1)
-    }
-
-    @Test
-    func submitCodeTransitionsToPassphraseEntryForReturningUser() async {
-        let mockEmailService = MockEmailVerificationService()
-        mockEmailService.verifyCodeResult = EmailVerificationResult(isValid: true, isReturningUser: true)
-        let authService = MockAuthenticationService(isSetUp: false)
-        let viewModel = AuthenticationViewModel(
-            authService: authService,
-            emailVerificationService: mockEmailService
-        )
-        viewModel.flowState = .codeVerification(email: validEmail)
-        viewModel.verificationCode = validCode
-
-        await viewModel.submitVerificationCode()
-
-        #expect(viewModel.flowState == .passphraseEntry(email: validEmail, isReturningUser: true))
-    }
-
-    @Test
-    func submitCodeShowsErrorForInvalidCode() async {
-        let mockEmailService = MockEmailVerificationService()
-        mockEmailService.verifyCodeShouldThrow = .invalidVerificationCode
-        let authService = MockAuthenticationService(isSetUp: false)
-        let viewModel = AuthenticationViewModel(
-            authService: authService,
-            emailVerificationService: mockEmailService
-        )
-        viewModel.flowState = .codeVerification(email: validEmail)
-        viewModel.verificationCode = "000000"
-
-        await viewModel.submitVerificationCode()
-
-        #expect(viewModel.flowState == .codeVerification(email: validEmail))
-        #expect(viewModel.errorMessage != nil)
-    }
-
-    @Test
-    func submitCodeShowsErrorForShortCode() async {
-        let mockEmailService = MockEmailVerificationService()
-        let authService = MockAuthenticationService(isSetUp: false)
-        let viewModel = AuthenticationViewModel(
-            authService: authService,
-            emailVerificationService: mockEmailService
-        )
-        viewModel.flowState = .codeVerification(email: validEmail)
-        viewModel.verificationCode = "123" // Too short
-
-        await viewModel.submitVerificationCode()
-
-        #expect(viewModel.errorMessage != nil)
-        #expect(mockEmailService.verifyCodeCallCount == 0)
+        #expect(viewModel.flowState == .passphraseEntry(username: validUsername, isReturningUser: true))
     }
 
     // MARK: - Passphrase Creation Tests
@@ -176,24 +69,24 @@ struct AuthenticationViewModelFlowTests {
     func submitPassphraseCreationTransitionsToConfirmation() async {
         let authService = MockAuthenticationService(isSetUp: false)
         let viewModel = AuthenticationViewModel(authService: authService)
-        viewModel.flowState = .passphraseCreation(email: validEmail)
+        viewModel.flowState = .passphraseCreation(username: validUsername)
         viewModel.passphrase = validPassphrase
 
         await viewModel.submitPassphraseCreation()
 
-        #expect(viewModel.flowState == .passphraseConfirmation(email: validEmail, passphrase: validPassphrase))
+        #expect(viewModel.flowState == .passphraseConfirmation(username: validUsername, passphrase: validPassphrase))
     }
 
     @Test
     func submitPassphraseCreationShowsErrorForWeakPassphrase() async {
         let authService = MockAuthenticationService(isSetUp: false)
         let viewModel = AuthenticationViewModel(authService: authService)
-        viewModel.flowState = .passphraseCreation(email: validEmail)
+        viewModel.flowState = .passphraseCreation(username: validUsername)
         viewModel.passphrase = "short" // Too weak
 
         await viewModel.submitPassphraseCreation()
 
-        #expect(viewModel.flowState == .passphraseCreation(email: validEmail))
+        #expect(viewModel.flowState == .passphraseCreation(username: validUsername))
         #expect(viewModel.errorMessage != nil)
     }
 
@@ -203,24 +96,24 @@ struct AuthenticationViewModelFlowTests {
     func submitPassphraseConfirmationTransitionsToBiometricSetup() async {
         let authService = MockAuthenticationService(isSetUp: false)
         let viewModel = AuthenticationViewModel(authService: authService)
-        viewModel.flowState = .passphraseConfirmation(email: validEmail, passphrase: validPassphrase)
+        viewModel.flowState = .passphraseConfirmation(username: validUsername, passphrase: validPassphrase)
         viewModel.confirmPassphrase = validPassphrase
 
         await viewModel.submitPassphraseConfirmation()
 
-        #expect(viewModel.flowState == .biometricSetup(email: validEmail, passphrase: validPassphrase))
+        #expect(viewModel.flowState == .biometricSetup(username: validUsername, passphrase: validPassphrase))
     }
 
     @Test
     func submitPassphraseConfirmationShowsErrorForMismatch() async {
         let authService = MockAuthenticationService(isSetUp: false)
         let viewModel = AuthenticationViewModel(authService: authService)
-        viewModel.flowState = .passphraseConfirmation(email: validEmail, passphrase: validPassphrase)
+        viewModel.flowState = .passphraseConfirmation(username: validUsername, passphrase: validPassphrase)
         viewModel.confirmPassphrase = "different-passphrase"
 
         await viewModel.submitPassphraseConfirmation()
 
-        #expect(viewModel.flowState == .passphraseConfirmation(email: validEmail, passphrase: validPassphrase))
+        #expect(viewModel.flowState == .passphraseConfirmation(username: validUsername, passphrase: validPassphrase))
         #expect(viewModel.errorMessage != nil)
     }
 
@@ -234,7 +127,7 @@ struct AuthenticationViewModelFlowTests {
             authService: authService,
             biometricService: biometricService
         )
-        viewModel.flowState = .biometricSetup(email: validEmail, passphrase: validPassphrase)
+        viewModel.flowState = .biometricSetup(username: validUsername, passphrase: validPassphrase)
 
         await viewModel.completeSetup(enableBiometric: true)
 
@@ -247,7 +140,7 @@ struct AuthenticationViewModelFlowTests {
     func completeSetupWithoutBiometric() async {
         let authService = MockAuthenticationService(isSetUp: false)
         let viewModel = AuthenticationViewModel(authService: authService)
-        viewModel.flowState = .biometricSetup(email: validEmail, passphrase: validPassphrase)
+        viewModel.flowState = .biometricSetup(username: validUsername, passphrase: validPassphrase)
 
         await viewModel.completeSetup(enableBiometric: false)
 
@@ -256,45 +149,115 @@ struct AuthenticationViewModelFlowTests {
         #expect(viewModel.isAuthenticated == true)
     }
 
-    // MARK: - Resend Code Tests
+    // MARK: - Existing Passphrase Entry Tests
 
     @Test
-    func resendCodeCallsEmailService() async {
-        let mockEmailService = MockEmailVerificationService()
-        let authService = MockAuthenticationService(isSetUp: false)
-        let viewModel = AuthenticationViewModel(
-            authService: authService,
-            emailVerificationService: mockEmailService
-        )
-        viewModel.flowState = .codeVerification(email: validEmail)
+    func submitExistingPassphraseSuccessTransitionsToBiometricSetup() async {
+        let authService = MockAuthenticationService(isSetUp: true, storedUsername: "testuser")
+        let viewModel = AuthenticationViewModel(authService: authService)
+        viewModel.flowState = .passphraseEntry(username: "testuser", isReturningUser: true)
+        viewModel.passphrase = validPassphrase
 
-        await viewModel.resendVerificationCode()
+        await viewModel.submitExistingPassphrase()
 
-        #expect(mockEmailService.sendCodeCallCount == 1)
-        #expect(mockEmailService.sendCodeEmail == validEmail)
+        #expect(viewModel.flowState == .biometricSetup(username: "testuser", passphrase: validPassphrase))
+    }
+
+    @Test
+    func submitExistingPassphraseFailureShowsError() async {
+        let authService = MockAuthenticationService(isSetUp: true, storedUsername: "testuser", shouldFailUnlock: true)
+        let viewModel = AuthenticationViewModel(authService: authService)
+        viewModel.flowState = .passphraseEntry(username: "testuser", isReturningUser: true)
+        viewModel.passphrase = "wrongpassphrase"
+
+        await viewModel.submitExistingPassphrase()
+
+        // Should stay on same screen with error
+        #expect(viewModel.flowState == .passphraseEntry(username: "testuser", isReturningUser: true))
+        #expect(viewModel.errorMessage != nil)
     }
 
     // MARK: - Back Navigation Tests
 
     @Test
-    func goBackFromCodeVerificationReturnsToEmailEntry() {
+    func goBackFromPassphraseCreationReturnsToUsernameEntry() {
         let authService = MockAuthenticationService(isSetUp: false)
         let viewModel = AuthenticationViewModel(authService: authService)
-        viewModel.flowState = .codeVerification(email: validEmail)
+        viewModel.flowState = .passphraseCreation(username: validUsername)
 
         viewModel.goBack()
 
-        #expect(viewModel.flowState == .emailEntry)
+        #expect(viewModel.flowState == .usernameEntry)
     }
 
     @Test
-    func goBackFromPassphraseCreationReturnsToCodeVerification() {
+    func goBackFromPassphraseConfirmationReturnsToCreation() {
         let authService = MockAuthenticationService(isSetUp: false)
         let viewModel = AuthenticationViewModel(authService: authService)
-        viewModel.flowState = .passphraseCreation(email: validEmail)
+        viewModel.flowState = .passphraseConfirmation(username: validUsername, passphrase: validPassphrase)
 
         viewModel.goBack()
 
-        #expect(viewModel.flowState == .codeVerification(email: validEmail))
+        #expect(viewModel.flowState == .passphraseCreation(username: validUsername))
+    }
+
+    @Test
+    func goBackFromPassphraseEntryReturnsToUsernameEntry() {
+        let authService = MockAuthenticationService(isSetUp: false)
+        let viewModel = AuthenticationViewModel(authService: authService)
+        viewModel.flowState = .passphraseEntry(username: validUsername, isReturningUser: true)
+
+        viewModel.goBack()
+
+        #expect(viewModel.flowState == .usernameEntry)
+    }
+
+    @Test
+    func goBackFromBiometricSetupReturnsToConfirmation() {
+        let authService = MockAuthenticationService(isSetUp: false)
+        let viewModel = AuthenticationViewModel(authService: authService)
+        viewModel.flowState = .biometricSetup(username: validUsername, passphrase: validPassphrase)
+
+        viewModel.goBack()
+
+        #expect(viewModel.flowState == .passphraseConfirmation(username: validUsername, passphrase: validPassphrase))
+    }
+
+    // MARK: - Sensitive Field Clearing Tests
+
+    @Test
+    func goBackClearsPassphraseFromCreation() {
+        let authService = MockAuthenticationService(isSetUp: false)
+        let viewModel = AuthenticationViewModel(authService: authService)
+        viewModel.flowState = .passphraseCreation(username: validUsername)
+        viewModel.passphrase = validPassphrase
+
+        viewModel.goBack()
+
+        #expect(viewModel.passphrase.isEmpty)
+    }
+
+    @Test
+    func goBackClearsConfirmPassphraseFromConfirmation() {
+        let authService = MockAuthenticationService(isSetUp: false)
+        let viewModel = AuthenticationViewModel(authService: authService)
+        viewModel.flowState = .passphraseConfirmation(username: validUsername, passphrase: validPassphrase)
+        viewModel.confirmPassphrase = validPassphrase
+
+        viewModel.goBack()
+
+        #expect(viewModel.confirmPassphrase.isEmpty)
+    }
+
+    @Test
+    func goBackClearsErrorMessage() {
+        let authService = MockAuthenticationService(isSetUp: false)
+        let viewModel = AuthenticationViewModel(authService: authService)
+        viewModel.flowState = .passphraseCreation(username: validUsername)
+        viewModel.errorMessage = "Some error"
+
+        viewModel.goBack()
+
+        #expect(viewModel.errorMessage == nil)
     }
 }

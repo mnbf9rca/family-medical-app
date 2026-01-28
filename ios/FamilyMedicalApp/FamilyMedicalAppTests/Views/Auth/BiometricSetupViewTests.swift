@@ -4,7 +4,7 @@ import ViewInspector
 
 @MainActor
 struct BiometricSetupViewTests {
-    private let testEmail = "test@example.com"
+    private let testUsername = "testuser"
     private let testPassphrase = "valid-test-passphrase-123"
 
     // MARK: - View Structure Tests
@@ -12,7 +12,7 @@ struct BiometricSetupViewTests {
     @Test
     func viewContainsEnableBiometricButton() throws {
         let viewModel = AuthenticationViewModel()
-        let view = BiometricSetupView(viewModel: viewModel, email: testEmail, passphrase: testPassphrase)
+        let view = BiometricSetupView(viewModel: viewModel, username: testUsername, passphrase: testPassphrase)
 
         let sut = try view.inspect()
         let button = try sut.find(viewWithAccessibilityIdentifier: "enableBiometricButton")
@@ -23,7 +23,7 @@ struct BiometricSetupViewTests {
     @Test
     func viewContainsSkipButton() throws {
         let viewModel = AuthenticationViewModel()
-        let view = BiometricSetupView(viewModel: viewModel, email: testEmail, passphrase: testPassphrase)
+        let view = BiometricSetupView(viewModel: viewModel, username: testUsername, passphrase: testPassphrase)
 
         let sut = try view.inspect()
         let button = try sut.find(viewWithAccessibilityIdentifier: "skipButton")
@@ -34,7 +34,7 @@ struct BiometricSetupViewTests {
     @Test
     func viewContainsBackButton() throws {
         let viewModel = AuthenticationViewModel()
-        let view = BiometricSetupView(viewModel: viewModel, email: testEmail, passphrase: testPassphrase)
+        let view = BiometricSetupView(viewModel: viewModel, username: testUsername, passphrase: testPassphrase)
 
         let sut = try view.inspect()
         let button = try sut.find(viewWithAccessibilityIdentifier: "backButton")
@@ -48,7 +48,7 @@ struct BiometricSetupViewTests {
     func skipButtonAlwaysEnabled() throws {
         let viewModel = AuthenticationViewModel()
         viewModel.isLoading = false
-        let view = BiometricSetupView(viewModel: viewModel, email: testEmail, passphrase: testPassphrase)
+        let view = BiometricSetupView(viewModel: viewModel, username: testUsername, passphrase: testPassphrase)
 
         let sut = try view.inspect()
         let button = try sut.find(viewWithAccessibilityIdentifier: "skipButton").button()
@@ -60,7 +60,7 @@ struct BiometricSetupViewTests {
     func skipButtonDisabledWhenLoading() throws {
         let viewModel = AuthenticationViewModel()
         viewModel.isLoading = true
-        let view = BiometricSetupView(viewModel: viewModel, email: testEmail, passphrase: testPassphrase)
+        let view = BiometricSetupView(viewModel: viewModel, username: testUsername, passphrase: testPassphrase)
 
         let sut = try view.inspect()
         let button = try sut.find(viewWithAccessibilityIdentifier: "skipButton").button()
@@ -74,7 +74,7 @@ struct BiometricSetupViewTests {
     func errorLabelShownWhenErrorPresent() throws {
         let viewModel = AuthenticationViewModel()
         viewModel.errorMessage = "Biometric setup failed"
-        let view = BiometricSetupView(viewModel: viewModel, email: testEmail, passphrase: testPassphrase)
+        let view = BiometricSetupView(viewModel: viewModel, username: testUsername, passphrase: testPassphrase)
 
         let sut = try view.inspect()
         let errorLabel = try sut.find(viewWithAccessibilityIdentifier: "errorLabel")
@@ -86,7 +86,7 @@ struct BiometricSetupViewTests {
     func errorLabelHiddenWhenNoError() throws {
         let viewModel = AuthenticationViewModel()
         viewModel.errorMessage = nil
-        let view = BiometricSetupView(viewModel: viewModel, email: testEmail, passphrase: testPassphrase)
+        let view = BiometricSetupView(viewModel: viewModel, username: testUsername, passphrase: testPassphrase)
 
         let sut = try view.inspect()
 

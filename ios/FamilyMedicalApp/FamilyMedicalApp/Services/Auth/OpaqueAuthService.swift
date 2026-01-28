@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 import OpaqueSwift
 
@@ -28,7 +29,9 @@ final class OpaqueAuthService: OpaqueAuthServiceProtocol, @unchecked Sendable {
     func register(username: String, password: String) async throws -> OpaqueRegistrationResult {
         // Bypass for test usernames in DEBUG builds
         if Self.shouldBypassForTestUsername(username) {
-            return OpaqueRegistrationResult(exportKey: Data(repeating: 0xAB, count: 32))
+            // Derive deterministic export key from password so login verification works
+            let passwordKey = Self.deriveTestExportKey(from: password)
+            return OpaqueRegistrationResult(exportKey: passwordKey)
         }
 
         // Generate client identifier (SHA256 hash of username)
@@ -73,20 +76,46 @@ final class OpaqueAuthService: OpaqueAuthServiceProtocol, @unchecked Sendable {
     func login(username: String, password: String) async throws -> OpaqueLoginResult {
         // Bypass for test usernames in DEBUG builds
         if Self.shouldBypassForTestUsername(username) {
-            return OpaqueLoginResult(
-                exportKey: Data(repeating: 0xAB, count: 32),
-                sessionKey: Data(repeating: 0xCD, count: 32),
-                encryptedBundle: nil
-            )
+            return makeTestLoginResult(password: password)
         }
 
-        // Generate client identifier (SHA256 hash of username)
         let clientIdentifier = try generateClientIdentifier(username: username)
 
         // Step 1: Start login
         let login = try ClientLogin.start(password: password)
-        let credentialRequest = login.getRequest()
+        let (responseData, stateKey) = try await startLoginRequest(
+            clientIdentifier: clientIdentifier,
+            credentialRequest: login.getRequest()
+        )
 
+        // Step 2: Finish login
+        let result = try finishLogin(login: login, responseData: responseData, password: password)
+        try await finishLoginRequest(
+            clientIdentifier: clientIdentifier,
+            stateKey: stateKey,
+            credentialFinalization: result.credentialFinalization
+        )
+
+        return OpaqueLoginResult(
+            exportKey: result.exportKey,
+            sessionKey: result.sessionKey,
+            encryptedBundle: nil
+        )
+    }
+
+    private func makeTestLoginResult(password: String) -> OpaqueLoginResult {
+        let passwordKey = Self.deriveTestExportKey(from: password)
+        return OpaqueLoginResult(
+            exportKey: passwordKey,
+            sessionKey: Data(repeating: 0xCD, count: 32),
+            encryptedBundle: nil
+        )
+    }
+
+    private func startLoginRequest(
+        clientIdentifier: String,
+        credentialRequest: Data
+    ) async throws -> (responseData: Data, stateKey: String) {
         let startResponse = try await post(
             path: "login/start",
             body: [
@@ -101,41 +130,38 @@ final class OpaqueAuthService: OpaqueAuthServiceProtocol, @unchecked Sendable {
         else {
             throw OpaqueAuthError.invalidResponse
         }
+        return (responseData, stateKey)
+    }
 
-        // Step 2: Finish login
-        let result: LoginResult
+    private func finishLogin(
+        login: ClientLogin,
+        responseData: Data,
+        password: String
+    ) throws -> LoginResult {
         do {
-            result = try login.finish(serverResponse: responseData, password: password)
+            return try login.finish(serverResponse: responseData, password: password)
         } catch {
-            // OPAQUE verification failed - wrong password
             throw OpaqueAuthError.authenticationFailed
         }
+    }
 
+    private func finishLoginRequest(
+        clientIdentifier: String,
+        stateKey: String,
+        credentialFinalization: Data
+    ) async throws {
         let finishResponse = try await post(
             path: "login/finish",
             body: [
                 "clientIdentifier": clientIdentifier,
                 "stateKey": stateKey,
-                "finishLoginRequest": result.credentialFinalization.base64EncodedString()
+                "finishLoginRequest": credentialFinalization.base64EncodedString()
             ]
         )
 
         guard finishResponse["success"] as? Bool == true else {
             throw OpaqueAuthError.authenticationFailed
         }
-
-        // Parse optional encrypted bundle
-        let encryptedBundle: Data? = if let bundleBase64 = finishResponse["encryptedBundle"] as? String {
-            Data(base64Encoded: bundleBase64)
-        } else {
-            nil
-        }
-
-        return OpaqueLoginResult(
-            exportKey: result.exportKey,
-            sessionKey: result.sessionKey,
-            encryptedBundle: encryptedBundle
-        )
     }
 
     func uploadBundle(username: String, bundle: Data) async throws {
@@ -209,5 +235,16 @@ final class OpaqueAuthService: OpaqueAuthServiceProtocol, @unchecked Sendable {
         #else
         return UITestingHelpers.isUITesting
         #endif
+    }
+
+    /// Derive a deterministic test export key from password
+    /// This ensures wrong passwords produce different keys and fail verification
+    private static func deriveTestExportKey(from password: String) -> Data {
+        // Use SHA256 to deterministically map password to a 32-byte key
+        // This simulates OPAQUE's behavior where different passwords produce different export keys
+        var hasher = CryptoKit.SHA256()
+        hasher.update(data: Data("test-opaque-salt".utf8))
+        hasher.update(data: Data(password.utf8))
+        return Data(hasher.finalize())
     }
 }

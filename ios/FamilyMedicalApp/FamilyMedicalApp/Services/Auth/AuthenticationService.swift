@@ -19,16 +19,16 @@ protocol AuthenticationServiceProtocol {
     /// Remaining seconds until lockout expires
     var lockoutRemainingSeconds: Int { get }
 
-    /// Stored email address for display on unlock screen
-    var storedEmail: String? { get }
+    /// Stored username for display on unlock screen
+    var storedUsername: String? { get }
 
-    /// Set up user account with password
+    /// Set up user account with password (OPAQUE registration)
     /// - Parameters:
     ///   - password: User's password
-    ///   - email: User's email address (for autofill association)
+    ///   - username: User's username
     ///   - enableBiometric: Whether to enable biometric authentication
     /// - Throws: AuthenticationError if setup fails
-    func setUp(password: String, email: String, enableBiometric: Bool) async throws
+    func setUp(password: String, username: String, enableBiometric: Bool) async throws
 
     /// Unlock with password
     /// - Parameter password: User's password
@@ -63,11 +63,12 @@ final class AuthenticationService: AuthenticationServiceProtocol {
     private static let identityPublicKeyIdentifier = "com.family-medical-app.identity-public-key"
     private static let verificationTokenIdentifier = "com.family-medical-app.verification-token"
     private static let saltKey = "com.family-medical-app.salt"
-    private static let emailKey = "com.family-medical-app.email"
+    private static let usernameKey = "com.family-medical-app.username"
     private static let biometricEnabledKey = "com.family-medical-app.biometric-enabled"
     private static let failedAttemptsKey = "com.family-medical-app.failed-attempts"
     private static let lockoutEndTimeKey = "com.family-medical-app.lockout-end-time"
     private static let verificationPlaintext = "family-medical-app-verification"
+    private static let useOpaqueKey = "com.family-medical-app.use-opaque"
 
     // Rate limiting thresholds
     private static let rateLimitThresholds: [(attempts: Int, lockoutSeconds: Int)] = [
@@ -83,6 +84,7 @@ final class AuthenticationService: AuthenticationServiceProtocol {
     private let keychainService: KeychainServiceProtocol
     private let encryptionService: EncryptionServiceProtocol
     private let biometricService: BiometricServiceProtocol
+    private let opaqueAuthService: OpaqueAuthServiceProtocol
     private let userDefaults: UserDefaults
     private let logger: CategoryLoggerProtocol
 
@@ -106,15 +108,21 @@ final class AuthenticationService: AuthenticationServiceProtocol {
     }
 
     var isSetUp: Bool {
-        userDefaults.data(forKey: Self.saltKey) != nil
+        // Check for OPAQUE setup (new) or legacy salt-based setup
+        userDefaults.bool(forKey: Self.useOpaqueKey) || userDefaults.data(forKey: Self.saltKey) != nil
     }
 
     var isBiometricEnabled: Bool {
         userDefaults.bool(forKey: Self.biometricEnabledKey)
     }
 
-    var storedEmail: String? {
-        userDefaults.string(forKey: Self.emailKey)
+    var storedUsername: String? {
+        userDefaults.string(forKey: Self.usernameKey)
+    }
+
+    /// Whether this account uses OPAQUE authentication (vs legacy password+salt)
+    private var usesOpaque: Bool {
+        userDefaults.bool(forKey: Self.useOpaqueKey)
     }
 
     // MARK: - Initialization
@@ -125,6 +133,7 @@ final class AuthenticationService: AuthenticationServiceProtocol {
         keychainService: KeychainServiceProtocol = KeychainService(),
         encryptionService: EncryptionServiceProtocol = EncryptionService(),
         biometricService: BiometricServiceProtocol? = nil,
+        opaqueAuthService: OpaqueAuthServiceProtocol = OpaqueAuthService(),
         userDefaults: UserDefaults = .standard,
         logger: CategoryLoggerProtocol? = nil
     ) {
@@ -132,20 +141,21 @@ final class AuthenticationService: AuthenticationServiceProtocol {
         self.keychainService = keychainService
         self.encryptionService = encryptionService
         self.biometricService = biometricService ?? BiometricService()
+        self.opaqueAuthService = opaqueAuthService
         self.userDefaults = userDefaults
         self.logger = logger ?? LoggingService.shared.logger(category: .auth)
     }
 
     // MARK: - AuthenticationServiceProtocol
 
-    func setUp(password: String, email: String, enableBiometric: Bool) async throws {
+    func setUp(password: String, username: String, enableBiometric: Bool) async throws {
         logger.logOperation("setUp", state: "started")
 
-        // Generate salt
-        let salt = try keyDerivationService.generateSalt()
+        // Register with OPAQUE server
+        let registrationResult = try await opaqueAuthService.register(username: username, password: password)
 
-        // Derive primary key from password
-        let primaryKey = try keyDerivationService.derivePrimaryKey(from: password, salt: salt)
+        // Derive primary key from OPAQUE export key (replaces password+salt derivation)
+        let primaryKey = try keyDerivationService.derivePrimaryKey(fromExportKey: registrationResult.exportKey)
 
         // Generate Curve25519 keypair (per ADR-0002)
         let privateKey = Curve25519.KeyAgreement.PrivateKey()
@@ -183,11 +193,11 @@ final class AuthenticationService: AuthenticationServiceProtocol {
         // Store public key in UserDefaults (not sensitive)
         userDefaults.set(publicKey.rawRepresentation, forKey: Self.identityPublicKeyIdentifier)
 
-        // Store salt in UserDefaults (not sensitive per ADR-0002)
-        userDefaults.set(salt, forKey: Self.saltKey)
+        // Mark as using OPAQUE authentication
+        userDefaults.set(true, forKey: Self.useOpaqueKey)
 
-        // Store email in UserDefaults (not sensitive, needed for autofill)
-        userDefaults.set(email, forKey: Self.emailKey)
+        // Store username in UserDefaults (for display on unlock screen)
+        userDefaults.set(username, forKey: Self.usernameKey)
 
         // Set biometric preference
         userDefaults.set(enableBiometric && biometricService.isBiometricAvailable, forKey: Self.biometricEnabledKey)
@@ -197,13 +207,11 @@ final class AuthenticationService: AuthenticationServiceProtocol {
         userDefaults.removeObject(forKey: Self.lockoutEndTimeKey)
 
         // Best-effort: zero out this local copy of the password bytes
-        // Note: The original String instance may still remain in memory and
-        // cannot be reliably cleared due to Swift String copy-on-write semantics
         var passwordBytes = Array(password.utf8)
         keyDerivationService.secureZero(&passwordBytes)
 
         logger.logOperation("setUp", state: "completed")
-        logger.info("Account setup completed, biometric enabled: \(enableBiometric)")
+        logger.info("Account setup completed with OPAQUE, biometric enabled: \(enableBiometric)")
     }
 
     func unlockWithPassword(_ password: String) async throws {
@@ -219,19 +227,35 @@ final class AuthenticationService: AuthenticationServiceProtocol {
             throw AuthenticationError.notSetUp
         }
 
-        // Get salt
-        guard let salt = userDefaults.data(forKey: Self.saltKey) else {
-            throw AuthenticationError.notSetUp
-        }
-
         // Prepare password bytes and ensure they're wiped after key derivation
         var passwordBytes = Array(password.utf8)
         defer {
             keyDerivationService.secureZero(&passwordBytes)
         }
 
-        // Derive key from password
-        let candidateKey = try keyDerivationService.derivePrimaryKey(from: password, salt: salt)
+        let candidateKey: SymmetricKey
+
+        if usesOpaque {
+            // OPAQUE authentication: login with server and derive key from export key
+            guard let username = storedUsername else {
+                throw AuthenticationError.notSetUp
+            }
+
+            do {
+                let loginResult = try await opaqueAuthService.login(username: username, password: password)
+                candidateKey = try keyDerivationService.derivePrimaryKey(fromExportKey: loginResult.exportKey)
+            } catch is OpaqueAuthError {
+                logger.notice("OPAQUE authentication failed")
+                try handleFailedAttempt()
+                throw AuthenticationError.wrongPassword
+            }
+        } else {
+            // Legacy authentication: derive key from password + salt
+            guard let salt = userDefaults.data(forKey: Self.saltKey) else {
+                throw AuthenticationError.notSetUp
+            }
+            candidateKey = try keyDerivationService.derivePrimaryKey(from: password, salt: salt)
+        }
 
         // Verify by attempting to decrypt verification token
         guard let encryptedTokenData = try? keychainService.retrieveData(identifier: Self.verificationTokenIdentifier)
@@ -303,7 +327,8 @@ final class AuthenticationService: AuthenticationServiceProtocol {
 
         // Clear UserDefaults
         userDefaults.removeObject(forKey: Self.saltKey)
-        userDefaults.removeObject(forKey: Self.emailKey)
+        userDefaults.removeObject(forKey: Self.usernameKey)
+        userDefaults.removeObject(forKey: Self.useOpaqueKey)
         userDefaults.removeObject(forKey: Self.identityPublicKeyIdentifier)
         userDefaults.removeObject(forKey: Self.biometricEnabledKey)
         userDefaults.removeObject(forKey: Self.failedAttemptsKey)

@@ -10,7 +10,7 @@ final class MockAuthenticationService: AuthenticationServiceProtocol {
     var failedAttemptCount: Int
     var isLockedOut: Bool
     var lockoutRemainingSeconds: Int
-    var storedEmail: String?
+    var storedUsername: String?
 
     var shouldFailUnlock: Bool
     var shouldFailLogout: Bool
@@ -23,7 +23,7 @@ final class MockAuthenticationService: AuthenticationServiceProtocol {
         failedAttemptCount: Int = 0,
         isLockedOut: Bool = false,
         lockoutRemainingSeconds: Int = 0,
-        storedEmail: String? = nil,
+        storedUsername: String? = nil,
         shouldFailUnlock: Bool = false,
         shouldFailLogout: Bool = false,
         biometricService: BiometricServiceProtocol? = nil
@@ -33,15 +33,15 @@ final class MockAuthenticationService: AuthenticationServiceProtocol {
         self.failedAttemptCount = failedAttemptCount
         self.isLockedOut = isLockedOut
         self.lockoutRemainingSeconds = lockoutRemainingSeconds
-        self.storedEmail = storedEmail
+        self.storedUsername = storedUsername
         self.shouldFailUnlock = shouldFailUnlock
         self.shouldFailLogout = shouldFailLogout
         self.biometricService = biometricService
     }
 
-    func setUp(password: String, email: String, enableBiometric: Bool) async throws {
+    func setUp(password: String, username: String, enableBiometric: Bool) async throws {
         isSetUp = true
-        storedEmail = email
+        storedUsername = username
         if enableBiometric {
             if let biometricService {
                 try await biometricService.authenticate(reason: "Enable biometric")
@@ -92,7 +92,7 @@ final class MockAuthenticationService: AuthenticationServiceProtocol {
         isSetUp = false
         isBiometricEnabled = false
         failedAttemptCount = 0
-        storedEmail = nil
+        storedUsername = nil
     }
 }
 
@@ -159,33 +159,140 @@ final class MockLockStateService: LockStateServiceProtocol {
     }
 }
 
-// MARK: - Mock Email Verification Service
+// MARK: - Mock OPAQUE Auth Service
 
-final class MockEmailVerificationService: EmailVerificationServiceProtocol, @unchecked Sendable {
-    var sendCodeCallCount = 0
-    var sendCodeEmail: String?
-    var sendCodeShouldThrow: AuthenticationError?
+final class MockOpaqueAuthService: OpaqueAuthServiceProtocol, @unchecked Sendable {
+    // Configurable behavior
+    var shouldFailRegistration = false
+    var shouldFailLogin = false
+    var shouldFailUpload = false
 
-    var verifyCodeCallCount = 0
-    var verifyCodeInput: (code: String, email: String)?
-    var verifyCodeResult = EmailVerificationResult(isValid: true, isReturningUser: false)
-    var verifyCodeShouldThrow: AuthenticationError?
+    // Call tracking
+    var registerCallCount = 0
+    var loginCallCount = 0
+    var uploadCallCount = 0
+    var lastRegisteredUsername: String?
+    var lastLoginUsername: String?
+    var lastUploadedBundle: Data?
 
-    func sendVerificationCode(to email: String) async throws {
-        sendCodeCallCount += 1
-        sendCodeEmail = email
-        if let error = sendCodeShouldThrow {
-            throw error
+    // Fixed export key for testing (32 bytes)
+    let testExportKey = Data(repeating: 0x42, count: 32)
+    let testSessionKey = Data(repeating: 0x43, count: 32)
+
+    func register(username: String, password: String) async throws -> OpaqueRegistrationResult {
+        registerCallCount += 1
+        lastRegisteredUsername = username
+
+        if shouldFailRegistration {
+            throw OpaqueAuthError.registrationFailed
         }
+
+        return OpaqueRegistrationResult(exportKey: testExportKey)
     }
 
-    func verifyCode(_ code: String, for email: String) async throws -> EmailVerificationResult {
-        verifyCodeCallCount += 1
-        verifyCodeInput = (code, email)
-        if let error = verifyCodeShouldThrow {
-            throw error
+    func login(username: String, password: String) async throws -> OpaqueLoginResult {
+        loginCallCount += 1
+        lastLoginUsername = username
+
+        if shouldFailLogin {
+            throw OpaqueAuthError.authenticationFailed
         }
-        return verifyCodeResult
+
+        return OpaqueLoginResult(
+            exportKey: testExportKey,
+            sessionKey: testSessionKey,
+            encryptedBundle: nil
+        )
+    }
+
+    func uploadBundle(username: String, bundle: Data) async throws {
+        uploadCallCount += 1
+        lastUploadedBundle = bundle
+
+        if shouldFailUpload {
+            throw OpaqueAuthError.uploadFailed
+        }
+    }
+}
+
+// MARK: - Mock Keychain Service
+
+/// Mock keychain service for testing authentication flows
+/// Named MockAuthKeychainService to avoid conflict with file-local mocks in other test files
+final class MockAuthKeychainService: KeychainServiceProtocol, @unchecked Sendable {
+    private var keys: [String: SymmetricKey] = [:]
+    private var data: [String: Data] = [:]
+
+    func storeKey(_ key: SymmetricKey, identifier: String, accessControl: KeychainAccessControl) throws {
+        keys[identifier] = key
+    }
+
+    func retrieveKey(identifier: String) throws -> SymmetricKey {
+        guard let key = keys[identifier] else {
+            throw KeychainError.keyNotFound(identifier)
+        }
+        return key
+    }
+
+    func deleteKey(identifier: String) throws {
+        guard keys[identifier] != nil else {
+            throw KeychainError.keyNotFound(identifier)
+        }
+        keys.removeValue(forKey: identifier)
+    }
+
+    func keyExists(identifier: String) -> Bool {
+        keys[identifier] != nil
+    }
+
+    func storeData(_ dataToStore: Data, identifier: String, accessControl: KeychainAccessControl) throws {
+        data[identifier] = dataToStore
+    }
+
+    func retrieveData(identifier: String) throws -> Data {
+        guard let storedData = data[identifier] else {
+            throw KeychainError.keyNotFound(identifier)
+        }
+        return storedData
+    }
+
+    func deleteData(identifier: String) throws {
+        guard data[identifier] != nil else {
+            throw KeychainError.keyNotFound(identifier)
+        }
+        data.removeValue(forKey: identifier)
+    }
+
+    func dataExists(identifier: String) -> Bool {
+        data[identifier] != nil
+    }
+}
+
+// MARK: - Mock Biometric Service
+
+/// Mock biometric service for testing authentication flows
+/// Named MockAuthBiometricService to avoid conflict with file-local mocks in other test files
+final class MockAuthBiometricService: BiometricServiceProtocol {
+    let isAvailable: Bool
+    let shouldSucceed: Bool
+
+    init(isAvailable: Bool, shouldSucceed: Bool = true) {
+        self.isAvailable = isAvailable
+        self.shouldSucceed = shouldSucceed
+    }
+
+    var biometryType: BiometryType {
+        isAvailable ? .faceID : .none
+    }
+
+    var isBiometricAvailable: Bool {
+        isAvailable
+    }
+
+    func authenticate(reason: String) async throws {
+        if !shouldSucceed {
+            throw AuthenticationError.biometricFailed("Mock failure")
+        }
     }
 }
 

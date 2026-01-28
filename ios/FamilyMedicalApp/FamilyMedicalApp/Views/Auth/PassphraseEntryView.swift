@@ -2,11 +2,11 @@ import SwiftUI
 
 /// Alternative step for returning users: enter existing passphrase
 ///
-/// When a user is identified as returning (via email verification),
+/// When a user indicates they are returning (via username entry),
 /// they enter their existing passphrase instead of creating a new one.
 struct PassphraseEntryView: View {
     @Bindable var viewModel: AuthenticationViewModel
-    let email: String
+    let username: String
 
     @FocusState private var isPassphraseFocused: Bool
 
@@ -115,6 +115,6 @@ struct PassphraseEntryView: View {
 #Preview {
     PassphraseEntryView(
         viewModel: AuthenticationViewModel(),
-        email: "test@example.com"
+        username: "testuser"
     )
 }

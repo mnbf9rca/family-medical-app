@@ -7,11 +7,10 @@ struct AuthenticationFlowStateTests {
     @Test
     func newUserFlowStatesAreDistinct() {
         let states: [AuthenticationFlowState] = [
-            .emailEntry,
-            .codeVerification(email: "test@example.com"),
-            .passphraseCreation(email: "test@example.com"),
-            .passphraseConfirmation(email: "test@example.com", passphrase: "test"),
-            .biometricSetup(email: "test@example.com", passphrase: "test")
+            .usernameEntry,
+            .passphraseCreation(username: "testuser"),
+            .passphraseConfirmation(username: "testuser", passphrase: "test"),
+            .biometricSetup(username: "testuser", passphrase: "test")
         ]
 
         // Each state should be unique
@@ -24,8 +23,8 @@ struct AuthenticationFlowStateTests {
 
     @Test
     func returningUserStatesIncludeIsReturningFlag() {
-        let returningState = AuthenticationFlowState.passphraseEntry(email: "test@example.com", isReturningUser: true)
-        let newUserState = AuthenticationFlowState.passphraseCreation(email: "test@example.com")
+        let returningState = AuthenticationFlowState.passphraseEntry(username: "testuser", isReturningUser: true)
+        let newUserState = AuthenticationFlowState.passphraseCreation(username: "testuser")
 
         #expect(returningState != newUserState)
     }
@@ -34,22 +33,22 @@ struct AuthenticationFlowStateTests {
 
     @Test
     func sameStatesAreEqual() {
-        let state1 = AuthenticationFlowState.emailEntry
-        let state2 = AuthenticationFlowState.emailEntry
+        let state1 = AuthenticationFlowState.usernameEntry
+        let state2 = AuthenticationFlowState.usernameEntry
         #expect(state1 == state2)
     }
 
     @Test
     func statesWithSameAssociatedValuesAreEqual() {
-        let state1 = AuthenticationFlowState.codeVerification(email: "user@example.com")
-        let state2 = AuthenticationFlowState.codeVerification(email: "user@example.com")
+        let state1 = AuthenticationFlowState.passphraseCreation(username: "testuser")
+        let state2 = AuthenticationFlowState.passphraseCreation(username: "testuser")
         #expect(state1 == state2)
     }
 
     @Test
     func statesWithDifferentAssociatedValuesAreNotEqual() {
-        let state1 = AuthenticationFlowState.codeVerification(email: "user1@example.com")
-        let state2 = AuthenticationFlowState.codeVerification(email: "user2@example.com")
+        let state1 = AuthenticationFlowState.passphraseCreation(username: "user1")
+        let state2 = AuthenticationFlowState.passphraseCreation(username: "user2")
         #expect(state1 != state2)
     }
 
@@ -59,12 +58,11 @@ struct AuthenticationFlowStateTests {
     func allExpectedStatesExist() {
         // Verify all states can be instantiated (compile-time check via usage)
         let _: [AuthenticationFlowState] = [
-            .emailEntry,
-            .codeVerification(email: "test@example.com"),
-            .passphraseCreation(email: "test@example.com"),
-            .passphraseConfirmation(email: "test@example.com", passphrase: "pass"),
-            .passphraseEntry(email: "test@example.com", isReturningUser: true),
-            .biometricSetup(email: "test@example.com", passphrase: "pass"),
+            .usernameEntry,
+            .passphraseCreation(username: "testuser"),
+            .passphraseConfirmation(username: "testuser", passphrase: "pass"),
+            .passphraseEntry(username: "testuser", isReturningUser: true),
+            .biometricSetup(username: "testuser", passphrase: "pass"),
             .unlock,
             .authenticated
         ]

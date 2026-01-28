@@ -1,12 +1,13 @@
 import SwiftUI
 
-/// First step in the authentication flow: email entry
+/// First step in the authentication flow: username entry
 ///
-/// The user enters their email address, which triggers a verification code
-/// to be sent. The flow continues to CodeVerificationView on success.
-struct EmailEntryView: View {
+/// The user enters their username to begin OPAQUE authentication.
+/// The flow continues to PassphraseCreationView for new users or
+/// PassphraseEntryView for returning users.
+struct UsernameEntryView: View {
     @Bindable var viewModel: AuthenticationViewModel
-    @FocusState private var isEmailFocused: Bool
+    @FocusState private var isUsernameFocused: Bool
 
     var body: some View {
         VStack(spacing: 32) {
@@ -30,40 +31,56 @@ struct EmailEntryView: View {
 
             Spacer()
 
-            // Email input section
+            // Username input section
             VStack(spacing: 16) {
-                TextField("Email address", text: $viewModel.email)
-                    .textContentType(.emailAddress)
-                    .keyboardType(.emailAddress)
+                TextField("Username", text: $viewModel.username)
+                    .textContentType(.username)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
-                    .focused($isEmailFocused)
+                    .focused($isUsernameFocused)
                     .submitLabel(.continue)
-                    .onSubmit { submitEmail() }
+                    .onSubmit { submitUsername() }
                     .padding()
                     .background(Color(.systemGray6))
                     .cornerRadius(10)
-                    .accessibilityIdentifier("emailField")
+                    .accessibilityIdentifier("usernameField")
 
-                // Continue button
-                Button(action: submitEmail) {
+                // Validation hint
+                if let error = viewModel.usernameValidationError {
+                    Text(error)
+                        .font(.caption)
+                        .foregroundColor(.orange)
+                        .accessibilityIdentifier("usernameValidationHint")
+                }
+
+                // Continue button (for new users)
+                Button(action: submitUsername) {
                     if viewModel.isLoading {
                         ProgressView()
                             .progressViewStyle(.circular)
                             .frame(maxWidth: .infinity)
                             .padding()
                     } else {
-                        Text("Continue")
+                        Text("Create Account")
                             .fontWeight(.semibold)
                             .frame(maxWidth: .infinity)
                             .padding()
                     }
                 }
-                .background(viewModel.isEmailValid ? Color.blue : Color.gray)
+                .background(viewModel.isUsernameValid ? Color.blue : Color.gray)
                 .foregroundColor(.white)
                 .cornerRadius(10)
-                .disabled(!viewModel.isEmailValid || viewModel.isLoading)
+                .disabled(!viewModel.isUsernameValid || viewModel.isLoading)
                 .accessibilityIdentifier("continueButton")
+
+                // Sign in button (for returning users)
+                Button("I already have an account") {
+                    viewModel.proceedAsReturningUser()
+                }
+                .fontWeight(.medium)
+                .foregroundColor(.blue)
+                .disabled(!viewModel.isUsernameValid || viewModel.isLoading)
+                .accessibilityIdentifier("signInButton")
 
                 // Error message
                 if let error = viewModel.errorMessage {
@@ -80,17 +97,17 @@ struct EmailEntryView: View {
         }
         .padding()
         .onAppear {
-            isEmailFocused = true
+            isUsernameFocused = true
         }
     }
 
-    private func submitEmail() {
+    private func submitUsername() {
         Task {
-            await viewModel.submitEmail()
+            await viewModel.submitUsername()
         }
     }
 }
 
 #Preview {
-    EmailEntryView(viewModel: AuthenticationViewModel())
+    UsernameEntryView(viewModel: AuthenticationViewModel())
 }

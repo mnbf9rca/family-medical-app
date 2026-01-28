@@ -4,14 +4,14 @@ import ViewInspector
 
 @MainActor
 struct PassphraseCreationViewTests {
-    private let testEmail = "test@example.com"
+    private let testUsername = "testuser"
 
     // MARK: - View Structure Tests
 
     @Test
     func viewContainsPassphraseField() throws {
         let viewModel = AuthenticationViewModel()
-        let view = PassphraseCreationView(viewModel: viewModel, email: testEmail)
+        let view = PassphraseCreationView(viewModel: viewModel, username: testUsername)
 
         let sut = try view.inspect()
         let field = try sut.find(viewWithAccessibilityIdentifier: "passphraseField")
@@ -22,7 +22,7 @@ struct PassphraseCreationViewTests {
     @Test
     func viewContainsStrengthIndicator() throws {
         let viewModel = AuthenticationViewModel()
-        let view = PassphraseCreationView(viewModel: viewModel, email: testEmail)
+        let view = PassphraseCreationView(viewModel: viewModel, username: testUsername)
 
         let sut = try view.inspect()
         let indicator = try sut.find(viewWithAccessibilityIdentifier: "strengthIndicator")
@@ -33,7 +33,7 @@ struct PassphraseCreationViewTests {
     @Test
     func viewContainsContinueButton() throws {
         let viewModel = AuthenticationViewModel()
-        let view = PassphraseCreationView(viewModel: viewModel, email: testEmail)
+        let view = PassphraseCreationView(viewModel: viewModel, username: testUsername)
 
         let sut = try view.inspect()
         let button = try sut.find(viewWithAccessibilityIdentifier: "continueButton")
@@ -44,7 +44,7 @@ struct PassphraseCreationViewTests {
     @Test
     func viewContainsBackButton() throws {
         let viewModel = AuthenticationViewModel()
-        let view = PassphraseCreationView(viewModel: viewModel, email: testEmail)
+        let view = PassphraseCreationView(viewModel: viewModel, username: testUsername)
 
         let sut = try view.inspect()
         let button = try sut.find(viewWithAccessibilityIdentifier: "backButton")
@@ -58,7 +58,7 @@ struct PassphraseCreationViewTests {
     func continueButtonDisabledWhenPassphraseEmpty() throws {
         let viewModel = AuthenticationViewModel()
         viewModel.passphrase = ""
-        let view = PassphraseCreationView(viewModel: viewModel, email: testEmail)
+        let view = PassphraseCreationView(viewModel: viewModel, username: testUsername)
 
         let sut = try view.inspect()
         let button = try sut.find(viewWithAccessibilityIdentifier: "continueButton").button()
@@ -70,7 +70,7 @@ struct PassphraseCreationViewTests {
     func continueButtonDisabledWhenPassphraseWeak() throws {
         let viewModel = AuthenticationViewModel()
         viewModel.passphrase = "short"
-        let view = PassphraseCreationView(viewModel: viewModel, email: testEmail)
+        let view = PassphraseCreationView(viewModel: viewModel, username: testUsername)
 
         let sut = try view.inspect()
         let button = try sut.find(viewWithAccessibilityIdentifier: "continueButton").button()
@@ -82,7 +82,7 @@ struct PassphraseCreationViewTests {
     func continueButtonEnabledWhenPassphraseStrong() throws {
         let viewModel = AuthenticationViewModel()
         viewModel.passphrase = "valid-test-passphrase-123"
-        let view = PassphraseCreationView(viewModel: viewModel, email: testEmail)
+        let view = PassphraseCreationView(viewModel: viewModel, username: testUsername)
 
         let sut = try view.inspect()
         let button = try sut.find(viewWithAccessibilityIdentifier: "continueButton").button()
@@ -96,7 +96,7 @@ struct PassphraseCreationViewTests {
     func validationHintsShownWhenPassphraseWeak() throws {
         let viewModel = AuthenticationViewModel()
         viewModel.passphrase = "weak"
-        let view = PassphraseCreationView(viewModel: viewModel, email: testEmail)
+        let view = PassphraseCreationView(viewModel: viewModel, username: testUsername)
 
         let sut = try view.inspect()
         let hints = try sut.find(viewWithAccessibilityIdentifier: "validationHints")
@@ -110,7 +110,7 @@ struct PassphraseCreationViewTests {
     func validationHintsHiddenWhenPassphraseEmpty() throws {
         let viewModel = AuthenticationViewModel()
         viewModel.passphrase = ""
-        let view = PassphraseCreationView(viewModel: viewModel, email: testEmail)
+        let view = PassphraseCreationView(viewModel: viewModel, username: testUsername)
 
         let sut = try view.inspect()
 

@@ -4,14 +4,14 @@ import ViewInspector
 
 @MainActor
 struct PassphraseEntryViewTests {
-    private let testEmail = "test@example.com"
+    private let testUsername = "testuser"
 
     // MARK: - View Structure Tests
 
     @Test
     func viewContainsPassphraseField() throws {
         let viewModel = AuthenticationViewModel()
-        let view = PassphraseEntryView(viewModel: viewModel, email: testEmail)
+        let view = PassphraseEntryView(viewModel: viewModel, username: testUsername)
 
         let sut = try view.inspect()
         let field = try sut.find(viewWithAccessibilityIdentifier: "passphraseField")
@@ -22,7 +22,7 @@ struct PassphraseEntryViewTests {
     @Test
     func viewContainsContinueButton() throws {
         let viewModel = AuthenticationViewModel()
-        let view = PassphraseEntryView(viewModel: viewModel, email: testEmail)
+        let view = PassphraseEntryView(viewModel: viewModel, username: testUsername)
 
         let sut = try view.inspect()
         let button = try sut.find(viewWithAccessibilityIdentifier: "continueButton")
@@ -33,7 +33,7 @@ struct PassphraseEntryViewTests {
     @Test
     func viewContainsBackButton() throws {
         let viewModel = AuthenticationViewModel()
-        let view = PassphraseEntryView(viewModel: viewModel, email: testEmail)
+        let view = PassphraseEntryView(viewModel: viewModel, username: testUsername)
 
         let sut = try view.inspect()
         let button = try sut.find(viewWithAccessibilityIdentifier: "backButton")
@@ -47,7 +47,7 @@ struct PassphraseEntryViewTests {
     func continueButtonDisabledWhenEmpty() throws {
         let viewModel = AuthenticationViewModel()
         viewModel.passphrase = ""
-        let view = PassphraseEntryView(viewModel: viewModel, email: testEmail)
+        let view = PassphraseEntryView(viewModel: viewModel, username: testUsername)
 
         let sut = try view.inspect()
         let button = try sut.find(viewWithAccessibilityIdentifier: "continueButton").button()
@@ -59,7 +59,7 @@ struct PassphraseEntryViewTests {
     func continueButtonEnabledWhenPassphraseEntered() throws {
         let viewModel = AuthenticationViewModel()
         viewModel.passphrase = "any-passphrase"
-        let view = PassphraseEntryView(viewModel: viewModel, email: testEmail)
+        let view = PassphraseEntryView(viewModel: viewModel, username: testUsername)
 
         let sut = try view.inspect()
         let button = try sut.find(viewWithAccessibilityIdentifier: "continueButton").button()
@@ -73,7 +73,7 @@ struct PassphraseEntryViewTests {
     func errorLabelShownWhenErrorPresent() throws {
         let viewModel = AuthenticationViewModel()
         viewModel.errorMessage = "Invalid passphrase"
-        let view = PassphraseEntryView(viewModel: viewModel, email: testEmail)
+        let view = PassphraseEntryView(viewModel: viewModel, username: testUsername)
 
         let sut = try view.inspect()
         let errorLabel = try sut.find(viewWithAccessibilityIdentifier: "errorLabel")
@@ -85,7 +85,7 @@ struct PassphraseEntryViewTests {
     func errorLabelHiddenWhenNoError() throws {
         let viewModel = AuthenticationViewModel()
         viewModel.errorMessage = nil
-        let view = PassphraseEntryView(viewModel: viewModel, email: testEmail)
+        let view = PassphraseEntryView(viewModel: viewModel, username: testUsername)
 
         let sut = try view.inspect()
 

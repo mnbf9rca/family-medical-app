@@ -12,17 +12,20 @@ struct AuthenticationServiceTests {
     func setUpCreatesUserAccount() async throws {
         let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
         let keychainService = MockKeychainService()
+        let opaqueAuthService = MockOpaqueAuthService()
         let service = AuthenticationService(
             keychainService: keychainService,
+            opaqueAuthService: opaqueAuthService,
             userDefaults: userDefaults
         )
 
         #expect(service.isSetUp == false)
 
-        try await service.setUp(password: "MySecurePassword123!", email: "test@example.com", enableBiometric: false)
+        try await service.setUp(password: "MySecurePassword123!", username: "testuser", enableBiometric: false)
 
         #expect(service.isSetUp == true)
-        #expect(userDefaults.data(forKey: "com.family-medical-app.salt") != nil)
+        // OPAQUE doesn't use salt - it uses export key from OPAQUE protocol
+        #expect(userDefaults.bool(forKey: "com.family-medical-app.use-opaque") == true)
         #expect(keychainService.keyExists(identifier: "com.family-medical-app.primary-key"))
         #expect(keychainService.dataExists(identifier: "com.family-medical-app.identity-private-key"))
         #expect(keychainService.dataExists(identifier: "com.family-medical-app.verification-token"))
@@ -31,12 +34,14 @@ struct AuthenticationServiceTests {
     @Test
     func setUpStoresCurve25519PublicKey() async throws {
         let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        let opaqueAuthService = MockOpaqueAuthService()
         let service = AuthenticationService(
             keychainService: MockKeychainService(),
+            opaqueAuthService: opaqueAuthService,
             userDefaults: userDefaults
         )
 
-        try await service.setUp(password: "MySecurePassword123!", email: "test@example.com", enableBiometric: false)
+        try await service.setUp(password: "MySecurePassword123!", username: "testuser", enableBiometric: false)
 
         let publicKeyData = userDefaults.data(forKey: "com.family-medical-app.identity-public-key")
         #expect(publicKeyData != nil)
@@ -47,12 +52,14 @@ struct AuthenticationServiceTests {
     func setUpEnablesBiometricWhenRequested() async throws {
         let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
         let biometricService = MockBiometricService(isAvailable: true)
+        let opaqueAuthService = MockOpaqueAuthService()
         let service = AuthenticationService(
             biometricService: biometricService,
+            opaqueAuthService: opaqueAuthService,
             userDefaults: userDefaults
         )
 
-        try await service.setUp(password: "MySecurePassword123!", email: "test@example.com", enableBiometric: true)
+        try await service.setUp(password: "MySecurePassword123!", username: "testuser", enableBiometric: true)
 
         #expect(service.isBiometricEnabled == true)
     }
@@ -61,53 +68,77 @@ struct AuthenticationServiceTests {
     func setUpDoesNotEnableBiometricWhenNotAvailable() async throws {
         let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
         let biometricService = MockBiometricService(isAvailable: false)
+        let opaqueAuthService = MockOpaqueAuthService()
         let service = AuthenticationService(
             biometricService: biometricService,
+            opaqueAuthService: opaqueAuthService,
             userDefaults: userDefaults
         )
 
-        try await service.setUp(password: "MySecurePassword123!", email: "test@example.com", enableBiometric: true)
+        try await service.setUp(password: "MySecurePassword123!", username: "testuser", enableBiometric: true)
 
         #expect(service.isBiometricEnabled == false)
     }
 
     @Test
-    func setUpStoresEmail() async throws {
+    func setUpStoresUsername() async throws {
         let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        let opaqueAuthService = MockOpaqueAuthService()
         let service = AuthenticationService(
             keychainService: MockKeychainService(),
+            opaqueAuthService: opaqueAuthService,
             userDefaults: userDefaults
         )
 
-        try await service.setUp(password: "MySecurePassword123!", email: "user@example.com", enableBiometric: false)
+        try await service.setUp(password: "MySecurePassword123!", username: "testuser", enableBiometric: false)
 
-        #expect(service.storedEmail == "user@example.com")
+        #expect(service.storedUsername == "testuser")
     }
 
     @Test
-    func storedEmailReturnsNilBeforeSetup() async throws {
+    func storedUsernameReturnsNilBeforeSetup() async throws {
         let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
         let service = AuthenticationService(
             keychainService: MockKeychainService(),
             userDefaults: userDefaults
         )
 
-        #expect(service.storedEmail == nil)
+        #expect(service.storedUsername == nil)
     }
 
     @Test
-    func logoutClearsEmail() async throws {
+    func logoutClearsUsername() async throws {
         let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        let opaqueAuthService = MockOpaqueAuthService()
         let service = AuthenticationService(
             keychainService: MockKeychainService(),
+            opaqueAuthService: opaqueAuthService,
             userDefaults: userDefaults
         )
 
-        try await service.setUp(password: "MySecurePassword123!", email: "user@example.com", enableBiometric: false)
-        #expect(service.storedEmail == "user@example.com")
+        try await service.setUp(password: "MySecurePassword123!", username: "testuser", enableBiometric: false)
+        #expect(service.storedUsername == "testuser")
 
         try service.logout()
-        #expect(service.storedEmail == nil)
+        #expect(service.storedUsername == nil)
+    }
+
+    // MARK: - OPAQUE Registration Tests
+
+    @Test
+    func setUpCallsOpaqueRegister() async throws {
+        let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        let opaqueAuthService = MockOpaqueAuthService()
+        let service = AuthenticationService(
+            keychainService: MockKeychainService(),
+            opaqueAuthService: opaqueAuthService,
+            userDefaults: userDefaults
+        )
+
+        try await service.setUp(password: "MySecurePassword123!", username: "testuser", enableBiometric: false)
+
+        #expect(opaqueAuthService.registerCallCount == 1)
+        #expect(opaqueAuthService.lastRegisteredUsername == "testuser")
     }
 
     // MARK: - Password Unlock Tests
@@ -115,26 +146,34 @@ struct AuthenticationServiceTests {
     @Test
     func unlockWithCorrectPasswordSucceeds() async throws {
         let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        let opaqueAuthService = MockOpaqueAuthService()
         let service = AuthenticationService(
             keychainService: MockKeychainService(),
+            opaqueAuthService: opaqueAuthService,
             userDefaults: userDefaults
         )
 
         let password = "MySecurePassword123!"
-        try await service.setUp(password: password, email: "test@example.com", enableBiometric: false)
+        try await service.setUp(password: password, username: "testuser", enableBiometric: false)
         try await service.unlockWithPassword(password)
         // No error thrown means success
+        #expect(opaqueAuthService.loginCallCount == 1)
     }
 
     @Test
     func unlockWithWrongPasswordFails() async throws {
         let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        let opaqueAuthService = MockOpaqueAuthService()
         let service = AuthenticationService(
             keychainService: MockKeychainService(),
+            opaqueAuthService: opaqueAuthService,
             userDefaults: userDefaults
         )
 
-        try await service.setUp(password: "CorrectPassword123!", email: "test@example.com", enableBiometric: false)
+        try await service.setUp(password: "CorrectPassword123!", username: "testuser", enableBiometric: false)
+
+        // Make OPAQUE fail authentication
+        opaqueAuthService.shouldFailLogin = true
 
         await #expect(throws: AuthenticationError.wrongPassword) {
             try await service.unlockWithPassword("WrongPassword123!")
@@ -154,94 +193,7 @@ struct AuthenticationServiceTests {
         }
     }
 
-    // MARK: - Rate Limiting Tests
-
-    @Test
-    func threeFailedAttemptsTriggersLockout() async throws {
-        let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
-        let service = AuthenticationService(
-            keychainService: MockKeychainService(),
-            userDefaults: userDefaults
-        )
-
-        try await service.setUp(password: "CorrectPassword123!", email: "test@example.com", enableBiometric: false)
-
-        // First two failures don't lock
-        for _ in 1 ... 2 {
-            try? await service.unlockWithPassword("WrongPassword123!")
-            #expect(service.isLockedOut == false)
-        }
-
-        // Third failure locks
-        do {
-            try await service.unlockWithPassword("WrongPassword123!")
-            Issue.record("Expected accountLocked error")
-        } catch let error as AuthenticationError {
-            if case .accountLocked = error {
-                // Expected
-            } else {
-                Issue.record("Expected accountLocked, got \(error)")
-            }
-        }
-
-        #expect(service.isLockedOut == true)
-        #expect(service.failedAttemptCount == 3)
-    }
-
-    @Test
-    func lockoutPreventsUnlockEvenWithCorrectPassword() async throws {
-        let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
-        let service = AuthenticationService(
-            keychainService: MockKeychainService(),
-            userDefaults: userDefaults
-        )
-
-        let password = "CorrectPassword123!"
-        try await service.setUp(password: password, email: "test@example.com", enableBiometric: false)
-
-        // Trigger lockout
-        for _ in 1 ... 3 {
-            try? await service.unlockWithPassword("WrongPassword123!")
-        }
-
-        #expect(service.isLockedOut == true)
-
-        // Correct password should still be blocked during lockout
-        do {
-            try await service.unlockWithPassword(password)
-            Issue.record("Expected accountLocked error")
-        } catch let error as AuthenticationError {
-            if case .accountLocked = error {
-                // Expected
-            } else {
-                Issue.record("Expected accountLocked, got \(error)")
-            }
-        }
-    }
-
-    @Test
-    func successfulUnlockResetsFailedAttempts() async throws {
-        let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
-        let service = AuthenticationService(
-            keychainService: MockKeychainService(),
-            userDefaults: userDefaults
-        )
-
-        let password = "CorrectPassword123!"
-        try await service.setUp(password: password, email: "test@example.com", enableBiometric: false)
-
-        // Two failed attempts
-        for _ in 1 ... 2 {
-            try? await service.unlockWithPassword("WrongPassword123!")
-        }
-
-        #expect(service.failedAttemptCount == 2)
-
-        // Successful unlock
-        try await service.unlockWithPassword(password)
-
-        #expect(service.failedAttemptCount == 0)
-    }
+    // Note: Rate limiting tests moved to AuthenticationServiceRateLimitingTests.swift
 
     // MARK: - Biometric Tests
 
@@ -249,12 +201,14 @@ struct AuthenticationServiceTests {
     func unlockWithBiometricSucceeds() async throws {
         let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
         let biometricService = MockBiometricService(isAvailable: true, shouldSucceed: true)
+        let opaqueAuthService = MockOpaqueAuthService()
         let service = AuthenticationService(
             biometricService: biometricService,
+            opaqueAuthService: opaqueAuthService,
             userDefaults: userDefaults
         )
 
-        try await service.setUp(password: "MyPassword123!", email: "test@example.com", enableBiometric: true)
+        try await service.setUp(password: "MyPassword123!", username: "testuser", enableBiometric: true)
 
         try await service.unlockWithBiometric()
         // No error thrown means success
@@ -263,12 +217,14 @@ struct AuthenticationServiceTests {
     @Test
     func unlockWithBiometricFailsWhenNotEnabled() async throws {
         let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        let opaqueAuthService = MockOpaqueAuthService()
         let service = AuthenticationService(
             biometricService: MockBiometricService(isAvailable: true),
+            opaqueAuthService: opaqueAuthService,
             userDefaults: userDefaults
         )
 
-        try await service.setUp(password: "MyPassword123!", email: "test@example.com", enableBiometric: false)
+        try await service.setUp(password: "MyPassword123!", username: "testuser", enableBiometric: false)
 
         await #expect(throws: AuthenticationError.biometricNotAvailable) {
             try await service.unlockWithBiometric()
@@ -279,14 +235,17 @@ struct AuthenticationServiceTests {
     func unlockWithBiometricResetsFailedAttempts() async throws {
         let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
         let biometricService = MockBiometricService(isAvailable: true, shouldSucceed: true)
+        let opaqueAuthService = MockOpaqueAuthService()
         let service = AuthenticationService(
             biometricService: biometricService,
+            opaqueAuthService: opaqueAuthService,
             userDefaults: userDefaults
         )
 
-        try await service.setUp(password: "MyPassword123!", email: "test@example.com", enableBiometric: true)
+        try await service.setUp(password: "MyPassword123!", username: "testuser", enableBiometric: true)
 
         // Create failed attempts
+        opaqueAuthService.shouldFailLogin = true
         for _ in 1 ... 2 {
             try? await service.unlockWithPassword("WrongPassword!")
         }
@@ -335,12 +294,14 @@ struct AuthenticationServiceTests {
     @Test
     func disableBiometricWorks() async throws {
         let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        let opaqueAuthService = MockOpaqueAuthService()
         let service = AuthenticationService(
             biometricService: MockBiometricService(isAvailable: true),
+            opaqueAuthService: opaqueAuthService,
             userDefaults: userDefaults
         )
 
-        try await service.setUp(password: "MyPassword123!", email: "test@example.com", enableBiometric: true)
+        try await service.setUp(password: "MyPassword123!", username: "testuser", enableBiometric: true)
 
         #expect(service.isBiometricEnabled == true)
 
@@ -355,19 +316,21 @@ struct AuthenticationServiceTests {
     func logoutClearsAllData() async throws {
         let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
         let keychainService = MockKeychainService()
+        let opaqueAuthService = MockOpaqueAuthService()
         let service = AuthenticationService(
             keychainService: keychainService,
+            opaqueAuthService: opaqueAuthService,
             userDefaults: userDefaults
         )
 
-        try await service.setUp(password: "MyPassword123!", email: "test@example.com", enableBiometric: true)
+        try await service.setUp(password: "MyPassword123!", username: "testuser", enableBiometric: true)
 
         #expect(service.isSetUp == true)
 
         try service.logout()
 
         #expect(service.isSetUp == false)
-        #expect(userDefaults.data(forKey: "com.family-medical-app.salt") == nil)
+        #expect(userDefaults.bool(forKey: "com.family-medical-app.use-opaque") == false)
         #expect(!keychainService.keyExists(identifier: "com.family-medical-app.primary-key"))
     }
 }

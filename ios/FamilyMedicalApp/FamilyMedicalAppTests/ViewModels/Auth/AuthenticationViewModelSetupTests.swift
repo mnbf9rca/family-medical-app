@@ -7,8 +7,8 @@ import Testing
 struct AuthenticationViewModelSetupTests {
     // MARK: - Test Constants
 
-    private let validEmail = "test@example.com"
-    private let invalidEmail = "notanemail"
+    private let validUsername = "testuser"
+    private let shortUsername = "ab"
     private let validTestCredential = "valid-test-credential-123"
     private let shortTestCredential = "short"
     private let differentTestCredential = "different-credential"
@@ -38,7 +38,7 @@ struct AuthenticationViewModelSetupTests {
         let authService = MockAuthenticationService(isSetUp: false)
         let viewModel = AuthenticationViewModel(authService: authService)
 
-        viewModel.email = validEmail
+        viewModel.username = validUsername
         viewModel.password = validTestCredential
         viewModel.confirmPassword = validTestCredential
 
@@ -50,48 +50,48 @@ struct AuthenticationViewModelSetupTests {
     }
 
     @Test
-    func setupWithEmptyEmail() async {
+    func setupWithEmptyUsername() async {
         let authService = MockAuthenticationService(isSetUp: false)
         let viewModel = AuthenticationViewModel(authService: authService)
 
-        viewModel.email = ""
+        viewModel.username = ""
         viewModel.password = validTestCredential
         viewModel.confirmPassword = validTestCredential
 
         await viewModel.setUp()
 
         #expect(viewModel.isSetUp == false)
-        #expect(viewModel.errorMessage == "Please enter an email address")
+        #expect(viewModel.errorMessage == "Please enter a username")
     }
 
     @Test
-    func setupWithWhitespaceEmail() async {
+    func setupWithWhitespaceUsername() async {
         let authService = MockAuthenticationService(isSetUp: false)
         let viewModel = AuthenticationViewModel(authService: authService)
 
-        viewModel.email = "   "
+        viewModel.username = "   "
         viewModel.password = validTestCredential
         viewModel.confirmPassword = validTestCredential
 
         await viewModel.setUp()
 
         #expect(viewModel.isSetUp == false)
-        #expect(viewModel.errorMessage == "Please enter an email address")
+        #expect(viewModel.errorMessage == "Please enter a username")
     }
 
     @Test
-    func setupWithInvalidEmail() async {
+    func setupWithShortUsername() async {
         let authService = MockAuthenticationService(isSetUp: false)
         let viewModel = AuthenticationViewModel(authService: authService)
 
-        viewModel.email = invalidEmail
+        viewModel.username = shortUsername
         viewModel.password = validTestCredential
         viewModel.confirmPassword = validTestCredential
 
         await viewModel.setUp()
 
         #expect(viewModel.isSetUp == false)
-        #expect(viewModel.errorMessage == "Please enter a valid email address")
+        #expect(viewModel.errorMessage == "Username must be at least 3 characters")
     }
 
     @Test
@@ -99,7 +99,7 @@ struct AuthenticationViewModelSetupTests {
         let authService = MockAuthenticationService(isSetUp: false)
         let viewModel = AuthenticationViewModel(authService: authService)
 
-        viewModel.email = validEmail
+        viewModel.username = validUsername
         viewModel.password = validTestCredential
         viewModel.confirmPassword = differentTestCredential
 
@@ -114,7 +114,7 @@ struct AuthenticationViewModelSetupTests {
         let authService = MockAuthenticationService(isSetUp: false)
         let viewModel = AuthenticationViewModel(authService: authService)
 
-        viewModel.email = validEmail
+        viewModel.username = validUsername
         viewModel.password = shortTestCredential
         viewModel.confirmPassword = shortTestCredential
 
@@ -129,13 +129,13 @@ struct AuthenticationViewModelSetupTests {
         let authService = MockAuthenticationService(isSetUp: false)
         let viewModel = AuthenticationViewModel(authService: authService)
 
-        viewModel.email = validEmail
+        viewModel.username = validUsername
         viewModel.password = validTestCredential
         viewModel.confirmPassword = validTestCredential
 
         await viewModel.setUp()
 
-        #expect(viewModel.email.isEmpty)
+        #expect(viewModel.username.isEmpty)
         #expect(viewModel.password.isEmpty)
         #expect(viewModel.confirmPassword.isEmpty)
     }
@@ -149,7 +149,7 @@ struct AuthenticationViewModelSetupTests {
             biometricService: biometricService
         )
 
-        viewModel.email = validEmail
+        viewModel.username = validUsername
         viewModel.password = validTestCredential
         viewModel.confirmPassword = validTestCredential
         viewModel.enableBiometric = true
@@ -167,7 +167,7 @@ struct AuthenticationViewModelSetupTests {
 
         #expect(viewModel.hasAttemptedSetup == false)
 
-        viewModel.email = validEmail
+        viewModel.username = validUsername
         viewModel.password = validTestCredential
         viewModel.confirmPassword = validTestCredential
 
@@ -191,7 +191,7 @@ struct AuthenticationViewModelSetupTests {
         let authService = MockAuthenticationService(isSetUp: false)
         let viewModel = AuthenticationViewModel(authService: authService)
 
-        viewModel.email = validEmail
+        viewModel.username = validUsername
         viewModel.password = shortTestCredential
         viewModel.confirmPassword = shortTestCredential
 
@@ -200,54 +200,36 @@ struct AuthenticationViewModelSetupTests {
         #expect(!viewModel.displayedValidationErrors.isEmpty)
     }
 
-    // MARK: - Email Validation Tests
+    // MARK: - Username Validation Tests
 
     @Test
-    func emailValidationWithValidEmail() {
+    func usernameValidationWithValidUsername() {
         let authService = MockAuthenticationService(isSetUp: false)
         let viewModel = AuthenticationViewModel(authService: authService)
 
-        viewModel.email = validEmail
-        #expect(viewModel.isEmailValid == true)
-        #expect(viewModel.emailValidationError == nil)
+        viewModel.username = validUsername
+        #expect(viewModel.isUsernameValid == true)
+        #expect(viewModel.usernameValidationError == nil)
     }
 
     @Test
-    func emailValidationWithInvalidEmail() {
+    func usernameValidationWithShortUsername() {
         let authService = MockAuthenticationService(isSetUp: false)
         let viewModel = AuthenticationViewModel(authService: authService)
 
-        viewModel.email = invalidEmail
-        #expect(viewModel.isEmailValid == false)
-        #expect(viewModel.emailValidationError == "Please enter a valid email address")
+        viewModel.username = shortUsername
+        #expect(viewModel.isUsernameValid == false)
+        #expect(viewModel.usernameValidationError == "Username must be at least 3 characters")
     }
 
     @Test
-    func emailValidationWithEmptyEmail() {
+    func usernameValidationWithEmptyUsername() {
         let authService = MockAuthenticationService(isSetUp: false)
         let viewModel = AuthenticationViewModel(authService: authService)
 
-        viewModel.email = ""
-        #expect(viewModel.isEmailValid == false)
-        #expect(viewModel.emailValidationError == nil) // No error for empty (shown on submit)
-    }
-
-    @Test
-    func emailValidationWithMissingAt() {
-        let authService = MockAuthenticationService(isSetUp: false)
-        let viewModel = AuthenticationViewModel(authService: authService)
-
-        viewModel.email = "test.example.com"
-        #expect(viewModel.isEmailValid == false)
-    }
-
-    @Test
-    func emailValidationWithMissingDot() {
-        let authService = MockAuthenticationService(isSetUp: false)
-        let viewModel = AuthenticationViewModel(authService: authService)
-
-        viewModel.email = "test@examplecom"
-        #expect(viewModel.isEmailValid == false)
+        viewModel.username = ""
+        #expect(viewModel.isUsernameValid == false)
+        #expect(viewModel.usernameValidationError == nil) // No error for empty (shown on submit)
     }
 
     // MARK: - Password Mismatch Tests
@@ -300,22 +282,22 @@ struct AuthenticationViewModelSetupTests {
         #expect(viewModel.shouldShowPasswordMismatch == false)
     }
 
-    // MARK: - Stored Email Tests
+    // MARK: - Stored Username Tests
 
     @Test
-    func storedEmailReturnsValueFromService() {
-        let authService = MockAuthenticationService(isSetUp: true, storedEmail: "stored@example.com")
+    func storedUsernameReturnsValueFromService() {
+        let authService = MockAuthenticationService(isSetUp: true, storedUsername: "storeduser")
         let viewModel = AuthenticationViewModel(authService: authService)
 
-        #expect(viewModel.storedEmail == "stored@example.com")
+        #expect(viewModel.storedUsername == "storeduser")
     }
 
     @Test
-    func storedEmailReturnsEmptyWhenNil() {
-        let authService = MockAuthenticationService(isSetUp: true, storedEmail: nil)
+    func storedUsernameReturnsEmptyWhenNil() {
+        let authService = MockAuthenticationService(isSetUp: true, storedUsername: nil)
         let viewModel = AuthenticationViewModel(authService: authService)
 
-        #expect(viewModel.storedEmail.isEmpty)
+        #expect(viewModel.storedUsername.isEmpty)
     }
 }
 

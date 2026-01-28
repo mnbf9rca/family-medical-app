@@ -1,82 +1,41 @@
 import Foundation
 
-/// Email verification flow actions for AuthenticationViewModel
+/// OPAQUE authentication flow actions for AuthenticationViewModel
 extension AuthenticationViewModel {
-    // MARK: - Email Verification Flow Actions
+    // MARK: - Username Flow Actions
 
+    /// Submit username and determine if new or returning user
+    /// With OPAQUE, we attempt login first - if user doesn't exist, we proceed to registration
     @MainActor
-    func submitEmail() async {
-        guard isEmailValid else {
-            errorMessage = "Please enter a valid email address"
+    func submitUsername() async {
+        guard isUsernameValid else {
+            errorMessage = "Please enter a valid username (at least 3 characters)"
             return
         }
+
+        let trimmedUsername = username.trimmingCharacters(in: .whitespaces)
 
         isLoading = true
         errorMessage = nil
 
-        do {
-            try await performSendVerificationCode(to: email)
-            flowState = .codeVerification(email: email)
-        } catch let error as AuthenticationError {
-            errorMessage = error.errorDescription
-        } catch {
-            errorMessage = "Unable to send verification code"
-        }
+        // With OPAQUE, we can't check if user exists without attempting auth
+        // So we go directly to passphrase entry - the server will tell us if registration is needed
+        // For now, we ask user to choose (this could be enhanced with a "check username" endpoint)
+        flowState = .passphraseCreation(username: trimmedUsername)
 
         isLoading = false
     }
 
+    /// For returning users who know their account exists
     @MainActor
-    func submitVerificationCode() async {
-        guard verificationCode.count == 6 else {
-            errorMessage = "Please enter the 6-digit code"
-            return
-        }
-
-        guard case let .codeVerification(email) = flowState else { return }
-
-        isLoading = true
-        errorMessage = nil
-
-        do {
-            let result = try await performVerifyCode(verificationCode, for: email)
-            if result.isValid {
-                if result.isReturningUser {
-                    flowState = .passphraseEntry(email: email, isReturningUser: true)
-                } else {
-                    flowState = .passphraseCreation(email: email)
-                }
-            }
-        } catch let error as AuthenticationError {
-            errorMessage = error.errorDescription
-        } catch {
-            errorMessage = "Verification failed"
-        }
-
-        isLoading = false
-    }
-
-    @MainActor
-    func resendVerificationCode() async {
-        guard case let .codeVerification(email) = flowState else { return }
-
-        isLoading = true
-        errorMessage = nil
-
-        do {
-            try await performSendVerificationCode(to: email)
-        } catch let error as AuthenticationError {
-            errorMessage = error.errorDescription
-        } catch {
-            errorMessage = "Unable to resend code"
-        }
-
-        isLoading = false
+    func proceedAsReturningUser() {
+        let trimmedUsername = username.trimmingCharacters(in: .whitespaces)
+        flowState = .passphraseEntry(username: trimmedUsername, isReturningUser: true)
     }
 
     @MainActor
     func submitPassphraseCreation() async {
-        guard case let .passphraseCreation(email) = flowState else { return }
+        guard case let .passphraseCreation(username) = flowState else { return }
 
         // Validate passphrase strength
         let errors = validatePassphrase(passphrase)
@@ -85,31 +44,31 @@ extension AuthenticationViewModel {
             return
         }
 
-        flowState = .passphraseConfirmation(email: email, passphrase: passphrase)
+        flowState = .passphraseConfirmation(username: username, passphrase: passphrase)
     }
 
     @MainActor
     func submitPassphraseConfirmation() async {
-        guard case let .passphraseConfirmation(email, passphrase) = flowState else { return }
+        guard case let .passphraseConfirmation(username, passphrase) = flowState else { return }
 
         guard confirmPassphrase == passphrase else {
             errorMessage = "Passphrases don't match"
             return
         }
 
-        flowState = .biometricSetup(email: email, passphrase: passphrase)
+        flowState = .biometricSetup(username: username, passphrase: passphrase)
     }
 
     @MainActor
     func submitExistingPassphrase() async {
-        guard case let .passphraseEntry(email, _) = flowState else { return }
+        guard case let .passphraseEntry(username, _) = flowState else { return }
 
         isLoading = true
         errorMessage = nil
 
         do {
             try await performUnlockWithPassword(passphrase)
-            flowState = .biometricSetup(email: email, passphrase: passphrase)
+            flowState = .biometricSetup(username: username, passphrase: passphrase)
         } catch let error as AuthenticationError {
             errorMessage = error.errorDescription
         } catch {
@@ -121,13 +80,13 @@ extension AuthenticationViewModel {
 
     @MainActor
     func completeSetup(enableBiometric: Bool) async {
-        guard case let .biometricSetup(email, passphrase) = flowState else { return }
+        guard case let .biometricSetup(username, passphrase) = flowState else { return }
 
         isLoading = true
         errorMessage = nil
 
         do {
-            try await performSetUp(password: passphrase, email: email, enableBiometric: enableBiometric)
+            try await performSetUp(password: passphrase, username: username, enableBiometric: enableBiometric)
             isSetUp = true
             isAuthenticated = true
             flowState = .authenticated
@@ -143,20 +102,17 @@ extension AuthenticationViewModel {
 
     func goBack() {
         switch flowState {
-        case .codeVerification:
-            flowState = .emailEntry
-            verificationCode = ""
-        case let .passphraseCreation(email):
-            flowState = .codeVerification(email: email)
+        case .passphraseCreation:
+            flowState = .usernameEntry
             passphrase = ""
-        case let .passphraseConfirmation(email, _):
-            flowState = .passphraseCreation(email: email)
+        case let .passphraseConfirmation(username, _):
+            flowState = .passphraseCreation(username: username)
             confirmPassphrase = ""
-        case let .passphraseEntry(email, _):
-            flowState = .codeVerification(email: email)
+        case .passphraseEntry:
+            flowState = .usernameEntry
             passphrase = ""
-        case let .biometricSetup(email, passphrase):
-            flowState = .passphraseConfirmation(email: email, passphrase: passphrase)
+        case let .biometricSetup(username, passphrase):
+            flowState = .passphraseConfirmation(username: username, passphrase: passphrase)
         default:
             break
         }

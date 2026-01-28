@@ -5,12 +5,12 @@ struct UnlockView: View {
     @Bindable var viewModel: AuthenticationViewModel
 
     enum UnlockField: Hashable {
-        case email, passphrase
+        case username, passphrase
     }
 
     @FocusState private var focusedField: UnlockField?
     @State private var timerCancellable: AnyCancellable?
-    @State private var displayedEmail: String = ""
+    @State private var displayedUsername: String = ""
 
     var body: some View {
         VStack(spacing: 32) {
@@ -62,19 +62,18 @@ struct UnlockView: View {
                 } else {
                     // Password entry - NO Form, just plain TextFields like Duolingo
                     VStack(spacing: 12) {
-                        // Email field
-                        TextField("Email", text: $displayedEmail)
+                        // Username field
+                        TextField("Username", text: $displayedUsername)
                             .textContentType(.username)
-                            .keyboardType(.emailAddress)
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
-                            .focused($focusedField, equals: .email)
+                            .focused($focusedField, equals: .username)
                             .submitLabel(.next)
                             .onSubmit { focusedField = .passphrase }
                             .padding()
                             .background(Color(.systemGray6))
                             .cornerRadius(10)
-                            .accessibilityIdentifier("emailField")
+                            .accessibilityIdentifier("usernameField")
 
                         // Passphrase field
                         Group {
@@ -115,7 +114,7 @@ struct UnlockView: View {
                         .accessibilityIdentifier("unlockButton")
                     }
                     .onAppear {
-                        displayedEmail = viewModel.storedEmail
+                        displayedUsername = viewModel.storedUsername
                         focusedField = .passphrase
                     }
 

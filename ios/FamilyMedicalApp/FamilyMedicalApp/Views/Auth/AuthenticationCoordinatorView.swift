@@ -12,23 +12,20 @@ struct AuthenticationCoordinatorView: View {
     var body: some View {
         Group {
             switch viewModel.flowState {
-            case .emailEntry:
-                EmailEntryView(viewModel: viewModel)
+            case .usernameEntry:
+                UsernameEntryView(viewModel: viewModel)
 
-            case let .codeVerification(email):
-                CodeVerificationView(viewModel: viewModel, email: email)
+            case let .passphraseCreation(username):
+                PassphraseCreationView(viewModel: viewModel, username: username)
 
-            case let .passphraseCreation(email):
-                PassphraseCreationView(viewModel: viewModel, email: email)
+            case let .passphraseConfirmation(username, passphrase):
+                PassphraseConfirmView(viewModel: viewModel, username: username, passphrase: passphrase)
 
-            case let .passphraseConfirmation(email, passphrase):
-                PassphraseConfirmView(viewModel: viewModel, email: email, passphrase: passphrase)
+            case let .passphraseEntry(username, _):
+                PassphraseEntryView(viewModel: viewModel, username: username)
 
-            case let .passphraseEntry(email, _):
-                PassphraseEntryView(viewModel: viewModel, email: email)
-
-            case let .biometricSetup(email, passphrase):
-                BiometricSetupView(viewModel: viewModel, email: email, passphrase: passphrase)
+            case let .biometricSetup(username, passphrase):
+                BiometricSetupView(viewModel: viewModel, username: username, passphrase: passphrase)
 
             case .unlock:
                 UnlockView(viewModel: viewModel)

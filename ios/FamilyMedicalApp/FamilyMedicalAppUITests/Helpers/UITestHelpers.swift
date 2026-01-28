@@ -101,54 +101,30 @@ extension XCUIApplication {
 
     /// Create a new user account through the multi-step setup flow
     /// - Parameters:
-    ///   - email: Email address for the account (default: "test@example.com")
+    ///   - username: Username for the account (default: "testuser")
     ///   - passphrase: Passphrase to use (default: "Unique-Horse-Battery-Staple-2024")
     ///   - enableBiometric: Whether to enable biometric auth (default: false for testing)
     ///   - timeout: Max wait time for UI elements and account creation (default: 15s for encryption operations)
-    /// - Note: Uses test@example.com which bypasses email verification in DEBUG builds
     func createAccount(
-        email: String = "test@example.com",
+        username: String = "testuser",
         password passphrase: String = "Unique-Horse-Battery-Staple-2024",
         enableBiometric: Bool = false,
         timeout: TimeInterval = 15
     ) {
-        // Step 1: Email Entry
-        let emailEntryHeader = staticTexts["Family Medical"]
-        XCTAssertTrue(emailEntryHeader.waitForExistence(timeout: timeout), "Email entry view should appear")
+        // Step 1: Username Entry
+        let usernameEntryHeader = staticTexts["Family Medical"]
+        XCTAssertTrue(usernameEntryHeader.waitForExistence(timeout: timeout), "Username entry view should appear")
 
-        let emailField = textFields["Email address"]
-        XCTAssertTrue(emailField.waitForExistence(timeout: timeout), "Email field should exist")
-        emailField.tap()
-        emailField.typeText(email)
+        let usernameField = textFields["Username"]
+        XCTAssertTrue(usernameField.waitForExistence(timeout: timeout), "Username field should exist")
+        usernameField.tap()
+        usernameField.typeText(username)
 
-        let emailContinueButton = buttons["Continue"]
-        XCTAssertTrue(emailContinueButton.waitForExistence(timeout: 2) && emailContinueButton.isEnabled)
-        emailContinueButton.tap()
+        let usernameContinueButton = buttons["Create Account"]
+        XCTAssertTrue(usernameContinueButton.waitForExistence(timeout: 2) && usernameContinueButton.isEnabled)
+        usernameContinueButton.tap()
 
-        // Step 2: Code Verification (auto-bypassed for test@example.com in DEBUG)
-        let codeHeader = staticTexts["Check your email"]
-        if codeHeader.waitForExistence(timeout: 3) {
-            // If code entry appears, enter test code (bypassed in DEBUG)
-            let codeField = textFields["codeField"]
-            XCTAssertTrue(codeField.waitForExistence(timeout: 2), "Code field should exist")
-            codeField.tap()
-            codeField.typeText("123456")
-
-            let verifyButton = buttons["verifyButton"]
-            XCTAssertTrue(verifyButton.waitForExistence(timeout: 2), "Verify button should exist")
-            // Wait for button to become enabled (code has 6 digits)
-            let enabledPredicate = NSPredicate(format: "isEnabled == true")
-            let expectation = XCTNSPredicateExpectation(predicate: enabledPredicate, object: verifyButton)
-            let result = XCTWaiter.wait(for: [expectation], timeout: 2)
-            XCTAssertEqual(result, .completed, "Verify button should be enabled after entering 6-digit code")
-            verifyButton.tap()
-
-            // Wait for the code verification screen to disappear (async task completion)
-            let codeFieldGone = codeField.waitForNonExistence(timeout: 5)
-            XCTAssertTrue(codeFieldGone, "Code verification should complete and navigate away")
-        }
-
-        // Step 3: Passphrase Creation
+        // Step 2: Passphrase Creation (no more code verification with OPAQUE)
         let passphraseHeader = staticTexts["Create a Passphrase"]
         XCTAssertTrue(passphraseHeader.waitForExistence(timeout: timeout), "Passphrase creation should appear")
 
@@ -161,7 +137,7 @@ extension XCUIApplication {
         XCTAssertTrue(passphraseContinueButton.waitForExistence(timeout: 2) && passphraseContinueButton.isEnabled)
         passphraseContinueButton.tap()
 
-        // Step 4: Passphrase Confirmation
+        // Step 3: Passphrase Confirmation
         let confirmHeader = staticTexts["Confirm Passphrase"]
         XCTAssertTrue(confirmHeader.waitForExistence(timeout: timeout), "Passphrase confirmation should appear")
 
@@ -174,7 +150,7 @@ extension XCUIApplication {
         XCTAssertTrue(confirmContinueButton.waitForExistence(timeout: 2) && confirmContinueButton.isEnabled)
         confirmContinueButton.tap()
 
-        // Step 5: Biometric Setup
+        // Step 4: Biometric Setup
         let biometricHeader = staticTexts.matching(NSPredicate(format: "label CONTAINS 'Enable'")).firstMatch
         XCTAssertTrue(biometricHeader.waitForExistence(timeout: timeout), "Biometric setup should appear")
 

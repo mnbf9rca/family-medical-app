@@ -6,7 +6,7 @@ import SwiftUI
 /// On success, progresses to PassphraseConfirmView.
 struct PassphraseCreationView: View {
     @Bindable var viewModel: AuthenticationViewModel
-    let email: String
+    let username: String
 
     @FocusState private var isPassphraseFocused: Bool
 
@@ -137,6 +137,6 @@ struct PassphraseCreationView: View {
 #Preview {
     PassphraseCreationView(
         viewModel: AuthenticationViewModel(),
-        email: "test@example.com"
+        username: "testuser"
     )
 }

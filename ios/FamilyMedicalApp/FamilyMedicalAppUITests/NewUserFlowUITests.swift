@@ -2,7 +2,7 @@
 //  NewUserFlowUITests.swift
 //  FamilyMedicalAppUITests
 //
-//  Tests for new user account creation flow with multi-step authentication
+//  Tests for new user account creation flow with OPAQUE multi-step authentication
 //
 //  ## Test Organization
 //  - Independent tests: `testCompleteNewUserJourney`, `testNewUserWithCustomCredentials`
@@ -47,9 +47,9 @@ final class NewUserFlowUITests: XCTestCase {
         app = XCUIApplication()
         app.launchForUITesting(resetState: true)
 
-        // Verify EmailEntryView appears
+        // Verify UsernameEntryView appears
         let header = app.staticTexts["Family Medical"]
-        XCTAssertTrue(header.waitForExistence(timeout: 5), "Email entry screen should appear for new user")
+        XCTAssertTrue(header.waitForExistence(timeout: 5), "Username entry screen should appear for new user")
 
         // Create account using the helper (goes through all steps)
         app.createAccount()
@@ -66,10 +66,11 @@ final class NewUserFlowUITests: XCTestCase {
         app = XCUIApplication()
         app.launchForUITesting(resetState: true)
 
-        let customEmail = "custom@test.example.com"
+        // Use test_* pattern to trigger OPAQUE bypass in DEBUG builds
+        let customUsername = "test_customuser"
         let customPassphrase = "unique-good-pass-1234"
 
-        app.createAccount(email: customEmail, password: customPassphrase)
+        app.createAccount(username: customUsername, password: customPassphrase)
 
         // Verify successful creation
         let navTitle = app.navigationBars["Members"]
@@ -79,40 +80,37 @@ final class NewUserFlowUITests: XCTestCase {
         app.terminate()
     }
 
-    // MARK: - Email Entry Validation Test
+    // MARK: - Username Entry Validation Test
 
-    func testEmailEntryValidation() throws {
+    func testUsernameEntryValidation() throws {
         app = XCUIApplication()
         app.launchForUITesting(resetState: true)
 
-        // Wait for email entry view
+        // Wait for username entry view
         let headerText = app.staticTexts["Family Medical"]
-        XCTAssertTrue(headerText.waitForExistence(timeout: 5), "Email entry screen should appear")
+        XCTAssertTrue(headerText.waitForExistence(timeout: 5), "Username entry screen should appear")
 
-        // Verify email field exists
-        let emailField = app.textFields["Email address"]
-        XCTAssertTrue(emailField.exists, "Email field should exist")
+        // Verify username field exists
+        let usernameField = app.textFields["Username"]
+        XCTAssertTrue(usernameField.exists, "Username field should exist")
 
-        // Continue button should be disabled with empty email
-        let continueButton = app.buttons["Continue"]
-        XCTAssertTrue(continueButton.exists, "Continue button should exist")
-        XCTAssertFalse(continueButton.isEnabled, "Continue should be disabled with empty email")
+        // Create Account button should be disabled with empty username
+        let createAccountButton = app.buttons["Create Account"]
+        XCTAssertTrue(createAccountButton.exists, "Create Account button should exist")
+        XCTAssertFalse(createAccountButton.isEnabled, "Create Account should be disabled with empty username")
 
-        // Enter invalid email
-        emailField.tap()
-        emailField.typeText("invalid-email")
-        XCTAssertFalse(continueButton.isEnabled, "Continue should be disabled with invalid email")
+        // Enter short username (less than 3 chars)
+        usernameField.tap()
+        usernameField.typeText("ab")
+        XCTAssertFalse(createAccountButton.isEnabled, "Create Account should be disabled with short username")
 
-        // Clear and enter valid email
-        emailField.tap()
-        let deleteString = String(repeating: XCUIKeyboardKey.delete.rawValue, count: "invalid-email".count)
-        emailField.typeText(deleteString)
-        emailField.typeText("test@example.com")
+        // Add one more character to make it valid
+        usernameField.typeText("c")
 
-        // Continue should now be enabled
+        // Create Account should now be enabled
         XCTAssertTrue(
-            continueButton.waitForExistence(timeout: 2) && continueButton.isEnabled,
-            "Continue should be enabled with valid email"
+            createAccountButton.waitForExistence(timeout: 2) && createAccountButton.isEnabled,
+            "Create Account should be enabled with valid username"
         )
 
         app.terminate()
@@ -124,29 +122,15 @@ final class NewUserFlowUITests: XCTestCase {
         app = XCUIApplication()
         app.launchForUITesting(resetState: true)
 
-        // Navigate to passphrase creation (through email entry)
-        let emailField = app.textFields["Email address"]
-        XCTAssertTrue(emailField.waitForExistence(timeout: 5))
-        emailField.tap()
-        emailField.typeText("test@example.com")
+        // Navigate to passphrase creation (through username entry)
+        let usernameField = app.textFields["Username"]
+        XCTAssertTrue(usernameField.waitForExistence(timeout: 5))
+        usernameField.tap()
+        usernameField.typeText("testuser")
 
-        let emailContinueButton = app.buttons["Continue"]
-        XCTAssertTrue(emailContinueButton.waitForExistence(timeout: 2) && emailContinueButton.isEnabled)
-        emailContinueButton.tap()
-
-        // Skip code verification (auto-bypassed for test email)
-        let codeHeader = app.staticTexts["Check your email"]
-        if codeHeader.waitForExistence(timeout: 3) {
-            let codeField = app.textFields["codeField"]
-            if codeField.exists {
-                codeField.tap()
-                codeField.typeText("123456")
-            }
-            let verifyButton = app.buttons["verifyButton"]
-            if verifyButton.exists && verifyButton.isEnabled {
-                verifyButton.tap()
-            }
-        }
+        let usernameContinueButton = app.buttons["Create Account"]
+        XCTAssertTrue(usernameContinueButton.waitForExistence(timeout: 2) && usernameContinueButton.isEnabled)
+        usernameContinueButton.tap()
 
         // Wait for passphrase creation view
         let passphraseHeader = app.staticTexts["Create a Passphrase"]
@@ -202,26 +186,12 @@ final class NewUserFlowUITests: XCTestCase {
 
         let passphrase = "Unique-Horse-Battery-Staple-2024"
 
-        // Navigate through email entry
-        let emailField = app.textFields["Email address"]
-        XCTAssertTrue(emailField.waitForExistence(timeout: 5))
-        emailField.tap()
-        emailField.typeText("test@example.com")
-        app.buttons["Continue"].tap()
-
-        // Skip code verification
-        let codeHeader = app.staticTexts["Check your email"]
-        if codeHeader.waitForExistence(timeout: 3) {
-            let codeField = app.textFields["codeField"]
-            if codeField.exists {
-                codeField.tap()
-                codeField.typeText("123456")
-            }
-            let verifyButton = app.buttons["verifyButton"]
-            if verifyButton.exists && verifyButton.isEnabled {
-                verifyButton.tap()
-            }
-        }
+        // Navigate through username entry
+        let usernameField = app.textFields["Username"]
+        XCTAssertTrue(usernameField.waitForExistence(timeout: 5))
+        usernameField.tap()
+        usernameField.typeText("testuser")
+        app.buttons["Create Account"].tap()
 
         // Navigate through passphrase creation
         let passphraseHeader = app.staticTexts["Create a Passphrase"]

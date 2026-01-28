@@ -3,13 +3,13 @@ import ViewInspector
 @testable import FamilyMedicalApp
 
 @MainActor
-struct EmailEntryViewTests {
+struct UsernameEntryViewTests {
     // MARK: - View Structure Tests
 
     @Test
     func viewContainsAppBranding() throws {
         let viewModel = AuthenticationViewModel()
-        let view = EmailEntryView(viewModel: viewModel)
+        let view = UsernameEntryView(viewModel: viewModel)
 
         let sut = try view.inspect()
 
@@ -19,20 +19,20 @@ struct EmailEntryViewTests {
     }
 
     @Test
-    func viewContainsEmailField() throws {
+    func viewContainsUsernameField() throws {
         let viewModel = AuthenticationViewModel()
-        let view = EmailEntryView(viewModel: viewModel)
+        let view = UsernameEntryView(viewModel: viewModel)
 
         let sut = try view.inspect()
 
-        let emailField = try sut.find(viewWithAccessibilityIdentifier: "emailField")
-        #expect(emailField != nil)
+        let usernameField = try sut.find(viewWithAccessibilityIdentifier: "usernameField")
+        #expect(usernameField != nil)
     }
 
     @Test
     func viewContainsContinueButton() throws {
         let viewModel = AuthenticationViewModel()
-        let view = EmailEntryView(viewModel: viewModel)
+        let view = UsernameEntryView(viewModel: viewModel)
 
         let sut = try view.inspect()
 
@@ -43,10 +43,10 @@ struct EmailEntryViewTests {
     // MARK: - Button State Tests
 
     @Test
-    func continueButtonDisabledWhenEmailInvalid() throws {
+    func continueButtonDisabledWhenUsernameInvalid() throws {
         let viewModel = AuthenticationViewModel()
-        viewModel.email = "invalid"
-        let view = EmailEntryView(viewModel: viewModel)
+        viewModel.username = "ab" // Too short
+        let view = UsernameEntryView(viewModel: viewModel)
 
         let sut = try view.inspect()
         let button = try sut.find(viewWithAccessibilityIdentifier: "continueButton").button()
@@ -55,10 +55,10 @@ struct EmailEntryViewTests {
     }
 
     @Test
-    func continueButtonEnabledWhenEmailValid() throws {
+    func continueButtonEnabledWhenUsernameValid() throws {
         let viewModel = AuthenticationViewModel()
-        viewModel.email = "test@example.com"
-        let view = EmailEntryView(viewModel: viewModel)
+        viewModel.username = "testuser"
+        let view = UsernameEntryView(viewModel: viewModel)
 
         let sut = try view.inspect()
         let button = try sut.find(viewWithAccessibilityIdentifier: "continueButton").button()
@@ -72,7 +72,7 @@ struct EmailEntryViewTests {
     func errorLabelShowsWhenErrorPresent() throws {
         let viewModel = AuthenticationViewModel()
         viewModel.errorMessage = "Test error"
-        let view = EmailEntryView(viewModel: viewModel)
+        let view = UsernameEntryView(viewModel: viewModel)
 
         let sut = try view.inspect()
         let errorLabel = try sut.find(viewWithAccessibilityIdentifier: "errorLabel")
@@ -84,7 +84,7 @@ struct EmailEntryViewTests {
     func errorLabelHiddenWhenNoError() throws {
         let viewModel = AuthenticationViewModel()
         viewModel.errorMessage = nil
-        let view = EmailEntryView(viewModel: viewModel)
+        let view = UsernameEntryView(viewModel: viewModel)
 
         let sut = try view.inspect()
 

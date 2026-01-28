@@ -4,7 +4,7 @@ import ViewInspector
 
 @MainActor
 struct PassphraseConfirmViewTests {
-    private let testEmail = "test@example.com"
+    private let testUsername = "testuser"
     private let testPassphrase = "valid-test-passphrase-123"
 
     // MARK: - View Structure Tests
@@ -12,7 +12,7 @@ struct PassphraseConfirmViewTests {
     @Test
     func viewContainsConfirmField() throws {
         let viewModel = AuthenticationViewModel()
-        let view = PassphraseConfirmView(viewModel: viewModel, email: testEmail, passphrase: testPassphrase)
+        let view = PassphraseConfirmView(viewModel: viewModel, username: testUsername, passphrase: testPassphrase)
 
         let sut = try view.inspect()
         let field = try sut.find(viewWithAccessibilityIdentifier: "confirmPassphraseField")
@@ -23,7 +23,7 @@ struct PassphraseConfirmViewTests {
     @Test
     func viewContainsContinueButton() throws {
         let viewModel = AuthenticationViewModel()
-        let view = PassphraseConfirmView(viewModel: viewModel, email: testEmail, passphrase: testPassphrase)
+        let view = PassphraseConfirmView(viewModel: viewModel, username: testUsername, passphrase: testPassphrase)
 
         let sut = try view.inspect()
         let button = try sut.find(viewWithAccessibilityIdentifier: "continueButton")
@@ -34,7 +34,7 @@ struct PassphraseConfirmViewTests {
     @Test
     func viewContainsBackButton() throws {
         let viewModel = AuthenticationViewModel()
-        let view = PassphraseConfirmView(viewModel: viewModel, email: testEmail, passphrase: testPassphrase)
+        let view = PassphraseConfirmView(viewModel: viewModel, username: testUsername, passphrase: testPassphrase)
 
         let sut = try view.inspect()
         let button = try sut.find(viewWithAccessibilityIdentifier: "backButton")
@@ -48,7 +48,7 @@ struct PassphraseConfirmViewTests {
     func continueButtonDisabledWhenConfirmEmpty() throws {
         let viewModel = AuthenticationViewModel()
         viewModel.confirmPassphrase = ""
-        let view = PassphraseConfirmView(viewModel: viewModel, email: testEmail, passphrase: testPassphrase)
+        let view = PassphraseConfirmView(viewModel: viewModel, username: testUsername, passphrase: testPassphrase)
 
         let sut = try view.inspect()
         let button = try sut.find(viewWithAccessibilityIdentifier: "continueButton").button()
@@ -60,7 +60,7 @@ struct PassphraseConfirmViewTests {
     func continueButtonDisabledWhenMismatch() throws {
         let viewModel = AuthenticationViewModel()
         viewModel.confirmPassphrase = "wrong-passphrase"
-        let view = PassphraseConfirmView(viewModel: viewModel, email: testEmail, passphrase: testPassphrase)
+        let view = PassphraseConfirmView(viewModel: viewModel, username: testUsername, passphrase: testPassphrase)
 
         let sut = try view.inspect()
         let button = try sut.find(viewWithAccessibilityIdentifier: "continueButton").button()
@@ -72,7 +72,7 @@ struct PassphraseConfirmViewTests {
     func continueButtonEnabledWhenMatch() throws {
         let viewModel = AuthenticationViewModel()
         viewModel.confirmPassphrase = testPassphrase
-        let view = PassphraseConfirmView(viewModel: viewModel, email: testEmail, passphrase: testPassphrase)
+        let view = PassphraseConfirmView(viewModel: viewModel, username: testUsername, passphrase: testPassphrase)
 
         let sut = try view.inspect()
         let button = try sut.find(viewWithAccessibilityIdentifier: "continueButton").button()
@@ -86,7 +86,7 @@ struct PassphraseConfirmViewTests {
     func mismatchLabelShownWhenMismatch() throws {
         let viewModel = AuthenticationViewModel()
         viewModel.confirmPassphrase = "wrong"
-        let view = PassphraseConfirmView(viewModel: viewModel, email: testEmail, passphrase: testPassphrase)
+        let view = PassphraseConfirmView(viewModel: viewModel, username: testUsername, passphrase: testPassphrase)
 
         let sut = try view.inspect()
         let label = try sut.find(viewWithAccessibilityIdentifier: "mismatchLabel")
@@ -98,7 +98,7 @@ struct PassphraseConfirmViewTests {
     func matchLabelShownWhenMatch() throws {
         let viewModel = AuthenticationViewModel()
         viewModel.confirmPassphrase = testPassphrase
-        let view = PassphraseConfirmView(viewModel: viewModel, email: testEmail, passphrase: testPassphrase)
+        let view = PassphraseConfirmView(viewModel: viewModel, username: testUsername, passphrase: testPassphrase)
 
         let sut = try view.inspect()
         let label = try sut.find(viewWithAccessibilityIdentifier: "matchLabel")
@@ -110,7 +110,7 @@ struct PassphraseConfirmViewTests {
     func noIndicatorWhenEmpty() throws {
         let viewModel = AuthenticationViewModel()
         viewModel.confirmPassphrase = ""
-        let view = PassphraseConfirmView(viewModel: viewModel, email: testEmail, passphrase: testPassphrase)
+        let view = PassphraseConfirmView(viewModel: viewModel, username: testUsername, passphrase: testPassphrase)
 
         let sut = try view.inspect()
 
