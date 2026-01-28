@@ -1,42 +1,31 @@
-name = "family-medical-api"
+name = "recordwell-api"
 main = "src/index.ts"
 compatibility_date = "2024-01-01"
 
 # Routes
 routes = [
-  { pattern = "family-medical.cynexia.com/api/*", zone_name = "cynexia.com" }
+  { pattern = "api.recordwell.app/*", zone_name = "recordwell.app" }
 ]
 
-# KV Namespaces - Legacy (to be removed)
-[[kv_namespaces]]
-binding = "CODES"
-id = "ff2bfe3aeee2475a97caf1956b7644c7"
-
-[[kv_namespaces]]
-binding = "USERS"
-id = "77ae5a3875c14a9ab69c540bb3e12f4a"
-
-# KV Namespaces - Shared
-[[kv_namespaces]]
-binding = "RATE_LIMITS"
-id = "5d519620a3c341bc8821fc568ce67beb"
-
 # KV Namespaces - OPAQUE Authentication
-# TODO: Create these namespaces with `wrangler kv:namespace create <NAME>`
 [[kv_namespaces]]
 binding = "CREDENTIALS"
-id = "TODO_CREATE_CREDENTIALS_NAMESPACE"
+id = "c0373f3b95e54fbeaaef36782d426ca3"
 
 [[kv_namespaces]]
 binding = "BUNDLES"
-id = "TODO_CREATE_BUNDLES_NAMESPACE"
+id = "7967763b05c9496e89c4223fd765a34d"
 
 [[kv_namespaces]]
 binding = "LOGIN_STATES"
-id = "TODO_CREATE_LOGIN_STATES_NAMESPACE"
+id = "671b81ebdc2946e494d0d37c2059f9d6"
+
+[[kv_namespaces]]
+binding = "RATE_LIMITS"
+id = "5d519620a3c341bc8821fc568ce67beb"
 
 [vars]
 ENVIRONMENT = "production"
 
 # Secrets (set with `wrangler secret put <NAME>`):
-# - OPAQUE_SERVER_SETUP: Generated OPAQUE server setup string
+# - OPAQUE_SERVER_SETUP: stored as recordwell_OPAQUE_SERVER_SETUP in secrets store
