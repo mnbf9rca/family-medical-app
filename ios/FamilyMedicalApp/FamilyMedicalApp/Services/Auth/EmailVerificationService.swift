@@ -45,16 +45,19 @@ final class EmailVerificationService: EmailVerificationServiceProtocol, @uncheck
     }
 
     func sendVerificationCode(to email: String) async throws {
-        #if DEBUG
-        if isTestEmail(email) { return }
-        #endif
+        // Bypass for test emails in DEBUG builds or UI testing mode
+        if Self.shouldBypassForTestEmail(email) { return }
 
         let url = baseURL.appendingPathComponent("send-code")
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
-        let body = ["email_hash": hashEmail(email)]
+        // Send both email (for sending verification code) and hash (for server-side lookup)
+        let body: [String: String] = [
+            "email_hash": hashEmail(email),
+            "email": email
+        ]
         request.httpBody = try JSONEncoder().encode(body)
 
         let (_, response) = try await session.data(for: request)
@@ -74,11 +77,10 @@ final class EmailVerificationService: EmailVerificationServiceProtocol, @uncheck
     }
 
     func verifyCode(_ code: String, for email: String) async throws -> EmailVerificationResult {
-        #if DEBUG
-        if isTestEmail(email) {
+        // Bypass for test emails in DEBUG builds or UI testing mode
+        if Self.shouldBypassForTestEmail(email) {
             return EmailVerificationResult(isValid: true, isReturningUser: false)
         }
-        #endif
 
         let url = baseURL.appendingPathComponent("verify-code")
         var request = URLRequest(url: url)
@@ -113,12 +115,23 @@ final class EmailVerificationService: EmailVerificationServiceProtocol, @uncheck
         }
     }
 
-    #if DEBUG
-    private func isTestEmail(_ email: String) -> Bool {
+    /// Check if test email bypass should be used
+    /// Bypass is enabled in DEBUG builds OR when running UI tests
+    /// This ensures test emails work both during development and automated UI testing
+    private static func shouldBypassForTestEmail(_ email: String) -> Bool {
+        // Check if this is a recognized test email pattern
         let normalized = email.lowercased()
-        return normalized == "test@example.com" || normalized.hasSuffix("@test.example.com")
+        let isTestEmail = normalized == "test@example.com" || normalized.hasSuffix("@test.example.com")
+
+        guard isTestEmail else { return false }
+
+        // Allow bypass in DEBUG builds or UI testing mode
+        #if DEBUG
+        return true
+        #else
+        return UITestingHelpers.isUITesting
+        #endif
     }
-    #endif
 }
 
 // MARK: - Response Models
