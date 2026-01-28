@@ -1,0 +1,24 @@
+name = "family-medical-api"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+# Routes
+routes = [
+  { pattern = "family-medical.cynexia.com/api/*", zone_name = "cynexia.com" }
+]
+
+# KV Namespaces
+[[kv_namespaces]]
+binding = "CODES"
+id = "ff2bfe3aeee2475a97caf1956b7644c7"
+
+[[kv_namespaces]]
+binding = "RATE_LIMITS"
+id = "5d519620a3c341bc8821fc568ce67beb"
+
+[[kv_namespaces]]
+binding = "USERS"
+id = "77ae5a3875c14a9ab69c540bb3e12f4a"
+
+[vars]
+ENVIRONMENT = "production"

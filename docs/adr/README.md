@@ -83,6 +83,13 @@ ADRs document significant architectural decisions, their context, and consequenc
   - Coexists with ADR-0008 optional parameter pattern (system vs application dependencies)
   - Security constraint: crypto services excluded from swift-dependencies
 
+### Backend Services
+
+- [ADR-0011: Email Verification Backend Architecture](adr-0011-email-verification-backend.md) - **Accepted** (2026-01-27)
+  - Cloudflare Workers with KV storage for email verification codes
+  - AWS SES for email delivery, 6-digit codes with rate limiting
+  - Privacy-focused: only email hashes persisted, actual emails used only for sending
+
 ### UI/UX Architecture
 <!-- Add ADRs related to SwiftUI patterns, navigation, accessibility -->
 
