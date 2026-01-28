@@ -85,10 +85,14 @@ ADRs document significant architectural decisions, their context, and consequenc
 
 ### Backend Services
 
-- [ADR-0011: Email Verification Backend Architecture](adr-0011-email-verification-backend.md) - **Accepted** (2026-01-27)
-  - Cloudflare Workers with KV storage for email verification codes
-  - AWS SES for email delivery, 6-digit codes with rate limiting
-  - Privacy-focused: only email hashes persisted, actual emails used only for sending
+- [ADR-0012: OPAQUE Zero-Knowledge Authentication](adr-0012-opaque-zero-knowledge-auth.md) - **Proposed** (2026-01-28)
+  - OPAQUE protocol (RFC 9807) for true zero-knowledge authentication
+  - Server never learns username or password
+  - opaque-ke (Rust) via UniFFI for iOS, @serenity-kit/opaque for Cloudflare Workers
+  - Supersedes ADR-0011 (email verification no longer needed)
+- [ADR-0011: Email Verification Backend Architecture](adr-0011-email-verification-backend.md) - ~~Accepted~~ **Superseded** (2026-01-27)
+  - ~~Cloudflare Workers with KV storage for email verification codes~~
+  - Superseded by ADR-0012 (OPAQUE zero-knowledge authentication)
 
 ### UI/UX Architecture
 <!-- Add ADRs related to SwiftUI patterns, navigation, accessibility -->

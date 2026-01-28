@@ -2,7 +2,7 @@
 
 ## Status
 
-**Status**: accepted
+**Status**: Superseded by [ADR-0012](adr-0012-opaque-zero-knowledge-auth.md)
 
 ## Context
 
