@@ -7,18 +7,36 @@ routes = [
   { pattern = "family-medical.cynexia.com/api/*", zone_name = "cynexia.com" }
 ]
 
-# KV Namespaces
+# KV Namespaces - Legacy (to be removed)
 [[kv_namespaces]]
 binding = "CODES"
 id = "ff2bfe3aeee2475a97caf1956b7644c7"
 
 [[kv_namespaces]]
-binding = "RATE_LIMITS"
-id = "5d519620a3c341bc8821fc568ce67beb"
-
-[[kv_namespaces]]
 binding = "USERS"
 id = "77ae5a3875c14a9ab69c540bb3e12f4a"
 
+# KV Namespaces - Shared
+[[kv_namespaces]]
+binding = "RATE_LIMITS"
+id = "5d519620a3c341bc8821fc568ce67beb"
+
+# KV Namespaces - OPAQUE Authentication
+# TODO: Create these namespaces with `wrangler kv:namespace create <NAME>`
+[[kv_namespaces]]
+binding = "CREDENTIALS"
+id = "TODO_CREATE_CREDENTIALS_NAMESPACE"
+
+[[kv_namespaces]]
+binding = "BUNDLES"
+id = "TODO_CREATE_BUNDLES_NAMESPACE"
+
+[[kv_namespaces]]
+binding = "LOGIN_STATES"
+id = "TODO_CREATE_LOGIN_STATES_NAMESPACE"
+
 [vars]
 ENVIRONMENT = "production"
+
+# Secrets (set with `wrangler secret put <NAME>`):
+# - OPAQUE_SERVER_SETUP: Generated OPAQUE server setup string

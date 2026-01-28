@@ -2,20 +2,31 @@
 
 import { checkRateLimit, RATE_LIMITS } from './rate-limit';
 import { sendVerificationEmail, generateVerificationCode } from './email';
+import { initServerSetup, startRegistration, finishRegistration, startLogin, finishLogin } from './opaque';
 
 export interface Env {
+  // Legacy email verification (to be removed)
   CODES: KVNamespace;
-  RATE_LIMITS: KVNamespace;
   USERS: KVNamespace;
   AWS_ACCESS_KEY_ID: string;
   AWS_SECRET_ACCESS_KEY: string;
   AWS_REGION: string;
   FROM_EMAIL: string;
+
+  // OPAQUE authentication
+  CREDENTIALS: KVNamespace;  // OPAQUE password files
+  BUNDLES: KVNamespace;      // Encrypted user data bundles
+  LOGIN_STATES: KVNamespace; // Temporary login states (short TTL)
+  OPAQUE_SERVER_SETUP: string; // Secret: server setup string
+
+  // Shared
+  RATE_LIMITS: KVNamespace;
 }
 
+// Legacy types (to be removed)
 interface SendCodeRequest {
   email_hash: string;
-  email: string;  // Actual email for sending verification code
+  email: string;
 }
 
 interface VerifyCodeRequest {
@@ -28,10 +39,37 @@ interface StoredCode {
   createdAt: number;
 }
 
-const CODE_TTL_SECONDS = 300; // 5 minutes
+// OPAQUE request types
+interface OpaqueRegisterStartRequest {
+  clientIdentifier: string;
+  registrationRequest: string;
+}
+
+interface OpaqueRegisterFinishRequest {
+  clientIdentifier: string;
+  registrationRecord: string;
+  encryptedBundle?: string;
+}
+
+interface OpaqueLoginStartRequest {
+  clientIdentifier: string;
+  startLoginRequest: string;
+}
+
+interface OpaqueLoginFinishRequest {
+  clientIdentifier: string;
+  stateKey: string;
+  finishLoginRequest: string;
+}
+
+const CODE_TTL_SECONDS = 300;
+const LOGIN_STATE_TTL_SECONDS = 60;
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
+    // Initialize OPAQUE server setup
+    initServerSetup(env.OPAQUE_SERVER_SETUP);
+
     const url = new URL(request.url);
     const path = url.pathname;
 
@@ -49,6 +87,21 @@ export default {
 
     // Route handling
     if (request.method === 'POST') {
+      // OPAQUE authentication routes
+      if (path === '/api/auth/opaque/register/start') {
+        return handleOpaqueRegisterStart(request, env);
+      }
+      if (path === '/api/auth/opaque/register/finish') {
+        return handleOpaqueRegisterFinish(request, env);
+      }
+      if (path === '/api/auth/opaque/login/start') {
+        return handleOpaqueLoginStart(request, env);
+      }
+      if (path === '/api/auth/opaque/login/finish') {
+        return handleOpaqueLoginFinish(request, env);
+      }
+
+      // Legacy email verification routes (to be removed)
       if (path === '/api/auth/send-code') {
         return handleSendCode(request, env);
       }
@@ -60,6 +113,189 @@ export default {
     return jsonResponse({ error: 'Not found' }, 404);
   }
 };
+
+// ============================================================================
+// OPAQUE Authentication Handlers
+// ============================================================================
+
+async function handleOpaqueRegisterStart(request: Request, env: Env): Promise<Response> {
+  try {
+    const body = await request.json() as OpaqueRegisterStartRequest;
+    const { clientIdentifier, registrationRequest } = body;
+
+    if (!clientIdentifier || typeof clientIdentifier !== 'string' || clientIdentifier.length !== 64) {
+      return jsonResponse({ error: 'Invalid clientIdentifier' }, 400);
+    }
+
+    if (!registrationRequest || typeof registrationRequest !== 'string') {
+      return jsonResponse({ error: 'Invalid registrationRequest' }, 400);
+    }
+
+    // Check if user already exists - but don't reveal this to prevent enumeration
+    // We proceed with registration response either way
+    const existing = await env.CREDENTIALS.get(`cred:${clientIdentifier}`);
+    if (existing) {
+      // User exists, but we still return a valid-looking response
+      // The registration will fail at the finish step
+      console.log(`[opaque/register/start] Existing user attempted re-registration: ${clientIdentifier.substring(0, 8)}...`);
+    }
+
+    const result = startRegistration(clientIdentifier, registrationRequest);
+
+    return jsonResponse({
+      registrationResponse: result.registrationResponse,
+    });
+  } catch (error) {
+    console.error('[opaque/register/start] Error:', error);
+    return jsonResponse({ error: 'Internal server error' }, 500);
+  }
+}
+
+async function handleOpaqueRegisterFinish(request: Request, env: Env): Promise<Response> {
+  try {
+    const body = await request.json() as OpaqueRegisterFinishRequest;
+    const { clientIdentifier, registrationRecord, encryptedBundle } = body;
+
+    if (!clientIdentifier || typeof clientIdentifier !== 'string' || clientIdentifier.length !== 64) {
+      return jsonResponse({ error: 'Invalid clientIdentifier' }, 400);
+    }
+
+    if (!registrationRecord || typeof registrationRecord !== 'string') {
+      return jsonResponse({ error: 'Invalid registrationRecord' }, 400);
+    }
+
+    // Check if user already exists
+    const existing = await env.CREDENTIALS.get(`cred:${clientIdentifier}`);
+    if (existing) {
+      return jsonResponse({ error: 'Registration failed' }, 400);
+    }
+
+    const result = finishRegistration(registrationRecord);
+
+    // Store password file
+    await env.CREDENTIALS.put(`cred:${clientIdentifier}`, result.passwordFile);
+
+    // Store initial bundle if provided
+    if (encryptedBundle) {
+      await env.BUNDLES.put(`bundle:${clientIdentifier}`, encryptedBundle);
+    }
+
+    console.log(`[opaque/register/finish] Registered user: ${clientIdentifier.substring(0, 8)}...`);
+
+    return jsonResponse({ success: true });
+  } catch (error) {
+    console.error('[opaque/register/finish] Error:', error);
+    return jsonResponse({ error: 'Internal server error' }, 500);
+  }
+}
+
+async function handleOpaqueLoginStart(request: Request, env: Env): Promise<Response> {
+  try {
+    const body = await request.json() as OpaqueLoginStartRequest;
+    const { clientIdentifier, startLoginRequest } = body;
+
+    if (!clientIdentifier || typeof clientIdentifier !== 'string' || clientIdentifier.length !== 64) {
+      return jsonResponse({ error: 'Invalid clientIdentifier' }, 400);
+    }
+
+    if (!startLoginRequest || typeof startLoginRequest !== 'string') {
+      return jsonResponse({ error: 'Invalid startLoginRequest' }, 400);
+    }
+
+    // Rate limiting
+    const rateLimit = await checkRateLimit(
+      env.RATE_LIMITS,
+      `opaque:login:${clientIdentifier}`,
+      { maxRequests: 5, windowSeconds: 300 } // 5 attempts per 5 minutes
+    );
+
+    if (!rateLimit.allowed) {
+      return jsonResponse(
+        { error: 'Too many attempts', retry_after: rateLimit.resetAt },
+        429,
+        { 'Retry-After': String(rateLimit.resetAt - Math.floor(Date.now() / 1000)) }
+      );
+    }
+
+    // Get password file
+    const passwordFile = await env.CREDENTIALS.get(`cred:${clientIdentifier}`);
+    if (!passwordFile) {
+      // User doesn't exist - return generic error to prevent enumeration
+      console.log(`[opaque/login/start] Unknown user: ${clientIdentifier.substring(0, 8)}...`);
+      return jsonResponse({ error: 'Authentication failed' }, 401);
+    }
+
+    const result = startLogin(clientIdentifier, passwordFile, startLoginRequest);
+
+    // Store server state temporarily (60 second TTL)
+    const stateKey = `state:${clientIdentifier}:${Date.now()}`;
+    await env.LOGIN_STATES.put(stateKey, result.serverState, {
+      expirationTtl: LOGIN_STATE_TTL_SECONDS
+    });
+
+    return jsonResponse({
+      loginResponse: result.credentialResponse,
+      stateKey,
+    });
+  } catch (error) {
+    console.error('[opaque/login/start] Error:', error);
+    return jsonResponse({ error: 'Authentication failed' }, 401);
+  }
+}
+
+async function handleOpaqueLoginFinish(request: Request, env: Env): Promise<Response> {
+  try {
+    const body = await request.json() as OpaqueLoginFinishRequest;
+    const { clientIdentifier, stateKey, finishLoginRequest } = body;
+
+    if (!clientIdentifier || typeof clientIdentifier !== 'string' || clientIdentifier.length !== 64) {
+      return jsonResponse({ error: 'Invalid clientIdentifier' }, 400);
+    }
+
+    if (!stateKey || typeof stateKey !== 'string') {
+      return jsonResponse({ error: 'Invalid stateKey' }, 400);
+    }
+
+    if (!finishLoginRequest || typeof finishLoginRequest !== 'string') {
+      return jsonResponse({ error: 'Invalid finishLoginRequest' }, 400);
+    }
+
+    // Get server state
+    const serverState = await env.LOGIN_STATES.get(stateKey);
+    if (!serverState) {
+      return jsonResponse({ error: 'Session expired' }, 401);
+    }
+
+    // Delete state (one-time use)
+    await env.LOGIN_STATES.delete(stateKey);
+
+    try {
+      const result = finishLogin(serverState, finishLoginRequest);
+
+      // Get user's encrypted bundle
+      const encryptedBundle = await env.BUNDLES.get(`bundle:${clientIdentifier}`);
+
+      console.log(`[opaque/login/finish] Successful login: ${clientIdentifier.substring(0, 8)}...`);
+
+      return jsonResponse({
+        success: true,
+        sessionKey: result.sessionKey,
+        encryptedBundle,
+      });
+    } catch {
+      // OPAQUE verification failed - wrong password
+      console.log(`[opaque/login/finish] Failed verification: ${clientIdentifier.substring(0, 8)}...`);
+      return jsonResponse({ error: 'Authentication failed' }, 401);
+    }
+  } catch (error) {
+    console.error('[opaque/login/finish] Error:', error);
+    return jsonResponse({ error: 'Internal server error' }, 500);
+  }
+}
+
+// ============================================================================
+// Legacy Email Verification Handlers (to be removed in Task 13)
+// ============================================================================
 
 async function handleSendCode(request: Request, env: Env): Promise<Response> {
   try {
@@ -74,10 +310,8 @@ async function handleSendCode(request: Request, env: Env): Promise<Response> {
       return jsonResponse({ error: 'Invalid email' }, 400);
     }
 
-    // Get client IP for rate limiting
     const clientIP = request.headers.get('CF-Connecting-IP') ?? 'unknown';
 
-    // Check rate limits
     const emailRateLimit = await checkRateLimit(
       env.RATE_LIMITS,
       `send:email:${email_hash}`,
@@ -106,7 +340,6 @@ async function handleSendCode(request: Request, env: Env): Promise<Response> {
       );
     }
 
-    // Generate and store code
     const code = generateVerificationCode();
     const storedCode: StoredCode = {
       code,
@@ -117,7 +350,6 @@ async function handleSendCode(request: Request, env: Env): Promise<Response> {
       expirationTtl: CODE_TTL_SECONDS
     });
 
-    // Send verification email
     const emailSent = await sendVerificationEmail(
       {
         awsAccessKeyId: env.AWS_ACCESS_KEY_ID,
@@ -160,7 +392,6 @@ async function handleVerifyCode(request: Request, env: Env): Promise<Response> {
       return jsonResponse({ error: 'Invalid code format' }, 400);
     }
 
-    // Check rate limit
     const rateLimit = await checkRateLimit(
       env.RATE_LIMITS,
       `verify:${email_hash}`,
@@ -175,27 +406,21 @@ async function handleVerifyCode(request: Request, env: Env): Promise<Response> {
       );
     }
 
-    // Look up stored code
     const storedData = await env.CODES.get<StoredCode>(`code:${email_hash}`, 'json');
 
     if (!storedData) {
-      // Code doesn't exist or expired (KV auto-deletes after TTL)
       return jsonResponse({ error: 'Code expired or not found' }, 410);
     }
 
-    // Verify code matches
     if (storedData.code !== code) {
       return jsonResponse({ error: 'Invalid code' }, 400);
     }
 
-    // Code is valid - delete it (one-time use)
     await env.CODES.delete(`code:${email_hash}`);
 
-    // Check if returning user
     const existingUser = await env.USERS.get(`user:${email_hash}`);
     const isReturningUser = existingUser !== null;
 
-    // If new user, register the email hash
     if (!isReturningUser) {
       await env.USERS.put(`user:${email_hash}`, JSON.stringify({
         createdAt: Math.floor(Date.now() / 1000)
@@ -214,6 +439,10 @@ async function handleVerifyCode(request: Request, env: Env): Promise<Response> {
     return jsonResponse({ error: 'Internal server error' }, 500);
   }
 }
+
+// ============================================================================
+// Helpers
+// ============================================================================
 
 function jsonResponse(
   data: object,
