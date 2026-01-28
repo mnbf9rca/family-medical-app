@@ -1,32 +1,44 @@
-# Backend Service
+# RecordWell API
 
-**Status**: Phase 2 - Not yet implemented
+Cloudflare Workers backend for RecordWell app OPAQUE zero-knowledge authentication.
 
-This directory will contain the sync backend service for cross-device synchronization.
+## Architecture
 
-## Phase 2 Implementation
+- **Cloudflare Workers** - Serverless API endpoints
+- **Cloudflare KV** - OPAQUE password files, encrypted bundles, login state
+- **@serenity-kit/opaque** - OPAQUE protocol (RFC 9807) implementation
 
-Backend development begins in **Phase 2** after Phase 1 (local iOS app) is complete.
+## API Endpoints
 
-See Issue #14 for backend technology research and selection.
+### OPAQUE Authentication
 
-## Planned Features
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/auth/opaque/register/start` | Begin registration |
+| POST | `/auth/opaque/register/finish` | Complete registration |
+| POST | `/auth/opaque/login/start` | Begin login |
+| POST | `/auth/opaque/login/finish` | Complete login |
 
-- Encrypted blob storage
-- User authentication (for sync, not data decryption)
-- Sync coordination
-- Zero-knowledge architecture (server cannot decrypt data)
+## Development
 
-## Development Environment
+```bash
+npm install
+npm run dev        # Local development
+npm run typecheck  # Type checking
+npm run deploy     # Deploy to production
+```
 
-When implementation begins, this directory will include:
+## Environment Variables
 
-- `.devcontainer/` - VS Code devcontainer configuration
-- `docker-compose.yml` - Local development services
-- Backend API code (Python/FastAPI, Node.js, or chosen stack)
-- Database migrations
-- API documentation
+| Name | Description |
+|------|-------------|
+| `OPAQUE_SERVER_SETUP` | Secret: OPAQUE server setup string |
 
-## For Now
+## KV Namespaces
 
-Focus on Phase 1 (iOS app) first. Backend setup will be documented when Phase 2 begins.
+| Binding | Purpose |
+|---------|---------|
+| `CREDENTIALS` | OPAQUE password files |
+| `BUNDLES` | Encrypted user data bundles |
+| `LOGIN_STATES` | Temporary login state (60s TTL) |
+| `RATE_LIMITS` | Rate limit counters |
