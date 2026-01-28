@@ -1,7 +1,7 @@
 {
-  "name": "family-medical-api",
+  "name": "recordwell-api",
   "version": "1.0.0",
-  "description": "Cloudflare Workers backend for Family Medical App email verification",
+  "description": "Cloudflare Workers backend for RecordWell OPAQUE authentication",
   "main": "src/index.ts",
   "scripts": {
     "dev": "wrangler dev",
@@ -10,7 +10,8 @@
   },
   "keywords": [
     "cloudflare-workers",
-    "email-verification"
+    "opaque",
+    "authentication"
   ],
   "author": "",
   "license": "ISC",
@@ -21,7 +22,6 @@
     "wrangler": "^4.61.0"
   },
   "dependencies": {
-    "@aws-sdk/client-ses": "^3.975.0",
     "@serenity-kit/opaque": "^1.0.0"
   }
 }
