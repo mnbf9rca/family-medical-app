@@ -13,6 +13,7 @@ import OpaqueSwift
 final class OpaqueAuthService: OpaqueAuthServiceProtocol, @unchecked Sendable {
     private let baseURL: URL
     private let session: URLSession
+    private let logger: CategoryLoggerProtocol
 
     /// Default API base URL
     private static let defaultBaseURL =
@@ -20,15 +21,21 @@ final class OpaqueAuthService: OpaqueAuthServiceProtocol, @unchecked Sendable {
 
     init(
         baseURL: URL = OpaqueAuthService.defaultBaseURL,
-        session: URLSession = .shared
+        session: URLSession = .shared,
+        logger: CategoryLoggerProtocol? = nil
     ) {
         self.baseURL = baseURL
         self.session = session
+        self.logger = logger ?? LoggingService.shared.logger(category: .auth)
     }
 
     func register(username: String, password: String) async throws -> OpaqueRegistrationResult {
+        logger.logOperation("register", state: "started")
+        logger.debug("Registering user with base URL: \(baseURL.absoluteString)")
+
         // Bypass for test usernames in DEBUG builds
         if Self.shouldBypassForTestUsername(username) {
+            logger.debug("Using test username bypass for registration")
             // Derive deterministic export key from password so login verification works
             let passwordKey = Self.deriveTestExportKey(from: password)
             return OpaqueRegistrationResult(exportKey: passwordKey)
@@ -36,10 +43,13 @@ final class OpaqueAuthService: OpaqueAuthServiceProtocol, @unchecked Sendable {
 
         // Generate client identifier (SHA256 hash of username)
         let clientIdentifier = try generateClientIdentifier(username: username)
+        logger.debug("Generated client identifier: \(clientIdentifier.prefix(8))...")
 
         // Step 1: Start registration
+        logger.debug("Starting OPAQUE registration (step 1)")
         let registration = try ClientRegistration.start(password: password)
         let registrationRequest = registration.getRequest()
+        logger.debug("Registration request size: \(registrationRequest.count) bytes")
 
         let startResponse = try await post(
             path: "register/start",
@@ -48,14 +58,17 @@ final class OpaqueAuthService: OpaqueAuthServiceProtocol, @unchecked Sendable {
                 "registrationRequest": registrationRequest.base64EncodedString()
             ]
         )
+        logger.debug("Received register/start response")
 
         guard let responseBase64 = startResponse["registrationResponse"] as? String,
               let responseData = Data(base64Encoded: responseBase64)
         else {
+            logger.error("Invalid response from register/start - missing registrationResponse")
             throw OpaqueAuthError.invalidResponse
         }
 
         // Step 2: Finish registration
+        logger.debug("Finishing OPAQUE registration (step 2)")
         let result = try registration.finish(serverResponse: responseData, password: password)
 
         let finishResponse = try await post(
@@ -67,9 +80,11 @@ final class OpaqueAuthService: OpaqueAuthServiceProtocol, @unchecked Sendable {
         )
 
         guard finishResponse["success"] as? Bool == true else {
+            logger.error("Registration finish failed - success != true")
             throw OpaqueAuthError.registrationFailed
         }
 
+        logger.logOperation("register", state: "completed")
         return OpaqueRegistrationResult(exportKey: result.exportKey)
     }
 
@@ -187,6 +202,8 @@ final class OpaqueAuthService: OpaqueAuthServiceProtocol, @unchecked Sendable {
 
     private func post(path: String, body: [String: Any]) async throws -> [String: Any] {
         let url = baseURL.appendingPathComponent(path)
+        logger.debug("POST \(url.absoluteString)")
+
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -197,26 +214,37 @@ final class OpaqueAuthService: OpaqueAuthServiceProtocol, @unchecked Sendable {
         do {
             (data, response) = try await session.data(for: request)
         } catch {
+            logger.error("Network error: \(error.localizedDescription)")
             throw OpaqueAuthError.networkError
         }
 
         guard let httpResponse = response as? HTTPURLResponse else {
+            logger.error("Invalid response type (not HTTPURLResponse)")
             throw OpaqueAuthError.networkError
         }
+
+        logger.debug("Response status: \(httpResponse.statusCode)")
 
         switch httpResponse.statusCode {
         case 200 ... 299:
             break
         case 401:
+            logger.notice("Authentication failed (401)")
             throw OpaqueAuthError.authenticationFailed
         case 429:
             let retryAfter = httpResponse.value(forHTTPHeaderField: "Retry-After").flatMap(Int.init)
+            logger.notice("Rate limited (429), retry after: \(retryAfter ?? -1)")
             throw OpaqueAuthError.rateLimited(retryAfter: retryAfter)
         default:
+            // Log response body for debugging server errors
+            let responseBody = String(data: data, encoding: .utf8) ?? "<non-utf8>"
+            logger.error("Server error (\(httpResponse.statusCode)): \(responseBody)")
             throw OpaqueAuthError.serverError(statusCode: httpResponse.statusCode)
         }
 
         guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            let responseBody = String(data: data, encoding: .utf8) ?? "<non-utf8>"
+            logger.error("Invalid JSON response: \(responseBody)")
             throw OpaqueAuthError.invalidResponse
         }
 

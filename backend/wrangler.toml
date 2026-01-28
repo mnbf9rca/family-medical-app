@@ -25,6 +25,13 @@ id = "5d519620a3c341bc8821fc568ce67beb"
 [vars]
 ENVIRONMENT = "production"
 
+[observability]
+enabled = true
+
+[observability.logs]
+enabled = true
+invocation_logs = true
+
 # Secrets Store binding for OPAQUE server setup
 [[secrets_store_secrets]]
 binding = "OPAQUE_SERVER_SETUP"
