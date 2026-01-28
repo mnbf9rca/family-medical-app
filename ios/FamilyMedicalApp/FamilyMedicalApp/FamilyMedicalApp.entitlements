@@ -6,6 +6,8 @@
 	<array>
 		<string>webcredentials:family-medical.cynexia.com</string>
 		<string>applinks:family-medical.cynexia.com</string>
+		<string>applinks:recordwell.app</string>
+		<string>webcredentials:recordwell.app</string>
 	</array>
 </dict>
 </plist>
