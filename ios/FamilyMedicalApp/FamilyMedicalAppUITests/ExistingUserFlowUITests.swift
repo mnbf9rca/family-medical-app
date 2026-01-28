@@ -36,7 +36,7 @@ final class ExistingUserFlowUITests: XCTestCase {
     var app: XCUIApplication { Self.sharedApp }
 
     /// Passphrase used to create the test account
-    static let testPassphrase = "unique-horse-battery-staple-2024"
+    static let testPassphrase = "Unique-Horse-Battery-Staple-2024"
 
     // MARK: - Class Setup / Teardown
 
@@ -191,23 +191,5 @@ final class ExistingUserFlowUITests: XCTestCase {
             passphraseField.waitForExistence(timeout: 2),
             "Passphrase field should appear after tapping 'Use Passphrase'"
         )
-    }
-}
-
-// MARK: - XCUIElement Extension for text clearing
-
-extension XCUIElement {
-    /// Clear text from a text field
-    func clearText() {
-        guard let stringValue = self.value as? String else {
-            return
-        }
-
-        // Tap the field to focus
-        self.tap()
-
-        // Delete each character
-        let deleteString = String(repeating: XCUIKeyboardKey.delete.rawValue, count: stringValue.count)
-        self.typeText(deleteString)
     }
 }

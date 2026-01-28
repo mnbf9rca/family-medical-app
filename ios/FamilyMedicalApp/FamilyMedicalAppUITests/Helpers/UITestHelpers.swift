@@ -102,13 +102,13 @@ extension XCUIApplication {
     /// Create a new user account through the multi-step setup flow
     /// - Parameters:
     ///   - email: Email address for the account (default: "test@example.com")
-    ///   - passphrase: Passphrase to use (default: "unique-horse-battery-staple-2024")
+    ///   - passphrase: Passphrase to use (default: "Unique-Horse-Battery-Staple-2024")
     ///   - enableBiometric: Whether to enable biometric auth (default: false for testing)
     ///   - timeout: Max wait time for UI elements and account creation (default: 15s for encryption operations)
     /// - Note: Uses test@example.com which bypasses email verification in DEBUG builds
     func createAccount(
         email: String = "test@example.com",
-        password passphrase: String = "unique-horse-battery-staple-2024",
+        password passphrase: String = "Unique-Horse-Battery-Staple-2024",
         enableBiometric: Bool = false,
         timeout: TimeInterval = 15
     ) {
@@ -126,25 +126,33 @@ extension XCUIApplication {
         emailContinueButton.tap()
 
         // Step 2: Code Verification (auto-bypassed for test@example.com in DEBUG)
-        let codeHeader = staticTexts["Enter verification code"]
+        let codeHeader = staticTexts["Check your email"]
         if codeHeader.waitForExistence(timeout: 3) {
             // If code entry appears, enter test code (bypassed in DEBUG)
             let codeField = textFields["codeField"]
-            if codeField.exists {
-                codeField.tap()
-                codeField.typeText("123456")
-            }
-            let verifyButton = buttons["Verify"]
-            if verifyButton.exists && verifyButton.isEnabled {
-                verifyButton.tap()
-            }
+            XCTAssertTrue(codeField.waitForExistence(timeout: 2), "Code field should exist")
+            codeField.tap()
+            codeField.typeText("123456")
+
+            let verifyButton = buttons["verifyButton"]
+            XCTAssertTrue(verifyButton.waitForExistence(timeout: 2), "Verify button should exist")
+            // Wait for button to become enabled (code has 6 digits)
+            let enabledPredicate = NSPredicate(format: "isEnabled == true")
+            let expectation = XCTNSPredicateExpectation(predicate: enabledPredicate, object: verifyButton)
+            let result = XCTWaiter.wait(for: [expectation], timeout: 2)
+            XCTAssertEqual(result, .completed, "Verify button should be enabled after entering 6-digit code")
+            verifyButton.tap()
+
+            // Wait for the code verification screen to disappear (async task completion)
+            let codeFieldGone = codeField.waitForNonExistence(timeout: 5)
+            XCTAssertTrue(codeFieldGone, "Code verification should complete and navigate away")
         }
 
         // Step 3: Passphrase Creation
-        let passphraseHeader = staticTexts["Create your passphrase"]
+        let passphraseHeader = staticTexts["Create a Passphrase"]
         XCTAssertTrue(passphraseHeader.waitForExistence(timeout: timeout), "Passphrase creation should appear")
 
-        let passphraseField = passwordField("Enter passphrase")
+        let passphraseField = passwordField("Passphrase")
         XCTAssertTrue(passphraseField.waitForExistence(timeout: timeout))
         passphraseField.tap()
         passphraseField.typeText(passphrase)
@@ -154,7 +162,7 @@ extension XCUIApplication {
         passphraseContinueButton.tap()
 
         // Step 4: Passphrase Confirmation
-        let confirmHeader = staticTexts["Confirm your passphrase"]
+        let confirmHeader = staticTexts["Confirm Passphrase"]
         XCTAssertTrue(confirmHeader.waitForExistence(timeout: timeout), "Passphrase confirmation should appear")
 
         let confirmField = passwordField("Confirm passphrase")
@@ -188,9 +196,9 @@ extension XCUIApplication {
 
     /// Unlock app with passphrase (for returning user)
     /// - Parameters:
-    ///   - passphrase: Passphrase to use (default: "unique-horse-battery-staple-2024")
+    ///   - passphrase: Passphrase to use (default: "Unique-Horse-Battery-Staple-2024")
     ///   - timeout: Max wait time for UI elements
-    func unlockApp(passphrase: String = "unique-horse-battery-staple-2024", timeout: TimeInterval = 5) {
+    func unlockApp(passphrase: String = "Unique-Horse-Battery-Staple-2024", timeout: TimeInterval = 5) {
         // Wait for UnlockView to appear
         let appTitle = staticTexts["Family Medical App"]
         XCTAssertTrue(appTitle.waitForExistence(timeout: timeout), "Unlock view should appear")
@@ -323,5 +331,23 @@ extension XCUIApplication {
 
         // Strategy 5: Tap outside (for popovers/menus)
         coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.1)).tap()
+    }
+}
+
+// MARK: - XCUIElement Extension for text clearing
+
+extension XCUIElement {
+    /// Clear text from a text field
+    func clearText() {
+        guard let stringValue = self.value as? String, !stringValue.isEmpty else {
+            return
+        }
+
+        // Tap the field to focus
+        self.tap()
+
+        // Delete each character
+        let deleteString = String(repeating: XCUIKeyboardKey.delete.rawValue, count: stringValue.count)
+        self.typeText(deleteString)
     }
 }
