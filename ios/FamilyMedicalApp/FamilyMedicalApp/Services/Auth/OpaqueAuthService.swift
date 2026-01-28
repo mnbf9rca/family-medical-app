@@ -16,7 +16,7 @@ final class OpaqueAuthService: OpaqueAuthServiceProtocol, @unchecked Sendable {
 
     /// Default API base URL
     private static let defaultBaseURL =
-        URL(string: "https://family-medical.cynexia.com/api/auth/opaque")! // swiftlint:disable:this force_unwrapping
+        URL(string: "https://api.recordwell.app/auth/opaque")! // swiftlint:disable:this force_unwrapping
 
     init(
         baseURL: URL = OpaqueAuthService.defaultBaseURL,
