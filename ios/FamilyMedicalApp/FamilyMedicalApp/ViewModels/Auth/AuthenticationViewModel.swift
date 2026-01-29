@@ -331,6 +331,18 @@ final class AuthenticationViewModel {
         try await authService.loginAndSetup(password: password, username: username, enableBiometric: enableBiometric)
     }
 
+    func performCompleteLoginFromExistingAccount(
+        loginResult: OpaqueLoginResult,
+        username: String,
+        enableBiometric: Bool
+    ) async throws {
+        try await authService.completeLoginFromExistingAccount(
+            loginResult: loginResult,
+            username: username,
+            enableBiometric: enableBiometric
+        )
+    }
+
     func clearSensitiveFields() {
         username = ""
         passphrase = ""

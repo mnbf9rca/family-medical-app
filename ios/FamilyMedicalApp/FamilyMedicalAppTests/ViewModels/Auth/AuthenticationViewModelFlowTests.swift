@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import FamilyMedicalApp
 
@@ -392,4 +393,6 @@ struct AuthenticationViewModelFlowTests {
 
         #expect(viewModel.flowState == .passphraseEntry(username: "existinguser", isReturningUser: true))
     }
+
+    // Account Exists Confirmation Tests moved to AuthenticationViewModelAccountExistsTests.swift
 }

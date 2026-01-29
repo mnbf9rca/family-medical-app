@@ -38,6 +38,18 @@ protocol AuthenticationServiceProtocol {
     /// - Throws: AuthenticationError if login or setup fails
     func loginAndSetup(password: String, username: String, enableBiometric: Bool) async throws
 
+    /// Complete setup using a pre-authenticated login result (from duplicate registration recovery)
+    /// - Parameters:
+    ///   - loginResult: The OPAQUE login result from successful login probe
+    ///   - username: User's username
+    ///   - enableBiometric: Whether to enable biometric authentication
+    /// - Throws: AuthenticationError if setup fails
+    func completeLoginFromExistingAccount(
+        loginResult: OpaqueLoginResult,
+        username: String,
+        enableBiometric: Bool
+    ) async throws
+
     /// Unlock with password
     /// - Parameter password: User's password
     /// - Throws: AuthenticationError if authentication fails
@@ -160,59 +172,22 @@ final class AuthenticationService: AuthenticationServiceProtocol {
         logger.logOperation("setUp", state: "started")
 
         // Register with OPAQUE server
-        let registrationResult = try await opaqueAuthService.register(username: username, password: password)
+        let registrationResult: OpaqueRegistrationResult
+        do {
+            registrationResult = try await opaqueAuthService.register(username: username, password: password)
+        } catch let OpaqueAuthError.accountExistsConfirmed(loginResult) {
+            // Account exists and user proved ownership (correct password)
+            // Convert to AuthenticationError so UI can handle it
+            logger.info("Account exists (confirmed via login probe) - prompting user")
+            throw AuthenticationError.accountExistsConfirmed(loginResult: loginResult)
+        }
 
-        // Derive primary key from OPAQUE export key (replaces password+salt derivation)
-        let primaryKey = try keyDerivationService.derivePrimaryKey(fromExportKey: registrationResult.exportKey)
-
-        // Generate Curve25519 keypair (per ADR-0002)
-        let privateKey = Curve25519.KeyAgreement.PrivateKey()
-        let publicKey = privateKey.publicKey
-
-        // Encrypt private key with primary key
-        let privateKeyData = privateKey.rawRepresentation
-        let encryptedPrivateKey = try encryptionService.encrypt(privateKeyData, using: primaryKey)
-
-        // Create verification token
-        let verificationData = Data(Self.verificationPlaintext.utf8)
-        let encryptedVerificationToken = try encryptionService.encrypt(verificationData, using: primaryKey)
-
-        // Store in Keychain
-        try keychainService.storeKey(
-            primaryKey,
-            identifier: Self.primaryKeyIdentifier,
-            accessControl: .whenUnlockedThisDeviceOnly
+        // Complete local setup with export key
+        try await completeLocalSetup(
+            exportKey: registrationResult.exportKey,
+            username: username,
+            enableBiometric: enableBiometric
         )
-
-        // Store encrypted private key as Data in Keychain
-        try keychainService.storeData(
-            encryptedPrivateKey.combined,
-            identifier: Self.identityPrivateKeyIdentifier,
-            accessControl: .whenUnlockedThisDeviceOnly
-        )
-
-        // Store verification token
-        try keychainService.storeData(
-            encryptedVerificationToken.combined,
-            identifier: Self.verificationTokenIdentifier,
-            accessControl: .whenUnlockedThisDeviceOnly
-        )
-
-        // Store public key in UserDefaults (not sensitive)
-        userDefaults.set(publicKey.rawRepresentation, forKey: Self.identityPublicKeyIdentifier)
-
-        // Mark as using OPAQUE authentication
-        userDefaults.set(true, forKey: Self.useOpaqueKey)
-
-        // Store username in UserDefaults (for display on unlock screen)
-        userDefaults.set(username, forKey: Self.usernameKey)
-
-        // Set biometric preference and prompt for Face ID permission if enabled
-        try await configureBiometric(enabled: enableBiometric)
-
-        // Clear any previous failed attempts
-        userDefaults.removeObject(forKey: Self.failedAttemptsKey)
-        userDefaults.removeObject(forKey: Self.lockoutEndTimeKey)
 
         // Best-effort: zero out this local copy of the password bytes
         var passwordBytes = Array(password.utf8)
@@ -243,55 +218,12 @@ final class AuthenticationService: AuthenticationServiceProtocol {
 
         logger.debug("OPAQUE login successful, setting up local account")
 
-        // Derive primary key from OPAQUE export key
-        let primaryKey = try keyDerivationService.derivePrimaryKey(fromExportKey: loginResult.exportKey)
-
-        // Generate Curve25519 keypair (per ADR-0002)
-        let privateKey = Curve25519.KeyAgreement.PrivateKey()
-        let publicKey = privateKey.publicKey
-
-        // Encrypt private key with primary key
-        let privateKeyData = privateKey.rawRepresentation
-        let encryptedPrivateKey = try encryptionService.encrypt(privateKeyData, using: primaryKey)
-
-        // Create verification token
-        let verificationData = Data(Self.verificationPlaintext.utf8)
-        let encryptedVerificationToken = try encryptionService.encrypt(verificationData, using: primaryKey)
-
-        // Store in Keychain
-        try keychainService.storeKey(
-            primaryKey,
-            identifier: Self.primaryKeyIdentifier,
-            accessControl: .whenUnlockedThisDeviceOnly
+        // Complete local setup with export key
+        try await completeLocalSetup(
+            exportKey: loginResult.exportKey,
+            username: username,
+            enableBiometric: enableBiometric
         )
-
-        try keychainService.storeData(
-            encryptedPrivateKey.combined,
-            identifier: Self.identityPrivateKeyIdentifier,
-            accessControl: .whenUnlockedThisDeviceOnly
-        )
-
-        try keychainService.storeData(
-            encryptedVerificationToken.combined,
-            identifier: Self.verificationTokenIdentifier,
-            accessControl: .whenUnlockedThisDeviceOnly
-        )
-
-        // Store public key in UserDefaults
-        userDefaults.set(publicKey.rawRepresentation, forKey: Self.identityPublicKeyIdentifier)
-
-        // Mark as using OPAQUE authentication
-        userDefaults.set(true, forKey: Self.useOpaqueKey)
-
-        // Store username
-        userDefaults.set(username, forKey: Self.usernameKey)
-
-        // Set biometric preference and prompt for Face ID permission if enabled
-        try await configureBiometric(enabled: enableBiometric)
-
-        // Clear any previous failed attempts
-        userDefaults.removeObject(forKey: Self.failedAttemptsKey)
-        userDefaults.removeObject(forKey: Self.lockoutEndTimeKey)
 
         // Secure zero password bytes
         var passwordBytes = Array(password.utf8)
@@ -299,6 +231,23 @@ final class AuthenticationService: AuthenticationServiceProtocol {
 
         logger.logOperation("loginAndSetup", state: "completed")
         logger.info("Returning user setup completed with OPAQUE, biometric enabled: \(enableBiometric)")
+    }
+
+    func completeLoginFromExistingAccount(
+        loginResult: OpaqueLoginResult,
+        username: String,
+        enableBiometric: Bool
+    ) async throws {
+        logger.logOperation("completeLoginFromExistingAccount", state: "started")
+
+        try await completeLocalSetup(
+            exportKey: loginResult.exportKey,
+            username: username,
+            enableBiometric: enableBiometric
+        )
+
+        logger.logOperation("completeLoginFromExistingAccount", state: "completed")
+        logger.info("Existing account setup completed, biometric enabled: \(enableBiometric)")
     }
 
     func unlockWithPassword(_ password: String) async throws {
@@ -441,6 +390,64 @@ final class AuthenticationService: AuthenticationServiceProtocol {
     }
 
     // MARK: - Private Methods
+
+    /// Complete local account setup with OPAQUE export key
+    /// Shared by setUp, loginAndSetup, and completeLoginFromExistingAccount
+    private func completeLocalSetup(
+        exportKey: Data,
+        username: String,
+        enableBiometric: Bool
+    ) async throws {
+        // Derive primary key from OPAQUE export key
+        let primaryKey = try keyDerivationService.derivePrimaryKey(fromExportKey: exportKey)
+
+        // Generate Curve25519 keypair (per ADR-0002)
+        let privateKey = Curve25519.KeyAgreement.PrivateKey()
+        let publicKey = privateKey.publicKey
+
+        // Encrypt private key with primary key
+        let privateKeyData = privateKey.rawRepresentation
+        let encryptedPrivateKey = try encryptionService.encrypt(privateKeyData, using: primaryKey)
+
+        // Create verification token
+        let verificationData = Data(Self.verificationPlaintext.utf8)
+        let encryptedVerificationToken = try encryptionService.encrypt(verificationData, using: primaryKey)
+
+        // Store in Keychain
+        try keychainService.storeKey(
+            primaryKey,
+            identifier: Self.primaryKeyIdentifier,
+            accessControl: .whenUnlockedThisDeviceOnly
+        )
+
+        try keychainService.storeData(
+            encryptedPrivateKey.combined,
+            identifier: Self.identityPrivateKeyIdentifier,
+            accessControl: .whenUnlockedThisDeviceOnly
+        )
+
+        try keychainService.storeData(
+            encryptedVerificationToken.combined,
+            identifier: Self.verificationTokenIdentifier,
+            accessControl: .whenUnlockedThisDeviceOnly
+        )
+
+        // Store public key in UserDefaults (not sensitive)
+        userDefaults.set(publicKey.rawRepresentation, forKey: Self.identityPublicKeyIdentifier)
+
+        // Mark as using OPAQUE authentication
+        userDefaults.set(true, forKey: Self.useOpaqueKey)
+
+        // Store username in UserDefaults
+        userDefaults.set(username, forKey: Self.usernameKey)
+
+        // Set biometric preference and prompt for Face ID permission if enabled
+        try await configureBiometric(enabled: enableBiometric)
+
+        // Clear any previous failed attempts
+        userDefaults.removeObject(forKey: Self.failedAttemptsKey)
+        userDefaults.removeObject(forKey: Self.lockoutEndTimeKey)
+    }
 
     private func configureBiometric(enabled: Bool) async throws {
         if enabled, biometricService.isBiometricAvailable {

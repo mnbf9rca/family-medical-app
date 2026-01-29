@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import FamilyMedicalApp
 
@@ -72,6 +73,11 @@ struct AuthenticationFlowStateTests {
     @Test
     func allExpectedStatesExist() {
         // Verify all states can be instantiated (compile-time check via usage)
+        let loginResult = OpaqueLoginResult(
+            exportKey: Data(repeating: 0x42, count: 32),
+            sessionKey: Data(repeating: 0x43, count: 32),
+            encryptedBundle: nil
+        )
         let _: [AuthenticationFlowState] = [
             .welcome,
             .usernameEntry(isNewUser: true),
@@ -80,11 +86,74 @@ struct AuthenticationFlowStateTests {
             .passphraseConfirmation(username: "testuser", passphrase: "pass"),
             .passphraseEntry(username: "testuser", isReturningUser: true),
             .biometricSetup(username: "testuser", passphrase: "pass", isReturningUser: false),
+            .accountExistsConfirmation(username: "testuser", loginResult: loginResult, enableBiometric: false),
             .unlock,
             .authenticated
         ]
 
         // If this compiles, all states exist
         #expect(true)
+    }
+
+    // MARK: - Account Exists Confirmation Tests
+
+    @Test
+    func accountExistsConfirmationStatesWithSameValuesAreEqual() {
+        let loginResult = OpaqueLoginResult(
+            exportKey: Data(repeating: 0x42, count: 32),
+            sessionKey: Data(repeating: 0x43, count: 32),
+            encryptedBundle: nil
+        )
+        let state1 = AuthenticationFlowState.accountExistsConfirmation(
+            username: "testuser",
+            loginResult: loginResult,
+            enableBiometric: false
+        )
+        let state2 = AuthenticationFlowState.accountExistsConfirmation(
+            username: "testuser",
+            loginResult: loginResult,
+            enableBiometric: false
+        )
+        #expect(state1 == state2)
+    }
+
+    @Test
+    func accountExistsConfirmationStatesWithDifferentUsernamesAreNotEqual() {
+        let loginResult = OpaqueLoginResult(
+            exportKey: Data(repeating: 0x42, count: 32),
+            sessionKey: Data(repeating: 0x43, count: 32),
+            encryptedBundle: nil
+        )
+        let state1 = AuthenticationFlowState.accountExistsConfirmation(
+            username: "user1",
+            loginResult: loginResult,
+            enableBiometric: false
+        )
+        let state2 = AuthenticationFlowState.accountExistsConfirmation(
+            username: "user2",
+            loginResult: loginResult,
+            enableBiometric: false
+        )
+        #expect(state1 != state2)
+    }
+
+    @Test
+    func accountExistsConfirmationStatesWithDifferentBiometricAreNotEqual() {
+        let loginResult = OpaqueLoginResult(
+            exportKey: Data(repeating: 0x42, count: 32),
+            sessionKey: Data(repeating: 0x43, count: 32),
+            encryptedBundle: nil
+        )
+        let state1 = AuthenticationFlowState.accountExistsConfirmation(
+            username: "testuser",
+            loginResult: loginResult,
+            enableBiometric: true
+        )
+        let state2 = AuthenticationFlowState.accountExistsConfirmation(
+            username: "testuser",
+            loginResult: loginResult,
+            enableBiometric: false
+        )
+        #expect(state1 != state2)
     }
 }

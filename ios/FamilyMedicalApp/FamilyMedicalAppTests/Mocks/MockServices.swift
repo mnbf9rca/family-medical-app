@@ -67,6 +67,22 @@ final class MockAuthenticationService: AuthenticationServiceProtocol {
         }
     }
 
+    func completeLoginFromExistingAccount(
+        loginResult: OpaqueLoginResult,
+        username: String,
+        enableBiometric: Bool
+    ) async throws {
+        // Complete login using pre-authenticated result
+        isSetUp = true
+        storedUsername = username
+        if enableBiometric {
+            if let biometricService {
+                try await biometricService.authenticate(reason: "Enable biometric")
+            }
+            isBiometricEnabled = true
+        }
+    }
+
     func unlockWithPassword(_ password: String) async throws {
         if shouldFailUnlock {
             if isLockedOut {
@@ -183,6 +199,8 @@ final class MockOpaqueAuthService: OpaqueAuthServiceProtocol, @unchecked Sendabl
     var shouldFailRegistration = false
     var shouldFailLogin = false
     var shouldFailUpload = false
+    /// When true, registration fails but login succeeds (simulates existing account with correct password)
+    var shouldThrowAccountExistsConfirmed = false
 
     // Call tracking
     var registerCallCount = 0
@@ -199,6 +217,16 @@ final class MockOpaqueAuthService: OpaqueAuthServiceProtocol, @unchecked Sendabl
     func register(username: String, password: String) async throws -> OpaqueRegistrationResult {
         registerCallCount += 1
         lastRegisteredUsername = username
+
+        if shouldThrowAccountExistsConfirmed {
+            // Simulate: registration failed but login succeeded (account exists, correct password)
+            let loginResult = OpaqueLoginResult(
+                exportKey: testExportKey,
+                sessionKey: testSessionKey,
+                encryptedBundle: nil
+            )
+            throw OpaqueAuthError.accountExistsConfirmed(loginResult: loginResult)
+        }
 
         if shouldFailRegistration {
             throw OpaqueAuthError.registrationFailed

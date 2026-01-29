@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import FamilyMedicalApp
 
@@ -75,6 +76,18 @@ struct OpaqueAuthErrorTests {
         #expect(error.errorDescription?.contains("Failed to upload") == true)
     }
 
+    @Test
+    func accountExistsConfirmedHasDescription() {
+        let loginResult = OpaqueLoginResult(
+            exportKey: Data(repeating: 0x42, count: 32),
+            sessionKey: Data(repeating: 0x43, count: 32),
+            encryptedBundle: nil
+        )
+        let error = OpaqueAuthError.accountExistsConfirmed(loginResult: loginResult)
+        #expect(error.errorDescription?.isEmpty == false)
+        #expect(error.errorDescription?.contains("already have an account") == true)
+    }
+
     // MARK: - Equatable Conformance
 
     @Test
@@ -116,6 +129,35 @@ struct OpaqueAuthErrorTests {
     func rateLimitedErrorsWithDifferentRetryAreNotEqual() {
         let error1 = OpaqueAuthError.rateLimited(retryAfter: 30)
         let error2 = OpaqueAuthError.rateLimited(retryAfter: 60)
+        #expect(error1 != error2)
+    }
+
+    @Test
+    func accountExistsConfirmedWithSameResultAreEqual() {
+        let loginResult = OpaqueLoginResult(
+            exportKey: Data(repeating: 0x42, count: 32),
+            sessionKey: Data(repeating: 0x43, count: 32),
+            encryptedBundle: nil
+        )
+        let error1 = OpaqueAuthError.accountExistsConfirmed(loginResult: loginResult)
+        let error2 = OpaqueAuthError.accountExistsConfirmed(loginResult: loginResult)
+        #expect(error1 == error2)
+    }
+
+    @Test
+    func accountExistsConfirmedWithDifferentResultsAreNotEqual() {
+        let loginResult1 = OpaqueLoginResult(
+            exportKey: Data(repeating: 0x42, count: 32),
+            sessionKey: Data(repeating: 0x43, count: 32),
+            encryptedBundle: nil
+        )
+        let loginResult2 = OpaqueLoginResult(
+            exportKey: Data(repeating: 0x99, count: 32),
+            sessionKey: Data(repeating: 0x43, count: 32),
+            encryptedBundle: nil
+        )
+        let error1 = OpaqueAuthError.accountExistsConfirmed(loginResult: loginResult1)
+        let error2 = OpaqueAuthError.accountExistsConfirmed(loginResult: loginResult2)
         #expect(error1 != error2)
     }
 }

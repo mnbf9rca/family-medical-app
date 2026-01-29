@@ -49,5 +49,43 @@ else
   exit 1
 fi
 
+# Test expired/invalid login state (stateKey doesn't exist)
+echo -n "POST /auth/opaque/login/finish (expired session)... "
+STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE_URL/auth/opaque/login/finish" \
+  -H "Content-Type: application/json" \
+  -d '{"clientIdentifier":"0000000000000000000000000000000000000000000000000000000000000000","stateKey":"nonexistent:state:key","finishLoginRequest":"dGVzdA=="}')
+if [ "$STATUS" = "401" ]; then
+  echo "OK (401 - session expired/invalid)"
+else
+  echo "FAIL ($STATUS)"
+  exit 1
+fi
+
+# Test malformed JSON (parse error)
+# Note: Currently returns 500 (server error) for parse failures - acceptable but not ideal
+echo -n "POST /auth/opaque/register/start (malformed JSON)... "
+STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE_URL/auth/opaque/register/start" \
+  -H "Content-Type: application/json" \
+  -d '{invalid json}')
+if [ "$STATUS" = "400" ] || [ "$STATUS" = "500" ]; then
+  echo "OK ($STATUS - rejected)"
+else
+  echo "FAIL ($STATUS)"
+  exit 1
+fi
+
+# Test missing required fields
+# Note: Currently returns 500 for missing fields - acceptable but not ideal
+echo -n "POST /auth/opaque/register/start (missing fields)... "
+STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE_URL/auth/opaque/register/start" \
+  -H "Content-Type: application/json" \
+  -d '{}')
+if [ "$STATUS" = "400" ] || [ "$STATUS" = "500" ]; then
+  echo "OK ($STATUS - rejected)"
+else
+  echo "FAIL ($STATUS)"
+  exit 1
+fi
+
 echo ""
 echo "All smoke tests passed!"

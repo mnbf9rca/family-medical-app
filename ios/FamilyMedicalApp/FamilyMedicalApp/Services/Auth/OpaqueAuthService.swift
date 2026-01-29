@@ -71,21 +71,28 @@ final class OpaqueAuthService: OpaqueAuthServiceProtocol, @unchecked Sendable {
         logger.debug("Finishing OPAQUE registration (step 2)")
         let result = try registration.finish(serverResponse: responseData, password: password)
 
-        let finishResponse = try await post(
-            path: "register/finish",
-            body: [
-                "clientIdentifier": clientIdentifier,
-                "registrationRecord": result.registrationUpload.base64EncodedString()
-            ]
-        )
+        do {
+            let finishResponse = try await post(
+                path: "register/finish",
+                body: [
+                    "clientIdentifier": clientIdentifier,
+                    "registrationRecord": result.registrationUpload.base64EncodedString()
+                ]
+            )
 
-        guard finishResponse["success"] as? Bool == true else {
-            logger.error("Registration finish failed - success != true")
-            throw OpaqueAuthError.registrationFailed
+            guard finishResponse["success"] as? Bool == true else {
+                logger.error("Registration finish failed - success != true")
+                throw OpaqueAuthError.registrationFailed
+            }
+
+            logger.logOperation("register", state: "completed")
+            return OpaqueRegistrationResult(exportKey: result.exportKey)
+        } catch OpaqueAuthError.registrationFailed {
+            // Registration failed - silently probe login to check if account exists with correct password
+            // This reveals "account exists" ONLY if the user proves ownership (correct password)
+            logger.info("Registration failed, probing login to check for existing account...")
+            return try await probeLoginForExistingAccount(username: username, password: password)
         }
-
-        logger.logOperation("register", state: "completed")
-        return OpaqueRegistrationResult(exportKey: result.exportKey)
     }
 
     func login(username: String, password: String) async throws -> OpaqueLoginResult {
@@ -312,5 +319,37 @@ final class OpaqueAuthService: OpaqueAuthServiceProtocol, @unchecked Sendable {
         hasher.update(data: Data("test-opaque-salt".utf8))
         hasher.update(data: Data(password.utf8))
         return Data(hasher.finalize())
+    }
+
+    /// Probe login after registration failure to detect existing accounts
+    ///
+    /// This implements secure duplicate registration handling:
+    /// - If login succeeds: account exists AND user proved ownership (correct password)
+    ///   → throw `.accountExistsConfirmed` with login result
+    /// - If login fails: don't reveal whether account exists (could be wrong password OR no account)
+    ///   → throw generic `.registrationFailed`
+    ///
+    /// Security: Only reveals "account exists" when user proves they own it (correct password)
+    private func probeLoginForExistingAccount(
+        username: String,
+        password: String
+    ) async throws -> OpaqueRegistrationResult {
+        do {
+            // Try login with same credentials
+            let loginResult = try await login(username: username, password: password)
+            logger.info("Login probe succeeded - account exists and password is correct")
+            // Login succeeded - account exists and password is correct
+            // Throw special error so UI can offer to complete login
+            throw OpaqueAuthError.accountExistsConfirmed(loginResult: loginResult)
+        } catch let error as OpaqueAuthError {
+            if case .accountExistsConfirmed = error {
+                // Re-throw this specific error (don't catch it as a generic failure)
+                throw error
+            }
+            // Login failed (wrong password OR no account) - return generic error
+            // This is security-critical: don't reveal account existence to attackers
+            logger.info("Login probe failed - returning generic registration failure")
+            throw OpaqueAuthError.registrationFailed
+        }
     }
 }

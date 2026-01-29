@@ -7,7 +7,7 @@ struct OpaqueRegistrationResult: Equatable, Sendable {
 }
 
 /// Result of OPAQUE login
-struct OpaqueLoginResult: Equatable, Sendable {
+struct OpaqueLoginResult: Equatable, Hashable, Sendable {
     /// Export key derived from OPAQUE protocol (used as basis for Primary Key)
     let exportKey: Data
 
@@ -74,6 +74,10 @@ enum OpaqueAuthError: Error, Equatable {
     /// Registration failed (username may already exist)
     case registrationFailed
 
+    /// Registration failed, but login succeeded - user confirmed they own this account via correct password
+    /// Contains the login result so we can complete authentication without re-authenticating
+    case accountExistsConfirmed(loginResult: OpaqueLoginResult)
+
     /// Authentication failed (wrong username OR wrong password - intentionally ambiguous)
     case authenticationFailed
 
@@ -104,6 +108,8 @@ extension OpaqueAuthError: LocalizedError {
         switch self {
         case .registrationFailed:
             "Registration failed. Please try a different username."
+        case .accountExistsConfirmed:
+            "Looks like you already have an account!"
         case .authenticationFailed:
             "Authentication failed. Please check your username and password."
         case .networkError:

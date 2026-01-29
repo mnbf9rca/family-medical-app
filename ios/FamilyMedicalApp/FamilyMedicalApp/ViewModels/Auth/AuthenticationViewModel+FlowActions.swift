@@ -110,12 +110,58 @@ extension AuthenticationViewModel {
             isAuthenticated = true
             flowState = .authenticated
             clearSensitiveFields()
+        } catch let error as AuthenticationError {
+            if case let .accountExistsConfirmed(loginResult) = error {
+                // Account exists and user proved ownership - show confirmation dialog
+                logger.info("[auth] Account exists (confirmed) - showing confirmation dialog")
+                flowState = .accountExistsConfirmation(
+                    username: username,
+                    loginResult: loginResult,
+                    enableBiometric: enableBiometric
+                )
+            } else {
+                logger.error("[auth] Setup failed: \(error.localizedDescription, privacy: .public)")
+                errorMessage = error.localizedDescription
+            }
         } catch {
             logger.error("[auth] Setup failed: \(error.localizedDescription, privacy: .public)")
             errorMessage = error.localizedDescription
         }
 
         isLoading = false
+    }
+
+    /// User confirmed they want to use their existing account
+    @MainActor
+    func confirmExistingAccount() async {
+        guard case let .accountExistsConfirmation(username, loginResult, enableBiometric) = flowState else { return }
+
+        isLoading = true
+        errorMessage = nil
+
+        do {
+            try await performCompleteLoginFromExistingAccount(
+                loginResult: loginResult,
+                username: username,
+                enableBiometric: enableBiometric
+            )
+            isSetUp = true
+            isAuthenticated = true
+            flowState = .authenticated
+            clearSensitiveFields()
+        } catch {
+            logger.error("[auth] Complete login failed: \(error.localizedDescription, privacy: .public)")
+            errorMessage = error.localizedDescription
+        }
+
+        isLoading = false
+    }
+
+    /// User cancelled using their existing account - return to username entry
+    func cancelExistingAccountConfirmation() {
+        flowState = .usernameEntry(isNewUser: true)
+        clearSensitiveFields()
+        errorMessage = nil
     }
 
     // MARK: - Flow Navigation

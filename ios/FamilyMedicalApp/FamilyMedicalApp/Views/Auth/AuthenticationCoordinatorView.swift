@@ -30,6 +30,9 @@ struct AuthenticationCoordinatorView: View {
             case let .biometricSetup(username, passphrase, _):
                 BiometricSetupView(viewModel: viewModel, username: username, passphrase: passphrase)
 
+            case let .accountExistsConfirmation(username, _, _):
+                AccountExistsConfirmationView(viewModel: viewModel, username: username)
+
             case .unlock:
                 UnlockView(viewModel: viewModel)
 

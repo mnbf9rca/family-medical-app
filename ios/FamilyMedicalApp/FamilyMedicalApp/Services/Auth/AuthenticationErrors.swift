@@ -22,6 +22,10 @@ enum AuthenticationError: LocalizedError, Equatable, Hashable {
     case networkError(String)
     case opaqueError(String)
 
+    /// Registration failed, but login probe succeeded - account exists (user proved ownership)
+    /// The associated value contains the OPAQUE login result to complete authentication
+    case accountExistsConfirmed(loginResult: OpaqueLoginResult)
+
     // Email verification errors
     case emailVerificationFailed
     case invalidVerificationCode
@@ -67,6 +71,8 @@ enum AuthenticationError: LocalizedError, Equatable, Hashable {
             return "Network error: \(message)"
         case let .opaqueError(message):
             return "Authentication error: \(message)"
+        case .accountExistsConfirmed:
+            return "Looks like you already have an account!"
         // Email verification errors
         case .emailVerificationFailed:
             return "Unable to send verification code. Please try again."

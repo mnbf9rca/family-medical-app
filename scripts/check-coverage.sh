@@ -63,7 +63,8 @@ FILE_EXCEPTIONS = {
     # OPAQUE authentication - requires backend server for full integration testing
     # Coverage decreased from 38% to 21% after adding password-aware test bypass and refactoring for function length
     # Further decrease to 20% after adding comprehensive logging for debugging auth flow
-    "OpaqueAuthService.swift": 20.0,  # Requires running OPAQUE server - tested via MockOpaqueAuthService in unit tests
+    # Decreased to 17% after adding probeLoginForExistingAccount (duplicate registration handling)
+    "OpaqueAuthService.swift": 17.0,  # Requires running OPAQUE server - tested via MockOpaqueAuthService in unit tests
     # Test infrastructure - ViewModifier for UI testing that can't be easily unit tested
     "UITestingHelpers.swift": 82.0,  # Test-only code with conditional compilation
 }

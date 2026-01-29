@@ -45,6 +45,13 @@ enum AuthenticationFlowState: Equatable {
     ///   - isReturningUser: true if returning user on new device (needs loginAndSetup), false for new registration
     case biometricSetup(username: String, passphrase: String, isReturningUser: Bool = false)
 
+    /// Account exists confirmation (user tried to register with existing username + correct password)
+    /// - Parameters:
+    ///   - username: The username
+    ///   - loginResult: The pre-authenticated login result from the silent probe
+    ///   - enableBiometric: Whether user wants biometric enabled
+    case accountExistsConfirmation(username: String, loginResult: OpaqueLoginResult, enableBiometric: Bool)
+
     /// Daily unlock (existing device with setup complete)
     case unlock
 

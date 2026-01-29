@@ -311,6 +311,7 @@ struct AuthenticationServiceTests {
     }
 
     // Note: loginAndSetup tests moved to AuthenticationServiceLoginAndSetupTests.swift
+    // Note: Duplicate registration tests moved to AuthenticationServiceDuplicateRegistrationTests.swift
 
     // MARK: - Logout Tests
 
