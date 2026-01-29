@@ -1,0 +1,207 @@
+name: Backend Rust CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend-rust/**'
+      - '.github/workflows/backend-rust-ci.yml'
+  pull_request:
+    paths:
+      - 'backend-rust/**'
+      - '.github/workflows/backend-rust-ci.yml'
+
+env:
+  CARGO_TERM_COLOR: always
+  WORKERS_SUBDOMAIN: cynexia
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: backend-rust
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: backend-rust
+
+      - name: Check formatting
+        run: cargo fmt --check
+
+      - name: Clippy
+        run: cargo clippy --all-targets -- -D warnings
+
+  build:
+    name: Build WASM
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend-rust
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install wasm32 target
+        run: rustup target add wasm32-unknown-unknown
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: backend-rust
+
+      - name: Build WASM
+        run: |
+          cargo install -q worker-build
+          worker-build --release
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wasm-build
+          path: backend-rust/build/
+          retention-days: 1
+
+  deploy-preview:
+    name: Deploy Preview
+    needs: [lint, build]
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      preview-url: ${{ steps.deploy.outputs.url }}
+    defaults:
+      run:
+        working-directory: backend-rust
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: wasm-build
+          path: backend-rust/build/
+
+      - name: Deploy PR preview
+        id: deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: backend-rust
+          command: deploy --env preview --name recordwell-opaque-pr-${{ github.event.pull_request.number }}
+          secrets: |
+            OPAQUE_SERVER_SETUP
+        env:
+          OPAQUE_SERVER_SETUP: ${{ secrets.TEST_OPAQUE_SERVER_SETUP }}
+
+      - name: Set preview URL
+        run: |
+          echo "url=https://recordwell-opaque-pr-${{ github.event.pull_request.number }}.${{ env.WORKERS_SUBDOMAIN }}.workers.dev" >> "$GITHUB_OUTPUT"
+
+  smoke-test:
+    name: Smoke Test
+    needs: [deploy-preview]
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: backend-rust
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run smoke tests
+        run: |
+          sleep 3  # Brief wait for deployment propagation
+          chmod +x tests/smoke_test.sh
+          ./tests/smoke_test.sh "https://recordwell-opaque-pr-${{ github.event.pull_request.number }}.${{ env.WORKERS_SUBDOMAIN }}.workers.dev"
+
+      - name: Comment preview URL
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = context.payload.pull_request.number;
+            const url = `https://recordwell-opaque-pr-${prNumber}.${{ env.WORKERS_SUBDOMAIN }}.workers.dev`;
+
+            // Check for existing comment to avoid duplicates
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+            });
+
+            const marker = '<!-- backend-preview-url -->';
+            const existing = comments.find(c => c.body.includes(marker));
+
+            const body = `${marker}\n🚀 **Backend Preview**\n\nAPI: \`${url}\`\n\nSmoke tests: ✅ Passed`;
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body,
+              });
+            }
+
+  deploy-production:
+    name: Deploy Production
+    needs: [lint, build]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: backend-rust
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: wasm-build
+          path: backend-rust/build/
+
+      - name: Deploy to production
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: backend-rust
+          command: deploy
+
+  summary:
+    name: CI Summary
+    needs: [lint, build]
+    if: always() && github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check required jobs
+        run: |
+          if [[ "${{ needs.lint.result }}" != "success" || \
+                "${{ needs.build.result }}" != "success" ]]; then
+            echo "Required jobs failed"
+            exit 1
+          fi
+          echo "CI passed"

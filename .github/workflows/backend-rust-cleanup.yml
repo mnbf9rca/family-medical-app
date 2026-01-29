@@ -1,0 +1,26 @@
+name: Backend Rust Cleanup
+
+on:
+  pull_request:
+    types: [closed]
+    paths:
+      - 'backend-rust/**'
+      - '.github/workflows/backend-rust-ci.yml'
+
+jobs:
+  cleanup:
+    name: Delete Preview Worker
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Delete PR worker
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          command: delete --name recordwell-opaque-pr-${{ github.event.pull_request.number }} --force
+        continue-on-error: true  # Don't fail if worker doesn't exist
+
+      - name: Log cleanup
+        run: |
+          echo "Cleaned up recordwell-opaque-pr-${{ github.event.pull_request.number }}"
