@@ -6,7 +6,7 @@
 
 ## Context
 
-The Family Medical App requires user authentication for cloud sync and data sharing. The previous approach (ADR-0011) used email verification with hashed emails stored on the server. While privacy-preserving compared to plaintext email storage, this approach has limitations:
+The Family Medical App requires user authentication for cloud sync and data sharing. An earlier approach considered email verification with hashed emails stored on the server. While privacy-preserving compared to plaintext email storage, this approach has limitations:
 
 1. **Email hashes are reversible**: Common emails can be rainbow-tabled
 2. **Server knows when users authenticate**: Timing metadata leakage
@@ -192,7 +192,7 @@ OPAQUE intentionally provides no indication of whether username or password is w
 
 ### Neutral
 
-1. **Supersedes ADR-0011**: Email verification no longer needed
+1. **No email infrastructure**: Email verification approach was considered but rejected
 2. **Username instead of email**: Users choose a username (can still be email-formatted if desired)
 3. **Two round-trips**: OPAQUE requires request→response→finalization (vs single password check)
 
@@ -200,7 +200,6 @@ OPAQUE intentionally provides no indication of whether username or password is w
 
 - **ADR-0002**: Key Hierarchy - Updated to use OPAQUE export_key
 - **ADR-0004**: Sync Encryption - Recovery codes remain for account recovery
-- **ADR-0011**: Email Verification Backend - **Superseded** by this ADR
 
 ## References
 
