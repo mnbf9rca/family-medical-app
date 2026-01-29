@@ -137,6 +137,16 @@ pub async fn handle_register_finish(mut req: Request, env: &Env) -> Result<Respo
         );
     }
 
+    // Validate registration record is valid base64 before storing
+    if BASE64.decode(&body.registration_record).is_err() {
+        return json_response(
+            &ErrorResponse {
+                error: "Invalid registration record format".into(),
+            },
+            400,
+        );
+    }
+
     // Store the registration record as the password file
     credentials.put(&key, &body.registration_record)?.execute().await?;
 

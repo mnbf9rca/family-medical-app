@@ -119,6 +119,7 @@ extension AuthenticationViewModel {
                     loginResult: loginResult,
                     enableBiometric: enableBiometric
                 )
+                clearSensitiveFields()
             } else {
                 logger.error("[auth] Setup failed: \(error.localizedDescription, privacy: .public)")
                 errorMessage = error.localizedDescription
