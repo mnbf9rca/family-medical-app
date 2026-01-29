@@ -90,7 +90,7 @@ final class AuthenticationService: AuthenticationServiceProtocol {
     private static let verificationPlaintext = "family-medical-app-verification"
     private static let useOpaqueKey = "com.family-medical-app.use-opaque"
 
-    // Rate limiting thresholds
+    /// Rate limiting thresholds
     private static let rateLimitThresholds: [(attempts: Int, lockoutSeconds: Int)] = [
         (3, 30), // 3 fails = 30 seconds
         (4, 60), // 4 fails = 1 minute

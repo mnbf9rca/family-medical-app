@@ -187,14 +187,13 @@ struct DynamicFieldView: View {
             return existing
         }
 
-        let viewModel = AttachmentPickerViewModel(
+        return AttachmentPickerViewModel(
             personId: personId,
             recordId: recordId,
             existingAttachments: existingAttachments
         )
         // Can't set @State in computed property, so we return new each time
         // The view should manage this at a higher level for persistence
-        return viewModel
     }
 
     private var stringArrayInputView: some View {

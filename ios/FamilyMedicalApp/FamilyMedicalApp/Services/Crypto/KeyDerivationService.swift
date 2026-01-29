@@ -95,13 +95,11 @@ final class KeyDerivationService: KeyDerivationServiceProtocol, @unchecked Senda
         let inputKey = SymmetricKey(data: exportKey)
         let info = Data("family-medical-app-primary-key-v1".utf8)
 
-        let derivedKey = HKDF<SHA256>.deriveKey(
+        return HKDF<SHA256>.deriveKey(
             inputKeyMaterial: inputKey,
             info: info,
             outputByteCount: outputLength
         )
-
-        return derivedKey
     }
 
     func generateSalt() throws -> Data {

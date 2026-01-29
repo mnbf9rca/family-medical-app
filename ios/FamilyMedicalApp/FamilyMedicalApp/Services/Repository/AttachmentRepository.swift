@@ -369,8 +369,7 @@ final class AttachmentRepository: AttachmentRepositoryProtocol, @unchecked Senda
         do {
             let payload = try EncryptedPayload(combined: encryptedData)
             let jsonData = try encryptionService.decrypt(payload, using: key)
-            let metadata = try JSONDecoder().decode(AttachmentMetadata.self, from: jsonData)
-            return metadata
+            return try JSONDecoder().decode(AttachmentMetadata.self, from: jsonData)
         } catch let error as CryptoError {
             throw RepositoryError.decryptionFailed(error.localizedDescription)
         } catch {

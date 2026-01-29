@@ -45,19 +45,19 @@ final class AuthenticationViewModel {
         passwordValidator.validate(passphrase)
     }
 
-    // Only show validation errors after user attempts setup
+    /// Only show validation errors after user attempts setup
     var displayedValidationErrors: [AuthenticationError] {
         hasAttemptedSetup ? passwordValidationErrors : []
     }
 
-    // Show password mismatch only after confirm field loses focus or has content
+    /// Show password mismatch only after confirm field loses focus or has content
     var shouldShowPasswordMismatch: Bool {
         (hasConfirmFieldLostFocus || !confirmPassword.isEmpty) &&
             !password.isEmpty &&
             password != confirmPassword
     }
 
-    // Username validation (basic check for non-empty)
+    /// Username validation (basic check for non-empty)
     var isUsernameValid: Bool {
         let trimmed = username.trimmingCharacters(in: .whitespaces)
         return trimmed.count >= 3

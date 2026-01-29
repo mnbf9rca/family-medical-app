@@ -69,9 +69,7 @@ final class RecordContentService: RecordContentServiceProtocol, @unchecked Senda
             let jsonData = try encryptionService.decrypt(payload, using: fmk)
 
             // 3. Decode JSON to RecordContent
-            let content = try JSONDecoder().decode(RecordContent.self, from: jsonData)
-
-            return content
+            return try JSONDecoder().decode(RecordContent.self, from: jsonData)
         } catch let error as CryptoError {
             throw RepositoryError.decryptionFailed(error.localizedDescription)
         } catch {
