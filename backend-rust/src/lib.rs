@@ -18,25 +18,16 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
     // https://github.com/cloudflare/workers-rs/issues/XXX
     let setup_secret = env.secret("OPAQUE_SERVER_SETUP")?.to_string();
 
-    let server_setup = opaque::init_server_setup(Some(&setup_secret))
-        .map_err(|e| Error::from(e))?;
+    let server_setup = opaque::init_server_setup(Some(&setup_secret)).map_err(Error::from)?;
 
     let path = req.path();
 
     match (req.method(), path.as_str()) {
-        (Method::Post, "/auth/opaque/register/start") => {
-            routes::handle_register_start(req, &env, &server_setup).await
-        }
-        (Method::Post, "/auth/opaque/register/finish") => {
-            routes::handle_register_finish(req, &env).await
-        }
-        (Method::Post, "/auth/opaque/login/start") => {
-            routes::handle_login_start(req, &env, &server_setup).await
-        }
-        (Method::Post, "/auth/opaque/login/finish") => {
-            routes::handle_login_finish(req, &env).await
-        }
-        _ => Response::error("Not found", 404)
+        (Method::Post, "/auth/opaque/register/start") => routes::handle_register_start(req, &env, &server_setup).await,
+        (Method::Post, "/auth/opaque/register/finish") => routes::handle_register_finish(req, &env).await,
+        (Method::Post, "/auth/opaque/login/start") => routes::handle_login_start(req, &env, &server_setup).await,
+        (Method::Post, "/auth/opaque/login/finish") => routes::handle_login_finish(req, &env).await,
+        _ => Response::error("Not found", 404),
     }
 }
 

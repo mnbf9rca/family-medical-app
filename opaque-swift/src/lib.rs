@@ -1,15 +1,9 @@
 use opaque_ke::{
-    ClientRegistration as OpaqueClientRegistration,
-    ClientLogin as OpaqueClientLogin,
-    ClientRegistrationFinishParameters,
-    ClientLoginFinishParameters,
-    RegistrationResponse,
-    CredentialResponse,
-    CipherSuite,
-    Ristretto255,
-    rand::rngs::OsRng,
+    rand::rngs::OsRng, CipherSuite, ClientLogin as OpaqueClientLogin, ClientLoginFinishParameters,
+    ClientRegistration as OpaqueClientRegistration, ClientRegistrationFinishParameters, CredentialResponse,
+    RegistrationResponse, Ristretto255,
 };
-use sha2::{Sha256, Sha512, Digest};
+use sha2::{Digest, Sha256, Sha512};
 use std::sync::Mutex;
 
 uniffi::setup_scaffolding!();
@@ -73,10 +67,8 @@ impl ClientRegistration {
     pub fn start(password: String) -> Result<Self, OpaqueError> {
         let mut rng = OsRng;
 
-        let result = OpaqueClientRegistration::<DefaultCipherSuite>::start(
-            &mut rng,
-            password.as_bytes(),
-        ).map_err(|_| OpaqueError::ProtocolError)?;
+        let result = OpaqueClientRegistration::<DefaultCipherSuite>::start(&mut rng, password.as_bytes())
+            .map_err(|_| OpaqueError::ProtocolError)?;
 
         let request = result.message.serialize().to_vec();
 
@@ -94,16 +86,18 @@ impl ClientRegistration {
         let mut state_guard = self.state.lock().map_err(|_| OpaqueError::ProtocolError)?;
         let state = state_guard.take().ok_or(OpaqueError::ProtocolError)?;
 
-        let response = RegistrationResponse::deserialize(&server_response)
-            .map_err(|_| OpaqueError::SerializationError)?;
+        let response =
+            RegistrationResponse::deserialize(&server_response).map_err(|_| OpaqueError::SerializationError)?;
 
         let mut rng = OsRng;
-        let result = state.finish(
-            &mut rng,
-            password.as_bytes(),
-            response,
-            ClientRegistrationFinishParameters::default(),
-        ).map_err(|_| OpaqueError::ProtocolError)?;
+        let result = state
+            .finish(
+                &mut rng,
+                password.as_bytes(),
+                response,
+                ClientRegistrationFinishParameters::default(),
+            )
+            .map_err(|_| OpaqueError::ProtocolError)?;
 
         Ok(RegistrationResult {
             registration_upload: result.message.serialize().to_vec(),
@@ -125,10 +119,8 @@ impl ClientLogin {
     pub fn start(password: String) -> Result<Self, OpaqueError> {
         let mut rng = OsRng;
 
-        let result = OpaqueClientLogin::<DefaultCipherSuite>::start(
-            &mut rng,
-            password.as_bytes(),
-        ).map_err(|_| OpaqueError::ProtocolError)?;
+        let result = OpaqueClientLogin::<DefaultCipherSuite>::start(&mut rng, password.as_bytes())
+            .map_err(|_| OpaqueError::ProtocolError)?;
 
         let request = result.message.serialize().to_vec();
 
@@ -146,16 +138,18 @@ impl ClientLogin {
         let mut state_guard = self.state.lock().map_err(|_| OpaqueError::ProtocolError)?;
         let state = state_guard.take().ok_or(OpaqueError::ProtocolError)?;
 
-        let response = CredentialResponse::deserialize(&server_response)
-            .map_err(|_| OpaqueError::SerializationError)?;
+        let response =
+            CredentialResponse::deserialize(&server_response).map_err(|_| OpaqueError::SerializationError)?;
 
         let mut rng = OsRng;
-        let result = state.finish(
-            &mut rng,
-            password.as_bytes(),
-            response,
-            ClientLoginFinishParameters::default(),
-        ).map_err(|_| OpaqueError::ProtocolError)?;
+        let result = state
+            .finish(
+                &mut rng,
+                password.as_bytes(),
+                response,
+                ClientLoginFinishParameters::default(),
+            )
+            .map_err(|_| OpaqueError::ProtocolError)?;
 
         Ok(LoginResult {
             credential_finalization: result.message.serialize().to_vec(),

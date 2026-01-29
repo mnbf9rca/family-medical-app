@@ -1,14 +1,11 @@
-use opaque_ke::{
-    CipherSuite, Ristretto255,
-    ServerSetup, ServerRegistration, ServerLogin,
-    RegistrationRequest, RegistrationUpload,
-    CredentialRequest, CredentialFinalization,
-    ServerLoginParameters,
-};
 use argon2::Argon2;
-use sha2::Sha512;
+use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
+use opaque_ke::{
+    CipherSuite, CredentialFinalization, CredentialRequest, RegistrationRequest, RegistrationUpload, Ristretto255,
+    ServerLogin, ServerLoginParameters, ServerRegistration, ServerSetup,
+};
 use rand::rngs::OsRng;
-use base64::{Engine, engine::general_purpose::STANDARD as BASE64};
+use sha2::Sha512;
 
 /// Cipher suite matching iOS OpaqueSwift configuration
 /// MUST be identical to client for protocol compatibility
@@ -26,11 +23,11 @@ pub type OpaqueServerSetup = ServerSetup<DefaultCipherSuite>;
 pub fn init_server_setup(stored: Option<&str>) -> Result<OpaqueServerSetup, String> {
     match stored {
         Some(b64) => {
-            let bytes = BASE64.decode(b64)
+            let bytes = BASE64
+                .decode(b64)
                 .map_err(|e| format!("Failed to decode server setup: {}", e))?;
 
-            OpaqueServerSetup::deserialize(&bytes)
-                .map_err(|_| "Failed to deserialize server setup".to_string())
+            OpaqueServerSetup::deserialize(&bytes).map_err(|_| "Failed to deserialize server setup".to_string())
         }
         None => {
             let mut rng = OsRng;
@@ -59,11 +56,8 @@ pub fn start_registration(
     let request = RegistrationRequest::<DefaultCipherSuite>::deserialize(registration_request)
         .map_err(|_| "Failed to deserialize registration request")?;
 
-    let result = ServerRegistration::start(
-        server_setup,
-        request,
-        client_identifier,
-    ).map_err(|_| "Failed to start registration")?;
+    let result = ServerRegistration::start(server_setup, request, client_identifier)
+        .map_err(|_| "Failed to start registration")?;
 
     Ok(RegistrationStartResult {
         response: result.message.serialize().to_vec(),
@@ -101,7 +95,8 @@ pub fn start_login(
         request,
         client_identifier,
         ServerLoginParameters::default(),
-    ).map_err(|_| "Failed to start login")?;
+    )
+    .map_err(|_| "Failed to start login")?;
 
     Ok(LoginStartResult {
         response: result.message.serialize().to_vec(),
@@ -115,17 +110,15 @@ pub struct LoginFinishResult {
 }
 
 /// Finish login - verify client's credential finalization
-pub fn finish_login(
-    server_state: &[u8],
-    credential_finalization: &[u8],
-) -> Result<LoginFinishResult, String> {
+pub fn finish_login(server_state: &[u8], credential_finalization: &[u8]) -> Result<LoginFinishResult, String> {
     let state = ServerLogin::<DefaultCipherSuite>::deserialize(server_state)
         .map_err(|_| "Failed to deserialize server state")?;
 
     let finalization = CredentialFinalization::<DefaultCipherSuite>::deserialize(credential_finalization)
         .map_err(|_| "Failed to deserialize credential finalization")?;
 
-    let result = state.finish(finalization, ServerLoginParameters::default())
+    let result = state
+        .finish(finalization, ServerLoginParameters::default())
         .map_err(|_| "Login verification failed")?;
 
     Ok(LoginFinishResult {

@@ -1,0 +1,15 @@
+# Rust formatting configuration (mirrors SwiftFormat settings)
+edition = "2021"
+max_width = 120
+tab_spaces = 4
+newline_style = "Unix"
+use_small_heuristics = "Default"
+
+# Import organization (stable option)
+reorder_imports = true
+
+# Note: The following options require nightly Rust and are commented out:
+# imports_granularity = "Module"
+# group_imports = "StdExternalCrate"
+# format_code_in_doc_comments = true
+# format_macro_matchers = true

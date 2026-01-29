@@ -22,6 +22,25 @@ repos:
           - --config
           - .swiftlint.yml
 
+  # Rust formatting
+  - repo: https://github.com/doublify/pre-commit-rust
+    rev: v1.0
+    hooks:
+      - id: fmt
+        name: rustfmt (opaque-swift)
+        args: ["--manifest-path", "opaque-swift/Cargo.toml", "--"]
+      - id: fmt
+        name: rustfmt (backend-rust)
+        args: ["--manifest-path", "backend-rust/Cargo.toml", "--"]
+      - id: cargo-check
+        name: clippy (opaque-swift)
+        entry: cargo clippy
+        args: ["--manifest-path", "opaque-swift/Cargo.toml", "--", "-D", "warnings", "-D", "clippy::unwrap_used", "-D", "clippy::expect_used"]
+      - id: cargo-check
+        name: clippy (backend-rust)
+        entry: cargo clippy
+        args: ["--manifest-path", "backend-rust/Cargo.toml", "--target", "wasm32-unknown-unknown", "--", "-D", "warnings", "-D", "clippy::unwrap_used", "-D", "clippy::expect_used"]
+
   # GitHub Actions workflow linting
   - repo: https://github.com/rhysd/actionlint
     rev: v1.7.9  # Latest as of Dec 2025

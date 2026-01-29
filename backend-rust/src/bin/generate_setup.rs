@@ -1,8 +1,8 @@
-use opaque_ke::{CipherSuite, Ristretto255, ServerSetup};
 use argon2::Argon2;
-use sha2::Sha512;
+use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
+use opaque_ke::{CipherSuite, Ristretto255, ServerSetup};
 use rand::rngs::OsRng;
-use base64::{Engine, engine::general_purpose::STANDARD as BASE64};
+use sha2::Sha512;
 
 struct DefaultCipherSuite;
 
@@ -16,7 +16,7 @@ fn main() {
     let mut rng = OsRng;
     let setup = ServerSetup::<DefaultCipherSuite>::new(&mut rng);
     let serialized = setup.serialize();
-    let b64 = BASE64.encode(&serialized);
+    let b64 = BASE64.encode(serialized);
 
     println!("New OPAQUE Server Setup (base64):");
     println!("{}", b64);
