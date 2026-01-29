@@ -82,7 +82,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           OPAQUE_SECRET: ${{ secrets.TEST_OPAQUE_SERVER_SETUP }}
-        run: echo "$OPAQUE_SECRET" | wrangler secret put OPAQUE_SERVER_SETUP --name "recordwell-opaque-pr-${PR_NUMBER}" --env preview
+        run: echo "$OPAQUE_SECRET" | wrangler secret put OPAQUE_SERVER_SETUP --name "recordwell-opaque-pr-${PR_NUMBER}-preview"
 
   smoke-test:
     name: Smoke Test
@@ -90,6 +90,8 @@ jobs:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      pull-requests: write
     defaults:
       run:
         working-directory: backend-rust
@@ -102,14 +104,14 @@ jobs:
         run: |
           sleep 3  # Brief wait for deployment propagation
           chmod +x tests/smoke_test.sh
-          ./tests/smoke_test.sh "https://recordwell-opaque-pr-${PR_NUMBER}.${{ env.WORKERS_SUBDOMAIN }}.workers.dev"
+          ./tests/smoke_test.sh "https://recordwell-opaque-pr-${PR_NUMBER}-preview.${{ env.WORKERS_SUBDOMAIN }}.workers.dev"
 
       - name: Comment preview URL
         uses: actions/github-script@v7
         with:
           script: |
             const prNumber = context.payload.pull_request.number;
-            const url = `https://recordwell-opaque-pr-${prNumber}.${{ env.WORKERS_SUBDOMAIN }}.workers.dev`;
+            const url = `https://recordwell-opaque-pr-${prNumber}-preview.${{ env.WORKERS_SUBDOMAIN }}.workers.dev`;
 
             // Check for existing comment to avoid duplicates
             const { data: comments } = await github.rest.issues.listComments({

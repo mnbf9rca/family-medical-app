@@ -18,8 +18,9 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: wrangler delete --name "recordwell-opaque-pr-${PR_NUMBER}" --force || true
+        run: wrangler delete --name "recordwell-opaque-pr-${PR_NUMBER}-preview" --force || true
 
       - name: Log cleanup
-        run: |
-          echo "Cleaned up recordwell-opaque-pr-${{ github.event.pull_request.number }}"
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: echo "Cleaned up recordwell-opaque-pr-${PR_NUMBER}-preview"
