@@ -8,7 +8,7 @@ iOS Password AutoFill allows the system to automatically save and fill passwords
 
 ### 1. Associated Domains
 
-- **Domain**: `family-medical.cynexia.com`
+- **Domain**: `recordwell.app`
 - **Entitlements**: `FamilyMedicalApp/FamilyMedicalApp.entitlements`
 - **Team ID**: `BU7526J4QY`
 - **Bundle ID**: `com.cynexia.FamilyMedicalApp`
@@ -18,7 +18,7 @@ iOS Password AutoFill allows the system to automatically save and fill passwords
 The `apple-app-site-association` file is hosted at:
 
 ```
-https://family-medical.cynexia.com/.well-known/apple-app-site-association
+https://recordwell.app/.well-known/apple-app-site-association
 ```
 
 Requirements:
@@ -42,7 +42,7 @@ Requirements:
 
 ## Troubleshooting
 
-- Verify the association file is accessible: `curl https://family-medical.cynexia.com/.well-known/apple-app-site-association`
+- Verify the association file is accessible: `curl https://recordwell.app/.well-known/apple-app-site-association`
 - Wait 10-15 minutes after hosting for Apple's CDN to cache the file
 - Delete and reinstall the app if needed
 

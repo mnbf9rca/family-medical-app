@@ -26,12 +26,6 @@ enum AuthenticationError: LocalizedError, Equatable, Hashable {
     /// The associated value contains the OPAQUE login result to complete authentication
     case accountExistsConfirmed(loginResult: OpaqueLoginResult)
 
-    // Email verification errors
-    case emailVerificationFailed
-    case invalidVerificationCode
-    case verificationCodeExpired
-    case tooManyVerificationAttempts
-
     var errorDescription: String? {
         switch self {
         // Biometric errors
@@ -73,15 +67,6 @@ enum AuthenticationError: LocalizedError, Equatable, Hashable {
             return "Authentication error: \(message)"
         case .accountExistsConfirmed:
             return "Looks like you already have an account!"
-        // Email verification errors
-        case .emailVerificationFailed:
-            return "Unable to send verification code. Please try again."
-        case .invalidVerificationCode:
-            return "Invalid code. Please check and try again."
-        case .verificationCodeExpired:
-            return "Code expired. Please request a new one."
-        case .tooManyVerificationAttempts:
-            return "Too many attempts. Please wait before trying again."
         }
     }
 }
