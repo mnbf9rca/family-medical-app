@@ -91,7 +91,10 @@ final class OpaqueAuthService: OpaqueAuthServiceProtocol, @unchecked Sendable {
             // Registration failed - silently probe login to check if account exists with correct password
             // This reveals "account exists" ONLY if the user proves ownership (correct password)
             logger.info("Registration failed, probing login to check for existing account...")
-            return try await probeLoginForExistingAccount(username: username, password: password)
+            // probeLoginForExistingAccount always throws - either .accountExistsConfirmed or .registrationFailed
+            try await probeLoginForExistingAccount(username: username, password: password)
+            // This line is unreachable but satisfies the compiler
+            throw OpaqueAuthError.registrationFailed
         }
     }
 
