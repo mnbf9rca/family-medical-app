@@ -11,6 +11,8 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
         return cors_preflight();
     }
 
+    console_log!("[opaque] {} {}", req.method(), req.path());
+
     // Load OPAQUE server setup from worker secret
     // Note: Using traditional secret due to workers-rs SecretStore bug
     // https://github.com/cloudflare/workers-rs/issues/XXX

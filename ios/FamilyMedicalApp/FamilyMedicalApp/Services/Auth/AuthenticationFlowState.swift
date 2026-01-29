@@ -35,7 +35,11 @@ enum AuthenticationFlowState: Equatable {
     // MARK: - Common States
 
     /// Optional biometric setup (Face ID / Touch ID)
-    case biometricSetup(username: String, passphrase: String)
+    /// - Parameters:
+    ///   - username: The username
+    ///   - passphrase: The passphrase
+    ///   - isReturningUser: true if returning user on new device (needs loginAndSetup), false for new registration
+    case biometricSetup(username: String, passphrase: String, isReturningUser: Bool = false)
 
     /// Daily unlock (existing device with setup complete)
     case unlock

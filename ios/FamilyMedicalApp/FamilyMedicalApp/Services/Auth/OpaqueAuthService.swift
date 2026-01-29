@@ -89,28 +89,60 @@ final class OpaqueAuthService: OpaqueAuthServiceProtocol, @unchecked Sendable {
     }
 
     func login(username: String, password: String) async throws -> OpaqueLoginResult {
+        logger.logOperation("login", state: "started")
+        logger.debug("Attempting OPAQUE login for user")
+
         // Bypass for test usernames in DEBUG builds
         if Self.shouldBypassForTestUsername(username) {
+            logger.debug("Using test username bypass for login")
             return makeTestLoginResult(password: password)
         }
 
         let clientIdentifier = try generateClientIdentifier(username: username)
+        logger.debug("Generated client identifier: \(clientIdentifier.prefix(8))...")
 
         // Step 1: Start login
+        logger.debug("Starting OPAQUE login (step 1)")
         let login = try ClientLogin.start(password: password)
-        let (responseData, stateKey) = try await startLoginRequest(
-            clientIdentifier: clientIdentifier,
-            credentialRequest: login.getRequest()
-        )
+        let credentialRequest = login.getRequest()
+        logger.debug("Credential request size: \(credentialRequest.count) bytes")
+
+        let (responseData, stateKey): (Data, String)
+        do {
+            (responseData, stateKey) = try await startLoginRequest(
+                clientIdentifier: clientIdentifier,
+                credentialRequest: credentialRequest
+            )
+            logger.debug("Received login/start response, state key length: \(stateKey.count)")
+        } catch {
+            logger.error("Login start failed: \(error.localizedDescription)")
+            throw error
+        }
 
         // Step 2: Finish login
-        let result = try finishLogin(login: login, responseData: responseData, password: password)
-        try await finishLoginRequest(
-            clientIdentifier: clientIdentifier,
-            stateKey: stateKey,
-            credentialFinalization: result.credentialFinalization
-        )
+        logger.debug("Finishing OPAQUE login (step 2)")
+        let result: LoginResult
+        do {
+            result = try finishLogin(login: login, responseData: responseData, password: password)
+            logger.debug("Login finish crypto completed")
+        } catch {
+            logger.error("Login finish crypto failed: \(error.localizedDescription)")
+            throw error
+        }
 
+        do {
+            try await finishLoginRequest(
+                clientIdentifier: clientIdentifier,
+                stateKey: stateKey,
+                credentialFinalization: result.credentialFinalization
+            )
+            logger.debug("Login finish request completed")
+        } catch {
+            logger.error("Login finish request failed: \(error.localizedDescription)")
+            throw error
+        }
+
+        logger.logOperation("login", state: "completed")
         return OpaqueLoginResult(
             exportKey: result.exportKey,
             sessionKey: result.sessionKey,

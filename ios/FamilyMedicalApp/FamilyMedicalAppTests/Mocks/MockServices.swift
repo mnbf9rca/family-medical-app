@@ -14,6 +14,7 @@ final class MockAuthenticationService: AuthenticationServiceProtocol {
 
     var shouldFailUnlock: Bool
     var shouldFailLogout: Bool
+    var shouldFailLoginAndSetup: Bool
 
     private let biometricService: BiometricServiceProtocol?
 
@@ -26,6 +27,7 @@ final class MockAuthenticationService: AuthenticationServiceProtocol {
         storedUsername: String? = nil,
         shouldFailUnlock: Bool = false,
         shouldFailLogout: Bool = false,
+        shouldFailLoginAndSetup: Bool = false,
         biometricService: BiometricServiceProtocol? = nil
     ) {
         self.isSetUp = isSetUp
@@ -36,10 +38,25 @@ final class MockAuthenticationService: AuthenticationServiceProtocol {
         self.storedUsername = storedUsername
         self.shouldFailUnlock = shouldFailUnlock
         self.shouldFailLogout = shouldFailLogout
+        self.shouldFailLoginAndSetup = shouldFailLoginAndSetup
         self.biometricService = biometricService
     }
 
     func setUp(password: String, username: String, enableBiometric: Bool) async throws {
+        isSetUp = true
+        storedUsername = username
+        if enableBiometric {
+            if let biometricService {
+                try await biometricService.authenticate(reason: "Enable biometric")
+            }
+            isBiometricEnabled = true
+        }
+    }
+
+    func loginAndSetup(password: String, username: String, enableBiometric: Bool) async throws {
+        if shouldFailLoginAndSetup {
+            throw AuthenticationError.wrongPassword
+        }
         isSetUp = true
         storedUsername = username
         if enableBiometric {

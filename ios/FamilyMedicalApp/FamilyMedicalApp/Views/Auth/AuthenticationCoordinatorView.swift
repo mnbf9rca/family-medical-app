@@ -24,7 +24,7 @@ struct AuthenticationCoordinatorView: View {
             case let .passphraseEntry(username, _):
                 PassphraseEntryView(viewModel: viewModel, username: username)
 
-            case let .biometricSetup(username, passphrase):
+            case let .biometricSetup(username, passphrase, _):
                 BiometricSetupView(viewModel: viewModel, username: username, passphrase: passphrase)
 
             case .unlock:

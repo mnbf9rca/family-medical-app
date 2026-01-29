@@ -10,7 +10,7 @@ struct AuthenticationFlowStateTests {
             .usernameEntry,
             .passphraseCreation(username: "testuser"),
             .passphraseConfirmation(username: "testuser", passphrase: "test"),
-            .biometricSetup(username: "testuser", passphrase: "test")
+            .biometricSetup(username: "testuser", passphrase: "test", isReturningUser: false)
         ]
 
         // Each state should be unique
@@ -62,7 +62,7 @@ struct AuthenticationFlowStateTests {
             .passphraseCreation(username: "testuser"),
             .passphraseConfirmation(username: "testuser", passphrase: "pass"),
             .passphraseEntry(username: "testuser", isReturningUser: true),
-            .biometricSetup(username: "testuser", passphrase: "pass"),
+            .biometricSetup(username: "testuser", passphrase: "pass", isReturningUser: false),
             .unlock,
             .authenticated
         ]

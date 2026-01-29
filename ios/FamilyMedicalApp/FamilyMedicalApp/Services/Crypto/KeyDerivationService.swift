@@ -83,8 +83,10 @@ final class KeyDerivationService: KeyDerivationServiceProtocol, @unchecked Senda
     }
 
     func derivePrimaryKey(fromExportKey exportKey: Data) throws -> SymmetricKey {
-        guard exportKey.count == outputLength else {
-            throw CryptoError.keyDerivationFailed("Export key must be \(outputLength) bytes, got \(exportKey.count)")
+        // opaque-ke with Sha512 produces 64-byte export keys
+        // Accept both 32-byte (legacy) and 64-byte (current) keys
+        guard exportKey.count == 32 || exportKey.count == 64 else {
+            throw CryptoError.keyDerivationFailed("Export key must be 32 or 64 bytes, got \(exportKey.count)")
         }
 
         // Use HKDF to derive primary key from OPAQUE export key

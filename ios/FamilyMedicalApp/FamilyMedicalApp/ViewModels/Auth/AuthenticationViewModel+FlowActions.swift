@@ -1,4 +1,7 @@
 import Foundation
+import OSLog
+
+private let logger = Logger(subsystem: "com.cynexia.FamilyMedicalApp", category: "AuthFlow")
 
 /// OPAQUE authentication flow actions for AuthenticationViewModel
 extension AuthenticationViewModel {
@@ -56,7 +59,7 @@ extension AuthenticationViewModel {
             return
         }
 
-        flowState = .biometricSetup(username: username, passphrase: passphrase)
+        flowState = .biometricSetup(username: username, passphrase: passphrase, isReturningUser: false)
     }
 
     @MainActor
@@ -66,32 +69,38 @@ extension AuthenticationViewModel {
         isLoading = true
         errorMessage = nil
 
-        do {
-            try await performUnlockWithPassword(passphrase)
-            flowState = .biometricSetup(username: username, passphrase: passphrase)
-        } catch let error as AuthenticationError {
-            errorMessage = error.errorDescription
-        } catch {
-            errorMessage = "Invalid passphrase"
-        }
+        // Go to biometric setup, marking this as a returning user
+        // The actual OPAQUE login will happen in completeSetup
+        flowState = .biometricSetup(username: username, passphrase: passphrase, isReturningUser: true)
 
         isLoading = false
     }
 
     @MainActor
     func completeSetup(enableBiometric: Bool) async {
-        guard case let .biometricSetup(username, passphrase) = flowState else { return }
+        guard case let .biometricSetup(username, passphrase, isReturningUser) = flowState else { return }
 
         isLoading = true
         errorMessage = nil
 
         do {
-            try await performSetUp(password: passphrase, username: username, enableBiometric: enableBiometric)
+            if isReturningUser {
+                // Returning user on new device: login with OPAQUE, then set up local account
+                try await performLoginAndSetup(
+                    password: passphrase,
+                    username: username,
+                    enableBiometric: enableBiometric
+                )
+            } else {
+                // New user: register with OPAQUE
+                try await performSetUp(password: passphrase, username: username, enableBiometric: enableBiometric)
+            }
             isSetUp = true
             isAuthenticated = true
             flowState = .authenticated
             clearSensitiveFields()
         } catch {
+            logger.error("[auth] Setup failed: \(error.localizedDescription, privacy: .public)")
             errorMessage = error.localizedDescription
         }
 
@@ -111,8 +120,12 @@ extension AuthenticationViewModel {
         case .passphraseEntry:
             flowState = .usernameEntry
             passphrase = ""
-        case let .biometricSetup(username, passphrase):
-            flowState = .passphraseConfirmation(username: username, passphrase: passphrase)
+        case let .biometricSetup(username, passphrase, isReturningUser):
+            if isReturningUser {
+                flowState = .passphraseEntry(username: username, isReturningUser: true)
+            } else {
+                flowState = .passphraseConfirmation(username: username, passphrase: passphrase)
+            }
         default:
             break
         }

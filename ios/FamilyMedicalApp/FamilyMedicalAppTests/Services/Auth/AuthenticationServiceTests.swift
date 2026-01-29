@@ -310,6 +310,8 @@ struct AuthenticationServiceTests {
         #expect(service.isBiometricEnabled == false)
     }
 
+    // Note: loginAndSetup tests moved to AuthenticationServiceLoginAndSetupTests.swift
+
     // MARK: - Logout Tests
 
     @Test

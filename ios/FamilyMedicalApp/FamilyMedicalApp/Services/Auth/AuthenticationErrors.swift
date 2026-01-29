@@ -19,6 +19,8 @@ enum AuthenticationError: LocalizedError, Equatable, Hashable {
     case accountLocked(remainingSeconds: Int)
     case verificationFailed
     case keychainError(String)
+    case networkError(String)
+    case opaqueError(String)
 
     // Email verification errors
     case emailVerificationFailed
@@ -61,6 +63,10 @@ enum AuthenticationError: LocalizedError, Equatable, Hashable {
             return "Authentication verification failed"
         case let .keychainError(message):
             return "Keychain error: \(message)"
+        case let .networkError(message):
+            return "Network error: \(message)"
+        case let .opaqueError(message):
+            return "Authentication error: \(message)"
         // Email verification errors
         case .emailVerificationFailed:
             return "Unable to send verification code. Please try again."

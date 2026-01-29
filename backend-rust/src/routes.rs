@@ -71,6 +71,7 @@ pub async fn handle_register_start(
     server_setup: &opaque::OpaqueServerSetup,
 ) -> Result<Response> {
     let body: RegisterStartRequest = req.json().await?;
+    console_log!("[opaque/register/start] Client ID: {}...", &body.client_identifier[..8.min(body.client_identifier.len())]);
 
     // Validate client identifier (64 hex chars = 32 bytes SHA256)
     if body.client_identifier.len() != 64 {
@@ -85,6 +86,8 @@ pub async fn handle_register_start(
         body.client_identifier.as_bytes(),
         &request_bytes,
     ).map_err(|e| Error::from(e))?;
+
+    console_log!("[opaque/register/start] Success, response: {} bytes", result.response.len());
 
     json_response(&RegisterStartResponse {
         registration_response: BASE64.encode(&result.response),
@@ -130,6 +133,7 @@ pub async fn handle_login_start(
     server_setup: &opaque::OpaqueServerSetup,
 ) -> Result<Response> {
     let body: LoginStartRequest = req.json().await?;
+    console_log!("[opaque/login/start] Client ID: {}...", &body.client_identifier[..8.min(body.client_identifier.len())]);
 
     if body.client_identifier.len() != 64 {
         return json_response(&ErrorResponse { error: "Invalid clientIdentifier".into() }, 400);
@@ -149,6 +153,7 @@ pub async fn handle_login_start(
 
     let password_file = BASE64.decode(&password_file_b64)
         .map_err(|_| Error::from("Corrupted password file"))?;
+    console_log!("[opaque/login/start] Found password file, {} bytes", password_file.len());
 
     let request_bytes = BASE64.decode(&body.start_login_request)
         .map_err(|_| Error::from("Invalid base64 in startLoginRequest"))?;
@@ -167,6 +172,8 @@ pub async fn handle_login_start(
     login_states.put(&state_key, BASE64.encode(&result.state))?
         .expiration_ttl(60)
         .execute().await?;
+
+    console_log!("[opaque/login/start] Stored state, key: {}...", &state_key[..20.min(state_key.len())]);
 
     json_response(&LoginStartResponse {
         login_response: BASE64.encode(&result.response),

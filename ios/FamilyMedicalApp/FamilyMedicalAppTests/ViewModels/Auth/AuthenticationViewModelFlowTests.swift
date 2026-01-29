@@ -101,7 +101,11 @@ struct AuthenticationViewModelFlowTests {
 
         await viewModel.submitPassphraseConfirmation()
 
-        #expect(viewModel.flowState == .biometricSetup(username: validUsername, passphrase: validPassphrase))
+        #expect(viewModel.flowState == .biometricSetup(
+            username: validUsername,
+            passphrase: validPassphrase,
+            isReturningUser: false
+        ))
     }
 
     @Test
@@ -127,7 +131,11 @@ struct AuthenticationViewModelFlowTests {
             authService: authService,
             biometricService: biometricService
         )
-        viewModel.flowState = .biometricSetup(username: validUsername, passphrase: validPassphrase)
+        viewModel.flowState = .biometricSetup(
+            username: validUsername,
+            passphrase: validPassphrase,
+            isReturningUser: false
+        )
 
         await viewModel.completeSetup(enableBiometric: true)
 
@@ -140,7 +148,11 @@ struct AuthenticationViewModelFlowTests {
     func completeSetupWithoutBiometric() async {
         let authService = MockAuthenticationService(isSetUp: false)
         let viewModel = AuthenticationViewModel(authService: authService)
-        viewModel.flowState = .biometricSetup(username: validUsername, passphrase: validPassphrase)
+        viewModel.flowState = .biometricSetup(
+            username: validUsername,
+            passphrase: validPassphrase,
+            isReturningUser: false
+        )
 
         await viewModel.completeSetup(enableBiometric: false)
 
@@ -160,21 +172,31 @@ struct AuthenticationViewModelFlowTests {
 
         await viewModel.submitExistingPassphrase()
 
-        #expect(viewModel.flowState == .biometricSetup(username: "testuser", passphrase: validPassphrase))
+        #expect(viewModel.flowState == .biometricSetup(
+            username: "testuser",
+            passphrase: validPassphrase,
+            isReturningUser: true
+        ))
     }
 
     @Test
-    func submitExistingPassphraseFailureShowsError() async {
-        let authService = MockAuthenticationService(isSetUp: true, storedUsername: "testuser", shouldFailUnlock: true)
+    func submitExistingPassphraseTransitionsToBiometricSetup() async {
+        // Note: Per the new flow, submitExistingPassphrase no longer validates the password
+        // immediately. It transitions to biometricSetup, and completeSetup performs the actual
+        // OPAQUE login. Password validation errors are now handled in completeSetup.
+        let authService = MockAuthenticationService(isSetUp: false)
         let viewModel = AuthenticationViewModel(authService: authService)
         viewModel.flowState = .passphraseEntry(username: "testuser", isReturningUser: true)
-        viewModel.passphrase = "wrongpassphrase"
+        viewModel.passphrase = "anypassphrase"
 
         await viewModel.submitExistingPassphrase()
 
-        // Should stay on same screen with error
-        #expect(viewModel.flowState == .passphraseEntry(username: "testuser", isReturningUser: true))
-        #expect(viewModel.errorMessage != nil)
+        // Should transition to biometricSetup with isReturningUser: true
+        #expect(viewModel.flowState == .biometricSetup(
+            username: "testuser",
+            passphrase: "anypassphrase",
+            isReturningUser: true
+        ))
     }
 
     // MARK: - Back Navigation Tests
@@ -216,7 +238,11 @@ struct AuthenticationViewModelFlowTests {
     func goBackFromBiometricSetupReturnsToConfirmation() {
         let authService = MockAuthenticationService(isSetUp: false)
         let viewModel = AuthenticationViewModel(authService: authService)
-        viewModel.flowState = .biometricSetup(username: validUsername, passphrase: validPassphrase)
+        viewModel.flowState = .biometricSetup(
+            username: validUsername,
+            passphrase: validPassphrase,
+            isReturningUser: false
+        )
 
         viewModel.goBack()
 
@@ -259,5 +285,75 @@ struct AuthenticationViewModelFlowTests {
         viewModel.goBack()
 
         #expect(viewModel.errorMessage == nil)
+    }
+
+    // MARK: - Returning User on New Device Tests
+
+    @Test
+    func submitExistingPassphraseTransitionsToBiometricSetupWithReturningUser() async {
+        let authService = MockAuthenticationService(isSetUp: false)
+        let viewModel = AuthenticationViewModel(authService: authService)
+        viewModel.flowState = .passphraseEntry(username: "existinguser", isReturningUser: true)
+        viewModel.passphrase = "ValidPassphrase123!"
+
+        await viewModel.submitExistingPassphrase()
+
+        #expect(viewModel.flowState == .biometricSetup(
+            username: "existinguser",
+            passphrase: "ValidPassphrase123!",
+            isReturningUser: true
+        ))
+    }
+
+    @Test
+    func completeSetupForReturningUserCallsLoginAndSetup() async {
+        let authService = MockAuthenticationService(isSetUp: false)
+        let viewModel = AuthenticationViewModel(authService: authService)
+        viewModel.flowState = .biometricSetup(
+            username: "existinguser",
+            passphrase: "ValidPassphrase123!",
+            isReturningUser: true
+        )
+
+        await viewModel.completeSetup(enableBiometric: false)
+
+        #expect(viewModel.flowState == .authenticated)
+        #expect(viewModel.isSetUp == true)
+        #expect(viewModel.isAuthenticated == true)
+    }
+
+    @Test
+    func completeSetupForReturningUserFailureShowsError() async {
+        let authService = MockAuthenticationService(isSetUp: false, shouldFailLoginAndSetup: true)
+        let viewModel = AuthenticationViewModel(authService: authService)
+        viewModel.flowState = .biometricSetup(
+            username: "existinguser",
+            passphrase: "ValidPassphrase123!",
+            isReturningUser: true
+        )
+
+        await viewModel.completeSetup(enableBiometric: false)
+
+        #expect(viewModel.flowState == .biometricSetup(
+            username: "existinguser",
+            passphrase: "ValidPassphrase123!",
+            isReturningUser: true
+        ))
+        #expect(viewModel.errorMessage != nil)
+    }
+
+    @Test
+    func goBackFromBiometricSetupReturningUserReturnsToPassphraseEntry() {
+        let authService = MockAuthenticationService(isSetUp: false)
+        let viewModel = AuthenticationViewModel(authService: authService)
+        viewModel.flowState = .biometricSetup(
+            username: "existinguser",
+            passphrase: "ValidPassphrase123!",
+            isReturningUser: true
+        )
+
+        viewModel.goBack()
+
+        #expect(viewModel.flowState == .passphraseEntry(username: "existinguser", isReturningUser: true))
     }
 }
