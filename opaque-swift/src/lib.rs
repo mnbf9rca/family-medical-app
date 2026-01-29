@@ -9,19 +9,18 @@ use opaque_ke::{
     Ristretto255,
     rand::rngs::OsRng,
 };
-use sha2::{Sha256, Digest};
+use sha2::{Sha256, Sha512, Digest};
 use std::sync::Mutex;
 
 uniffi::setup_scaffolding!();
 
-/// Cipher suite matching @serenity-kit/opaque configuration
+/// Cipher suite matching backend Rust worker configuration
 /// Ristretto255 + TripleDH + Argon2
 struct DefaultCipherSuite;
 
 impl CipherSuite for DefaultCipherSuite {
     type OprfCs = Ristretto255;
-    type KeGroup = Ristretto255;
-    type KeyExchange = opaque_ke::key_exchange::tripledh::TripleDh;
+    type KeyExchange = opaque_ke::key_exchange::tripledh::TripleDh<Ristretto255, Sha512>;
     type Ksf = argon2::Argon2<'static>;
 }
 
@@ -150,7 +149,9 @@ impl ClientLogin {
         let response = CredentialResponse::deserialize(&server_response)
             .map_err(|_| OpaqueError::SerializationError)?;
 
+        let mut rng = OsRng;
         let result = state.finish(
+            &mut rng,
             password.as_bytes(),
             response,
             ClientLoginFinishParameters::default(),

@@ -1,23 +1,22 @@
-# RecordWell API
+# RecordWell TypeScript Backend
 
-Cloudflare Workers backend for RecordWell app OPAQUE zero-knowledge authentication.
+> **Note:** OPAQUE authentication has been moved to the Rust backend at `backend-rust/`.
+> This TypeScript worker is a placeholder for future sync functionality.
 
 ## Architecture
 
-- **Cloudflare Workers** - Serverless API endpoints
-- **Cloudflare KV** - OPAQUE password files, encrypted bundles, login state
-- **@serenity-kit/opaque** - OPAQUE protocol (RFC 9807) implementation
+RecordWell uses a split backend architecture:
 
-## API Endpoints
+| Component | Location | Purpose |
+|-----------|----------|---------|
+| **Rust Worker** | `backend-rust/` | OPAQUE authentication (opaque-ke v4) |
+| **TypeScript Worker** | `backend/` | Future sync endpoints |
 
-### OPAQUE Authentication
+## Why Rust for OPAQUE?
 
-| Method | Path | Description |
-|--------|------|-------------|
-| POST | `/auth/opaque/register/start` | Begin registration |
-| POST | `/auth/opaque/register/finish` | Complete registration |
-| POST | `/auth/opaque/login/start` | Begin login |
-| POST | `/auth/opaque/login/finish` | Complete login |
+The original TypeScript implementation using `@serenity-kit/opaque` failed on Cloudflare Workers because the library uses dynamic WASM compilation (`WebAssembly.compile()`), which Workers blocks for security.
+
+The Rust implementation using `opaque-ke` compiles WASM ahead of time, avoiding this issue. It also ensures protocol compatibility with the iOS client (OpaqueSwift), since both use the same `opaque-ke` crate.
 
 ## Development
 
@@ -25,20 +24,8 @@ Cloudflare Workers backend for RecordWell app OPAQUE zero-knowledge authenticati
 npm install
 npm run dev        # Local development
 npm run typecheck  # Type checking
-npm run deploy     # Deploy to production
 ```
 
-## Environment Variables
+## See Also
 
-| Name | Description |
-|------|-------------|
-| `OPAQUE_SERVER_SETUP` | Secret: OPAQUE server setup string |
-
-## KV Namespaces
-
-| Binding | Purpose |
-|---------|---------|
-| `CREDENTIALS` | OPAQUE password files |
-| `BUNDLES` | Encrypted user data bundles |
-| `LOGIN_STATES` | Temporary login state (60s TTL) |
-| `RATE_LIMITS` | Rate limit counters |
+- `backend-rust/README.md` - Rust OPAQUE worker documentation

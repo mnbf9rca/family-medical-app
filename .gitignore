@@ -30,6 +30,7 @@ playground.xcworkspace
 # Secrets
 .env
 .env.local
+.dev.vars
 *.key
 *.pem
 secrets/
@@ -46,6 +47,16 @@ backend/.pytest_cache/
 backend/node_modules/
 backend/dist/
 
+# Rust
+target/
+Cargo.lock
+*.rlib
+*.rmeta
+*.so
+*.dylib
+*.dll
+backend-rust/build/
+
 # Testing
 *.coverage
 .coverage
@@ -56,3 +67,9 @@ htmlcov/
 logs/
 test-results*/
 */test-results*
+
+
+ralph-loop.local.md
+
+# Debug/repro folders
+workers-rs-secret-store-repro/
