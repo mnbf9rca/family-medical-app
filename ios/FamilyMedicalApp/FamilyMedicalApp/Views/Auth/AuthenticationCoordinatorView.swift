@@ -12,8 +12,11 @@ struct AuthenticationCoordinatorView: View {
     var body: some View {
         Group {
             switch viewModel.flowState {
-            case .usernameEntry:
-                UsernameEntryView(viewModel: viewModel)
+            case .welcome:
+                WelcomeView(viewModel: viewModel)
+
+            case let .usernameEntry(isNewUser):
+                UsernameEntryView(viewModel: viewModel, isNewUser: isNewUser)
 
             case let .passphraseCreation(username):
                 PassphraseCreationView(viewModel: viewModel, username: username)

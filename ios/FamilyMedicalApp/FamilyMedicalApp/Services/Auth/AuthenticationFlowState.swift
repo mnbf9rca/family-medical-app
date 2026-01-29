@@ -6,18 +6,22 @@ import Foundation
 /// supporting both new user registration and returning user login flows.
 ///
 /// ## New User Flow (OPAQUE Registration)
-/// `.usernameEntry` → `.passphraseCreation` → `.passphraseConfirmation` → `.biometricSetup` → `.authenticated`
+/// `.welcome` → `.usernameEntry(isNewUser: true)` → `.passphraseCreation` → `.passphraseConfirmation` →
+/// `.biometricSetup` → `.authenticated`
 ///
 /// ## Returning User Flow (OPAQUE Login)
-/// `.usernameEntry` → `.passphraseEntry` → `.biometricSetup` → `.authenticated`
+/// `.welcome` → `.usernameEntry(isNewUser: false)` → `.passphraseEntry` → `.biometricSetup` → `.authenticated`
 ///
 /// ## Daily Unlock (existing device)
 /// `.unlock` → `.authenticated`
 enum AuthenticationFlowState: Equatable {
     // MARK: - Initial State
 
-    /// Username entry (both new and returning users start here)
-    case usernameEntry
+    /// Welcome screen with options to create account or sign in
+    case welcome
+
+    /// Username entry - isNewUser determines the next step
+    case usernameEntry(isNewUser: Bool)
 
     // MARK: - New User States
 

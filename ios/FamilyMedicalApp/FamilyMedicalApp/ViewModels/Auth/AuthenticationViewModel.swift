@@ -12,7 +12,7 @@ final class AuthenticationViewModel {
 
     // MARK: - Flow State
 
-    var flowState: AuthenticationFlowState = .usernameEntry
+    var flowState: AuthenticationFlowState = .welcome
 
     // MARK: - Username/Passphrase State
 
@@ -142,7 +142,7 @@ final class AuthenticationViewModel {
         if self.authService.isSetUp {
             flowState = .unlock
         } else {
-            flowState = .usernameEntry
+            flowState = .welcome
         }
 
         // Show biometric prompt on launch if enabled

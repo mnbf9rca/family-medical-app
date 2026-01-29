@@ -7,21 +7,9 @@ struct UsernameEntryViewTests {
     // MARK: - View Structure Tests
 
     @Test
-    func viewContainsAppBranding() throws {
-        let viewModel = AuthenticationViewModel()
-        let view = UsernameEntryView(viewModel: viewModel)
-
-        let sut = try view.inspect()
-
-        // Verify app icon exists
-        let icon = try sut.find(viewWithAccessibilityLabel: "Family Medical App icon")
-        #expect(icon != nil)
-    }
-
-    @Test
     func viewContainsUsernameField() throws {
         let viewModel = AuthenticationViewModel()
-        let view = UsernameEntryView(viewModel: viewModel)
+        let view = UsernameEntryView(viewModel: viewModel, isNewUser: true)
 
         let sut = try view.inspect()
 
@@ -32,11 +20,22 @@ struct UsernameEntryViewTests {
     @Test
     func viewContainsContinueButton() throws {
         let viewModel = AuthenticationViewModel()
-        let view = UsernameEntryView(viewModel: viewModel)
+        let view = UsernameEntryView(viewModel: viewModel, isNewUser: true)
 
         let sut = try view.inspect()
 
         let button = try sut.find(viewWithAccessibilityIdentifier: "continueButton")
+        #expect(button != nil)
+    }
+
+    @Test
+    func viewContainsBackButton() throws {
+        let viewModel = AuthenticationViewModel()
+        let view = UsernameEntryView(viewModel: viewModel, isNewUser: true)
+
+        let sut = try view.inspect()
+
+        let button = try sut.find(viewWithAccessibilityIdentifier: "backButton")
         #expect(button != nil)
     }
 
@@ -46,7 +45,7 @@ struct UsernameEntryViewTests {
     func continueButtonDisabledWhenUsernameInvalid() throws {
         let viewModel = AuthenticationViewModel()
         viewModel.username = "ab" // Too short
-        let view = UsernameEntryView(viewModel: viewModel)
+        let view = UsernameEntryView(viewModel: viewModel, isNewUser: true)
 
         let sut = try view.inspect()
         let button = try sut.find(viewWithAccessibilityIdentifier: "continueButton").button()
@@ -58,7 +57,7 @@ struct UsernameEntryViewTests {
     func continueButtonEnabledWhenUsernameValid() throws {
         let viewModel = AuthenticationViewModel()
         viewModel.username = "testuser"
-        let view = UsernameEntryView(viewModel: viewModel)
+        let view = UsernameEntryView(viewModel: viewModel, isNewUser: true)
 
         let sut = try view.inspect()
         let button = try sut.find(viewWithAccessibilityIdentifier: "continueButton").button()
@@ -72,7 +71,7 @@ struct UsernameEntryViewTests {
     func errorLabelShowsWhenErrorPresent() throws {
         let viewModel = AuthenticationViewModel()
         viewModel.errorMessage = "Test error"
-        let view = UsernameEntryView(viewModel: viewModel)
+        let view = UsernameEntryView(viewModel: viewModel, isNewUser: true)
 
         let sut = try view.inspect()
         let errorLabel = try sut.find(viewWithAccessibilityIdentifier: "errorLabel")
@@ -84,7 +83,7 @@ struct UsernameEntryViewTests {
     func errorLabelHiddenWhenNoError() throws {
         let viewModel = AuthenticationViewModel()
         viewModel.errorMessage = nil
-        let view = UsernameEntryView(viewModel: viewModel)
+        let view = UsernameEntryView(viewModel: viewModel, isNewUser: true)
 
         let sut = try view.inspect()
 

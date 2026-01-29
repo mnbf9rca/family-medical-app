@@ -12,11 +12,33 @@ struct AuthenticationViewModelFlowTests {
     // MARK: - Initial Flow State Tests
 
     @Test
-    func initialFlowStateIsUsernameEntryWhenNotSetUp() {
+    func initialFlowStateIsWelcomeWhenNotSetUp() {
         let authService = MockAuthenticationService(isSetUp: false)
         let viewModel = AuthenticationViewModel(authService: authService)
 
-        #expect(viewModel.flowState == .usernameEntry)
+        #expect(viewModel.flowState == .welcome)
+    }
+
+    // MARK: - Welcome Screen Tests
+
+    @Test
+    func selectCreateAccountTransitionsToUsernameEntry() {
+        let authService = MockAuthenticationService(isSetUp: false)
+        let viewModel = AuthenticationViewModel(authService: authService)
+
+        viewModel.selectCreateAccount()
+
+        #expect(viewModel.flowState == .usernameEntry(isNewUser: true))
+    }
+
+    @Test
+    func selectSignInTransitionsToUsernameEntry() {
+        let authService = MockAuthenticationService(isSetUp: false)
+        let viewModel = AuthenticationViewModel(authService: authService)
+
+        viewModel.selectSignIn()
+
+        #expect(viewModel.flowState == .usernameEntry(isNewUser: false))
     }
 
     @Test
@@ -30,9 +52,10 @@ struct AuthenticationViewModelFlowTests {
     // MARK: - Submit Username Tests
 
     @Test
-    func submitUsernameTransitionsToPassphraseCreationForNewUser() async {
+    func submitUsernameAsNewUserTransitionsToPassphraseCreation() async {
         let authService = MockAuthenticationService(isSetUp: false)
         let viewModel = AuthenticationViewModel(authService: authService)
+        viewModel.flowState = .usernameEntry(isNewUser: true)
         viewModel.username = validUsername
 
         await viewModel.submitUsername()
@@ -41,26 +64,28 @@ struct AuthenticationViewModelFlowTests {
     }
 
     @Test
+    func submitUsernameAsReturningUserTransitionsToPassphraseEntry() async {
+        let authService = MockAuthenticationService(isSetUp: false)
+        let viewModel = AuthenticationViewModel(authService: authService)
+        viewModel.flowState = .usernameEntry(isNewUser: false)
+        viewModel.username = validUsername
+
+        await viewModel.submitUsername()
+
+        #expect(viewModel.flowState == .passphraseEntry(username: validUsername, isReturningUser: true))
+    }
+
+    @Test
     func submitUsernameShowsErrorForInvalidUsername() async {
         let authService = MockAuthenticationService(isSetUp: false)
         let viewModel = AuthenticationViewModel(authService: authService)
+        viewModel.flowState = .usernameEntry(isNewUser: true)
         viewModel.username = "ab" // Too short
 
         await viewModel.submitUsername()
 
-        #expect(viewModel.flowState == .usernameEntry)
+        #expect(viewModel.flowState == .usernameEntry(isNewUser: true))
         #expect(viewModel.errorMessage != nil)
-    }
-
-    @Test
-    func proceedAsReturningUserTransitionsToPassphraseEntry() {
-        let authService = MockAuthenticationService(isSetUp: false)
-        let viewModel = AuthenticationViewModel(authService: authService)
-        viewModel.username = validUsername
-
-        viewModel.proceedAsReturningUser()
-
-        #expect(viewModel.flowState == .passphraseEntry(username: validUsername, isReturningUser: true))
     }
 
     // MARK: - Passphrase Creation Tests
@@ -202,6 +227,17 @@ struct AuthenticationViewModelFlowTests {
     // MARK: - Back Navigation Tests
 
     @Test
+    func goBackFromUsernameEntryReturnsToWelcome() {
+        let authService = MockAuthenticationService(isSetUp: false)
+        let viewModel = AuthenticationViewModel(authService: authService)
+        viewModel.flowState = .usernameEntry(isNewUser: true)
+
+        viewModel.goBack()
+
+        #expect(viewModel.flowState == .welcome)
+    }
+
+    @Test
     func goBackFromPassphraseCreationReturnsToUsernameEntry() {
         let authService = MockAuthenticationService(isSetUp: false)
         let viewModel = AuthenticationViewModel(authService: authService)
@@ -209,7 +245,7 @@ struct AuthenticationViewModelFlowTests {
 
         viewModel.goBack()
 
-        #expect(viewModel.flowState == .usernameEntry)
+        #expect(viewModel.flowState == .usernameEntry(isNewUser: true))
     }
 
     @Test
@@ -231,7 +267,7 @@ struct AuthenticationViewModelFlowTests {
 
         viewModel.goBack()
 
-        #expect(viewModel.flowState == .usernameEntry)
+        #expect(viewModel.flowState == .usernameEntry(isNewUser: false))
     }
 
     @Test

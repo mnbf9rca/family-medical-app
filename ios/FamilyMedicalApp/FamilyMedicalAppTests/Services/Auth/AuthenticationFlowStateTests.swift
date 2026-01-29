@@ -7,7 +7,8 @@ struct AuthenticationFlowStateTests {
     @Test
     func newUserFlowStatesAreDistinct() {
         let states: [AuthenticationFlowState] = [
-            .usernameEntry,
+            .welcome,
+            .usernameEntry(isNewUser: true),
             .passphraseCreation(username: "testuser"),
             .passphraseConfirmation(username: "testuser", passphrase: "test"),
             .biometricSetup(username: "testuser", passphrase: "test", isReturningUser: false)
@@ -33,9 +34,23 @@ struct AuthenticationFlowStateTests {
 
     @Test
     func sameStatesAreEqual() {
-        let state1 = AuthenticationFlowState.usernameEntry
-        let state2 = AuthenticationFlowState.usernameEntry
+        let state1 = AuthenticationFlowState.welcome
+        let state2 = AuthenticationFlowState.welcome
         #expect(state1 == state2)
+    }
+
+    @Test
+    func usernameEntryStatesWithSameParameterAreEqual() {
+        let state1 = AuthenticationFlowState.usernameEntry(isNewUser: true)
+        let state2 = AuthenticationFlowState.usernameEntry(isNewUser: true)
+        #expect(state1 == state2)
+    }
+
+    @Test
+    func usernameEntryStatesWithDifferentParameterAreNotEqual() {
+        let state1 = AuthenticationFlowState.usernameEntry(isNewUser: true)
+        let state2 = AuthenticationFlowState.usernameEntry(isNewUser: false)
+        #expect(state1 != state2)
     }
 
     @Test
@@ -58,7 +73,9 @@ struct AuthenticationFlowStateTests {
     func allExpectedStatesExist() {
         // Verify all states can be instantiated (compile-time check via usage)
         let _: [AuthenticationFlowState] = [
-            .usernameEntry,
+            .welcome,
+            .usernameEntry(isNewUser: true),
+            .usernameEntry(isNewUser: false),
             .passphraseCreation(username: "testuser"),
             .passphraseConfirmation(username: "testuser", passphrase: "pass"),
             .passphraseEntry(username: "testuser", isReturningUser: true),

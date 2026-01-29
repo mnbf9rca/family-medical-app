@@ -5,10 +5,23 @@ private let logger = Logger(subsystem: "com.cynexia.FamilyMedicalApp", category:
 
 /// OPAQUE authentication flow actions for AuthenticationViewModel
 extension AuthenticationViewModel {
+    // MARK: - Welcome Screen Actions
+
+    /// User selected "Create Account" from welcome screen
+    func selectCreateAccount() {
+        flowState = .usernameEntry(isNewUser: true)
+        errorMessage = nil
+    }
+
+    /// User selected "Sign In" from welcome screen
+    func selectSignIn() {
+        flowState = .usernameEntry(isNewUser: false)
+        errorMessage = nil
+    }
+
     // MARK: - Username Flow Actions
 
-    /// Submit username and determine if new or returning user
-    /// With OPAQUE, we attempt login first - if user doesn't exist, we proceed to registration
+    /// Submit username and proceed based on whether user is new or returning
     @MainActor
     func submitUsername() async {
         guard isUsernameValid else {
@@ -16,24 +29,22 @@ extension AuthenticationViewModel {
             return
         }
 
+        guard case let .usernameEntry(isNewUser) = flowState else { return }
+
         let trimmedUsername = username.trimmingCharacters(in: .whitespaces)
 
         isLoading = true
         errorMessage = nil
 
-        // With OPAQUE, we can't check if user exists without attempting auth
-        // So we go directly to passphrase entry - the server will tell us if registration is needed
-        // For now, we ask user to choose (this could be enhanced with a "check username" endpoint)
-        flowState = .passphraseCreation(username: trimmedUsername)
+        if isNewUser {
+            // New user: go to passphrase creation
+            flowState = .passphraseCreation(username: trimmedUsername)
+        } else {
+            // Returning user: go to passphrase entry
+            flowState = .passphraseEntry(username: trimmedUsername, isReturningUser: true)
+        }
 
         isLoading = false
-    }
-
-    /// For returning users who know their account exists
-    @MainActor
-    func proceedAsReturningUser() {
-        let trimmedUsername = username.trimmingCharacters(in: .whitespaces)
-        flowState = .passphraseEntry(username: trimmedUsername, isReturningUser: true)
     }
 
     @MainActor
@@ -111,14 +122,17 @@ extension AuthenticationViewModel {
 
     func goBack() {
         switch flowState {
+        case .usernameEntry:
+            flowState = .welcome
+            username = ""
         case .passphraseCreation:
-            flowState = .usernameEntry
+            flowState = .usernameEntry(isNewUser: true)
             passphrase = ""
         case let .passphraseConfirmation(username, _):
             flowState = .passphraseCreation(username: username)
             confirmPassphrase = ""
         case .passphraseEntry:
-            flowState = .usernameEntry
+            flowState = .usernameEntry(isNewUser: false)
             passphrase = ""
         case let .biometricSetup(username, passphrase, isReturningUser):
             if isReturningUser {

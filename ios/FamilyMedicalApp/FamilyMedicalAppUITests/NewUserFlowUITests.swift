@@ -86,31 +86,40 @@ final class NewUserFlowUITests: XCTestCase {
         app = XCUIApplication()
         app.launchForUITesting(resetState: true)
 
+        // Wait for welcome screen
+        let welcomeHeader = app.staticTexts["Family Medical"]
+        XCTAssertTrue(welcomeHeader.waitForExistence(timeout: 5), "Welcome screen should appear")
+
+        // Tap Create Account to go to username entry
+        let createAccountButton = app.buttons["Create Account"]
+        XCTAssertTrue(createAccountButton.exists, "Create Account button should exist on welcome screen")
+        createAccountButton.tap()
+
         // Wait for username entry view
-        let headerText = app.staticTexts["Family Medical"]
-        XCTAssertTrue(headerText.waitForExistence(timeout: 5), "Username entry screen should appear")
+        let usernameHeader = app.staticTexts["Create Your Account"]
+        XCTAssertTrue(usernameHeader.waitForExistence(timeout: 5), "Username entry screen should appear")
 
         // Verify username field exists
         let usernameField = app.textFields["Username"]
         XCTAssertTrue(usernameField.exists, "Username field should exist")
 
-        // Create Account button should be disabled with empty username
-        let createAccountButton = app.buttons["Create Account"]
-        XCTAssertTrue(createAccountButton.exists, "Create Account button should exist")
-        XCTAssertFalse(createAccountButton.isEnabled, "Create Account should be disabled with empty username")
+        // Continue button should be disabled with empty username
+        let continueButton = app.buttons["Continue"]
+        XCTAssertTrue(continueButton.exists, "Continue button should exist")
+        XCTAssertFalse(continueButton.isEnabled, "Continue should be disabled with empty username")
 
         // Enter short username (less than 3 chars)
         usernameField.tap()
         usernameField.typeText("ab")
-        XCTAssertFalse(createAccountButton.isEnabled, "Create Account should be disabled with short username")
+        XCTAssertFalse(continueButton.isEnabled, "Continue should be disabled with short username")
 
         // Add one more character to make it valid
         usernameField.typeText("c")
 
-        // Create Account should now be enabled
+        // Continue should now be enabled
         XCTAssertTrue(
-            createAccountButton.waitForExistence(timeout: 2) && createAccountButton.isEnabled,
-            "Create Account should be enabled with valid username"
+            continueButton.waitForExistence(timeout: 2) && continueButton.isEnabled,
+            "Continue should be enabled with valid username"
         )
 
         app.terminate()
@@ -122,13 +131,18 @@ final class NewUserFlowUITests: XCTestCase {
         app = XCUIApplication()
         app.launchForUITesting(resetState: true)
 
+        // Start from welcome screen - tap Create Account
+        let welcomeHeader = app.staticTexts["Family Medical"]
+        XCTAssertTrue(welcomeHeader.waitForExistence(timeout: 5))
+        app.buttons["Create Account"].tap()
+
         // Navigate to passphrase creation (through username entry)
         let usernameField = app.textFields["Username"]
         XCTAssertTrue(usernameField.waitForExistence(timeout: 5))
         usernameField.tap()
         usernameField.typeText("testuser")
 
-        let usernameContinueButton = app.buttons["Create Account"]
+        let usernameContinueButton = app.buttons["Continue"]
         XCTAssertTrue(usernameContinueButton.waitForExistence(timeout: 2) && usernameContinueButton.isEnabled)
         usernameContinueButton.tap()
 
@@ -186,12 +200,17 @@ final class NewUserFlowUITests: XCTestCase {
 
         let passphrase = "Unique-Horse-Battery-Staple-2024"
 
+        // Start from welcome screen - tap Create Account
+        let welcomeHeader = app.staticTexts["Family Medical"]
+        XCTAssertTrue(welcomeHeader.waitForExistence(timeout: 5))
+        app.buttons["Create Account"].tap()
+
         // Navigate through username entry
         let usernameField = app.textFields["Username"]
         XCTAssertTrue(usernameField.waitForExistence(timeout: 5))
         usernameField.tap()
         usernameField.typeText("testuser")
-        app.buttons["Create Account"].tap()
+        app.buttons["Continue"].tap()
 
         // Navigate through passphrase creation
         let passphraseHeader = app.staticTexts["Create a Passphrase"]

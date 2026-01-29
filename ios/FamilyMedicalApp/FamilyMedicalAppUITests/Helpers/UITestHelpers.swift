@@ -111,18 +111,26 @@ extension XCUIApplication {
         enableBiometric: Bool = false,
         timeout: TimeInterval = 15
     ) {
+        // Step 0: Welcome Screen - tap "Create Account"
+        let welcomeHeader = staticTexts["Family Medical"]
+        XCTAssertTrue(welcomeHeader.waitForExistence(timeout: timeout), "Welcome view should appear")
+
+        let createAccountButton = buttons["Create Account"]
+        XCTAssertTrue(createAccountButton.waitForExistence(timeout: timeout), "Create Account button should exist")
+        createAccountButton.tap()
+
         // Step 1: Username Entry
-        let usernameEntryHeader = staticTexts["Family Medical"]
-        XCTAssertTrue(usernameEntryHeader.waitForExistence(timeout: timeout), "Username entry view should appear")
+        let usernameHeader = staticTexts["Create Your Account"]
+        XCTAssertTrue(usernameHeader.waitForExistence(timeout: timeout), "Username entry view should appear")
 
         let usernameField = textFields["Username"]
         XCTAssertTrue(usernameField.waitForExistence(timeout: timeout), "Username field should exist")
         usernameField.tap()
         usernameField.typeText(username)
 
-        let usernameContinueButton = buttons["Create Account"]
-        XCTAssertTrue(usernameContinueButton.waitForExistence(timeout: 2) && usernameContinueButton.isEnabled)
-        usernameContinueButton.tap()
+        let continueButton = buttons["Continue"]
+        XCTAssertTrue(continueButton.waitForExistence(timeout: 2) && continueButton.isEnabled)
+        continueButton.tap()
 
         // Step 2: Passphrase Creation (no more code verification with OPAQUE)
         let passphraseHeader = staticTexts["Create a Passphrase"]

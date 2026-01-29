@@ -1,33 +1,34 @@
 import SwiftUI
 
-/// First step in the authentication flow: username entry
+/// Username entry step in the authentication flow
 ///
-/// The user enters their username to begin OPAQUE authentication.
-/// The flow continues to PassphraseCreationView for new users or
-/// PassphraseEntryView for returning users.
+/// For new users: continues to PassphraseCreationView
+/// For returning users: continues to PassphraseEntryView
 struct UsernameEntryView: View {
     @Bindable var viewModel: AuthenticationViewModel
+    let isNewUser: Bool
     @FocusState private var isUsernameFocused: Bool
 
     var body: some View {
-        VStack(spacing: 32) {
+        VStack(spacing: 24) {
             Spacer()
 
-            // App branding
-            Image(systemName: "heart.text.square.fill")
-                .font(.system(size: 80))
+            // Context-aware header
+            Image(systemName: isNewUser ? "person.badge.plus" : "person.fill")
+                .font(.system(size: 60))
                 .foregroundColor(.blue)
-                .accessibilityLabel("Family Medical App icon")
+                .accessibilityHidden(true)
 
-            Text("Family Medical")
+            Text(isNewUser ? "Create Your Account" : "Welcome Back")
                 .font(.title)
                 .fontWeight(.bold)
 
-            Text("Secure storage for your family's health records")
+            Text(isNewUser
+                ? "Choose a username for your account"
+                : "Enter your username to sign in")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
-                .padding(.horizontal)
 
             Spacer()
 
@@ -53,7 +54,7 @@ struct UsernameEntryView: View {
                         .accessibilityIdentifier("usernameValidationHint")
                 }
 
-                // Continue button (for new users)
+                // Continue button
                 Button(action: submitUsername) {
                     if viewModel.isLoading {
                         ProgressView()
@@ -61,7 +62,7 @@ struct UsernameEntryView: View {
                             .frame(maxWidth: .infinity)
                             .padding()
                     } else {
-                        Text("Create Account")
+                        Text("Continue")
                             .fontWeight(.semibold)
                             .frame(maxWidth: .infinity)
                             .padding()
@@ -73,15 +74,6 @@ struct UsernameEntryView: View {
                 .disabled(!viewModel.isUsernameValid || viewModel.isLoading)
                 .accessibilityIdentifier("continueButton")
 
-                // Sign in button (for returning users)
-                Button("I already have an account") {
-                    viewModel.proceedAsReturningUser()
-                }
-                .fontWeight(.medium)
-                .foregroundColor(.blue)
-                .disabled(!viewModel.isUsernameValid || viewModel.isLoading)
-                .accessibilityIdentifier("signInButton")
-
                 // Error message
                 if let error = viewModel.errorMessage {
                     Text(error)
@@ -92,6 +84,13 @@ struct UsernameEntryView: View {
                 }
             }
             .padding()
+
+            // Back button
+            Button("Back") {
+                viewModel.goBack()
+            }
+            .foregroundColor(.blue)
+            .accessibilityIdentifier("backButton")
 
             Spacer()
         }
@@ -108,6 +107,10 @@ struct UsernameEntryView: View {
     }
 }
 
-#Preview {
-    UsernameEntryView(viewModel: AuthenticationViewModel())
+#Preview("New User") {
+    UsernameEntryView(viewModel: AuthenticationViewModel(), isNewUser: true)
+}
+
+#Preview("Returning User") {
+    UsernameEntryView(viewModel: AuthenticationViewModel(), isNewUser: false)
 }
