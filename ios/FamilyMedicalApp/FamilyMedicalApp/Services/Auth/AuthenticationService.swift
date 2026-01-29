@@ -207,8 +207,8 @@ final class AuthenticationService: AuthenticationServiceProtocol {
         // Store username in UserDefaults (for display on unlock screen)
         userDefaults.set(username, forKey: Self.usernameKey)
 
-        // Set biometric preference
-        userDefaults.set(enableBiometric && biometricService.isBiometricAvailable, forKey: Self.biometricEnabledKey)
+        // Set biometric preference and prompt for Face ID permission if enabled
+        try await configureBiometric(enabled: enableBiometric)
 
         // Clear any previous failed attempts
         userDefaults.removeObject(forKey: Self.failedAttemptsKey)
@@ -286,8 +286,8 @@ final class AuthenticationService: AuthenticationServiceProtocol {
         // Store username
         userDefaults.set(username, forKey: Self.usernameKey)
 
-        // Set biometric preference
-        userDefaults.set(enableBiometric && biometricService.isBiometricAvailable, forKey: Self.biometricEnabledKey)
+        // Set biometric preference and prompt for Face ID permission if enabled
+        try await configureBiometric(enabled: enableBiometric)
 
         // Clear any previous failed attempts
         userDefaults.removeObject(forKey: Self.failedAttemptsKey)
@@ -441,6 +441,16 @@ final class AuthenticationService: AuthenticationServiceProtocol {
     }
 
     // MARK: - Private Methods
+
+    private func configureBiometric(enabled: Bool) async throws {
+        if enabled, biometricService.isBiometricAvailable {
+            // Prompt for biometric to trigger system permission dialog
+            try await biometricService.authenticate(reason: "Enable Face ID for quick unlock")
+            userDefaults.set(true, forKey: Self.biometricEnabledKey)
+        } else {
+            userDefaults.set(false, forKey: Self.biometricEnabledKey)
+        }
+    }
 
     private func handleFailedAttempt() throws {
         let currentAttempts = failedAttemptCount + 1

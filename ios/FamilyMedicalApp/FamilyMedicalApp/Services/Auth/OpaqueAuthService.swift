@@ -271,6 +271,12 @@ final class OpaqueAuthService: OpaqueAuthServiceProtocol, @unchecked Sendable {
             // Log response body for debugging server errors
             let responseBody = String(data: data, encoding: .utf8) ?? "<non-utf8>"
             logger.error("Server error (\(httpResponse.statusCode)): \(responseBody)")
+
+            // Check for registration failure (username already exists)
+            if httpResponse.statusCode == 400, responseBody.contains("Registration failed") {
+                throw OpaqueAuthError.registrationFailed
+            }
+
             throw OpaqueAuthError.serverError(statusCode: httpResponse.statusCode)
         }
 
