@@ -103,6 +103,7 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: backend-rust
+          wranglerVersion: "4"
           command: deploy --env preview --name recordwell-opaque-pr-${{ github.event.pull_request.number }}
           secrets: |
             OPAQUE_SERVER_SETUP
@@ -190,6 +191,7 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: backend-rust
+          wranglerVersion: "4"
           command: deploy
 
   summary:
