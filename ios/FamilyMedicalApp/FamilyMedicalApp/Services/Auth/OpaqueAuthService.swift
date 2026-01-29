@@ -326,14 +326,18 @@ final class OpaqueAuthService: OpaqueAuthServiceProtocol, @unchecked Sendable {
     /// This implements secure duplicate registration handling:
     /// - If login succeeds: account exists AND user proved ownership (correct password)
     ///   → throw `.accountExistsConfirmed` with login result
-    /// - If login fails: don't reveal whether account exists (could be wrong password OR no account)
+    /// - If login fails with auth error: don't reveal whether account exists
     ///   → throw generic `.registrationFailed`
+    /// - If login fails with transport error: expose for user feedback (doesn't reveal account existence)
+    ///   → re-throw the original network/rate-limit error
     ///
-    /// Security: Only reveals "account exists" when user proves they own it (correct password)
+    /// Security: Only reveals "account exists" when user proves they own it (correct password).
+    /// Transport errors (network unreachable, rate limited) are safe to expose as they don't
+    /// reveal whether the account exists.
     private func probeLoginForExistingAccount(
         username: String,
         password: String
-    ) async throws -> OpaqueRegistrationResult {
+    ) async throws {
         do {
             // Try login with same credentials
             let loginResult = try await login(username: username, password: password)
@@ -342,14 +346,22 @@ final class OpaqueAuthService: OpaqueAuthServiceProtocol, @unchecked Sendable {
             // Throw special error so UI can offer to complete login
             throw OpaqueAuthError.accountExistsConfirmed(loginResult: loginResult)
         } catch let error as OpaqueAuthError {
-            if case .accountExistsConfirmed = error {
+            switch error {
+            case .accountExistsConfirmed:
                 // Re-throw this specific error (don't catch it as a generic failure)
                 throw error
+            case .networkError, .rateLimited:
+                // Transport errors are safe to expose - they don't reveal account existence
+                // User needs this feedback to know to retry
+                logger.info("Login probe failed with transport error - exposing for user feedback")
+                throw error
+            case .authenticationFailed, .invalidResponse, .protocolError, .registrationFailed,
+                 .serverError, .sessionExpired, .uploadFailed:
+                // Server auth errors - return generic error to not reveal account existence
+                // This is security-critical: don't reveal account existence to attackers
+                logger.info("Login probe failed - returning generic registration failure")
+                throw OpaqueAuthError.registrationFailed
             }
-            // Login failed (wrong password OR no account) - return generic error
-            // This is security-critical: don't reveal account existence to attackers
-            logger.info("Login probe failed - returning generic registration failure")
-            throw OpaqueAuthError.registrationFailed
         }
     }
 }

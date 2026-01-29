@@ -28,7 +28,7 @@ This document explains the app's encryption usage and why it qualifies for U.S. 
 | Library | Algorithm | Standard | Usage |
 |---------|-----------|----------|-------|
 | Swift-Sodium (libsodium) | Argon2id | RFC 9106 | Password-based key derivation |
-| OpaqueSwift (opaque-ke) | OPAQUE | RFC 9497 | Zero-knowledge authentication |
+| OpaqueSwift (opaque-ke) | OPAQUE | RFC 9807 | Zero-knowledge authentication |
 
 ### Transport Security
 
@@ -59,7 +59,7 @@ The app does not provide encryption as a service or feature to end users. Encryp
 
 - AES-256-GCM: NIST standard, implemented via Apple CryptoKit
 - Argon2id: RFC 9106, winner of Password Hashing Competition (2015)
-- OPAQUE: RFC 9497, IETF standard for asymmetric PAKE
+- OPAQUE: RFC 9807, IETF standard for asymmetric PAKE
 - HKDF: RFC 5869, IETF standard
 - Curve25519: RFC 7748, IETF standard
 

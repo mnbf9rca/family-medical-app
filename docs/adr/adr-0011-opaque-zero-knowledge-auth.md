@@ -35,7 +35,7 @@ OPAQUE (RFC 9807) is an augmented Password-Authenticated Key Exchange (aPAKE) th
 We will implement OPAQUE-based authentication using:
 
 1. **iOS Client**: `opaque-ke` (Rust) wrapped via Mozilla UniFFI for Swift bindings
-2. **Server**: `@serenity-kit/opaque` (TypeScript, wraps same `opaque-ke` via WASM)
+2. **Server**: `opaque-ke` (Rust) compiled to wasm32-unknown-unknown for Cloudflare Workers
 3. **Storage**: Cloudflare KV for OPAQUE credential files
 
 ### Authentication Flows

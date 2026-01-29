@@ -88,7 +88,7 @@ ADRs document significant architectural decisions, their context, and consequenc
 - [ADR-0011: OPAQUE Zero-Knowledge Authentication](adr-0011-opaque-zero-knowledge-auth.md) - **Proposed** (2026-01-28)
   - OPAQUE protocol (RFC 9807) for true zero-knowledge authentication
   - Server never learns username or password
-  - opaque-ke (Rust) via UniFFI for iOS, @serenity-kit/opaque for Cloudflare Workers
+  - opaque-ke (Rust) for both iOS (via UniFFI) and Cloudflare Workers (via wasm32)
 
 ### UI/UX Architecture
 <!-- Add ADRs related to SwiftUI patterns, navigation, accessibility -->

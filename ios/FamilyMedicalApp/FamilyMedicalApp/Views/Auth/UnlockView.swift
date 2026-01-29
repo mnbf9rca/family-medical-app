@@ -5,12 +5,13 @@ struct UnlockView: View {
     @Bindable var viewModel: AuthenticationViewModel
 
     enum UnlockField: Hashable {
-        case username, passphrase
+        case passphrase
     }
 
     @FocusState private var focusedField: UnlockField?
     @State private var timerCancellable: AnyCancellable?
     @State private var displayedUsername: String = ""
+    @State private var timerTick: Int = 0
 
     var body: some View {
         VStack(spacing: 32) {
@@ -62,18 +63,16 @@ struct UnlockView: View {
                 } else {
                     // Password entry - NO Form, just plain TextFields like Duolingo
                     VStack(spacing: 12) {
-                        // Username field
-                        TextField("Username", text: $displayedUsername)
-                            .textContentType(.username)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
-                            .focused($focusedField, equals: .username)
-                            .submitLabel(.next)
-                            .onSubmit { focusedField = .passphrase }
-                            .padding()
-                            .background(Color(.systemGray6))
-                            .cornerRadius(10)
-                            .accessibilityIdentifier("usernameField")
+                        // Username display (read-only - OPAQUE uses stored username)
+                        HStack {
+                            Text(displayedUsername)
+                                .foregroundColor(.primary)
+                            Spacer()
+                        }
+                        .padding()
+                        .background(Color(.systemGray6))
+                        .cornerRadius(10)
+                        .accessibilityIdentifier("usernameField")
 
                         // Passphrase field
                         Group {
@@ -195,8 +194,8 @@ struct UnlockView: View {
         timerCancellable = Timer.publish(every: 1, on: .main, in: .common)
             .autoconnect()
             .sink { _ in
-                // Force view refresh when locked out to update countdown
-                // The view will naturally re-read lockoutTimeRemaining
+                // Increment tick to force SwiftUI re-render and update countdown
+                timerTick += 1
             }
     }
 }

@@ -1,7 +1,7 @@
 {
   "name": "recordwell-api",
   "version": "1.0.0",
-  "description": "Cloudflare Workers backend for RecordWell OPAQUE authentication",
+  "description": "Cloudflare Workers backend for RecordWell (sync placeholder)",
   "main": "src/index.ts",
   "scripts": {
     "dev": "wrangler dev",
@@ -9,9 +9,7 @@
     "typecheck": "tsc --noEmit"
   },
   "keywords": [
-    "cloudflare-workers",
-    "opaque",
-    "authentication"
+    "cloudflare-workers"
   ],
   "author": "",
   "license": "ISC",
@@ -20,8 +18,5 @@
     "@cloudflare/workers-types": "^4.20260127.0",
     "typescript": "^5.9.3",
     "wrangler": "^4.61.0"
-  },
-  "dependencies": {
-    "@serenity-kit/opaque": "^1.0.0"
   }
 }

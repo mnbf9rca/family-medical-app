@@ -70,7 +70,10 @@ pub async fn handle_register_start(
     _env: &Env,
     server_setup: &opaque::OpaqueServerSetup,
 ) -> Result<Response> {
-    let body: RegisterStartRequest = req.json().await?;
+    let body: RegisterStartRequest = match parse_json(&mut req).await {
+        Ok(b) => b,
+        Err(r) => return r,
+    };
     console_log!(
         "[opaque/register/start] Client ID: {}...",
         &body.client_identifier[..8.min(body.client_identifier.len())]
@@ -107,7 +110,10 @@ pub async fn handle_register_start(
 }
 
 pub async fn handle_register_finish(mut req: Request, env: &Env) -> Result<Response> {
-    let body: RegisterFinishRequest = req.json().await?;
+    let body: RegisterFinishRequest = match parse_json(&mut req).await {
+        Ok(b) => b,
+        Err(r) => return r,
+    };
 
     if body.client_identifier.len() != 64 {
         return json_response(
@@ -156,7 +162,10 @@ pub async fn handle_login_start(
     env: &Env,
     server_setup: &opaque::OpaqueServerSetup,
 ) -> Result<Response> {
-    let body: LoginStartRequest = req.json().await?;
+    let body: LoginStartRequest = match parse_json(&mut req).await {
+        Ok(b) => b,
+        Err(r) => return r,
+    };
     console_log!(
         "[opaque/login/start] Client ID: {}...",
         &body.client_identifier[..8.min(body.client_identifier.len())]
@@ -233,7 +242,10 @@ pub async fn handle_login_start(
 }
 
 pub async fn handle_login_finish(mut req: Request, env: &Env) -> Result<Response> {
-    let body: LoginFinishRequest = req.json().await?;
+    let body: LoginFinishRequest = match parse_json(&mut req).await {
+        Ok(b) => b,
+        Err(r) => return r,
+    };
 
     if body.client_identifier.len() != 64 {
         return json_response(
@@ -314,4 +326,17 @@ fn json_response<T: Serialize>(data: &T, status: u16) -> Result<Response> {
     headers.set("Access-Control-Allow-Origin", "*")?;
 
     Response::from_body(ResponseBody::Body(body.into_bytes())).map(|r| r.with_status(status).with_headers(headers))
+}
+
+/// Parse JSON request body, returning 400 Bad Request on parse failure
+async fn parse_json<T: for<'de> Deserialize<'de>>(req: &mut Request) -> std::result::Result<T, Result<Response>> {
+    match req.json().await {
+        Ok(body) => Ok(body),
+        Err(e) => Err(json_response(
+            &ErrorResponse {
+                error: format!("Invalid JSON: {}", e),
+            },
+            400,
+        )),
+    }
 }

@@ -15,7 +15,7 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
 
     // Load OPAQUE server setup from worker secret
     // Note: Using traditional secret due to workers-rs SecretStore bug
-    // https://github.com/cloudflare/workers-rs/issues/XXX
+    // https://github.com/cloudflare/workers-rs/issues/919
     let setup_secret = env.secret("OPAQUE_SERVER_SETUP")?.to_string();
 
     let server_setup = opaque::init_server_setup(Some(&setup_secret)).map_err(Error::from)?;
