@@ -11,6 +11,22 @@ struct UsernameEntryView: View {
 
     var body: some View {
         VStack(spacing: 24) {
+            // Back button at top left
+            HStack {
+                Button {
+                    viewModel.goBack()
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "chevron.left")
+                        Text("Back")
+                    }
+                }
+                .foregroundColor(.blue)
+                .accessibilityIdentifier("backButton")
+
+                Spacer()
+            }
+
             Spacer()
 
             // Context-aware header
@@ -84,13 +100,6 @@ struct UsernameEntryView: View {
                 }
             }
             .padding()
-
-            // Back button
-            Button("Back") {
-                viewModel.goBack()
-            }
-            .foregroundColor(.blue)
-            .accessibilityIdentifier("backButton")
 
             Spacer()
         }

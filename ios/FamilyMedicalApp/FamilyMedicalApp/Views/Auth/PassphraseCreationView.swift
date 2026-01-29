@@ -12,6 +12,22 @@ struct PassphraseCreationView: View {
 
     var body: some View {
         VStack(spacing: 32) {
+            // Back button at top left
+            HStack {
+                Button {
+                    viewModel.goBack()
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "chevron.left")
+                        Text("Back")
+                    }
+                }
+                .foregroundColor(.blue)
+                .accessibilityIdentifier("backButton")
+
+                Spacer()
+            }
+
             Spacer()
 
             // Header
@@ -107,19 +123,6 @@ struct PassphraseCreationView: View {
             .padding()
 
             Spacer()
-
-            // Back button
-            Button(action: {
-                viewModel.goBack()
-            }, label: {
-                HStack {
-                    Image(systemName: "chevron.left")
-                    Text("Back")
-                }
-                .foregroundColor(.blue)
-            })
-            .accessibilityIdentifier("backButton")
-            .padding(.bottom)
         }
         .padding()
         .onAppear {
