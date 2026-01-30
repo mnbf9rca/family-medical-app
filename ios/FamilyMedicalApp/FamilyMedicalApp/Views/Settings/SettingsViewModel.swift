@@ -78,6 +78,98 @@ final class SettingsViewModel {
         self.logger = logger ?? LoggingService.shared.logger(category: .storage)
     }
 
+    /// Creates a SettingsViewModel with default production dependencies
+    static func makeDefault() -> SettingsViewModel {
+        let deps = DefaultDependencies()
+        return SettingsViewModel(
+            exportService: deps.exportService,
+            importService: deps.importService,
+            backupFileService: deps.backupFileService
+        )
+    }
+}
+
+// MARK: - Default Dependencies
+
+/// Container for default production dependencies used by SettingsViewModel
+private struct DefaultDependencies {
+    let exportService: ExportServiceProtocol
+    let importService: ImportServiceProtocol
+    let backupFileService: BackupFileServiceProtocol
+
+    init() {
+        let coreDataStack = CoreDataStack.shared
+        let encryptionService = EncryptionService()
+        let fmkService = FamilyMemberKeyService()
+
+        let personRepository = PersonRepository(
+            coreDataStack: coreDataStack,
+            encryptionService: encryptionService,
+            fmkService: fmkService
+        )
+        let recordRepository = MedicalRecordRepository(coreDataStack: coreDataStack)
+        let attachmentRepository = AttachmentRepository(
+            coreDataStack: coreDataStack,
+            encryptionService: encryptionService,
+            fmkService: fmkService
+        )
+        let customSchemaRepository = CustomSchemaRepository(
+            coreDataStack: coreDataStack,
+            encryptionService: encryptionService
+        )
+        let recordContentService = RecordContentService(encryptionService: encryptionService)
+        let attachmentService = Self.makeAttachmentService(
+            attachmentRepository: attachmentRepository,
+            encryptionService: encryptionService,
+            fmkService: fmkService
+        )
+
+        self.exportService = ExportService(
+            personRepository: personRepository,
+            recordRepository: recordRepository,
+            recordContentService: recordContentService,
+            attachmentService: attachmentService,
+            customSchemaRepository: customSchemaRepository,
+            fmkService: fmkService
+        )
+
+        self.importService = ImportService(
+            personRepository: personRepository,
+            recordRepository: recordRepository,
+            recordContentService: recordContentService,
+            attachmentService: attachmentService,
+            customSchemaRepository: customSchemaRepository,
+            fmkService: fmkService
+        )
+
+        self.backupFileService = BackupFileService(
+            keyDerivationService: KeyDerivationService(),
+            encryptionService: encryptionService
+        )
+    }
+
+    private static func makeAttachmentService(
+        attachmentRepository: AttachmentRepositoryProtocol,
+        encryptionService: EncryptionServiceProtocol,
+        fmkService: FamilyMemberKeyServiceProtocol
+    ) -> AttachmentService {
+        // File storage init only fails if file system is inaccessible (fatal)
+        guard let fileStorage = try? AttachmentFileStorageService() else {
+            fatalError("Failed to initialize AttachmentFileStorageService - file system inaccessible")
+        }
+        return AttachmentService(
+            attachmentRepository: attachmentRepository,
+            fileStorage: fileStorage,
+            imageProcessor: ImageProcessingService(),
+            encryptionService: encryptionService,
+            fmkService: fmkService
+        )
+    }
+}
+
+// MARK: - Export/Import Methods
+
+extension SettingsViewModel {
     // MARK: - Export Methods
 
     func startExport() {
