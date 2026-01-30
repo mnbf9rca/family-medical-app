@@ -85,7 +85,7 @@ jobs:
         run: echo "$OPAQUE_SECRET" | wrangler secret put OPAQUE_SERVER_SETUP --name "recordwell-opaque-pr-${PR_NUMBER}-preview"
 
   smoke-test:
-    name: Smoke Test
+    name: Smoke Test Preview
     needs: [deploy-preview]
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
