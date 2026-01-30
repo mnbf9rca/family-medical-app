@@ -59,7 +59,10 @@ pub async fn check_rate_limit(
             // Increment count
             e.count += 1;
             if let Ok(builder) = kv.put(&key, serde_json::to_string(&e).unwrap_or_default()) {
-                let _ = builder.expiration_ttl(config.window_seconds).execute().await;
+                if builder.expiration_ttl(config.window_seconds).execute().await.is_err() {
+                    // Fail-open: log but allow request (primary rate limiting is at Cloudflare edge)
+                    console_log!("[rate_limit] KV write failed for key: {}", key);
+                }
             }
             Ok(())
         }
@@ -70,7 +73,10 @@ pub async fn check_rate_limit(
                 window_start: now,
             };
             if let Ok(builder) = kv.put(&key, serde_json::to_string(&new_entry).unwrap_or_default()) {
-                let _ = builder.expiration_ttl(config.window_seconds).execute().await;
+                if builder.expiration_ttl(config.window_seconds).execute().await.is_err() {
+                    // Fail-open: log but allow request (primary rate limiting is at Cloudflare edge)
+                    console_log!("[rate_limit] KV write failed for key: {}", key);
+                }
             }
             Ok(())
         }

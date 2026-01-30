@@ -419,8 +419,15 @@ private extension OpaqueAuthService {
 
     /// Zero password bytes to limit exposure time in memory (RFC 9807 Section 4.1)
     ///
-    /// This is a best-effort security measure. The original Swift String may still
-    /// exist in memory until garbage collected, but this limits exposure time.
+    /// SECURITY LIMITATION: This function zeros a COPY of the password bytes.
+    /// The original Swift String's backing storage cannot be cleared because:
+    /// - Swift Strings are immutable copy-on-write types
+    /// - The original buffer persists until the String is deallocated
+    ///
+    /// This provides marginal benefit by reducing the number of copies in memory,
+    /// but does not guarantee the password is wiped. True secure memory handling
+    /// would require never using String for passwords (using `[UInt8]` throughout),
+    /// which requires API changes tracked in Issue #95.
     @inline(__always)
     static func zeroPasswordBytes(_ password: String) {
         var passwordBytes = Array(password.utf8)

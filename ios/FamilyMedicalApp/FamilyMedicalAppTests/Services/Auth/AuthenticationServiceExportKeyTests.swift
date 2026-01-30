@@ -74,6 +74,56 @@ struct AuthenticationServiceExportKeyTests {
         try await service.setUp(password: "MySecurePassword123!", username: "testuser", enableBiometric: false)
         #expect(service.isSetUp == true)
     }
+
+    // MARK: - Unlock Path Export Key Validation Tests
+
+    @Test
+    func unlockRejectsEmptyExportKey() async throws {
+        let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        let opaqueAuthService = MockOpaqueAuthService()
+        let keychainService = MockAuthKeychainService()
+
+        // Set up with valid export key first
+        opaqueAuthService.testExportKey = Data(repeating: 0x42, count: 32)
+        let service = AuthenticationService(
+            keychainService: keychainService,
+            opaqueAuthService: opaqueAuthService,
+            userDefaults: userDefaults
+        )
+        try await service.setUp(password: "MySecurePassword123!", username: "testuser", enableBiometric: false)
+        #expect(service.isSetUp == true)
+
+        // Change mock to return empty export key during login (unlock path)
+        opaqueAuthService.testExportKey = Data()
+
+        await #expect(throws: AuthenticationError.verificationFailed) {
+            try await service.unlockWithPassword("MySecurePassword123!")
+        }
+    }
+
+    @Test
+    func unlockRejectsInvalidExportKeyLength() async throws {
+        let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        let opaqueAuthService = MockOpaqueAuthService()
+        let keychainService = MockAuthKeychainService()
+
+        // Set up with valid export key first
+        opaqueAuthService.testExportKey = Data(repeating: 0x42, count: 32)
+        let service = AuthenticationService(
+            keychainService: keychainService,
+            opaqueAuthService: opaqueAuthService,
+            userDefaults: userDefaults
+        )
+        try await service.setUp(password: "MySecurePassword123!", username: "testuser", enableBiometric: false)
+        #expect(service.isSetUp == true)
+
+        // Change mock to return invalid length export key during login (unlock path)
+        opaqueAuthService.testExportKey = Data(repeating: 0xAB, count: 16)
+
+        await #expect(throws: AuthenticationError.verificationFailed) {
+            try await service.unlockWithPassword("MySecurePassword123!")
+        }
+    }
 }
 
 // swiftlint:enable force_unwrapping
