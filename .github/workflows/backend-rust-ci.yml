@@ -115,6 +115,7 @@ jobs:
           script: |
             const prNumber = context.payload.pull_request.number;
             const url = `https://recordwell-opaque-pr-${prNumber}-preview.${{ env.WORKERS_SUBDOMAIN }}.workers.dev`;
+            const sha = context.payload.pull_request.head.sha.substring(0, 7);
 
             // Check for existing comment to avoid duplicates
             const { data: comments } = await github.rest.issues.listComments({
@@ -126,7 +127,7 @@ jobs:
             const marker = '<!-- backend-preview-url -->';
             const existing = comments.find(c => c.body.includes(marker));
 
-            const body = `${marker}\n🚀 **Backend Preview**\n\nAPI: \`${url}\`\n\nSmoke tests: ✅ Passed`;
+            const body = `${marker}\n🚀 **Backend Preview**\n\nAPI: \`${url}\`\n\nSmoke tests: ✅ Passed (${sha})`;
 
             if (existing) {
               await github.rest.issues.updateComment({
