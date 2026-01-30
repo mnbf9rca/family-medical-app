@@ -3,7 +3,7 @@ import Foundation
 import OpaqueSwift
 
 /// Result from starting the OPAQUE login protocol
-private struct LoginStartResult {
+struct LoginStartResult {
     let loginState: ClientLogin
     let responseData: Data
     let stateKey: String
@@ -18,9 +18,9 @@ private struct LoginStartResult {
 /// In DEBUG builds, usernames matching `testuser` or `test_*` patterns
 /// bypass actual API calls for testing purposes.
 final class OpaqueAuthService: OpaqueAuthServiceProtocol, @unchecked Sendable {
-    private let baseURL: URL
-    private let session: URLSession
-    private let logger: CategoryLoggerProtocol
+    let baseURL: URL
+    let session: URLSession
+    let logger: CategoryLoggerProtocol
 
     /// Default API base URL
     private static let defaultBaseURL =
@@ -240,7 +240,7 @@ final class OpaqueAuthService: OpaqueAuthServiceProtocol, @unchecked Sendable {
         }
     }
 
-    private func sendLoginFinishRequest(
+    func sendLoginFinishRequest(
         clientIdentifier: String,
         stateKey: String,
         credentialFinalization: Data
@@ -258,7 +258,7 @@ final class OpaqueAuthService: OpaqueAuthServiceProtocol, @unchecked Sendable {
         }
     }
 
-    private func startLoginRequest(
+    func startLoginRequest(
         clientIdentifier: String,
         credentialRequest: Data
     ) async throws -> (responseData: Data, stateKey: String) {
@@ -329,9 +329,9 @@ final class OpaqueAuthService: OpaqueAuthServiceProtocol, @unchecked Sendable {
         }
     }
 
-    // MARK: - Private
+    // MARK: - Internal Networking
 
-    private func post(path: String, body: [String: Any]) async throws -> [String: Any] {
+    func post(path: String, body: [String: Any]) async throws -> [String: Any] {
         let url = baseURL.appendingPathComponent(path)
         logger.debug("POST \(url.absoluteString)")
 
@@ -391,7 +391,7 @@ final class OpaqueAuthService: OpaqueAuthServiceProtocol, @unchecked Sendable {
 
 // MARK: - Static Utilities
 
-private extension OpaqueAuthService {
+extension OpaqueAuthService {
     /// Check if test username bypass should be used
     static func shouldBypassForTestUsername(_ username: String) -> Bool {
         let normalized = username.lowercased()
