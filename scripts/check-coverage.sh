@@ -64,15 +64,8 @@ FILE_EXCEPTIONS = {
     # Services with file system operations - CI/local variance in directory creation paths
     "AttachmentFileStorageService.swift": 79.0,  # Local 80%, CI 89% - variance in default init tests
     # OPAQUE authentication - requires backend server for full integration testing
-    # Coverage decreased from 38% to 21% after adding password-aware test bypass and refactoring for function length
-    # Further decrease to 20% after adding comprehensive logging for debugging auth flow
-    # Decreased to 17% after adding probeLoginForExistingAccount (duplicate registration handling)
-    # Decreased to 4% after moving deprecated methods to extension and adding bytes-based methods
-    "OpaqueAuthService.swift": 4.0,  # Requires running OPAQUE server - tested via MockOpaqueAuthService in unit tests
-    # RFC 9807 bytes-based password methods - thin wrappers that delegate to tested String methods
-    # These methods zero password bytes after use; zeroing tested via PasswordZeroingTests with mocks
-    "OpaqueAuthService+Bytes.swift": 19.0,  # Bytes-to-string wrapper + zeroing - integration needs live server
-    "AuthenticationService+Bytes.swift": 67.0,  # Bytes methods delegate to tested String methods
+    # Coverage varies as code is refactored; tested via MockOpaqueAuthService in unit tests
+    "OpaqueAuthService.swift": 4.0,  # Requires running OPAQUE server
     # Test infrastructure - ViewModifier for UI testing that can't be easily unit tested
     "UITestingHelpers.swift": 82.0,  # Test-only code with conditional compilation
 }

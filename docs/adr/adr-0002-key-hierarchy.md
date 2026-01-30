@@ -181,8 +181,8 @@ func setUp(passwordBytes: inout [UInt8], username: String, enableBiometric: Bool
 
 **API Design**:
 
-- **Bytes-based methods** (preferred): `setUp(passwordBytes:)`, `login(passwordBytes:)`, `unlockWithPassword(_ passwordBytes:)`
-- **String-based methods** (deprecated): Marked with `@available(*, deprecated)` for backward compatibility
+- **Bytes-based methods**: All password-handling methods accept `[UInt8]` or `inout [UInt8]` for secure zeroing
+- Methods: `setUp(passwordBytes:)`, `loginAndSetup(passwordBytes:)`, `unlockWithPassword(_ passwordBytes:)`
 
 **Security Note**: This approach zeros a single buffer that the caller controls, rather than leaving multiple String copies in memory. The `defer` pattern ensures zeroing happens on all exit paths (success, error, or exception).
 

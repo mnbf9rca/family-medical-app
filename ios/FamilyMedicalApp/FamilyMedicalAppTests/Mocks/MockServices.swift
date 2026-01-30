@@ -42,7 +42,10 @@ final class MockAuthenticationService: AuthenticationServiceProtocol {
         self.biometricService = biometricService
     }
 
-    func setUp(password: String, username: String, enableBiometric: Bool) async throws {
+    func setUp(passwordBytes: inout [UInt8], username: String, enableBiometric: Bool) async throws {
+        for index in passwordBytes.indices {
+            passwordBytes[index] = 0
+        }
         isSetUp = true
         storedUsername = username
         if enableBiometric {
@@ -53,7 +56,10 @@ final class MockAuthenticationService: AuthenticationServiceProtocol {
         }
     }
 
-    func loginAndSetup(password: String, username: String, enableBiometric: Bool) async throws {
+    func loginAndSetup(passwordBytes: inout [UInt8], username: String, enableBiometric: Bool) async throws {
+        for index in passwordBytes.indices {
+            passwordBytes[index] = 0
+        }
         if shouldFailLoginAndSetup {
             throw AuthenticationError.wrongPassword
         }
@@ -83,7 +89,10 @@ final class MockAuthenticationService: AuthenticationServiceProtocol {
         }
     }
 
-    func unlockWithPassword(_ password: String) async throws {
+    func unlockWithPassword(_ passwordBytes: inout [UInt8]) async throws {
+        for index in passwordBytes.indices {
+            passwordBytes[index] = 0
+        }
         if shouldFailUnlock {
             if isLockedOut {
                 throw AuthenticationError.accountLocked(remainingSeconds: lockoutRemainingSeconds)
@@ -126,30 +135,6 @@ final class MockAuthenticationService: AuthenticationServiceProtocol {
         isBiometricEnabled = false
         failedAttemptCount = 0
         storedUsername = nil
-    }
-
-    // MARK: - Bytes-Based Methods (RFC 9807)
-
-    func setUp(passwordBytes: inout [UInt8], username: String, enableBiometric: Bool) async throws {
-        // Zero the bytes to match real implementation behavior
-        for index in passwordBytes.indices {
-            passwordBytes[index] = 0
-        }
-        try await setUp(password: "", username: username, enableBiometric: enableBiometric)
-    }
-
-    func loginAndSetup(passwordBytes: inout [UInt8], username: String, enableBiometric: Bool) async throws {
-        for index in passwordBytes.indices {
-            passwordBytes[index] = 0
-        }
-        try await loginAndSetup(password: "", username: username, enableBiometric: enableBiometric)
-    }
-
-    func unlockWithPassword(_ passwordBytes: inout [UInt8]) async throws {
-        for index in passwordBytes.indices {
-            passwordBytes[index] = 0
-        }
-        try await unlockWithPassword("")
     }
 }
 
@@ -238,7 +223,7 @@ final class MockOpaqueAuthService: OpaqueAuthServiceProtocol, @unchecked Sendabl
     var testExportKey = Data(repeating: 0x42, count: 32)
     let testSessionKey = Data(repeating: 0x43, count: 32)
 
-    func register(username: String, password: String) async throws -> OpaqueRegistrationResult {
+    func register(username: String, passwordBytes: [UInt8]) async throws -> OpaqueRegistrationResult {
         registerCallCount += 1
         lastRegisteredUsername = username
 
@@ -259,7 +244,7 @@ final class MockOpaqueAuthService: OpaqueAuthServiceProtocol, @unchecked Sendabl
         return OpaqueRegistrationResult(exportKey: testExportKey)
     }
 
-    func login(username: String, password: String) async throws -> OpaqueLoginResult {
+    func login(username: String, passwordBytes: [UInt8]) async throws -> OpaqueLoginResult {
         loginCallCount += 1
         lastLoginUsername = username
 
@@ -281,20 +266,6 @@ final class MockOpaqueAuthService: OpaqueAuthServiceProtocol, @unchecked Sendabl
         if shouldFailUpload {
             throw OpaqueAuthError.uploadFailed
         }
-    }
-
-    // MARK: - Bytes-Based Methods (RFC 9807)
-
-    func register(username: String, passwordBytes: [UInt8]) async throws -> OpaqueRegistrationResult {
-        // Delegate to String version for test compatibility
-        let password = String(bytes: passwordBytes, encoding: .utf8) ?? ""
-        return try await register(username: username, password: password)
-    }
-
-    func login(username: String, passwordBytes: [UInt8]) async throws -> OpaqueLoginResult {
-        // Delegate to String version for test compatibility
-        let password = String(bytes: passwordBytes, encoding: .utf8) ?? ""
-        return try await login(username: username, password: password)
     }
 }
 

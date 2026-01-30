@@ -31,7 +31,7 @@ struct OpaqueLoginResult: Equatable, Hashable, Sendable {
 ///
 /// ## Usage Flow
 /// 1. Registration: `register(username:password:)` creates server-side credential
-/// 2. Login: `login(username:password:)` authenticates and retrieves export key
+/// 2. Login: `login(username:passwordBytes:)` authenticates and retrieves export key
 /// 3. Export key is used to derive Primary Key (per ADR-0002 key hierarchy)
 protocol OpaqueAuthServiceProtocol: Sendable {
     /// Register a new user with OPAQUE protocol
@@ -45,8 +45,7 @@ protocol OpaqueAuthServiceProtocol: Sendable {
     ///   - password: User's password (never leaves device)
     /// - Returns: Registration result containing export key
     /// - Throws: `OpaqueAuthError.registrationFailed` if server rejects registration
-    @available(*, deprecated, message: "Use register(username:passwordBytes:) for secure zeroing (RFC 9807)")
-    func register(username: String, password: String) async throws -> OpaqueRegistrationResult
+    func register(username: String, passwordBytes: [UInt8]) async throws -> OpaqueRegistrationResult
 
     /// Login an existing user with OPAQUE protocol
     ///
@@ -59,21 +58,6 @@ protocol OpaqueAuthServiceProtocol: Sendable {
     ///   - password: User's password (never leaves device)
     /// - Returns: Login result containing export key, session key, and optional bundle
     /// - Throws: `OpaqueAuthError.authenticationFailed` for wrong username OR password
-    @available(*, deprecated, message: "Use login(username:passwordBytes:) for secure zeroing (RFC 9807)")
-    func login(username: String, password: String) async throws -> OpaqueLoginResult
-
-    /// Register with password bytes - preferred for secure zeroing
-    /// - Parameters:
-    ///   - username: User identifier
-    ///   - passwordBytes: Password as bytes (caller responsible for zeroing after)
-    /// - Returns: Registration result with export key
-    func register(username: String, passwordBytes: [UInt8]) async throws -> OpaqueRegistrationResult
-
-    /// Login with password bytes - preferred for secure zeroing
-    /// - Parameters:
-    ///   - username: User identifier
-    ///   - passwordBytes: Password as bytes (caller responsible for zeroing after)
-    /// - Returns: Login result with keys
     func login(username: String, passwordBytes: [UInt8]) async throws -> OpaqueLoginResult
 
     /// Upload encrypted bundle after registration or key change
