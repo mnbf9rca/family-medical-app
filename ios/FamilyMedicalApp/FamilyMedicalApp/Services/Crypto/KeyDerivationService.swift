@@ -12,6 +12,13 @@ protocol KeyDerivationServiceProtocol: Sendable {
     /// - Throws: CryptoError on derivation failure
     func derivePrimaryKey(from password: String, salt: Data) throws -> SymmetricKey
 
+    /// Derives primary key from password bytes - preferred for secure zeroing
+    /// - Parameters:
+    ///   - passwordBytes: Password as bytes (caller responsible for zeroing after)
+    ///   - salt: Cryptographic salt
+    /// - Returns: Derived symmetric key
+    func derivePrimaryKey(from passwordBytes: [UInt8], salt: Data) throws -> SymmetricKey
+
     /// Derive a primary key from OPAQUE export key using HKDF
     ///
     /// When using OPAQUE authentication, the export key replaces password-based
@@ -78,6 +85,32 @@ final class KeyDerivationService: KeyDerivationServiceProtocol, @unchecked Senda
 
         var passwordBytes = [UInt8](passwordData)
         sodium.utils.zero(&passwordBytes)
+
+        return key
+    }
+
+    func derivePrimaryKey(from passwordBytes: [UInt8], salt: Data) throws -> SymmetricKey {
+        guard salt.count == saltLength else {
+            throw CryptoError.invalidSalt("Salt must be \(saltLength) bytes, got \(salt.count)")
+        }
+
+        guard let derivedKey = sodium.pwHash.hash(
+            outputLength: outputLength,
+            passwd: passwordBytes,
+            salt: salt.bytes,
+            opsLimit: opsLimit,
+            memLimit: memLimit,
+            alg: .Argon2ID13
+        ) else {
+            throw CryptoError.keyDerivationFailed("Argon2id derivation failed")
+        }
+
+        // Convert to CryptoKit SymmetricKey
+        let key = SymmetricKey(data: Data(derivedKey))
+
+        // Zero the derived key copy after creating SymmetricKey
+        var mutableDerivedKey = derivedKey
+        sodium.utils.zero(&mutableDerivedKey)
 
         return key
     }
