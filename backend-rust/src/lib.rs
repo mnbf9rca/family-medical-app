@@ -1,4 +1,5 @@
 mod opaque;
+mod rate_limit;
 mod routes;
 
 use worker::*;
