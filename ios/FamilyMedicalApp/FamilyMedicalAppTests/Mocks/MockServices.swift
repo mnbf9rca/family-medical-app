@@ -258,6 +258,20 @@ final class MockOpaqueAuthService: OpaqueAuthServiceProtocol, @unchecked Sendabl
             throw OpaqueAuthError.uploadFailed
         }
     }
+
+    // MARK: - Bytes-Based Methods (RFC 9807)
+
+    func register(username: String, passwordBytes: [UInt8]) async throws -> OpaqueRegistrationResult {
+        // Delegate to String version for test compatibility
+        let password = String(bytes: passwordBytes, encoding: .utf8) ?? ""
+        return try await register(username: username, password: password)
+    }
+
+    func login(username: String, passwordBytes: [UInt8]) async throws -> OpaqueLoginResult {
+        // Delegate to String version for test compatibility
+        let password = String(bytes: passwordBytes, encoding: .utf8) ?? ""
+        return try await login(username: username, password: password)
+    }
 }
 
 // MARK: - Mock Keychain Service
