@@ -37,9 +37,9 @@ THRESHOLD = 85  # Individual file threshold
 # The new views (FieldEditorSheet, SchemaEditorView, SchemaListView) have ViewInspector
 # limitations but their backing ViewModels have 95%+ coverage.
 # OpaqueAuthService requires live backend for integration testing.
-# Reduced from 87% to 86% for RFC 9807 bytes-based password methods (Issue #95)
-# New +Bytes extension files are thin wrappers; zeroing tested via mocks.
-OVERALL_THRESHOLD = 86  # Overall project threshold
+# RFC 9807 bytes-based password methods (Issue #95) merged into main service files.
+# Password zeroing tested via mocks; actual coverage is 87.77%.
+OVERALL_THRESHOLD = 87  # Overall project threshold
 DETAILED_MODE = "${DETAILED_MODE}" == "true"
 FUNCTION_LIMIT = int("${FUNCTION_LIMIT}")
 
@@ -50,7 +50,7 @@ FILE_EXCEPTIONS = {
     "CoreDataStack.swift": 67.0,  # Test infrastructure methods (deleteAllData) difficult to test without mocking Core Data internals
     # SwiftUI Views - body closures don't execute in ViewInspector unit tests, UI tests don't count toward coverage
     "AttachmentViewerView.swift": 55.0,  # Full-screen viewer with PDFKit/UIImage - thin closures call ViewModel methods
-    "AttachmentPickerView.swift": 62.0,  # PhotosPicker/Menu/sheet closures - CI has ~5% variance from local
+    "AttachmentPickerView.swift": 67.0,  # PhotosPicker/Menu/sheet closures - CI has ~5% variance from local
     "FieldEditorSheet.swift": 50.0,  # Form with validation binding closures - delegates to FieldEditorViewModel (97%+)
     "SchemaEditorView.swift": 64.0,  # Form with sheet/alert/swipe closures - delegates to SchemaEditorViewModel (95%+)
     "SchemaListView.swift": 69.0,  # List with navigation/delete closures - delegates to SchemaListViewModel (98%+)
@@ -65,7 +65,7 @@ FILE_EXCEPTIONS = {
     "AttachmentFileStorageService.swift": 79.0,  # Local 80%, CI 89% - variance in default init tests
     # OPAQUE authentication - requires backend server for full integration testing
     # Coverage varies as code is refactored; tested via MockOpaqueAuthService in unit tests
-    "OpaqueAuthService.swift": 4.0,  # Requires running OPAQUE server
+    "OpaqueAuthService.swift": 13.0,  # Requires running OPAQUE server; actual ~15.8%
     # Test infrastructure - ViewModifier for UI testing that can't be easily unit tested
     "UITestingHelpers.swift": 82.0,  # Test-only code with conditional compilation
 }
