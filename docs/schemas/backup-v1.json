@@ -416,27 +416,91 @@
     "fieldDefinition": {
       "type": "object",
       "description": "Definition of a field in a record schema",
-      "required": ["id", "label", "type", "isRequired"],
+      "required": ["id", "displayName", "fieldType", "isRequired", "displayOrder", "isMultiline", "capitalizationMode", "visibility", "createdBy", "createdAt", "updatedBy", "updatedAt"],
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique field identifier"
+          "format": "uuid",
+          "description": "Unique field identifier (UUID)"
         },
-        "label": {
+        "displayName": {
           "type": "string",
-          "description": "Display label"
+          "description": "Human-readable display name"
         },
-        "type": {
+        "fieldType": {
           "type": "string",
           "enum": ["string", "int", "double", "bool", "date", "attachmentIds", "stringArray"],
-          "description": "Field type"
+          "description": "Type of value this field holds"
         },
         "isRequired": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Whether this field must have a value"
+        },
+        "displayOrder": {
+          "type": "integer",
+          "description": "Order in UI (lower numbers first)"
         },
         "placeholder": {
           "type": ["string", "null"],
           "description": "Placeholder text for input"
+        },
+        "helpText": {
+          "type": ["string", "null"],
+          "description": "Help text explaining the field"
+        },
+        "validationRules": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/validationRule" },
+          "description": "Validation rules for this field"
+        },
+        "isMultiline": {
+          "type": "boolean",
+          "description": "Whether to use multiline text input"
+        },
+        "capitalizationMode": {
+          "type": "string",
+          "enum": ["none", "words", "sentences", "allCharacters"],
+          "description": "Text capitalization mode for string fields"
+        },
+        "visibility": {
+          "type": "string",
+          "enum": ["active", "hidden", "deprecated"],
+          "description": "Visibility state of this field"
+        },
+        "createdBy": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Device ID that created this field"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When this field was created"
+        },
+        "updatedBy": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Device ID that last updated this field"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When this field was last updated"
+        }
+      }
+    },
+    "validationRule": {
+      "type": "object",
+      "description": "Validation rule for a field",
+      "required": ["type", "value"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["minLength", "maxLength", "minValue", "maxValue", "minDate", "maxDate", "pattern"],
+          "description": "Type of validation rule"
+        },
+        "value": {
+          "description": "Rule parameter (type depends on rule type)"
         }
       }
     }

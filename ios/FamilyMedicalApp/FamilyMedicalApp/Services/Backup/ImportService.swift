@@ -104,6 +104,9 @@ final class ImportService: ImportServiceProtocol, @unchecked Sendable {
             throw BackupError.importFailed("Invalid person data in backup")
         }
 
+        // TODO: Issue #98 - Add conflict detection and resolution UI
+        // Currently fails if person already exists with different FMK
+
         // Generate and store new FMK for this person
         let fmk = fmkService.generateFMK()
         do {
