@@ -82,6 +82,9 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           OPAQUE_SECRET: ${{ secrets.TEST_OPAQUE_SERVER_SETUP }}
+        # Note: --env preview is intentionally omitted here. Unlike wrangler deploy,
+        # wrangler secret put appends the env suffix even with explicit --name,
+        # causing duplicate workers. See: github.com/cloudflare/workers-sdk/issues/12300
         run: echo "$OPAQUE_SECRET" | wrangler secret put OPAQUE_SERVER_SETUP --name "recordwell-opaque-pr-${PR_NUMBER}-preview"
 
   smoke-test:
