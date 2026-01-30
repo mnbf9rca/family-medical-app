@@ -8,7 +8,7 @@ struct BackupFileTests {
     @Test("BackupFile encodes encrypted format correctly")
     func backupFileEncryptedFormat() throws {
         let file = BackupFile(
-            schema: "https://familymedicalapp.com/schemas/backup-v1.json",
+            schema: "https://recordwell.app/schemas/backup-v1.json",
             formatName: BackupFile.formatNameValue,
             formatVersion: BackupFile.currentVersion,
             generator: "FamilyMedicalApp/1.0.0 (iOS)",
@@ -75,7 +75,7 @@ struct BackupFileTests {
     @Test("BackupFile round-trips through JSON")
     func backupFileRoundTrip() throws {
         let original = BackupFile(
-            schema: "https://familymedicalapp.com/schemas/backup-v1.json",
+            schema: "https://recordwell.app/schemas/backup-v1.json",
             formatName: BackupFile.formatNameValue,
             formatVersion: BackupFile.currentVersion,
             generator: "Test/1.0",

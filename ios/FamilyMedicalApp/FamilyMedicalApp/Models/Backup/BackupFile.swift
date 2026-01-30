@@ -13,8 +13,8 @@ struct BackupFile: Codable, Equatable {
     // MARK: - Constants
 
     static let currentVersion = "1.0"
-    static let formatNameValue = "FamilyMedicalApp Backup"
-    static let schemaURL = "https://familymedicalapp.com/schemas/backup-v1.json"
+    static let formatNameValue = "RecordWell Backup"
+    static let schemaURL = "https://recordwell.app/schemas/backup-v1.json"
 
     // MARK: - Properties
 
