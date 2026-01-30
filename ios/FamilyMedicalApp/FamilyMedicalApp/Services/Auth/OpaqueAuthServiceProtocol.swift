@@ -31,7 +31,7 @@ struct OpaqueLoginResult: Equatable, Hashable, Sendable {
 ///
 /// ## Usage Flow
 /// 1. Registration: `register(username:password:)` creates server-side credential
-/// 2. Login: `login(username:password:)` authenticates and retrieves export key
+/// 2. Login: `login(username:passwordBytes:)` authenticates and retrieves export key
 /// 3. Export key is used to derive Primary Key (per ADR-0002 key hierarchy)
 protocol OpaqueAuthServiceProtocol: Sendable {
     /// Register a new user with OPAQUE protocol
@@ -45,7 +45,7 @@ protocol OpaqueAuthServiceProtocol: Sendable {
     ///   - password: User's password (never leaves device)
     /// - Returns: Registration result containing export key
     /// - Throws: `OpaqueAuthError.registrationFailed` if server rejects registration
-    func register(username: String, password: String) async throws -> OpaqueRegistrationResult
+    func register(username: String, passwordBytes: [UInt8]) async throws -> OpaqueRegistrationResult
 
     /// Login an existing user with OPAQUE protocol
     ///
@@ -58,7 +58,7 @@ protocol OpaqueAuthServiceProtocol: Sendable {
     ///   - password: User's password (never leaves device)
     /// - Returns: Login result containing export key, session key, and optional bundle
     /// - Throws: `OpaqueAuthError.authenticationFailed` for wrong username OR password
-    func login(username: String, password: String) async throws -> OpaqueLoginResult
+    func login(username: String, passwordBytes: [UInt8]) async throws -> OpaqueLoginResult
 
     /// Upload encrypted bundle after registration or key change
     ///

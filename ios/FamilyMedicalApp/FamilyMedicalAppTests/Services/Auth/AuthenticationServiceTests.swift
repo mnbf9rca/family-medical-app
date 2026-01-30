@@ -1,4 +1,4 @@
-// swiftlint:disable password_in_code force_unwrapping
+// swiftlint:disable force_unwrapping
 import CryptoKit
 import Foundation
 import Testing
@@ -21,7 +21,8 @@ struct AuthenticationServiceTests {
 
         #expect(service.isSetUp == false)
 
-        try await service.setUp(password: "MySecurePassword123!", username: "testuser", enableBiometric: false)
+        var passwordBytes = Array("MySecurePassword123!".utf8)
+        try await service.setUp(passwordBytes: &passwordBytes, username: "testuser", enableBiometric: false)
 
         #expect(service.isSetUp == true)
         // OPAQUE doesn't use salt - it uses export key from OPAQUE protocol
@@ -41,7 +42,8 @@ struct AuthenticationServiceTests {
             userDefaults: userDefaults
         )
 
-        try await service.setUp(password: "MySecurePassword123!", username: "testuser", enableBiometric: false)
+        var passwordBytes = Array("MySecurePassword123!".utf8)
+        try await service.setUp(passwordBytes: &passwordBytes, username: "testuser", enableBiometric: false)
 
         let publicKeyData = userDefaults.data(forKey: "com.family-medical-app.identity-public-key")
         #expect(publicKeyData != nil)
@@ -59,7 +61,8 @@ struct AuthenticationServiceTests {
             userDefaults: userDefaults
         )
 
-        try await service.setUp(password: "MySecurePassword123!", username: "testuser", enableBiometric: true)
+        var passwordBytes = Array("MySecurePassword123!".utf8)
+        try await service.setUp(passwordBytes: &passwordBytes, username: "testuser", enableBiometric: true)
 
         #expect(service.isBiometricEnabled == true)
     }
@@ -75,7 +78,8 @@ struct AuthenticationServiceTests {
             userDefaults: userDefaults
         )
 
-        try await service.setUp(password: "MySecurePassword123!", username: "testuser", enableBiometric: true)
+        var passwordBytes = Array("MySecurePassword123!".utf8)
+        try await service.setUp(passwordBytes: &passwordBytes, username: "testuser", enableBiometric: true)
 
         #expect(service.isBiometricEnabled == false)
     }
@@ -90,7 +94,8 @@ struct AuthenticationServiceTests {
             userDefaults: userDefaults
         )
 
-        try await service.setUp(password: "MySecurePassword123!", username: "testuser", enableBiometric: false)
+        var passwordBytes = Array("MySecurePassword123!".utf8)
+        try await service.setUp(passwordBytes: &passwordBytes, username: "testuser", enableBiometric: false)
 
         #expect(service.storedUsername == "testuser")
     }
@@ -118,7 +123,8 @@ struct AuthenticationServiceTests {
             userDefaults: userDefaults
         )
 
-        try await service.setUp(password: "MySecurePassword123!", username: "testuser", enableBiometric: false)
+        var passwordBytes = Array("MySecurePassword123!".utf8)
+        try await service.setUp(passwordBytes: &passwordBytes, username: "testuser", enableBiometric: false)
         #expect(service.storedUsername == "testuser")
 
         try service.logout()
@@ -137,7 +143,8 @@ struct AuthenticationServiceTests {
             userDefaults: userDefaults
         )
 
-        try await service.setUp(password: "MySecurePassword123!", username: "testuser", enableBiometric: false)
+        var passwordBytes = Array("MySecurePassword123!".utf8)
+        try await service.setUp(passwordBytes: &passwordBytes, username: "testuser", enableBiometric: false)
 
         #expect(opaqueAuthService.registerCallCount == 1)
         #expect(opaqueAuthService.lastRegisteredUsername == "testuser")
@@ -155,9 +162,10 @@ struct AuthenticationServiceTests {
             userDefaults: userDefaults
         )
 
-        let password = "MySecurePassword123!"
-        try await service.setUp(password: password, username: "testuser", enableBiometric: false)
-        try await service.unlockWithPassword(password)
+        var setUpPasswordBytes = Array("MySecurePassword123!".utf8)
+        try await service.setUp(passwordBytes: &setUpPasswordBytes, username: "testuser", enableBiometric: false)
+        var unlockPasswordBytes = Array("MySecurePassword123!".utf8)
+        try await service.unlockWithPassword(&unlockPasswordBytes)
         // No error thrown means success
         #expect(opaqueAuthService.loginCallCount == 1)
     }
@@ -172,13 +180,15 @@ struct AuthenticationServiceTests {
             userDefaults: userDefaults
         )
 
-        try await service.setUp(password: "CorrectPassword123!", username: "testuser", enableBiometric: false)
+        var setUpPasswordBytes = Array("CorrectPassword123!".utf8)
+        try await service.setUp(passwordBytes: &setUpPasswordBytes, username: "testuser", enableBiometric: false)
 
         // Make OPAQUE fail authentication
         opaqueAuthService.shouldFailLogin = true
 
+        var wrongPasswordBytes = Array("WrongPassword123!".utf8)
         await #expect(throws: AuthenticationError.wrongPassword) {
-            try await service.unlockWithPassword("WrongPassword123!")
+            try await service.unlockWithPassword(&wrongPasswordBytes)
         }
     }
 
@@ -190,8 +200,9 @@ struct AuthenticationServiceTests {
             userDefaults: userDefaults
         )
 
+        var passwordBytes = Array("SomePassword123!".utf8)
         await #expect(throws: AuthenticationError.notSetUp) {
-            try await service.unlockWithPassword("SomePassword123!")
+            try await service.unlockWithPassword(&passwordBytes)
         }
     }
 
@@ -210,7 +221,8 @@ struct AuthenticationServiceTests {
             userDefaults: userDefaults
         )
 
-        try await service.setUp(password: "MyPassword123!", username: "testuser", enableBiometric: true)
+        var passwordBytes = Array("MyPassword123!".utf8)
+        try await service.setUp(passwordBytes: &passwordBytes, username: "testuser", enableBiometric: true)
 
         try await service.unlockWithBiometric()
         // No error thrown means success
@@ -226,7 +238,8 @@ struct AuthenticationServiceTests {
             userDefaults: userDefaults
         )
 
-        try await service.setUp(password: "MyPassword123!", username: "testuser", enableBiometric: false)
+        var passwordBytes = Array("MyPassword123!".utf8)
+        try await service.setUp(passwordBytes: &passwordBytes, username: "testuser", enableBiometric: false)
 
         await #expect(throws: AuthenticationError.biometricNotAvailable) {
             try await service.unlockWithBiometric()
@@ -244,12 +257,14 @@ struct AuthenticationServiceTests {
             userDefaults: userDefaults
         )
 
-        try await service.setUp(password: "MyPassword123!", username: "testuser", enableBiometric: true)
+        var passwordBytes = Array("MyPassword123!".utf8)
+        try await service.setUp(passwordBytes: &passwordBytes, username: "testuser", enableBiometric: true)
 
         // Create failed attempts
         opaqueAuthService.shouldFailLogin = true
         for _ in 1 ... 2 {
-            try? await service.unlockWithPassword("WrongPassword!")
+            var wrongPasswordBytes = Array("WrongPassword!".utf8)
+            try? await service.unlockWithPassword(&wrongPasswordBytes)
         }
 
         #expect(service.failedAttemptCount == 2)
@@ -303,7 +318,8 @@ struct AuthenticationServiceTests {
             userDefaults: userDefaults
         )
 
-        try await service.setUp(password: "MyPassword123!", username: "testuser", enableBiometric: true)
+        var passwordBytes = Array("MyPassword123!".utf8)
+        try await service.setUp(passwordBytes: &passwordBytes, username: "testuser", enableBiometric: true)
 
         #expect(service.isBiometricEnabled == true)
 
@@ -328,7 +344,8 @@ struct AuthenticationServiceTests {
             userDefaults: userDefaults
         )
 
-        try await service.setUp(password: "MyPassword123!", username: "testuser", enableBiometric: true)
+        var passwordBytes = Array("MyPassword123!".utf8)
+        try await service.setUp(passwordBytes: &passwordBytes, username: "testuser", enableBiometric: true)
 
         #expect(service.isSetUp == true)
 
@@ -416,4 +433,4 @@ private final class MockBiometricService: BiometricServiceProtocol {
     }
 }
 
-// swiftlint:enable password_in_code force_unwrapping
+// swiftlint:enable force_unwrapping

@@ -42,7 +42,10 @@ final class MockAuthenticationService: AuthenticationServiceProtocol {
         self.biometricService = biometricService
     }
 
-    func setUp(password: String, username: String, enableBiometric: Bool) async throws {
+    func setUp(passwordBytes: inout [UInt8], username: String, enableBiometric: Bool) async throws {
+        for index in passwordBytes.indices {
+            passwordBytes[index] = 0
+        }
         isSetUp = true
         storedUsername = username
         if enableBiometric {
@@ -53,7 +56,10 @@ final class MockAuthenticationService: AuthenticationServiceProtocol {
         }
     }
 
-    func loginAndSetup(password: String, username: String, enableBiometric: Bool) async throws {
+    func loginAndSetup(passwordBytes: inout [UInt8], username: String, enableBiometric: Bool) async throws {
+        for index in passwordBytes.indices {
+            passwordBytes[index] = 0
+        }
         if shouldFailLoginAndSetup {
             throw AuthenticationError.wrongPassword
         }
@@ -83,7 +89,10 @@ final class MockAuthenticationService: AuthenticationServiceProtocol {
         }
     }
 
-    func unlockWithPassword(_ password: String) async throws {
+    func unlockWithPassword(_ passwordBytes: inout [UInt8]) async throws {
+        for index in passwordBytes.indices {
+            passwordBytes[index] = 0
+        }
         if shouldFailUnlock {
             if isLockedOut {
                 throw AuthenticationError.accountLocked(remainingSeconds: lockoutRemainingSeconds)
@@ -214,7 +223,7 @@ final class MockOpaqueAuthService: OpaqueAuthServiceProtocol, @unchecked Sendabl
     var testExportKey = Data(repeating: 0x42, count: 32)
     let testSessionKey = Data(repeating: 0x43, count: 32)
 
-    func register(username: String, password: String) async throws -> OpaqueRegistrationResult {
+    func register(username: String, passwordBytes: [UInt8]) async throws -> OpaqueRegistrationResult {
         registerCallCount += 1
         lastRegisteredUsername = username
 
@@ -235,7 +244,7 @@ final class MockOpaqueAuthService: OpaqueAuthServiceProtocol, @unchecked Sendabl
         return OpaqueRegistrationResult(exportKey: testExportKey)
     }
 
-    func login(username: String, password: String) async throws -> OpaqueLoginResult {
+    func login(username: String, passwordBytes: [UInt8]) async throws -> OpaqueLoginResult {
         loginCallCount += 1
         lastLoginUsername = username
 

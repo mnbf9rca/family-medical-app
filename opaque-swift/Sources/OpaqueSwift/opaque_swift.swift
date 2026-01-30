@@ -457,6 +457,8 @@ private struct FfiConverterData: FfiConverterRustBuffer {
 public protocol ClientLoginProtocol: AnyObject {
     func finish(serverResponse: Data, password: String) throws -> LoginResult
 
+    func finishWithBytes(serverResponse: Data, password: Data) throws -> LoginResult
+
     func getRequest() -> Data
 }
 
@@ -521,12 +523,31 @@ ClientLoginProtocol {
         })
     }
 
+    public static func startWithBytes(password: Data) throws -> ClientLogin {
+        try FfiConverterTypeClientLogin.lift(rustCallWithError(FfiConverterTypeOpaqueError.lift) {
+            uniffi_opaque_swift_fn_constructor_clientlogin_start_with_bytes(
+                FfiConverterData.lower(password), $0
+            )
+        })
+    }
+
     open func finish(serverResponse: Data, password: String) throws -> LoginResult {
         try FfiConverterTypeLoginResult.lift(rustCallWithError(FfiConverterTypeOpaqueError.lift) {
             uniffi_opaque_swift_fn_method_clientlogin_finish(
                 self.uniffiClonePointer(),
                 FfiConverterData.lower(serverResponse),
                 FfiConverterString.lower(password),
+                $0
+            )
+        })
+    }
+
+    open func finishWithBytes(serverResponse: Data, password: Data) throws -> LoginResult {
+        try FfiConverterTypeLoginResult.lift(rustCallWithError(FfiConverterTypeOpaqueError.lift) {
+            uniffi_opaque_swift_fn_method_clientlogin_finish_with_bytes(
+                self.uniffiClonePointer(),
+                FfiConverterData.lower(serverResponse),
+                FfiConverterData.lower(password),
                 $0
             )
         })
@@ -595,6 +616,8 @@ public func FfiConverterTypeClientLogin_lower(_ value: ClientLogin) -> UnsafeMut
 public protocol ClientRegistrationProtocol: AnyObject {
     func finish(serverResponse: Data, password: String) throws -> RegistrationResult
 
+    func finishWithBytes(serverResponse: Data, password: Data) throws -> RegistrationResult
+
     func getRequest() -> Data
 }
 
@@ -659,12 +682,31 @@ ClientRegistrationProtocol {
         })
     }
 
+    public static func startWithBytes(password: Data) throws -> ClientRegistration {
+        try FfiConverterTypeClientRegistration.lift(rustCallWithError(FfiConverterTypeOpaqueError.lift) {
+            uniffi_opaque_swift_fn_constructor_clientregistration_start_with_bytes(
+                FfiConverterData.lower(password), $0
+            )
+        })
+    }
+
     open func finish(serverResponse: Data, password: String) throws -> RegistrationResult {
         try FfiConverterTypeRegistrationResult.lift(rustCallWithError(FfiConverterTypeOpaqueError.lift) {
             uniffi_opaque_swift_fn_method_clientregistration_finish(
                 self.uniffiClonePointer(),
                 FfiConverterData.lower(serverResponse),
                 FfiConverterString.lower(password),
+                $0
+            )
+        })
+    }
+
+    open func finishWithBytes(serverResponse: Data, password: Data) throws -> RegistrationResult {
+        try FfiConverterTypeRegistrationResult.lift(rustCallWithError(FfiConverterTypeOpaqueError.lift) {
+            uniffi_opaque_swift_fn_method_clientregistration_finish_with_bytes(
+                self.uniffiClonePointer(),
+                FfiConverterData.lower(serverResponse),
+                FfiConverterData.lower(password),
                 $0
             )
         })
@@ -932,10 +974,16 @@ private var initializationResult: InitializationResult = {
     if uniffi_opaque_swift_checksum_method_clientlogin_finish() != 43_646 {
         return InitializationResult.apiChecksumMismatch
     }
+    if uniffi_opaque_swift_checksum_method_clientlogin_finish_with_bytes() != 51_572 {
+        return InitializationResult.apiChecksumMismatch
+    }
     if uniffi_opaque_swift_checksum_method_clientlogin_get_request() != 18_869 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_opaque_swift_checksum_method_clientregistration_finish() != 55_546 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_opaque_swift_checksum_method_clientregistration_finish_with_bytes() != 43_626 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_opaque_swift_checksum_method_clientregistration_get_request() != 1_373 {
@@ -944,7 +992,13 @@ private var initializationResult: InitializationResult = {
     if uniffi_opaque_swift_checksum_constructor_clientlogin_start() != 46_105 {
         return InitializationResult.apiChecksumMismatch
     }
+    if uniffi_opaque_swift_checksum_constructor_clientlogin_start_with_bytes() != 11_810 {
+        return InitializationResult.apiChecksumMismatch
+    }
     if uniffi_opaque_swift_checksum_constructor_clientregistration_start() != 14_741 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_opaque_swift_checksum_constructor_clientregistration_start_with_bytes() != 33_221 {
         return InitializationResult.apiChecksumMismatch
     }
 

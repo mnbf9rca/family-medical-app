@@ -9,12 +9,11 @@ struct KeyDerivationServiceTests {
     /// Test key derivation consistency (same password + same salt = same key)
     @Test
     func derivePrimaryKey_consistency() throws {
-        // swiftlint:disable:next password_in_code
-        let password = "correct-horse-battery-staple"
+        let passwordBytes: [UInt8] = Array("correct-horse-battery-staple".utf8)
         let salt = try service.generateSalt()
 
-        let key1 = try service.derivePrimaryKey(from: password, salt: salt)
-        let key2 = try service.derivePrimaryKey(from: password, salt: salt)
+        let key1 = try service.derivePrimaryKey(from: passwordBytes, salt: salt)
+        let key2 = try service.derivePrimaryKey(from: passwordBytes, salt: salt)
 
         // Keys should be identical
         let data1 = key1.withUnsafeBytes { Data($0) }
@@ -25,12 +24,12 @@ struct KeyDerivationServiceTests {
     /// Test different passwords produce different keys
     @Test
     func derivePrimaryKey_differentPassword() throws {
-        let password1 = "password1"
-        let password2 = "password2"
+        let passwordBytes1: [UInt8] = Array("password1".utf8)
+        let passwordBytes2: [UInt8] = Array("password2".utf8)
         let salt = try service.generateSalt()
 
-        let key1 = try service.derivePrimaryKey(from: password1, salt: salt)
-        let key2 = try service.derivePrimaryKey(from: password2, salt: salt)
+        let key1 = try service.derivePrimaryKey(from: passwordBytes1, salt: salt)
+        let key2 = try service.derivePrimaryKey(from: passwordBytes2, salt: salt)
 
         // Keys should be different
         let data1 = key1.withUnsafeBytes { Data($0) }
@@ -41,13 +40,12 @@ struct KeyDerivationServiceTests {
     /// Test different salts produce different keys
     @Test
     func derivePrimaryKey_differentSalt() throws {
-        // swiftlint:disable:next password_in_code
-        let password = "same-password"
+        let passwordBytes: [UInt8] = Array("same-password".utf8)
         let salt1 = try service.generateSalt()
         let salt2 = try service.generateSalt()
 
-        let key1 = try service.derivePrimaryKey(from: password, salt: salt1)
-        let key2 = try service.derivePrimaryKey(from: password, salt: salt2)
+        let key1 = try service.derivePrimaryKey(from: passwordBytes, salt: salt1)
+        let key2 = try service.derivePrimaryKey(from: passwordBytes, salt: salt2)
 
         // Keys should be different
         let data1 = key1.withUnsafeBytes { Data($0) }
@@ -58,23 +56,22 @@ struct KeyDerivationServiceTests {
     /// Test invalid salt length throws error
     @Test
     func derivePrimaryKey_invalidSaltLength() throws {
-        // swiftlint:disable:next password_in_code
-        let password = "password"
+        let passwordBytes: [UInt8] = Array("password".utf8)
         let shortSalt = Data([0x01, 0x02, 0x03]) // Only 3 bytes
 
         #expect(throws: CryptoError.invalidSalt("Salt must be 16 bytes, got 3")) {
-            _ = try service.derivePrimaryKey(from: password, salt: shortSalt)
+            _ = try service.derivePrimaryKey(from: passwordBytes, salt: shortSalt)
         }
     }
 
     /// Test empty password succeeds (valid edge case)
     @Test
     func derivePrimaryKey_emptyPassword() throws {
-        let password = ""
+        let passwordBytes: [UInt8] = []
         let salt = try service.generateSalt()
 
         // Empty password should still derive a key
-        let key = try service.derivePrimaryKey(from: password, salt: salt)
+        let key = try service.derivePrimaryKey(from: passwordBytes, salt: salt)
 
         // Verify key is 32 bytes (256 bits)
         let keyData = key.withUnsafeBytes { Data($0) }
@@ -124,13 +121,41 @@ struct KeyDerivationServiceTests {
     /// Test derived key is 256 bits (32 bytes)
     @Test
     func derivePrimaryKey_keySize() throws {
-        // swiftlint:disable:next password_in_code
-        let password = "test-password"
+        let passwordBytes: [UInt8] = Array("test-password".utf8)
         let salt = try service.generateSalt()
 
-        let key = try service.derivePrimaryKey(from: password, salt: salt)
+        let key = try service.derivePrimaryKey(from: passwordBytes, salt: salt)
 
         let keyData = key.withUnsafeBytes { Data($0) }
         #expect(keyData.count == 32) // 256 bits
+    }
+
+    // MARK: - Bytes-Based Methods (RFC 9807)
+
+    /// Test key derivation from password bytes
+    @Test
+    func derivePrimaryKeyFromBytes() throws {
+        let passwordBytes: [UInt8] = Array("test-password-123".utf8)
+        let salt = try service.generateSalt()
+
+        let key = try service.derivePrimaryKey(from: passwordBytes, salt: salt)
+
+        // Key should be 256 bits (32 bytes)
+        let keyData = key.withUnsafeBytes { Data($0) }
+        #expect(keyData.count == 32)
+    }
+
+    /// Test bytes-based derivation is deterministic
+    @Test
+    func derivePrimaryKeyFromBytes_deterministic() throws {
+        let passwordBytes: [UInt8] = Array("test-password-123".utf8)
+        let salt = try service.generateSalt()
+
+        let key1 = try service.derivePrimaryKey(from: passwordBytes, salt: salt)
+        let key2 = try service.derivePrimaryKey(from: passwordBytes, salt: salt)
+
+        let keyData1 = key1.withUnsafeBytes { Data($0) }
+        let keyData2 = key2.withUnsafeBytes { Data($0) }
+        #expect(keyData1 == keyData2)
     }
 }

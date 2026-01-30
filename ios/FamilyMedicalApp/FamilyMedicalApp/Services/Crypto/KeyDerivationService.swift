@@ -10,7 +10,12 @@ protocol KeyDerivationServiceProtocol: Sendable {
     ///   - salt: 16-byte salt (generate new for new users, retrieve for existing)
     /// - Returns: 256-bit SymmetricKey
     /// - Throws: CryptoError on derivation failure
-    func derivePrimaryKey(from password: String, salt: Data) throws -> SymmetricKey
+    /// Derives primary key from password bytes - enables secure zeroing per RFC 9807
+    /// - Parameters:
+    ///   - passwordBytes: Password as bytes (caller responsible for zeroing after)
+    ///   - salt: Cryptographic salt
+    /// - Returns: Derived symmetric key
+    func derivePrimaryKey(from passwordBytes: [UInt8], salt: Data) throws -> SymmetricKey
 
     /// Derive a primary key from OPAQUE export key using HKDF
     ///
@@ -48,36 +53,28 @@ final class KeyDerivationService: KeyDerivationServiceProtocol, @unchecked Senda
     private let memLimit = 64 * 1_024 * 1_024 // 64 MB memory
     private let outputLength = 32 // 256-bit key
 
-    func derivePrimaryKey(from password: String, salt: Data) throws -> SymmetricKey {
+    func derivePrimaryKey(from passwordBytes: [UInt8], salt: Data) throws -> SymmetricKey {
         guard salt.count == saltLength else {
             throw CryptoError.invalidSalt("Salt must be \(saltLength) bytes, got \(salt.count)")
         }
 
-        let passwordData = Data(password.utf8)
-
         guard let derivedKey = sodium.pwHash.hash(
             outputLength: outputLength,
-            passwd: passwordData.bytes,
+            passwd: passwordBytes,
             salt: salt.bytes,
             opsLimit: opsLimit,
             memLimit: memLimit,
             alg: .Argon2ID13
         ) else {
-            // Securely clear password data before throwing
-            var passwordBytes = [UInt8](passwordData)
-            sodium.utils.zero(&passwordBytes)
             throw CryptoError.keyDerivationFailed("Argon2id derivation failed")
         }
 
         // Convert to CryptoKit SymmetricKey
         let key = SymmetricKey(data: Data(derivedKey))
 
-        // Securely clear the intermediate arrays
+        // Zero the derived key copy after creating SymmetricKey
         var mutableDerivedKey = derivedKey
         sodium.utils.zero(&mutableDerivedKey)
-
-        var passwordBytes = [UInt8](passwordData)
-        sodium.utils.zero(&passwordBytes)
 
         return key
     }
