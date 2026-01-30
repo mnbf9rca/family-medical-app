@@ -22,8 +22,9 @@ struct AuthenticationServiceDuplicateRegistrationTests {
         )
 
         // Should throw accountExistsConfirmed with the login result
+        var passwordBytes = Array("MyPassword123!".utf8)
         await #expect(throws: AuthenticationError.self) {
-            try await service.setUp(password: "MyPassword123!", username: "existinguser", enableBiometric: false)
+            try await service.setUp(passwordBytes: &passwordBytes, username: "existinguser", enableBiometric: false)
         }
 
         // Verify registration was attempted

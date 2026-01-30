@@ -1,4 +1,4 @@
-// swiftlint:disable password_in_code force_unwrapping
+// swiftlint:disable force_unwrapping
 import CryptoKit
 import Foundation
 import Testing
@@ -18,20 +18,23 @@ struct AuthenticationServiceRateLimitingTests {
             userDefaults: userDefaults
         )
 
-        try await service.setUp(password: "CorrectPassword123!", username: "testuser", enableBiometric: false)
+        var setUpPasswordBytes = Array("CorrectPassword123!".utf8)
+        try await service.setUp(passwordBytes: &setUpPasswordBytes, username: "testuser", enableBiometric: false)
 
         // Make OPAQUE fail for wrong password
         opaqueAuthService.shouldFailLogin = true
 
         // First two failures don't lock
         for _ in 1 ... 2 {
-            try? await service.unlockWithPassword("WrongPassword123!")
+            var wrongPasswordBytes = Array("WrongPassword123!".utf8)
+            try? await service.unlockWithPassword(&wrongPasswordBytes)
             #expect(service.isLockedOut == false)
         }
 
         // Third failure locks
         do {
-            try await service.unlockWithPassword("WrongPassword123!")
+            var wrongPasswordBytes = Array("WrongPassword123!".utf8)
+            try await service.unlockWithPassword(&wrongPasswordBytes)
             Issue.record("Expected accountLocked error")
         } catch let error as AuthenticationError {
             if case .accountLocked = error {
@@ -55,13 +58,14 @@ struct AuthenticationServiceRateLimitingTests {
             userDefaults: userDefaults
         )
 
-        let password = "CorrectPassword123!"
-        try await service.setUp(password: password, username: "testuser", enableBiometric: false)
+        var setUpPasswordBytes = Array("CorrectPassword123!".utf8)
+        try await service.setUp(passwordBytes: &setUpPasswordBytes, username: "testuser", enableBiometric: false)
 
         // Trigger lockout with failed attempts
         opaqueAuthService.shouldFailLogin = true
         for _ in 1 ... 3 {
-            try? await service.unlockWithPassword("WrongPassword123!")
+            var wrongPasswordBytes = Array("WrongPassword123!".utf8)
+            try? await service.unlockWithPassword(&wrongPasswordBytes)
         }
 
         #expect(service.isLockedOut == true)
@@ -69,7 +73,8 @@ struct AuthenticationServiceRateLimitingTests {
         // Even with correct credentials (reset mock), lockout prevents unlock
         opaqueAuthService.shouldFailLogin = false
         do {
-            try await service.unlockWithPassword(password)
+            var correctPasswordBytes = Array("CorrectPassword123!".utf8)
+            try await service.unlockWithPassword(&correctPasswordBytes)
             Issue.record("Expected accountLocked error")
         } catch let error as AuthenticationError {
             if case .accountLocked = error {
@@ -90,23 +95,25 @@ struct AuthenticationServiceRateLimitingTests {
             userDefaults: userDefaults
         )
 
-        let password = "CorrectPassword123!"
-        try await service.setUp(password: password, username: "testuser", enableBiometric: false)
+        var setUpPasswordBytes = Array("CorrectPassword123!".utf8)
+        try await service.setUp(passwordBytes: &setUpPasswordBytes, username: "testuser", enableBiometric: false)
 
         // Two failed attempts
         opaqueAuthService.shouldFailLogin = true
         for _ in 1 ... 2 {
-            try? await service.unlockWithPassword("WrongPassword123!")
+            var wrongPasswordBytes = Array("WrongPassword123!".utf8)
+            try? await service.unlockWithPassword(&wrongPasswordBytes)
         }
 
         #expect(service.failedAttemptCount == 2)
 
         // Successful unlock (reset mock)
         opaqueAuthService.shouldFailLogin = false
-        try await service.unlockWithPassword(password)
+        var correctPasswordBytes = Array("CorrectPassword123!".utf8)
+        try await service.unlockWithPassword(&correctPasswordBytes)
 
         #expect(service.failedAttemptCount == 0)
     }
 }
 
-// swiftlint:enable password_in_code force_unwrapping
+// swiftlint:enable force_unwrapping
