@@ -212,15 +212,15 @@ final class AuthenticationViewModel {
 
         do {
             var passwordBytes = passwordToBytes(unlockPassword)
-            defer { unlockPassword = "" }
             try await authService.unlockWithPassword(&passwordBytes)
+            unlockPassword = "" // Clear on success
             isAuthenticated = true
             flowState = .authenticated
             lockStateService.unlock()
         } catch let error as AuthenticationError {
             errorMessage = error.errorDescription
             if case .accountLocked = error {
-                // Keep password, show lockout message
+                // Keep password so user can retry after lockout expires
             } else {
                 unlockPassword = ""
             }
