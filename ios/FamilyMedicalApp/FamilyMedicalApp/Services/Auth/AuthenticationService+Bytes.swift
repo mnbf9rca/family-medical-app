@@ -127,3 +127,65 @@ extension AuthenticationService {
         }
     }
 }
+
+// MARK: - Deprecated String-Based Methods
+
+extension AuthenticationService {
+    @available(*, deprecated, message: "Use unlockWithPassword(_:) with inout [UInt8] for secure zeroing (RFC 9807)")
+    func unlockWithPassword(_ password: String) async throws {
+        logger.logOperation("unlockWithPassword", state: "started")
+
+        // Check if locked out
+        if isLockedOut {
+            logger.notice("Unlock attempt during lockout, remaining: \(lockoutRemainingSeconds)s")
+            throw AuthenticationError.accountLocked(remainingSeconds: lockoutRemainingSeconds)
+        }
+
+        guard isSetUp else {
+            throw AuthenticationError.notSetUp
+        }
+
+        // Prepare password bytes and ensure they're wiped after key derivation
+        var passwordBytes = Array(password.utf8)
+        defer {
+            keyDerivationService.secureZero(&passwordBytes)
+        }
+
+        let candidateKey = try await deriveCandidateKey(password: password)
+        try verifyAndCompleteUnlock(candidateKey: candidateKey)
+    }
+
+    /// Derive candidate key using OPAQUE or legacy authentication
+    private func deriveCandidateKey(password: String) async throws -> SymmetricKey {
+        if usesOpaque {
+            try await deriveKeyViaOpaque(password: password)
+        } else {
+            try deriveKeyViaLegacy(password: password)
+        }
+    }
+
+    /// Derive key via OPAQUE authentication with server
+    private func deriveKeyViaOpaque(password: String) async throws -> SymmetricKey {
+        guard let username = storedUsername else {
+            throw AuthenticationError.notSetUp
+        }
+
+        do {
+            let loginResult = try await opaqueAuthService.login(username: username, password: password)
+
+            // RFC 9807 §6.4.4: Validate export key before use
+            guard !loginResult.exportKey.isEmpty,
+                  loginResult.exportKey.count == 32 || loginResult.exportKey.count == 64
+            else {
+                logger.error("OPAQUE returned invalid export key length: \(loginResult.exportKey.count)")
+                throw AuthenticationError.verificationFailed
+            }
+
+            return try keyDerivationService.derivePrimaryKey(fromExportKey: loginResult.exportKey)
+        } catch is OpaqueAuthError {
+            logger.notice("OPAQUE authentication failed")
+            try handleFailedAttempt()
+            throw AuthenticationError.wrongPassword
+        }
+    }
+}

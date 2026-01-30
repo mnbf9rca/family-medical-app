@@ -28,6 +28,11 @@ protocol AuthenticationServiceProtocol {
     ///   - username: User's username
     ///   - enableBiometric: Whether to enable biometric authentication
     /// - Throws: AuthenticationError if setup fails
+    @available(
+        *,
+        deprecated,
+        message: "Use setUp(passwordBytes:username:enableBiometric:) for secure zeroing (RFC 9807)"
+    )
     func setUp(password: String, username: String, enableBiometric: Bool) async throws
 
     /// Login with OPAQUE and set up local account (for returning users on new device)
@@ -36,6 +41,11 @@ protocol AuthenticationServiceProtocol {
     ///   - username: User's username
     ///   - enableBiometric: Whether to enable biometric authentication
     /// - Throws: AuthenticationError if login or setup fails
+    @available(
+        *,
+        deprecated,
+        message: "Use loginAndSetup(passwordBytes:username:enableBiometric:) for secure zeroing (RFC 9807)"
+    )
     func loginAndSetup(password: String, username: String, enableBiometric: Bool) async throws
 
     /// Complete setup using a pre-authenticated login result (from duplicate registration recovery)
@@ -53,6 +63,7 @@ protocol AuthenticationServiceProtocol {
     /// Unlock with password
     /// - Parameter password: User's password
     /// - Throws: AuthenticationError if authentication fails
+    @available(*, deprecated, message: "Use unlockWithPassword(_:) with inout [UInt8] for secure zeroing (RFC 9807)")
     func unlockWithPassword(_ password: String) async throws
 
     // MARK: - Bytes-Based Methods (RFC 9807)
@@ -188,6 +199,11 @@ final class AuthenticationService: AuthenticationServiceProtocol {
 
     // MARK: - AuthenticationServiceProtocol
 
+    @available(
+        *,
+        deprecated,
+        message: "Use setUp(passwordBytes:username:enableBiometric:) for secure zeroing (RFC 9807)"
+    )
     func setUp(password: String, username: String, enableBiometric: Bool) async throws {
         logger.logOperation("setUp", state: "started")
 
@@ -217,6 +233,11 @@ final class AuthenticationService: AuthenticationServiceProtocol {
         logger.info("Account setup completed with OPAQUE, biometric enabled: \(enableBiometric)")
     }
 
+    @available(
+        *,
+        deprecated,
+        message: "Use loginAndSetup(passwordBytes:username:enableBiometric:) for secure zeroing (RFC 9807)"
+    )
     func loginAndSetup(password: String, username: String, enableBiometric: Bool) async throws {
         logger.logOperation("loginAndSetup", state: "started")
 
@@ -268,63 +289,6 @@ final class AuthenticationService: AuthenticationServiceProtocol {
 
         logger.logOperation("completeLoginFromExistingAccount", state: "completed")
         logger.info("Existing account setup completed, biometric enabled: \(enableBiometric)")
-    }
-
-    func unlockWithPassword(_ password: String) async throws {
-        logger.logOperation("unlockWithPassword", state: "started")
-
-        // Check if locked out
-        if isLockedOut {
-            logger.notice("Unlock attempt during lockout, remaining: \(lockoutRemainingSeconds)s")
-            throw AuthenticationError.accountLocked(remainingSeconds: lockoutRemainingSeconds)
-        }
-
-        guard isSetUp else {
-            throw AuthenticationError.notSetUp
-        }
-
-        // Prepare password bytes and ensure they're wiped after key derivation
-        var passwordBytes = Array(password.utf8)
-        defer {
-            keyDerivationService.secureZero(&passwordBytes)
-        }
-
-        let candidateKey = try await deriveCandidateKey(password: password)
-        try verifyAndCompleteUnlock(candidateKey: candidateKey)
-    }
-
-    /// Derive candidate key using OPAQUE or legacy authentication
-    private func deriveCandidateKey(password: String) async throws -> SymmetricKey {
-        if usesOpaque {
-            try await deriveKeyViaOpaque(password: password)
-        } else {
-            try deriveKeyViaLegacy(password: password)
-        }
-    }
-
-    /// Derive key via OPAQUE authentication with server
-    private func deriveKeyViaOpaque(password: String) async throws -> SymmetricKey {
-        guard let username = storedUsername else {
-            throw AuthenticationError.notSetUp
-        }
-
-        do {
-            let loginResult = try await opaqueAuthService.login(username: username, password: password)
-
-            // RFC 9807 §6.4.4: Validate export key before use
-            guard !loginResult.exportKey.isEmpty,
-                  loginResult.exportKey.count == 32 || loginResult.exportKey.count == 64
-            else {
-                logger.error("OPAQUE returned invalid export key length: \(loginResult.exportKey.count)")
-                throw AuthenticationError.verificationFailed
-            }
-
-            return try keyDerivationService.derivePrimaryKey(fromExportKey: loginResult.exportKey)
-        } catch is OpaqueAuthError {
-            logger.notice("OPAQUE authentication failed")
-            try handleFailedAttempt()
-            throw AuthenticationError.wrongPassword
-        }
     }
 
     /// Derive key via legacy password + salt authentication

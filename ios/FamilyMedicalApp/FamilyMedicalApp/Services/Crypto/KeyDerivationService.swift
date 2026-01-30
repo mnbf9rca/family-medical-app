@@ -10,6 +10,7 @@ protocol KeyDerivationServiceProtocol: Sendable {
     ///   - salt: 16-byte salt (generate new for new users, retrieve for existing)
     /// - Returns: 256-bit SymmetricKey
     /// - Throws: CryptoError on derivation failure
+    @available(*, deprecated, message: "Use derivePrimaryKey(from:salt:) with [UInt8] for secure zeroing (RFC 9807)")
     func derivePrimaryKey(from password: String, salt: Data) throws -> SymmetricKey
 
     /// Derives primary key from password bytes - preferred for secure zeroing
@@ -55,6 +56,7 @@ final class KeyDerivationService: KeyDerivationServiceProtocol, @unchecked Senda
     private let memLimit = 64 * 1_024 * 1_024 // 64 MB memory
     private let outputLength = 32 // 256-bit key
 
+    @available(*, deprecated, message: "Use derivePrimaryKey(from:salt:) with [UInt8] for secure zeroing (RFC 9807)")
     func derivePrimaryKey(from password: String, salt: Data) throws -> SymmetricKey {
         guard salt.count == saltLength else {
             throw CryptoError.invalidSalt("Salt must be \(saltLength) bytes, got \(salt.count)")

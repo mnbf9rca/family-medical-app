@@ -36,6 +36,7 @@ final class OpaqueAuthService: OpaqueAuthServiceProtocol, @unchecked Sendable {
         self.logger = logger ?? LoggingService.shared.logger(category: .auth)
     }
 
+    @available(*, deprecated, message: "Use register(username:passwordBytes:) for secure zeroing (RFC 9807)")
     func register(username: String, password: String) async throws -> OpaqueRegistrationResult {
         // Zero password bytes on all exit paths (RFC 9807 Section 4.1)
         defer { Self.zeroPasswordBytes(password) }
@@ -67,6 +68,7 @@ final class OpaqueAuthService: OpaqueAuthServiceProtocol, @unchecked Sendable {
         )
     }
 
+    @available(*, deprecated, message: "Use login(username:passwordBytes:) for secure zeroing (RFC 9807)")
     func login(username: String, password: String) async throws -> OpaqueLoginResult {
         // Zero password bytes on all exit paths (RFC 9807 Section 4.1)
         defer { Self.zeroPasswordBytes(password) }

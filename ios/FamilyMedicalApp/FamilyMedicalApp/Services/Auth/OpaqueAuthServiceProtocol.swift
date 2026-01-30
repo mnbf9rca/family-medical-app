@@ -45,6 +45,7 @@ protocol OpaqueAuthServiceProtocol: Sendable {
     ///   - password: User's password (never leaves device)
     /// - Returns: Registration result containing export key
     /// - Throws: `OpaqueAuthError.registrationFailed` if server rejects registration
+    @available(*, deprecated, message: "Use register(username:passwordBytes:) for secure zeroing (RFC 9807)")
     func register(username: String, password: String) async throws -> OpaqueRegistrationResult
 
     /// Login an existing user with OPAQUE protocol
@@ -58,6 +59,7 @@ protocol OpaqueAuthServiceProtocol: Sendable {
     ///   - password: User's password (never leaves device)
     /// - Returns: Login result containing export key, session key, and optional bundle
     /// - Throws: `OpaqueAuthError.authenticationFailed` for wrong username OR password
+    @available(*, deprecated, message: "Use login(username:passwordBytes:) for secure zeroing (RFC 9807)")
     func login(username: String, password: String) async throws -> OpaqueLoginResult
 
     /// Register with password bytes - preferred for secure zeroing
