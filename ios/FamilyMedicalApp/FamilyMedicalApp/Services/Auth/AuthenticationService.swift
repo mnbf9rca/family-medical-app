@@ -120,13 +120,13 @@ final class AuthenticationService: AuthenticationServiceProtocol {
 
     // MARK: - Dependencies
 
-    private let keyDerivationService: KeyDerivationServiceProtocol
+    let keyDerivationService: KeyDerivationServiceProtocol
     private let keychainService: KeychainServiceProtocol
-    private let encryptionService: EncryptionServiceProtocol
+    let encryptionService: EncryptionServiceProtocol
     private let biometricService: BiometricServiceProtocol
-    private let opaqueAuthService: OpaqueAuthServiceProtocol
+    let opaqueAuthService: OpaqueAuthServiceProtocol
     private let userDefaults: UserDefaults
-    private let logger: CategoryLoggerProtocol
+    let logger: CategoryLoggerProtocol
 
     // MARK: - Properties
 
@@ -161,7 +161,7 @@ final class AuthenticationService: AuthenticationServiceProtocol {
     }
 
     /// Whether this account uses OPAQUE authentication (vs legacy password+salt)
-    private var usesOpaque: Bool {
+    var usesOpaque: Bool {
         userDefaults.bool(forKey: Self.useOpaqueKey)
     }
 
@@ -328,7 +328,7 @@ final class AuthenticationService: AuthenticationServiceProtocol {
     }
 
     /// Derive key via legacy password + salt authentication
-    private func deriveKeyViaLegacy(password: String) throws -> SymmetricKey {
+    func deriveKeyViaLegacy(password: String) throws -> SymmetricKey {
         guard let salt = userDefaults.data(forKey: Self.saltKey) else {
             throw AuthenticationError.notSetUp
         }
@@ -336,7 +336,7 @@ final class AuthenticationService: AuthenticationServiceProtocol {
     }
 
     /// Verify candidate key and complete unlock
-    private func verifyAndCompleteUnlock(candidateKey: SymmetricKey) throws {
+    func verifyAndCompleteUnlock(candidateKey: SymmetricKey) throws {
         guard let encryptedTokenData = try? keychainService.retrieveData(identifier: Self.verificationTokenIdentifier)
         else {
             throw AuthenticationError.verificationFailed
@@ -436,7 +436,7 @@ final class AuthenticationService: AuthenticationServiceProtocol {
 
     /// Complete local account setup with OPAQUE export key
     /// Shared by setUp, loginAndSetup, and completeLoginFromExistingAccount
-    private func completeLocalSetup(
+    func completeLocalSetup(
         exportKey: Data,
         username: String,
         enableBiometric: Bool
@@ -510,7 +510,7 @@ final class AuthenticationService: AuthenticationServiceProtocol {
         }
     }
 
-    private func handleFailedAttempt() throws {
+    func handleFailedAttempt() throws {
         let currentAttempts = failedAttemptCount + 1
         userDefaults.set(currentAttempts, forKey: Self.failedAttemptsKey)
 
