@@ -165,7 +165,7 @@ OPAQUE intentionally provides no indication of whether username or password is w
 
 - **Invalid credentials**: Generic "Authentication failed" error
 - **Rate limiting**: Applied per client_identifier and per IP
-- **Account enumeration resistance**: Registration and login responses are indistinguishable
+- **Account enumeration resistance**: Partial. Error messages don't reveal whether username or password is wrong. However, `/login/start` currently returns 401 for unknown users rather than RFC 9807's recommended fake-record approach (Section 10.9), which reveals account existence at the protocol level. See Issue #90 for planned improvement.
 
 ## Consequences
 

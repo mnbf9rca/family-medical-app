@@ -47,7 +47,7 @@ id = "5353a67feee9436c9df0672376163c95"
 
 [[env.preview.kv_namespaces]]
 binding = "BUNDLES"
-id = "7967763b05c9496e89c4223fd765a34d"
+id = "8f0fc30c66dd4eaf830fd9a8507de7c8"
 
 [[env.preview.kv_namespaces]]
 binding = "LOGIN_STATES"

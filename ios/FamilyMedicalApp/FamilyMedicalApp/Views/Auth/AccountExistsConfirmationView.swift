@@ -30,12 +30,14 @@ struct AccountExistsConfirmationView: View {
                 .fontWeight(.bold)
 
             // Message
-            Text("Looks like you already have an account with username \"\(username)\".")
-            Text("Would you like to log in instead?")
-                .font(.body)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 32)
+            VStack(spacing: 8) {
+                Text("Looks like you already have an account with username \"\(username)\".")
+                Text("Would you like to log in instead?")
+            }
+            .font(.body)
+            .foregroundColor(.secondary)
+            .multilineTextAlignment(.center)
+            .padding(.horizontal, 32)
 
             Spacer()
 

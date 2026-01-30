@@ -62,26 +62,26 @@ else
 fi
 
 # Test malformed JSON (parse error)
-# Note: Currently returns 500 (server error) for parse failures - acceptable but not ideal
+# parse_json() returns 400 for JSON parse errors
 echo -n "POST /auth/opaque/register/start (malformed JSON)... "
 STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE_URL/auth/opaque/register/start" \
   -H "Content-Type: application/json" \
   -d '{invalid json}')
-if [ "$STATUS" = "400" ] || [ "$STATUS" = "500" ]; then
-  echo "OK ($STATUS - rejected)"
+if [ "$STATUS" = "400" ]; then
+  echo "OK (400 - bad request)"
 else
   echo "FAIL ($STATUS)"
   exit 1
 fi
 
 # Test missing required fields
-# Note: Currently returns 500 for missing fields - acceptable but not ideal
+# parse_json() returns 400 for deserialization errors (missing fields)
 echo -n "POST /auth/opaque/register/start (missing fields)... "
 STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE_URL/auth/opaque/register/start" \
   -H "Content-Type: application/json" \
   -d '{}')
-if [ "$STATUS" = "400" ] || [ "$STATUS" = "500" ]; then
-  echo "OK ($STATUS - rejected)"
+if [ "$STATUS" = "400" ]; then
+  echo "OK (400 - bad request)"
 else
   echo "FAIL ($STATUS)"
   exit 1
