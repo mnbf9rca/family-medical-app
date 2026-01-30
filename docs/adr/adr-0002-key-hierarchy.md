@@ -154,6 +154,40 @@ For Phase 1 implementation, consider adding a compile-time assertion to detect i
 
 **Security Bonus**: libsodium provides explicit key zeroization via `sodium_memzero()`, addressing Issue #46 (ephemeral key secure deallocation)
 
+#### RFC 9807 Compliance: Password Memory Handling
+
+**Decision**: Use `[UInt8]` with `inout` parameters instead of `String` for password handling to enable secure memory zeroing.
+
+**Background**: RFC 9807 Section 4.1 recommends zeroing password memory after use to minimize exposure time. Swift's `String` type is immutable and uses copy-on-write semantics, making secure zeroing impossible—the original backing buffer persists until garbage collection.
+
+**Implementation Pattern**:
+
+```swift
+// Convert password to mutable bytes at UI boundary (ViewModel)
+var passwordBytes = Array(password.utf8)
+
+// Pass as inout to service layer
+try await authService.setUp(passwordBytes: &passwordBytes, username: username, enableBiometric: false)
+// passwordBytes are zeroed by service via defer block
+
+// Service implementation pattern
+func setUp(passwordBytes: inout [UInt8], username: String, enableBiometric: Bool) async throws {
+    defer {
+        keyDerivationService.secureZero(&passwordBytes)  // Uses sodium_memzero
+    }
+    // ... use passwordBytes for key derivation
+}
+```
+
+**API Design**:
+
+- **Bytes-based methods** (preferred): `setUp(passwordBytes:)`, `login(passwordBytes:)`, `unlockWithPassword(_ passwordBytes:)`
+- **String-based methods** (deprecated): Marked with `@available(*, deprecated)` for backward compatibility
+
+**Security Note**: This approach zeros a single buffer that the caller controls, rather than leaving multiple String copies in memory. The `defer` pattern ensures zeroing happens on all exit paths (success, error, or exception).
+
+**References**: RFC 9807 (OPAQUE) Section 4.1, Issue #95
+
 #### 2. Key Hierarchy Structure: Three Tiers
 
 **Decision**: Use three tiers (Primary Key → User Identity → Family Member Keys → Medical Records).
