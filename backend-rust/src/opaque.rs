@@ -71,27 +71,33 @@ pub struct LoginStartResult {
 }
 
 /// Start login - process client's credential request
+///
+/// If `password_file` is `None`, generates a fake credential response per RFC 9807 Section 10.9.
+/// This makes responses for unknown users cryptographically indistinguishable from real users.
 pub fn start_login(
     server_setup: &OpaqueServerSetup,
     client_identifier: &[u8],
-    password_file: &[u8],
+    password_file: Option<&[u8]>,
     credential_request: &[u8],
 ) -> Result<LoginStartResult, String> {
     let request = CredentialRequest::<DefaultCipherSuite>::deserialize(credential_request)
         .map_err(|_| "Failed to deserialize credential request")?;
 
     // Password file is stored as RegistrationUpload, but ServerLogin::start expects ServerRegistration
-    let password = RegistrationUpload::<DefaultCipherSuite>::deserialize(password_file)
-        .map_err(|_| "Failed to deserialize password file")?;
-
-    // Complete the registration to get ServerRegistration
-    let server_registration = ServerRegistration::finish(password);
+    let server_registration = match password_file {
+        Some(pf) => {
+            let password = RegistrationUpload::<DefaultCipherSuite>::deserialize(pf)
+                .map_err(|_| "Failed to deserialize password file")?;
+            Some(ServerRegistration::finish(password))
+        }
+        None => None,
+    };
 
     let mut rng = OsRng;
     let result = ServerLogin::start(
         &mut rng,
         server_setup,
-        Some(server_registration),
+        server_registration,
         request,
         client_identifier,
         ServerLoginParameters::default(),
