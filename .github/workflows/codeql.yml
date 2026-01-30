@@ -40,6 +40,22 @@ jobs:
           xcodebuild -version
           swift --version
 
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios,aarch64-apple-ios-sim,x86_64-apple-ios
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: opaque-swift
+
+      - name: Build OpaqueSwift XCFramework
+        run: |
+          cd opaque-swift
+          chmod +x build-xcframework.sh
+          ./build-xcframework.sh
+
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
         with:
