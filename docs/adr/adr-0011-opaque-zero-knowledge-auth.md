@@ -2,7 +2,7 @@
 
 ## Status
 
-**Status**: Proposed
+**Status**: Accepted
 
 ## Context
 
@@ -164,8 +164,8 @@ The bundle is encrypted with a key derived from export_key, ensuring zero-knowle
 OPAQUE intentionally provides no indication of whether username or password is wrong:
 
 - **Invalid credentials**: Generic "Authentication failed" error
-- **Rate limiting**: Applied per client_identifier and per IP
-- **Account enumeration resistance**: Partial. Error messages don't reveal whether username or password is wrong. However, `/login/start` currently returns 401 for unknown users rather than RFC 9807's recommended fake-record approach (Section 10.9), which reveals account existence at the protocol level. See Issue #90 for planned improvement.
+- **Rate limiting**: Applied per client_identifier (5 req/60s for login, 3 req/300s for registration)
+- **Account enumeration resistance**: Full RFC 9807 §10.9 compliance. For unknown users, the server completes the full OPAQUE protocol using a fake record, making responses cryptographically indistinguishable from real users. The login will fail at the finish step with the same "Authentication failed" error.
 
 ## Consequences
 

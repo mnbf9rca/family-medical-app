@@ -27,15 +27,32 @@ else
   exit 1
 fi
 
-# Test unknown user login
-echo -n "POST /auth/opaque/login/start (unknown user)... "
+# Test unknown user login - with fake record support (RFC 9807 §10.9).
+# Since smoke test can't generate valid OPAQUE messages, we verify:
+# 1. Unknown users don't get 401 (which would leak existence)
+# 2. Invalid OPAQUE messages get 400 regardless of user existence
+echo -n "POST /auth/opaque/login/start (unknown user, invalid OPAQUE)... "
 STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE_URL/auth/opaque/login/start" \
   -H "Content-Type: application/json" \
   -d '{"clientIdentifier":"0000000000000000000000000000000000000000000000000000000000000000","startLoginRequest":"dGVzdA=="}')
-if [ "$STATUS" = "401" ]; then
-  echo "OK (401)"
+if [ "$STATUS" = "400" ]; then
+  echo "OK (400 - consistent error for invalid OPAQUE message)"
 else
-  echo "FAIL ($STATUS)"
+  echo "FAIL ($STATUS) - expected 400"
+  exit 1
+fi
+
+# Test rate limiting (requires multiple rapid requests)
+echo -n "POST /auth/opaque/login/start (rate limit check)... "
+# Note: This is a basic check. Real rate limiting kicks in after 5 requests.
+# With invalid OPAQUE messages, we expect 400 or 429 if rate limited.
+STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE_URL/auth/opaque/login/start" \
+  -H "Content-Type: application/json" \
+  -d '{"clientIdentifier":"1111111111111111111111111111111111111111111111111111111111111111","startLoginRequest":"dGVzdA=="}')
+if [ "$STATUS" = "400" ] || [ "$STATUS" = "429" ]; then
+  echo "OK ($STATUS)"
+else
+  echo "FAIL ($STATUS) - expected 400 or 429"
   exit 1
 fi
 

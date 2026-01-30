@@ -106,6 +106,8 @@ struct AuthenticationServiceTests {
         #expect(service.storedUsername == nil)
     }
 
+    // Note: Export key validation tests moved to AuthenticationServiceExportKeyTests.swift
+
     @Test
     func logoutClearsUsername() async throws {
         let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!

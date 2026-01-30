@@ -1,4 +1,5 @@
 use crate::opaque;
+use crate::rate_limit::{check_rate_limit, RateLimitConfig};
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
 use serde::{Deserialize, Serialize};
 use worker::*;
@@ -67,7 +68,7 @@ pub struct ErrorResponse {
 
 pub async fn handle_register_start(
     mut req: Request,
-    _env: &Env,
+    env: &Env,
     server_setup: &opaque::OpaqueServerSetup,
 ) -> Result<Response> {
     let body: RegisterStartRequest = match parse_json(&mut req).await {
@@ -87,6 +88,31 @@ pub async fn handle_register_start(
             },
             400,
         );
+    }
+
+    // Rate limiting per client_identifier
+    if let Ok(rate_limits) = env.kv("RATE_LIMITS") {
+        let config = RateLimitConfig {
+            max_requests: 3,     // Stricter for registration
+            window_seconds: 300, // 5 minute window
+        };
+        if let Err(retry_after) =
+            check_rate_limit(&rate_limits, &body.client_identifier, "register_start", &config).await
+        {
+            console_log!(
+                "[opaque/register/start] Rate limited: {}...",
+                &body.client_identifier[..8]
+            );
+            let headers = Headers::new();
+            headers.set("Retry-After", &retry_after.to_string())?;
+            return json_response_with_headers(
+                &ErrorResponse {
+                    error: "Too many requests".into(),
+                },
+                429,
+                headers,
+            );
+        }
     }
 
     let request_bytes = BASE64
@@ -190,46 +216,81 @@ pub async fn handle_login_start(
         );
     }
 
-    // Get password file
+    // Rate limiting per client_identifier
+    if let Ok(rate_limits) = env.kv("RATE_LIMITS") {
+        let config = RateLimitConfig::default();
+        if let Err(retry_after) = check_rate_limit(&rate_limits, &body.client_identifier, "login_start", &config).await
+        {
+            console_log!("[opaque/login/start] Rate limited: {}...", &body.client_identifier[..8]);
+            let headers = Headers::new();
+            headers.set("Retry-After", &retry_after.to_string())?;
+            return json_response_with_headers(
+                &ErrorResponse {
+                    error: "Too many requests".into(),
+                },
+                429,
+                headers,
+            );
+        }
+    }
+
+    // Get password file (None for unknown users triggers fake record per RFC 9807 §10.9)
     let credentials = env.kv("CREDENTIALS")?;
     let key = format!("cred:{}", body.client_identifier);
 
-    let password_file_b64 = match credentials.get(&key).text().await? {
-        Some(pf) => pf,
+    let password_file_b64 = credentials.get(&key).text().await?;
+    let is_fake_record = password_file_b64.is_none();
+
+    let password_file: Option<Vec<u8>> = match password_file_b64 {
+        Some(pf_b64) => Some(
+            BASE64
+                .decode(&pf_b64)
+                .map_err(|_| Error::from("Corrupted password file"))?,
+        ),
         None => {
-            console_log!("[opaque/login/start] Unknown user: {}...", &body.client_identifier[..8]);
-            return json_response(
-                &ErrorResponse {
-                    error: "Authentication failed".into(),
-                },
-                401,
+            console_log!(
+                "[opaque/login/start] Unknown user, using fake record: {}...",
+                &body.client_identifier[..8]
             );
+            None
         }
     };
 
-    let password_file = BASE64
-        .decode(&password_file_b64)
-        .map_err(|_| Error::from("Corrupted password file"))?;
-    console_log!(
-        "[opaque/login/start] Found password file, {} bytes",
-        password_file.len()
-    );
+    if let Some(ref pf) = password_file {
+        console_log!("[opaque/login/start] Found password file, {} bytes", pf.len());
+    }
 
     let request_bytes = BASE64
         .decode(&body.start_login_request)
         .map_err(|_| Error::from("Invalid base64 in startLoginRequest"))?;
 
-    let result = opaque::start_login(
+    let result = match opaque::start_login(
         server_setup,
         body.client_identifier.as_bytes(),
-        &password_file,
+        password_file.as_deref(),
         &request_bytes,
-    )
-    .map_err(Error::from)?;
+    ) {
+        Ok(r) => r,
+        Err(e) => {
+            console_log!("[opaque/login/start] OPAQUE protocol error: {}", e);
+            return json_response(
+                &ErrorResponse {
+                    error: "Invalid credential request".into(),
+                },
+                400,
+            );
+        }
+    };
 
     // Store server state temporarily (60 second TTL)
+    // State key includes record type (f=fake, r=real) for finish step
     let login_states = env.kv("LOGIN_STATES")?;
-    let state_key = format!("state:{}:{}", body.client_identifier, Date::now().as_millis());
+    let state_key = format!(
+        "state:{}:{}:{}",
+        body.client_identifier,
+        Date::now().as_millis(),
+        if is_fake_record { "f" } else { "r" }
+    );
 
     login_states
         .put(&state_key, BASE64.encode(&result.state))?
@@ -269,6 +330,9 @@ pub async fn handle_login_finish(mut req: Request, env: &Env) -> Result<Response
     // Get and delete server state (one-time use)
     let login_states = env.kv("LOGIN_STATES")?;
 
+    // Check if this was a fake record (state key ends with :f)
+    let is_fake_record = body.state_key.ends_with(":f");
+
     let server_state_b64 = match login_states.get(&body.state_key).text().await? {
         Some(s) => s,
         None => {
@@ -295,7 +359,8 @@ pub async fn handle_login_finish(mut req: Request, env: &Env) -> Result<Response
         Ok(r) => r,
         Err(_) => {
             console_log!(
-                "[opaque/login/finish] Failed verification: {}...",
+                "[opaque/login/finish] Failed verification{}: {}...",
+                if is_fake_record { " (fake record)" } else { "" },
                 &body.client_identifier[..8]
             );
             return json_response(
@@ -306,6 +371,21 @@ pub async fn handle_login_finish(mut req: Request, env: &Env) -> Result<Response
             );
         }
     };
+
+    // Defense-in-depth: reject fake records even if finish_login somehow succeeded
+    // (should never happen cryptographically, but prevents logic bugs)
+    if is_fake_record {
+        console_log!(
+            "[opaque/login/finish] Rejecting fake record success (should not happen): {}...",
+            &body.client_identifier[..8]
+        );
+        return json_response(
+            &ErrorResponse {
+                error: "Authentication failed".into(),
+            },
+            401,
+        );
+    }
 
     // Get user's encrypted bundle
     let bundles = env.kv("BUNDLES")?;
@@ -332,6 +412,14 @@ pub async fn handle_login_finish(mut req: Request, env: &Env) -> Result<Response
 fn json_response<T: Serialize>(data: &T, status: u16) -> Result<Response> {
     let body = serde_json::to_string(data)?;
     let headers = Headers::new();
+    headers.set("Content-Type", "application/json")?;
+    headers.set("Access-Control-Allow-Origin", "*")?;
+
+    Response::from_body(ResponseBody::Body(body.into_bytes())).map(|r| r.with_status(status).with_headers(headers))
+}
+
+fn json_response_with_headers<T: Serialize>(data: &T, status: u16, headers: Headers) -> Result<Response> {
+    let body = serde_json::to_string(data)?;
     headers.set("Content-Type", "application/json")?;
     headers.set("Access-Control-Allow-Origin", "*")?;
 

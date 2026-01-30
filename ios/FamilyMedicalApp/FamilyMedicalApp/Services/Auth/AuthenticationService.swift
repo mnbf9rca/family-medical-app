@@ -269,31 +269,54 @@ final class AuthenticationService: AuthenticationServiceProtocol {
             keyDerivationService.secureZero(&passwordBytes)
         }
 
-        let candidateKey: SymmetricKey
+        let candidateKey = try await deriveCandidateKey(password: password)
+        try verifyAndCompleteUnlock(candidateKey: candidateKey)
+    }
 
+    /// Derive candidate key using OPAQUE or legacy authentication
+    private func deriveCandidateKey(password: String) async throws -> SymmetricKey {
         if usesOpaque {
-            // OPAQUE authentication: login with server and derive key from export key
-            guard let username = storedUsername else {
-                throw AuthenticationError.notSetUp
-            }
-
-            do {
-                let loginResult = try await opaqueAuthService.login(username: username, password: password)
-                candidateKey = try keyDerivationService.derivePrimaryKey(fromExportKey: loginResult.exportKey)
-            } catch is OpaqueAuthError {
-                logger.notice("OPAQUE authentication failed")
-                try handleFailedAttempt()
-                throw AuthenticationError.wrongPassword
-            }
+            try await deriveKeyViaOpaque(password: password)
         } else {
-            // Legacy authentication: derive key from password + salt
-            guard let salt = userDefaults.data(forKey: Self.saltKey) else {
-                throw AuthenticationError.notSetUp
-            }
-            candidateKey = try keyDerivationService.derivePrimaryKey(from: password, salt: salt)
+            try deriveKeyViaLegacy(password: password)
+        }
+    }
+
+    /// Derive key via OPAQUE authentication with server
+    private func deriveKeyViaOpaque(password: String) async throws -> SymmetricKey {
+        guard let username = storedUsername else {
+            throw AuthenticationError.notSetUp
         }
 
-        // Verify by attempting to decrypt verification token
+        do {
+            let loginResult = try await opaqueAuthService.login(username: username, password: password)
+
+            // RFC 9807 §6.4.4: Validate export key before use
+            guard !loginResult.exportKey.isEmpty,
+                  loginResult.exportKey.count == 32 || loginResult.exportKey.count == 64
+            else {
+                logger.error("OPAQUE returned invalid export key length: \(loginResult.exportKey.count)")
+                throw AuthenticationError.verificationFailed
+            }
+
+            return try keyDerivationService.derivePrimaryKey(fromExportKey: loginResult.exportKey)
+        } catch is OpaqueAuthError {
+            logger.notice("OPAQUE authentication failed")
+            try handleFailedAttempt()
+            throw AuthenticationError.wrongPassword
+        }
+    }
+
+    /// Derive key via legacy password + salt authentication
+    private func deriveKeyViaLegacy(password: String) throws -> SymmetricKey {
+        guard let salt = userDefaults.data(forKey: Self.saltKey) else {
+            throw AuthenticationError.notSetUp
+        }
+        return try keyDerivationService.derivePrimaryKey(from: password, salt: salt)
+    }
+
+    /// Verify candidate key and complete unlock
+    private func verifyAndCompleteUnlock(candidateKey: SymmetricKey) throws {
         guard let encryptedTokenData = try? keychainService.retrieveData(identifier: Self.verificationTokenIdentifier)
         else {
             throw AuthenticationError.verificationFailed
@@ -398,6 +421,14 @@ final class AuthenticationService: AuthenticationServiceProtocol {
         username: String,
         enableBiometric: Bool
     ) async throws {
+        // RFC 9807 §6.4.4: Validate export key before use
+        guard !exportKey.isEmpty,
+              exportKey.count == 32 || exportKey.count == 64
+        else {
+            logger.error("OPAQUE returned invalid export key length: \(exportKey.count)")
+            throw AuthenticationError.setupFailed
+        }
+
         // Derive primary key from OPAQUE export key
         let primaryKey = try keyDerivationService.derivePrimaryKey(fromExportKey: exportKey)
 
