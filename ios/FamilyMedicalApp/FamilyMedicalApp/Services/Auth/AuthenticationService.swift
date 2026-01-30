@@ -55,6 +55,26 @@ protocol AuthenticationServiceProtocol {
     /// - Throws: AuthenticationError if authentication fails
     func unlockWithPassword(_ password: String) async throws
 
+    // MARK: - Bytes-Based Methods (RFC 9807)
+
+    /// Set up authentication with password bytes - preferred for secure zeroing
+    /// - Parameters:
+    ///   - passwordBytes: Password as bytes (will be zeroed after use)
+    ///   - username: User identifier
+    ///   - enableBiometric: Whether to enable biometric unlock
+    func setUp(passwordBytes: inout [UInt8], username: String, enableBiometric: Bool) async throws
+
+    /// Login and set up with password bytes - preferred for secure zeroing
+    /// - Parameters:
+    ///   - passwordBytes: Password as bytes (will be zeroed after use)
+    ///   - username: User identifier
+    ///   - enableBiometric: Whether to enable biometric unlock
+    func loginAndSetup(passwordBytes: inout [UInt8], username: String, enableBiometric: Bool) async throws
+
+    /// Unlock with password bytes - preferred for secure zeroing
+    /// - Parameter passwordBytes: Password as bytes (will be zeroed after use)
+    func unlockWithPassword(_ passwordBytes: inout [UInt8]) async throws
+
     /// Unlock with biometric authentication
     /// - Throws: AuthenticationError if authentication fails
     func unlockWithBiometric() async throws
