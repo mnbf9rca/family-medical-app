@@ -61,7 +61,7 @@ final class BackupFileService: BackupFileServiceProtocol, @unchecked Sendable {
         // Encode payload to JSON
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
-        encoder.outputFormatting = [.sortedKeys]
+        encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
         let payloadData = try encoder.encode(payload)
 
         // Generate salt
@@ -117,7 +117,7 @@ final class BackupFileService: BackupFileServiceProtocol, @unchecked Sendable {
         // Encode payload to compute checksum
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
-        encoder.outputFormatting = [.sortedKeys]
+        encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
         let payloadData = try encoder.encode(payload)
 
         let checksum = BackupChecksum.sha256(of: payloadData)
@@ -232,7 +232,7 @@ final class BackupFileService: BackupFileServiceProtocol, @unchecked Sendable {
             }
             let encoder = JSONEncoder()
             encoder.dateEncodingStrategy = .iso8601
-            encoder.outputFormatting = [.sortedKeys]
+            encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
             let payloadData = try encoder.encode(data)
             return file.checksum.verify(against: payloadData)
         }
@@ -241,7 +241,7 @@ final class BackupFileService: BackupFileServiceProtocol, @unchecked Sendable {
     func serializeToJSON(file: BackupFile) throws -> Data {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
         return try encoder.encode(file)
     }
 
