@@ -114,6 +114,7 @@ struct MainAppView: View {
                         } label: {
                             Image(systemName: "gearshape.fill")
                         }
+                        .accessibilityIdentifier("settingsMenuButton")
                     }
                 }
                 .sheet(isPresented: $showingSettings) {
