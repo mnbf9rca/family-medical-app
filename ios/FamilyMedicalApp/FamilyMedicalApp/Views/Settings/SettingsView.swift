@@ -534,7 +534,9 @@ private final class PreviewBackupFileService: BackupFileServiceProtocol, @unchec
         )
     }
 
-    func verifyChecksum(file: BackupFile) throws -> Bool { true }
+    func verifyChecksum(file: BackupFile) throws -> Bool {
+        true
+    }
 
     func serializeToJSON(file: BackupFile) throws -> Data {
         Data("{\"test\": true}".utf8)
