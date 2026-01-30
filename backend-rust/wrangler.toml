@@ -1,4 +1,4 @@
-name = "recordwell-opaque"
+# name passed via CLI: --name "recordwell-opaque" (production) or --name "recordwell-opaque-pr-N" (PR preview)
 main = "build/worker/shim.mjs"
 compatibility_date = "2024-01-01"
 
