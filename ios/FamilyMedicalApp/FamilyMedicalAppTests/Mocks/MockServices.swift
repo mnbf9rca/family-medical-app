@@ -210,8 +210,8 @@ final class MockOpaqueAuthService: OpaqueAuthServiceProtocol, @unchecked Sendabl
     var lastLoginUsername: String?
     var lastUploadedBundle: Data?
 
-    // Fixed export key for testing (32 bytes)
-    let testExportKey = Data(repeating: 0x42, count: 32)
+    // Configurable export key for testing (default: 32 bytes)
+    var testExportKey = Data(repeating: 0x42, count: 32)
     let testSessionKey = Data(repeating: 0x43, count: 32)
 
     func register(username: String, password: String) async throws -> OpaqueRegistrationResult {

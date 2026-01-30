@@ -21,6 +21,7 @@ enum AuthenticationError: LocalizedError, Equatable, Hashable {
     case keychainError(String)
     case networkError(String)
     case opaqueError(String)
+    case setupFailed
 
     /// Registration failed, but login probe succeeded - account exists (user proved ownership)
     /// The associated value contains the OPAQUE login result to complete authentication
@@ -65,6 +66,8 @@ enum AuthenticationError: LocalizedError, Equatable, Hashable {
             return "Network error: \(message)"
         case let .opaqueError(message):
             return "Authentication error: \(message)"
+        case .setupFailed:
+            return "Account setup failed due to invalid authentication data"
         case .accountExistsConfirmed:
             return "Looks like you already have an account!"
         }
