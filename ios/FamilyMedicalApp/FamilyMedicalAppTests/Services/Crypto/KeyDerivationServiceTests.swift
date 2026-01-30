@@ -133,4 +133,49 @@ struct KeyDerivationServiceTests {
         let keyData = key.withUnsafeBytes { Data($0) }
         #expect(keyData.count == 32) // 256 bits
     }
+
+    // MARK: - Bytes-Based Methods (RFC 9807)
+
+    /// Test key derivation from password bytes
+    @Test
+    func derivePrimaryKeyFromBytes() throws {
+        let passwordBytes: [UInt8] = Array("test-password-123".utf8)
+        let salt = try service.generateSalt()
+
+        let key = try service.derivePrimaryKey(from: passwordBytes, salt: salt)
+
+        // Key should be 256 bits (32 bytes)
+        let keyData = key.withUnsafeBytes { Data($0) }
+        #expect(keyData.count == 32)
+    }
+
+    /// Test bytes-based derivation is deterministic
+    @Test
+    func derivePrimaryKeyFromBytes_deterministic() throws {
+        let passwordBytes: [UInt8] = Array("test-password-123".utf8)
+        let salt = try service.generateSalt()
+
+        let key1 = try service.derivePrimaryKey(from: passwordBytes, salt: salt)
+        let key2 = try service.derivePrimaryKey(from: passwordBytes, salt: salt)
+
+        let keyData1 = key1.withUnsafeBytes { Data($0) }
+        let keyData2 = key2.withUnsafeBytes { Data($0) }
+        #expect(keyData1 == keyData2)
+    }
+
+    /// Test bytes and string derivation produce same result
+    @Test
+    func derivePrimaryKeyFromBytes_matchesStringVersion() throws {
+        // swiftlint:disable:next password_in_code
+        let password = "test-password-123"
+        let passwordBytes: [UInt8] = Array(password.utf8)
+        let salt = try service.generateSalt()
+
+        let keyFromString = try service.derivePrimaryKey(from: password, salt: salt)
+        let keyFromBytes = try service.derivePrimaryKey(from: passwordBytes, salt: salt)
+
+        let dataFromString = keyFromString.withUnsafeBytes { Data($0) }
+        let dataFromBytes = keyFromBytes.withUnsafeBytes { Data($0) }
+        #expect(dataFromString == dataFromBytes)
+    }
 }
