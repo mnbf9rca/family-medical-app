@@ -7,7 +7,6 @@ use serde::{Deserialize, Serialize};
 use worker::*;
 
 /// Rate limit configuration
-#[allow(dead_code)]
 pub struct RateLimitConfig {
     /// Maximum requests per window
     pub max_requests: u32,
@@ -25,7 +24,6 @@ impl Default for RateLimitConfig {
 }
 
 /// Rate limit entry stored in KV
-#[allow(dead_code)]
 #[derive(Serialize, Deserialize)]
 struct RateLimitEntry {
     count: u32,
@@ -38,7 +36,6 @@ struct RateLimitEntry {
 /// Note: The read-then-write pattern has a race condition, but this is acceptable because:
 /// 1. This is defense-in-depth (Cloudflare edge rate limiting is the primary mechanism)
 /// 2. Cloudflare KV has eventual consistency anyway
-#[allow(dead_code)]
 pub async fn check_rate_limit(
     kv: &kv::KvStore,
     client_identifier: &str,

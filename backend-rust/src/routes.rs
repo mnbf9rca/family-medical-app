@@ -1,4 +1,5 @@
 use crate::opaque;
+use crate::rate_limit::{check_rate_limit, RateLimitConfig};
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
 use serde::{Deserialize, Serialize};
 use worker::*;
@@ -67,7 +68,7 @@ pub struct ErrorResponse {
 
 pub async fn handle_register_start(
     mut req: Request,
-    _env: &Env,
+    env: &Env,
     server_setup: &opaque::OpaqueServerSetup,
 ) -> Result<Response> {
     let body: RegisterStartRequest = match parse_json(&mut req).await {
@@ -87,6 +88,31 @@ pub async fn handle_register_start(
             },
             400,
         );
+    }
+
+    // Rate limiting per client_identifier
+    if let Ok(rate_limits) = env.kv("RATE_LIMITS") {
+        let config = RateLimitConfig {
+            max_requests: 3,     // Stricter for registration
+            window_seconds: 300, // 5 minute window
+        };
+        if let Err(retry_after) =
+            check_rate_limit(&rate_limits, &body.client_identifier, "register_start", &config).await
+        {
+            console_log!(
+                "[opaque/register/start] Rate limited: {}...",
+                &body.client_identifier[..8]
+            );
+            let headers = Headers::new();
+            headers.set("Retry-After", &retry_after.to_string())?;
+            return json_response_with_headers(
+                &ErrorResponse {
+                    error: "Too many requests".into(),
+                },
+                429,
+                headers,
+            );
+        }
     }
 
     let request_bytes = BASE64
@@ -188,6 +214,24 @@ pub async fn handle_login_start(
             },
             400,
         );
+    }
+
+    // Rate limiting per client_identifier
+    if let Ok(rate_limits) = env.kv("RATE_LIMITS") {
+        let config = RateLimitConfig::default();
+        if let Err(retry_after) = check_rate_limit(&rate_limits, &body.client_identifier, "login_start", &config).await
+        {
+            console_log!("[opaque/login/start] Rate limited: {}...", &body.client_identifier[..8]);
+            let headers = Headers::new();
+            headers.set("Retry-After", &retry_after.to_string())?;
+            return json_response_with_headers(
+                &ErrorResponse {
+                    error: "Too many requests".into(),
+                },
+                429,
+                headers,
+            );
+        }
     }
 
     // Get password file (None for unknown users triggers fake record per RFC 9807 §10.9)
@@ -358,6 +402,14 @@ pub async fn handle_login_finish(mut req: Request, env: &Env) -> Result<Response
 fn json_response<T: Serialize>(data: &T, status: u16) -> Result<Response> {
     let body = serde_json::to_string(data)?;
     let headers = Headers::new();
+    headers.set("Content-Type", "application/json")?;
+    headers.set("Access-Control-Allow-Origin", "*")?;
+
+    Response::from_body(ResponseBody::Body(body.into_bytes())).map(|r| r.with_status(status).with_headers(headers))
+}
+
+fn json_response_with_headers<T: Serialize>(data: &T, status: u16, headers: Headers) -> Result<Response> {
+    let body = serde_json::to_string(data)?;
     headers.set("Content-Type", "application/json")?;
     headers.set("Access-Control-Allow-Origin", "*")?;
 
