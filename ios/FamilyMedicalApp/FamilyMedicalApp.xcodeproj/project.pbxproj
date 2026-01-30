@@ -430,6 +430,7 @@
 				DEVELOPMENT_TEAM = BU7526J4QY;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Info.plist;
 				INFOPLIST_KEY_CFBundleIconName = AppIcon;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.medical";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "Family Medical uses Face ID to quickly and securely unlock your medical records.";
@@ -471,6 +472,7 @@
 				DEVELOPMENT_TEAM = BU7526J4QY;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Info.plist;
 				INFOPLIST_KEY_CFBundleIconName = AppIcon;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.medical";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "Family Medical uses Face ID to quickly and securely unlock your medical records.";
