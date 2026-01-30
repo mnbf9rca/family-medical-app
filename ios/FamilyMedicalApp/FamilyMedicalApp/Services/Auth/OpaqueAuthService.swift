@@ -2,6 +2,13 @@ import CryptoKit
 import Foundation
 import OpaqueSwift
 
+/// Result from starting the OPAQUE login protocol
+private struct LoginStartResult {
+    let loginState: ClientLogin
+    let responseData: Data
+    let stateKey: String
+}
+
 /// OPAQUE authentication service implementation
 ///
 /// Handles OPAQUE protocol communication with the backend server.
@@ -30,22 +37,87 @@ final class OpaqueAuthService: OpaqueAuthServiceProtocol, @unchecked Sendable {
     }
 
     func register(username: String, password: String) async throws -> OpaqueRegistrationResult {
+        // Zero password bytes on all exit paths (RFC 9807 Section 4.1)
+        defer { Self.zeroPasswordBytes(password) }
+
         logger.logOperation("register", state: "started")
         logger.debug("Registering user with base URL: \(baseURL.absoluteString)")
 
         // Bypass for test usernames in DEBUG builds
         if Self.shouldBypassForTestUsername(username) {
-            logger.debug("Using test username bypass for registration")
-            // Derive deterministic export key from password so login verification works
-            let passwordKey = Self.deriveTestExportKey(from: password)
-            return OpaqueRegistrationResult(exportKey: passwordKey)
+            return makeTestRegistrationResult(password: password)
         }
 
-        // Generate client identifier (SHA256 hash of username)
+        // Generate client identifier and start registration
         let clientIdentifier = try generateClientIdentifier(username: username)
         logger.debug("Generated client identifier: \(clientIdentifier.prefix(8))...")
 
-        // Step 1: Start registration
+        let (registration, responseData) = try await startRegistration(
+            clientIdentifier: clientIdentifier,
+            password: password
+        )
+
+        // Finish registration and handle existing account detection
+        return try await finishRegistration(
+            registration: registration,
+            responseData: responseData,
+            password: password,
+            clientIdentifier: clientIdentifier,
+            username: username
+        )
+    }
+
+    func login(username: String, password: String) async throws -> OpaqueLoginResult {
+        // Zero password bytes on all exit paths (RFC 9807 Section 4.1)
+        defer { Self.zeroPasswordBytes(password) }
+
+        logger.logOperation("login", state: "started")
+        logger.debug("Attempting OPAQUE login for user")
+
+        // Bypass for test usernames in DEBUG builds
+        if Self.shouldBypassForTestUsername(username) {
+            logger.debug("Using test username bypass for login")
+            return makeTestLoginResult(password: password)
+        }
+
+        let clientIdentifier = try generateClientIdentifier(username: username)
+        logger.debug("Generated client identifier: \(clientIdentifier.prefix(8))...")
+
+        // Step 1: Start login
+        let loginStart = try await performLoginStart(
+            clientIdentifier: clientIdentifier,
+            password: password
+        )
+
+        // Step 2: Finish login
+        return try await performLoginFinish(
+            loginStart: loginStart,
+            password: password,
+            clientIdentifier: clientIdentifier
+        )
+    }
+
+    private func makeTestLoginResult(password: String) -> OpaqueLoginResult {
+        let passwordKey = Self.deriveTestExportKey(from: password)
+        return OpaqueLoginResult(
+            exportKey: passwordKey,
+            sessionKey: Data(repeating: 0xCD, count: 32),
+            encryptedBundle: nil
+        )
+    }
+
+    private func makeTestRegistrationResult(password: String) -> OpaqueRegistrationResult {
+        logger.debug("Using test username bypass for registration")
+        let passwordKey = Self.deriveTestExportKey(from: password)
+        return OpaqueRegistrationResult(exportKey: passwordKey)
+    }
+
+    // MARK: - Registration Helpers
+
+    private func startRegistration(
+        clientIdentifier: String,
+        password: String
+    ) async throws -> (registration: ClientRegistration, responseData: Data) {
         logger.debug("Starting OPAQUE registration (step 1)")
         let registration = try ClientRegistration.start(password: password)
         let registrationRequest = registration.getRequest()
@@ -67,7 +139,16 @@ final class OpaqueAuthService: OpaqueAuthServiceProtocol, @unchecked Sendable {
             throw OpaqueAuthError.invalidResponse
         }
 
-        // Step 2: Finish registration
+        return (registration, responseData)
+    }
+
+    private func finishRegistration(
+        registration: ClientRegistration,
+        responseData: Data,
+        password: String,
+        clientIdentifier: String,
+        username: String
+    ) async throws -> OpaqueRegistrationResult {
         logger.debug("Finishing OPAQUE registration (step 2)")
         let result = try registration.finish(serverResponse: responseData, password: password)
 
@@ -98,59 +179,43 @@ final class OpaqueAuthService: OpaqueAuthServiceProtocol, @unchecked Sendable {
         }
     }
 
-    func login(username: String, password: String) async throws -> OpaqueLoginResult {
-        logger.logOperation("login", state: "started")
-        logger.debug("Attempting OPAQUE login for user")
+    // MARK: - Login Helpers
 
-        // Bypass for test usernames in DEBUG builds
-        if Self.shouldBypassForTestUsername(username) {
-            logger.debug("Using test username bypass for login")
-            return makeTestLoginResult(password: password)
-        }
-
-        let clientIdentifier = try generateClientIdentifier(username: username)
-        logger.debug("Generated client identifier: \(clientIdentifier.prefix(8))...")
-
-        // Step 1: Start login
+    private func performLoginStart(
+        clientIdentifier: String,
+        password: String
+    ) async throws -> LoginStartResult {
         logger.debug("Starting OPAQUE login (step 1)")
-        let login = try ClientLogin.start(password: password)
-        let credentialRequest = login.getRequest()
+        let loginState = try ClientLogin.start(password: password)
+        let credentialRequest = loginState.getRequest()
         logger.debug("Credential request size: \(credentialRequest.count) bytes")
 
-        let (responseData, stateKey): (Data, String)
         do {
-            (responseData, stateKey) = try await startLoginRequest(
+            let (responseData, stateKey) = try await startLoginRequest(
                 clientIdentifier: clientIdentifier,
                 credentialRequest: credentialRequest
             )
             logger.debug("Received login/start response, state key length: \(stateKey.count)")
+            return LoginStartResult(loginState: loginState, responseData: responseData, stateKey: stateKey)
         } catch {
             logger.error("Login start failed: \(error.localizedDescription)")
             throw error
         }
+    }
 
-        // Step 2: Finish login
+    private func performLoginFinish(
+        loginStart: LoginStartResult,
+        password: String,
+        clientIdentifier: String
+    ) async throws -> OpaqueLoginResult {
         logger.debug("Finishing OPAQUE login (step 2)")
-        let result: LoginResult
-        do {
-            result = try finishLogin(login: login, responseData: responseData, password: password)
-            logger.debug("Login finish crypto completed")
-        } catch {
-            logger.error("Login finish crypto failed: \(error.localizedDescription)")
-            throw error
-        }
+        let result = try executeLoginFinish(loginStart: loginStart, password: password)
 
-        do {
-            try await finishLoginRequest(
-                clientIdentifier: clientIdentifier,
-                stateKey: stateKey,
-                credentialFinalization: result.credentialFinalization
-            )
-            logger.debug("Login finish request completed")
-        } catch {
-            logger.error("Login finish request failed: \(error.localizedDescription)")
-            throw error
-        }
+        try await sendLoginFinishRequest(
+            clientIdentifier: clientIdentifier,
+            stateKey: loginStart.stateKey,
+            credentialFinalization: result.credentialFinalization
+        )
 
         logger.logOperation("login", state: "completed")
         return OpaqueLoginResult(
@@ -160,13 +225,37 @@ final class OpaqueAuthService: OpaqueAuthServiceProtocol, @unchecked Sendable {
         )
     }
 
-    private func makeTestLoginResult(password: String) -> OpaqueLoginResult {
-        let passwordKey = Self.deriveTestExportKey(from: password)
-        return OpaqueLoginResult(
-            exportKey: passwordKey,
-            sessionKey: Data(repeating: 0xCD, count: 32),
-            encryptedBundle: nil
-        )
+    private func executeLoginFinish(loginStart: LoginStartResult, password: String) throws -> LoginResult {
+        do {
+            let result = try finishLogin(
+                login: loginStart.loginState,
+                responseData: loginStart.responseData,
+                password: password
+            )
+            logger.debug("Login finish crypto completed")
+            return result
+        } catch {
+            logger.error("Login finish crypto failed: \(error.localizedDescription)")
+            throw error
+        }
+    }
+
+    private func sendLoginFinishRequest(
+        clientIdentifier: String,
+        stateKey: String,
+        credentialFinalization: Data
+    ) async throws {
+        do {
+            try await finishLoginRequest(
+                clientIdentifier: clientIdentifier,
+                stateKey: stateKey,
+                credentialFinalization: credentialFinalization
+            )
+            logger.debug("Login finish request completed")
+        } catch {
+            logger.error("Login finish request failed: \(error.localizedDescription)")
+            throw error
+        }
     }
 
     private func startLoginRequest(
@@ -298,9 +387,13 @@ final class OpaqueAuthService: OpaqueAuthServiceProtocol, @unchecked Sendable {
 
         return json
     }
+}
 
+// MARK: - Static Utilities
+
+private extension OpaqueAuthService {
     /// Check if test username bypass should be used
-    private static func shouldBypassForTestUsername(_ username: String) -> Bool {
+    static func shouldBypassForTestUsername(_ username: String) -> Bool {
         let normalized = username.lowercased()
         let isTestUsername = normalized == "testuser" || normalized.hasPrefix("test_")
 
@@ -315,7 +408,7 @@ final class OpaqueAuthService: OpaqueAuthServiceProtocol, @unchecked Sendable {
 
     /// Derive a deterministic test export key from password
     /// This ensures wrong passwords produce different keys and fail verification
-    private static func deriveTestExportKey(from password: String) -> Data {
+    static func deriveTestExportKey(from password: String) -> Data {
         // Use SHA256 to deterministically map password to a 32-byte key
         // This simulates OPAQUE's behavior where different passwords produce different export keys
         var hasher = CryptoKit.SHA256()
@@ -324,6 +417,22 @@ final class OpaqueAuthService: OpaqueAuthServiceProtocol, @unchecked Sendable {
         return Data(hasher.finalize())
     }
 
+    /// Zero password bytes to limit exposure time in memory (RFC 9807 Section 4.1)
+    ///
+    /// This is a best-effort security measure. The original Swift String may still
+    /// exist in memory until garbage collected, but this limits exposure time.
+    @inline(__always)
+    static func zeroPasswordBytes(_ password: String) {
+        var passwordBytes = Array(password.utf8)
+        for index in passwordBytes.indices {
+            passwordBytes[index] = 0
+        }
+    }
+}
+
+// MARK: - Account Probing
+
+private extension OpaqueAuthService {
     /// Probe login after registration failure to detect existing accounts
     ///
     /// This implements secure duplicate registration handling:
@@ -337,7 +446,7 @@ final class OpaqueAuthService: OpaqueAuthServiceProtocol, @unchecked Sendable {
     /// Security: Only reveals "account exists" when user proves they own it (correct password).
     /// Transport errors (network unreachable, rate limited) are safe to expose as they don't
     /// reveal whether the account exists.
-    private func probeLoginForExistingAccount(
+    func probeLoginForExistingAccount(
         username: String,
         password: String
     ) async throws {
