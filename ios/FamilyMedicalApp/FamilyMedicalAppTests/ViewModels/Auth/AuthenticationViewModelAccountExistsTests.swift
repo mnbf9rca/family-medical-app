@@ -162,4 +162,26 @@ private final class MockAuthenticationServiceWithAccountExists: AuthenticationSe
     func logout() throws { isSetUp = false }
     func disableBiometric() { isBiometricEnabled = false }
     func enableBiometric() async throws { isBiometricEnabled = true }
+
+    // MARK: - Bytes-Based Methods (RFC 9807)
+
+    func setUp(passwordBytes: inout [UInt8], username: String, enableBiometric: Bool) async throws {
+        for index in passwordBytes.indices {
+            passwordBytes[index] = 0
+        }
+        try await setUp(password: "", username: username, enableBiometric: enableBiometric)
+    }
+
+    func loginAndSetup(passwordBytes: inout [UInt8], username: String, enableBiometric: Bool) async throws {
+        for index in passwordBytes.indices {
+            passwordBytes[index] = 0
+        }
+        try await loginAndSetup(password: "", username: username, enableBiometric: enableBiometric)
+    }
+
+    func unlockWithPassword(_ passwordBytes: inout [UInt8]) async throws {
+        for index in passwordBytes.indices {
+            passwordBytes[index] = 0
+        }
+    }
 }
