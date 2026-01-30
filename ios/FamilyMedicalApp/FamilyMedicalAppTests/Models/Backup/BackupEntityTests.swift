@@ -193,6 +193,98 @@ struct FieldValueBackupTests {
         let boolValue = FieldValueBackup(type: "bool", value: .bool(true)).toFieldValue()
         #expect(boolValue == .bool(true))
     }
+
+    @Test("FieldValueBackup converts double back to FieldValue")
+    func fieldValueBackupDoubleToFieldValue() {
+        let doubleBackup = FieldValueBackup(from: .double(3.14))
+        #expect(doubleBackup.type == "double")
+
+        let doubleValue = FieldValueBackup(type: "double", value: .double(3.14)).toFieldValue()
+        #expect(doubleValue == .double(3.14))
+    }
+
+    @Test("FieldValueBackup converts date back to FieldValue")
+    func fieldValueBackupDateToFieldValue() {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withFullDate]
+        let dateString = "2025-01-30"
+
+        let dateValue = FieldValueBackup(type: "date", value: .string(dateString)).toFieldValue()
+
+        if case let .date(date) = dateValue {
+            #expect(formatter.string(from: date) == dateString)
+        } else {
+            Issue.record("Expected date value")
+        }
+    }
+
+    @Test("FieldValueBackup converts stringArray back to FieldValue")
+    func fieldValueBackupStringArrayToFieldValue() {
+        let stringArrayBackup = FieldValueBackup(from: .stringArray(["a", "b", "c"]))
+        #expect(stringArrayBackup.type == "stringArray")
+
+        let stringArrayValue = FieldValueBackup(type: "stringArray", value: .stringArray(["x", "y"])).toFieldValue()
+        #expect(stringArrayValue == .stringArray(["x", "y"]))
+    }
+
+    @Test("FieldValueBackup converts attachmentIds back to FieldValue")
+    func fieldValueBackupAttachmentIdsToFieldValue() {
+        let id1 = UUID()
+        let id2 = UUID()
+
+        let attachmentValue = FieldValueBackup(
+            type: "attachmentIds",
+            value: .stringArray([id1.uuidString, id2.uuidString])
+        ).toFieldValue()
+
+        if case let .attachmentIds(ids) = attachmentValue {
+            #expect(ids.count == 2)
+            #expect(ids.contains(id1))
+            #expect(ids.contains(id2))
+        } else {
+            Issue.record("Expected attachmentIds value")
+        }
+    }
+
+    @Test("FieldValueBackup returns fallback for unknown type")
+    func fieldValueBackupUnknownTypeFallback() {
+        let unknownValue = FieldValueBackup(type: "unknownType", value: .string("test")).toFieldValue()
+        #expect(unknownValue == .string(""))
+    }
+
+    @Test("FieldValueBackup returns fallback for invalid date string")
+    func fieldValueBackupInvalidDateFallback() {
+        let invalidDateValue = FieldValueBackup(type: "date", value: .string("not-a-date")).toFieldValue()
+        #expect(invalidDateValue == .string(""))
+    }
+
+    @Test("FieldValueBackupValue decodes from JSON correctly")
+    func fieldValueBackupValueDecoding() throws {
+        // Test bool decoding
+        let boolJSON = Data("true".utf8)
+        let boolDecoded = try JSONDecoder().decode(FieldValueBackupValue.self, from: boolJSON)
+        #expect(boolDecoded == .bool(true))
+
+        // Test int decoding
+        let intJSON = Data("42".utf8)
+        let intDecoded = try JSONDecoder().decode(FieldValueBackupValue.self, from: intJSON)
+        #expect(intDecoded == .int(42))
+
+        // Test double decoding
+        let doubleJSON = Data("3.14".utf8)
+        let doubleDecoded = try JSONDecoder().decode(FieldValueBackupValue.self, from: doubleJSON)
+        #expect(doubleDecoded == .double(3.14))
+
+        // Test string decoding
+        let stringJSON = Data("\"hello\"".utf8)
+        let stringDecoded = try JSONDecoder().decode(FieldValueBackupValue.self, from: stringJSON)
+        #expect(stringDecoded == .string("hello"))
+
+        // Test array decoding
+        let arrayJSON = Data("[\"a\",\"b\"]".utf8)
+        let arrayDecoded = try JSONDecoder().decode(FieldValueBackupValue.self, from: arrayJSON)
+        #expect(arrayDecoded == .stringArray(["a", "b"]))
+    }
 }
 
 @Suite("AttachmentBackup Tests")

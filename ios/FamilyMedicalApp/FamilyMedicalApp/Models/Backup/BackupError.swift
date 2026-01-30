@@ -1,7 +1,7 @@
 import Foundation
 
 /// Errors that can occur during backup export/import operations
-enum BackupError: Error, LocalizedError {
+enum BackupError: Error, LocalizedError, Equatable {
     /// The provided password is incorrect
     case invalidPassword
 
