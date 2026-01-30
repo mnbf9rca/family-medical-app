@@ -264,13 +264,23 @@ pub async fn handle_login_start(
         .decode(&body.start_login_request)
         .map_err(|_| Error::from("Invalid base64 in startLoginRequest"))?;
 
-    let result = opaque::start_login(
+    let result = match opaque::start_login(
         server_setup,
         body.client_identifier.as_bytes(),
         password_file.as_deref(),
         &request_bytes,
-    )
-    .map_err(Error::from)?;
+    ) {
+        Ok(r) => r,
+        Err(e) => {
+            console_log!("[opaque/login/start] OPAQUE protocol error: {}", e);
+            return json_response(
+                &ErrorResponse {
+                    error: "Invalid credential request".into(),
+                },
+                400,
+            );
+        }
+    };
 
     // Store server state temporarily (60 second TTL)
     // State key includes record type (f=fake, r=real) for finish step
