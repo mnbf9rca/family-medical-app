@@ -60,6 +60,20 @@ protocol OpaqueAuthServiceProtocol: Sendable {
     /// - Throws: `OpaqueAuthError.authenticationFailed` for wrong username OR password
     func login(username: String, password: String) async throws -> OpaqueLoginResult
 
+    /// Register with password bytes - preferred for secure zeroing
+    /// - Parameters:
+    ///   - username: User identifier
+    ///   - passwordBytes: Password as bytes (caller responsible for zeroing after)
+    /// - Returns: Registration result with export key
+    func register(username: String, passwordBytes: [UInt8]) async throws -> OpaqueRegistrationResult
+
+    /// Login with password bytes - preferred for secure zeroing
+    /// - Parameters:
+    ///   - username: User identifier
+    ///   - passwordBytes: Password as bytes (caller responsible for zeroing after)
+    /// - Returns: Login result with keys
+    func login(username: String, passwordBytes: [UInt8]) async throws -> OpaqueLoginResult
+
     /// Upload encrypted bundle after registration or key change
     ///
     /// - Parameters:
