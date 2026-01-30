@@ -58,6 +58,8 @@ FILE_EXCEPTIONS = {
     # UIViewControllerRepresentables - makeUIViewController needs UIKit context
     "CameraRepresentable.swift": 64.0,  # UIImagePickerController wrapper - needs camera/UIKit
     "DocumentPickerRepresentable.swift": 66.0,  # UIDocumentPickerViewController wrapper - needs UIKit
+    # Settings View - SwiftUI sheets/alerts/buttons don't execute in unit tests; delegates to SettingsViewModel (87%+)
+    "SettingsView.swift": 0.0,
     # ViewModels with static factory methods that use production dependencies
     "AttachmentViewerViewModel.swift": 71.0,  # createDefaultAttachmentService() uses real Core Data/services
     "AttachmentPickerViewModel.swift": 73.0,  # createDefaultAttachmentService() + test seeding code (raised from 58% after fixing test determinism)
