@@ -10,12 +10,22 @@ final class AuthenticationViewModel {
     var isAuthenticated = false
     var isSetUp = false
 
-    // MARK: - Password Setup State
+    // MARK: - Flow State
+
+    var flowState: AuthenticationFlowState = .welcome
+
+    // MARK: - Username/Passphrase State
 
     var username = ""
+    var passphrase = ""
+    var confirmPassphrase = ""
+
+    // MARK: - Password Setup State (legacy, kept for backward compatibility)
+
     var password = ""
     var confirmPassword = ""
     var hasAttemptedSetup = false // Track if user has tried to submit
+    var hasConfirmFieldLostFocus = false // Track if confirm field has lost focus for validation
 
     var passwordStrength: PasswordStrength {
         passwordValidator.passwordStrength(password)
@@ -25,9 +35,43 @@ final class AuthenticationViewModel {
         passwordValidator.validate(password)
     }
 
-    // Only show validation errors after user attempts setup
+    // MARK: - Passphrase Validation (for new flow)
+
+    var passphraseStrength: PasswordStrength {
+        passwordValidator.passwordStrength(passphrase)
+    }
+
+    var passphraseValidationErrors: [AuthenticationError] {
+        passwordValidator.validate(passphrase)
+    }
+
+    /// Only show validation errors after user attempts setup
     var displayedValidationErrors: [AuthenticationError] {
         hasAttemptedSetup ? passwordValidationErrors : []
+    }
+
+    /// Show password mismatch only after confirm field loses focus or has content
+    var shouldShowPasswordMismatch: Bool {
+        (hasConfirmFieldLostFocus || !confirmPassword.isEmpty) &&
+            !password.isEmpty &&
+            password != confirmPassword
+    }
+
+    /// Username validation (basic check for non-empty)
+    var isUsernameValid: Bool {
+        let trimmed = username.trimmingCharacters(in: .whitespaces)
+        return trimmed.count >= 3
+    }
+
+    var usernameValidationError: String? {
+        let trimmed = username.trimmingCharacters(in: .whitespaces)
+        if trimmed.isEmpty {
+            return nil // Don't show error for empty (show on submit)
+        }
+        if trimmed.count < 3 {
+            return "Username must be at least 3 characters"
+        }
+        return nil
     }
 
     var enableBiometric = false
@@ -35,6 +79,10 @@ final class AuthenticationViewModel {
     // MARK: - Unlock State
 
     var unlockPassword = ""
+    var storedUsername: String {
+        authService.storedUsername ?? ""
+    }
+
     var failedAttempts: Int {
         authService.failedAttemptCount
     }
@@ -90,30 +138,38 @@ final class AuthenticationViewModel {
         // Initialize setup state from authService
         isSetUp = self.authService.isSetUp
 
+        // Set initial flow state based on setup status
+        if self.authService.isSetUp {
+            flowState = .unlock
+        } else {
+            flowState = .welcome
+        }
+
         // Show biometric prompt on launch if enabled
         showBiometricPrompt = self.authService.isSetUp && self.authService.isBiometricEnabled
     }
 
-    // MARK: - Setup Actions
+    // MARK: - Setup Actions (legacy - kept for tests)
 
     @MainActor
     func setUp() async {
-        // Mark that user has attempted setup (enables error display)
         hasAttemptedSetup = true
 
-        // Validate username
-        guard !username.trimmingCharacters(in: .whitespaces).isEmpty else {
+        let trimmedUsername = username.trimmingCharacters(in: .whitespaces)
+        guard !trimmedUsername.isEmpty else {
             errorMessage = "Please enter a username"
             return
         }
+        guard isUsernameValid else {
+            errorMessage = "Username must be at least 3 characters"
+            return
+        }
 
-        // Validate passwords - check for validation errors
         if !passwordValidationErrors.isEmpty {
             errorMessage = passwordValidationErrors.first?.errorDescription
             return
         }
 
-        // Ensure passwords match
         guard password == confirmPassword else {
             errorMessage = AuthenticationError.passwordMismatch.errorDescription
             return
@@ -123,15 +179,15 @@ final class AuthenticationViewModel {
         errorMessage = nil
 
         do {
-            try await authService.setUp(password: password, enableBiometric: enableBiometric)
-            isSetUp = true // Update stored property to trigger view update
+            try await authService.setUp(password: password, username: trimmedUsername, enableBiometric: enableBiometric)
+            isSetUp = true
             isAuthenticated = true
 
-            // Clear fields
             username = ""
             password = ""
             confirmPassword = ""
             hasAttemptedSetup = false
+            hasConfirmFieldLostFocus = false
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -154,13 +210,12 @@ final class AuthenticationViewModel {
         do {
             try await authService.unlockWithPassword(unlockPassword)
             isAuthenticated = true
+            flowState = .authenticated
             lockStateService.unlock()
 
-            // Clear password field
             unlockPassword = ""
         } catch let error as AuthenticationError {
             errorMessage = error.errorDescription
-            // Don't clear password on lockout so user can see their attempt
             if case .accountLocked = error {
                 // Keep password, show lockout message
             } else {
@@ -183,9 +238,9 @@ final class AuthenticationViewModel {
         do {
             try await authService.unlockWithBiometric()
             isAuthenticated = true
+            flowState = .authenticated
             lockStateService.unlock()
         } catch let error as AuthenticationError {
-            // If biometric fails, show password option
             if error != .biometricCancelled {
                 errorMessage = error.errorDescription
             }
@@ -209,11 +264,11 @@ final class AuthenticationViewModel {
 
     func lock() {
         isAuthenticated = false
+        flowState = .unlock
         lockStateService.lock()
         errorMessage = nil
         unlockPassword = ""
 
-        // Show biometric prompt again if enabled
         showBiometricPrompt = authService.isBiometricEnabled
     }
 
@@ -221,19 +276,20 @@ final class AuthenticationViewModel {
     func logout() async {
         do {
             try authService.logout()
-            isSetUp = false // Update stored property
+            isSetUp = false
             isAuthenticated = false
+            flowState = .welcome
             lockStateService.unlock()
             errorMessage = nil
 
-            // Clear all state
             password = ""
             confirmPassword = ""
             unlockPassword = ""
+            username = ""
+            passphrase = ""
+            confirmPassphrase = ""
             showBiometricPrompt = false
         } catch {
-            // Don't expose technical error details to users
-            // TODO: Add proper logging when logging infrastructure is available
             errorMessage = "Unable to logout. Please try again or restart the app."
         }
     }
@@ -255,5 +311,43 @@ final class AuthenticationViewModel {
                 errorMessage = error.localizedDescription
             }
         }
+    }
+
+    // MARK: - Internal Helpers for Extension
+
+    func validatePassphrase(_ passphrase: String) -> [AuthenticationError] {
+        passwordValidator.validate(passphrase)
+    }
+
+    func performUnlockWithPassword(_ password: String) async throws {
+        try await authService.unlockWithPassword(password)
+    }
+
+    func performSetUp(password: String, username: String, enableBiometric: Bool) async throws {
+        try await authService.setUp(password: password, username: username, enableBiometric: enableBiometric)
+    }
+
+    func performLoginAndSetup(password: String, username: String, enableBiometric: Bool) async throws {
+        try await authService.loginAndSetup(password: password, username: username, enableBiometric: enableBiometric)
+    }
+
+    func performCompleteLoginFromExistingAccount(
+        loginResult: OpaqueLoginResult,
+        username: String,
+        enableBiometric: Bool
+    ) async throws {
+        try await authService.completeLoginFromExistingAccount(
+            loginResult: loginResult,
+            username: username,
+            enableBiometric: enableBiometric
+        )
+    }
+
+    func clearSensitiveFields() {
+        username = ""
+        passphrase = ""
+        confirmPassphrase = ""
+        password = ""
+        confirmPassword = ""
     }
 }

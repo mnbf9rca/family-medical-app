@@ -4,7 +4,8 @@
 <dict>
 	<key>com.apple.developer.associated-domains</key>
 	<array>
-		<string>webcredentials:cynexia.com</string>
+		<string>applinks:recordwell.app</string>
+		<string>webcredentials:recordwell.app</string>
 	</array>
 </dict>
 </plist>

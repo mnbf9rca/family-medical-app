@@ -12,6 +12,17 @@ protocol KeyDerivationServiceProtocol: Sendable {
     /// - Throws: CryptoError on derivation failure
     func derivePrimaryKey(from password: String, salt: Data) throws -> SymmetricKey
 
+    /// Derive a primary key from OPAQUE export key using HKDF
+    ///
+    /// When using OPAQUE authentication, the export key replaces password-based
+    /// derivation. The export key is already memory-hard (OPAQUE uses Argon2
+    /// internally), so we only need HKDF expansion.
+    ///
+    /// - Parameter exportKey: 256-bit OPAQUE export key
+    /// - Returns: 256-bit SymmetricKey
+    /// - Throws: CryptoError on derivation failure
+    func derivePrimaryKey(fromExportKey exportKey: Data) throws -> SymmetricKey
+
     /// Generate a cryptographically secure random salt (16 bytes)
     /// - Returns: 16-byte salt
     /// - Throws: CryptoError on random generation failure
@@ -69,6 +80,26 @@ final class KeyDerivationService: KeyDerivationServiceProtocol, @unchecked Senda
         sodium.utils.zero(&passwordBytes)
 
         return key
+    }
+
+    func derivePrimaryKey(fromExportKey exportKey: Data) throws -> SymmetricKey {
+        // opaque-ke with Sha512 produces 64-byte export keys
+        // Accept both 32-byte (legacy) and 64-byte (current) keys
+        guard exportKey.count == 32 || exportKey.count == 64 else {
+            throw CryptoError.keyDerivationFailed("Export key must be 32 or 64 bytes, got \(exportKey.count)")
+        }
+
+        // Use HKDF to derive primary key from OPAQUE export key
+        // The export key is already memory-hard (OPAQUE uses Argon2 internally)
+        // HKDF provides domain separation and deterministic derivation
+        let inputKey = SymmetricKey(data: exportKey)
+        let info = Data("family-medical-app-primary-key-v1".utf8)
+
+        return HKDF<SHA256>.deriveKey(
+            inputKeyMaterial: inputKey,
+            info: info,
+            outputByteCount: outputLength
+        )
     }
 
     func generateSalt() throws -> Data {

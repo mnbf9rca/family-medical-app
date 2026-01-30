@@ -1,0 +1,25 @@
+[package]
+name = "opaque-swift"
+version = "0.1.0"
+edition = "2021"
+description = "UniFFI wrapper around opaque-ke for Swift"
+
+[lib]
+crate-type = ["staticlib", "cdylib"]
+name = "opaque_swift"
+
+[dependencies]
+opaque-ke = { version = "4", features = ["argon2"] }
+rand = "0.8"
+argon2 = "0.5"
+sha2 = "0.10"
+hex = "0.4"
+uniffi = { version = "0.28", features = ["cli"] }
+thiserror = "1"
+
+[build-dependencies]
+uniffi = { version = "0.28", features = ["build"] }
+
+[[bin]]
+name = "uniffi-bindgen"
+path = "uniffi-bindgen.rs"

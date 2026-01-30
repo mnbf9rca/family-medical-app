@@ -16,7 +16,7 @@ struct AddPersonView: View {
     @State private var showValidationError = false
     @State private var validationErrorMessage = ""
 
-    // Track person being created to avoid race conditions
+    /// Track person being created to avoid race conditions
     @State private var creatingPersonId: UUID?
 
     var body: some View {

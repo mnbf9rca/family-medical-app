@@ -1,32 +1,31 @@
-# Backend Service
+# RecordWell TypeScript Backend
 
-**Status**: Phase 2 - Not yet implemented
+> **Note:** OPAQUE authentication has been moved to the Rust backend at `backend-rust/`.
+> This TypeScript worker is a placeholder for future sync functionality.
 
-This directory will contain the sync backend service for cross-device synchronization.
+## Architecture
 
-## Phase 2 Implementation
+RecordWell uses a split backend architecture:
 
-Backend development begins in **Phase 2** after Phase 1 (local iOS app) is complete.
+| Component | Location | Purpose |
+|-----------|----------|---------|
+| **Rust Worker** | `backend-rust/` | OPAQUE authentication (opaque-ke v4) |
+| **TypeScript Worker** | `backend/` | Future sync endpoints |
 
-See Issue #14 for backend technology research and selection.
+## Why Rust for OPAQUE?
 
-## Planned Features
+The original TypeScript implementation using `@serenity-kit/opaque` failed on Cloudflare Workers because the library uses dynamic WASM compilation (`WebAssembly.compile()`), which Workers blocks for security.
 
-- Encrypted blob storage
-- User authentication (for sync, not data decryption)
-- Sync coordination
-- Zero-knowledge architecture (server cannot decrypt data)
+The Rust implementation using `opaque-ke` compiles WASM ahead of time, avoiding this issue. It also ensures protocol compatibility with the iOS client (OpaqueSwift), since both use the same `opaque-ke` crate.
 
-## Development Environment
+## Development
 
-When implementation begins, this directory will include:
+```bash
+npm install
+npm run dev        # Local development
+npm run typecheck  # Type checking
+```
 
-- `.devcontainer/` - VS Code devcontainer configuration
-- `docker-compose.yml` - Local development services
-- Backend API code (Python/FastAPI, Node.js, or chosen stack)
-- Database migrations
-- API documentation
+## See Also
 
-## For Now
-
-Focus on Phase 1 (iOS app) first. Backend setup will be documented when Phase 2 begins.
+- `backend-rust/README.md` - Rust OPAQUE worker documentation

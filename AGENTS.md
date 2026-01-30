@@ -22,10 +22,10 @@
 - ⚠️ **NEVER** skip or override pre-commit hooks
   - The hooks are there for a reason - fix the issues instead
 - ⚠️ **ALWAYS** achieve required code coverage thresholds, validated through testing:
-  - **Overall project coverage: 90% minimum** and **individual file coverage: 85% minimum** (with exceptions for specific files, see `scripts/check-coverage.sh` - only add exceptions with explicit user consent)
+  - **Overall project coverage: 87% minimum** (temporarily reduced from 90% for OPAQUE auth, see Issue #78) and **individual file coverage: 85% minimum** (with exceptions for specific files, see `scripts/check-coverage.sh` - only add exceptions with explicit user consent)
   - Coverage applies to existing, new, **and changed** code
-  - Use `{projectRoot}/scripts/run-tests.sh` to run tests - this is the same script used in CI. Note that it can take up to 15 minutes for the full (UI) test suite to run.
-  - **After** running tests, use `{projectRoot}/scripts/check-coverage.sh` to validate coverage - this is the same script used in CI
+  - Use `{projectRoot}/scripts/run-tests.sh` to run iOS tests - this is the same script used in CI. Note that it can take up to 15 minutes for the full (UI) test suite to run.
+  - **After** running tests, use `{projectRoot}/scripts/check-coverage.sh` to validate iOS coverage - this is the same script used in CI
   - Use `--detailed` flag with check-coverage.sh to see function-level coverage details for files below 100%
   - **Using other methods will fail CI** meaning the PR cannot be merged
   - Create tests up front or as you go to ensure you hit coverage
@@ -82,12 +82,13 @@ For security-critical code (auth, encryption, key derivation, sharing):
 
 The versions below are available, despite this being beyond your knowledge cutoff:
 
-- **Xcode**: 26.2+ (December 2025)
+- **Xcode**: 26.2+ (December 2025) -> use `xcpretty` to manage output, not `grep` or `tail`.
+- **available simulators**: iPhone 17, iPhone 17 Pro, iPhone 17 Pro Max and others, but *not* iPhone 16
 - **Swift**: 6.2.3+ (ships with Xcode 26.2)
 - **iOS Deployment Target**: 17.6+ (required for @Observable macro, covers 84.7% of devices)
 - **iOS SDK**: 26.2+ (build with latest SDK, but deploy to older iOS versions)
 - **UI**: SwiftUI only
-- **Crypto**: CryptoKit (Apple's framework) + Swift-Sodium (libsodium for Argon2id)
+- **Crypto**: CryptoKit (Apple's framework) + Swift-Sodium (libsodium for Argon2id) + opaque-ke (Rust) → UniFFI → Swift XCFramework
 - **Auth**: LocalAuthentication framework
 - **Storage**: Core Data with field-level encryption (CryptoKit)
 - **Networking**: URLSession with certificate pinning

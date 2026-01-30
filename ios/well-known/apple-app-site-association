@@ -1,0 +1,23 @@
+{
+    "applinks": {
+        "apps": [],
+        "details": [
+            {
+                "appIDs": [
+                    "BU7526J4QY.com.cynexia.FamilyMedicalApp"
+                ],
+                "components": [
+                    {
+                        "/": "/records/*",
+                        "comment": "Universal links for records"
+                    }
+                ]
+            }
+        ]
+    },
+    "webcredentials": {
+        "apps": [
+            "BU7526J4QY.com.cynexia.FamilyMedicalApp"
+        ]
+    }
+}

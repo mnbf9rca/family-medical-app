@@ -12,6 +12,7 @@
 		D40AC5B42F03500000564AAD /* Dependencies in Frameworks */ = {isa = PBXBuildFile; productRef = D40AC5B22F03500000564AAD /* Dependencies */; };
 		D445F7DE2EFB435900E07F78 /* Clibsodium in Frameworks */ = {isa = PBXBuildFile; productRef = D445F7DD2EFB435900E07F78 /* Clibsodium */; };
 		D445F7E02EFB435900E07F78 /* Sodium in Frameworks */ = {isa = PBXBuildFile; productRef = D445F7DF2EFB435900E07F78 /* Sodium */; };
+		D49F98D32F2A9E5B00E436A0 /* OpaqueSwift in Frameworks */ = {isa = PBXBuildFile; productRef = D49F98D22F2A9E5B00E436A0 /* OpaqueSwift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -64,6 +65,7 @@
 				D40AC5B32F03500000564AAD /* Dependencies in Frameworks */,
 				D445F7DE2EFB435900E07F78 /* Clibsodium in Frameworks */,
 				D445F7E02EFB435900E07F78 /* Sodium in Frameworks */,
+				D49F98D32F2A9E5B00E436A0 /* OpaqueSwift in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -130,6 +132,7 @@
 				D40AC5B12F03500000564AAD /* Dependencies */,
 				D445F7DD2EFB435900E07F78 /* Clibsodium */,
 				D445F7DF2EFB435900E07F78 /* Sodium */,
+				D49F98D22F2A9E5B00E436A0 /* OpaqueSwift */,
 			);
 			productName = FamilyMedicalApp;
 			productReference = D445F79A2EF7E93C00E07F78 /* FamilyMedicalApp.app */;
@@ -219,6 +222,7 @@
 				D40AC5B02F03500000564AAD /* XCRemoteSwiftPackageReference "swift-dependencies" */,
 				D445F7DC2EFB435900E07F78 /* XCRemoteSwiftPackageReference "swift-sodium" */,
 				D40AC5A22F0332AD00564AAD /* XCRemoteSwiftPackageReference "ViewInspector" */,
+				D49F98D12F2A9E5B00E436A0 /* XCLocalSwiftPackageReference "../../opaque-swift" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = D445F79B2EF7E93C00E07F78 /* Products */;
@@ -426,10 +430,13 @@
 				DEVELOPMENT_TEAM = BU7526J4QY;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleIconName = AppIcon;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.medical";
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "Family Medical uses Face ID to quickly and securely unlock your medical records.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIRequiresFullScreen = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
@@ -460,10 +467,13 @@
 				DEVELOPMENT_TEAM = BU7526J4QY;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleIconName = AppIcon;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.medical";
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "Family Medical uses Face ID to quickly and securely unlock your medical records.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIRequiresFullScreen = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
@@ -608,6 +618,13 @@
 		};
 /* End XCConfigurationList section */
 
+/* Begin XCLocalSwiftPackageReference section */
+		D49F98D12F2A9E5B00E436A0 /* XCLocalSwiftPackageReference "../../opaque-swift" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = "../../opaque-swift";
+		};
+/* End XCLocalSwiftPackageReference section */
+
 /* Begin XCRemoteSwiftPackageReference section */
 		D40AC5A22F0332AD00564AAD /* XCRemoteSwiftPackageReference "ViewInspector" */ = {
 			isa = XCRemoteSwiftPackageReference;
@@ -660,6 +677,10 @@
 			isa = XCSwiftPackageProductDependency;
 			package = D445F7DC2EFB435900E07F78 /* XCRemoteSwiftPackageReference "swift-sodium" */;
 			productName = Sodium;
+		};
+		D49F98D22F2A9E5B00E436A0 /* OpaqueSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = OpaqueSwift;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

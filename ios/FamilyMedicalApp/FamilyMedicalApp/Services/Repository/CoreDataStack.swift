@@ -118,7 +118,9 @@ final class CoreDataStack: CoreDataStackProtocol, @unchecked Sendable {
     func deleteAllDataSync() throws {
         let context = container.newBackgroundContext()
 
-        var thrownError: Error?
+        // nonisolated(unsafe): performAndWait is synchronous and blocks until completion,
+        // so this variable access is actually safe despite the compiler not being able to prove it.
+        nonisolated(unsafe) var thrownError: Error?
 
         context.performAndWait {
             do {

@@ -1,0 +1,58 @@
+# name passed via CLI: --name "recordwell-opaque" (production) or --name "recordwell-opaque-pr-N" (PR preview)
+main = "build/worker/shim.mjs"
+compatibility_date = "2024-01-01"
+
+[build]
+command = "cargo install -q worker-build@0.7.4 && worker-build --release"
+
+# KV Namespaces - OPAQUE Authentication
+[[kv_namespaces]]
+binding = "CREDENTIALS"
+id = "c0373f3b95e54fbeaaef36782d426ca3"
+
+[[kv_namespaces]]
+binding = "BUNDLES"
+id = "7967763b05c9496e89c4223fd765a34d"
+
+[[kv_namespaces]]
+binding = "LOGIN_STATES"
+id = "671b81ebdc2946e494d0d37c2059f9d6"
+
+[[kv_namespaces]]
+binding = "RATE_LIMITS"
+id = "5d519620a3c341bc8821fc568ce67beb"
+
+[vars]
+ENVIRONMENT = "production"
+
+[observability]
+enabled = true
+
+[observability.logs]
+enabled = true
+invocation_logs = true
+
+# Secret: OPAQUE_SERVER_SETUP (set via: wrangler secret put OPAQUE_SERVER_SETUP)
+# Contains base64-encoded opaque-ke ServerSetup for OPAQUE authentication
+
+# Preview environment for PR deployments
+# Worker name is overridden via --name flag at deploy time
+[env.preview]
+vars = { ENVIRONMENT = "preview" }
+
+# Test KV namespaces (shared across PRs, isolated from production)
+[[env.preview.kv_namespaces]]
+binding = "CREDENTIALS"
+id = "5353a67feee9436c9df0672376163c95"
+
+[[env.preview.kv_namespaces]]
+binding = "BUNDLES"
+id = "8f0fc30c66dd4eaf830fd9a8507de7c8"
+
+[[env.preview.kv_namespaces]]
+binding = "LOGIN_STATES"
+id = "cfa578b6fed44c81bdadf7773eccb31b"
+
+[[env.preview.kv_namespaces]]
+binding = "RATE_LIMITS"
+id = "5d519620a3c341bc8821fc568ce67beb"

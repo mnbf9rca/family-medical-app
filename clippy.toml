@@ -1,0 +1,7 @@
+# Clippy configuration
+# Mirror SwiftLint's security-focused approach
+
+# Complexity thresholds (match SwiftLint)
+cognitive-complexity-threshold = 20
+too-many-arguments-threshold = 7
+too-many-lines-threshold = 100

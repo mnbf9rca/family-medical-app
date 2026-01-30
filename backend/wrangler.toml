@@ -1,0 +1,39 @@
+name = "recordwell-api"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+# Route managed via Cloudflare for SaaS (Custom Hostnames) in dashboard:
+# api.recordwell.app/* -> recordwell-api worker
+
+# KV Namespaces - OPAQUE Authentication
+[[kv_namespaces]]
+binding = "CREDENTIALS"
+id = "c0373f3b95e54fbeaaef36782d426ca3"
+
+[[kv_namespaces]]
+binding = "BUNDLES"
+id = "7967763b05c9496e89c4223fd765a34d"
+
+[[kv_namespaces]]
+binding = "LOGIN_STATES"
+id = "671b81ebdc2946e494d0d37c2059f9d6"
+
+[[kv_namespaces]]
+binding = "RATE_LIMITS"
+id = "5d519620a3c341bc8821fc568ce67beb"
+
+[vars]
+ENVIRONMENT = "production"
+
+[observability]
+enabled = true
+
+[observability.logs]
+enabled = true
+invocation_logs = true
+
+# Secrets Store binding for OPAQUE server setup
+[[secrets_store_secrets]]
+binding = "OPAQUE_SERVER_SETUP"
+secret_name = "recordwell_OPAQUE_SERVER_SETUP"
+store_id = "9ff53e3094b54ddeb4de44cfa3471119"

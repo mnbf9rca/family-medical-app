@@ -1,7 +1,17 @@
+import Combine
 import SwiftUI
 
 struct UnlockView: View {
     @Bindable var viewModel: AuthenticationViewModel
+
+    enum UnlockField: Hashable {
+        case passphrase
+    }
+
+    @FocusState private var focusedField: UnlockField?
+    @State private var timerCancellable: AnyCancellable?
+    @State private var displayedUsername: String = ""
+    @State private var timerTick: Int = 0
 
     var body: some View {
         VStack(spacing: 32) {
@@ -11,6 +21,7 @@ struct UnlockView: View {
             Image(systemName: "heart.text.square.fill")
                 .font(.system(size: 80))
                 .foregroundColor(.blue)
+                .accessibilityLabel("Family Medical App icon")
 
             Text("Family Medical App")
                 .font(.title)
@@ -18,7 +29,7 @@ struct UnlockView: View {
 
             Spacer()
 
-            // Biometric or password input
+            // Biometric or passphrase input
             VStack(spacing: 20) {
                 if viewModel.showBiometricPrompt {
                     // Biometric button
@@ -30,6 +41,7 @@ struct UnlockView: View {
                         VStack(spacing: 12) {
                             Image(systemName: viewModel.biometryType == .faceID ? "faceid" : "touchid")
                                 .font(.system(size: 50))
+                                .accessibilityHidden(true)
 
                             Text("Unlock with \(viewModel.biometryType == .faceID ? "Face ID" : "Touch ID")")
                                 .font(.headline)
@@ -43,55 +55,66 @@ struct UnlockView: View {
                     .disabled(viewModel.isLoading)
                     .accessibilityIdentifier("biometricButton")
 
-                    Button("Use Password") {
+                    Button("Use Passphrase") {
                         viewModel.showBiometricPrompt = false
                     }
                     .font(.subheadline)
-                    .accessibilityIdentifier("usePasswordButton")
+                    .accessibilityIdentifier("usePassphraseButton")
                 } else {
-                    // Password field
-                    VStack(spacing: 16) {
+                    // Password entry - NO Form, just plain TextFields like Duolingo
+                    VStack(spacing: 12) {
+                        // Username display (read-only - OPAQUE uses stored username)
+                        HStack {
+                            Text(displayedUsername)
+                                .foregroundColor(.primary)
+                            Spacer()
+                        }
+                        .padding()
+                        .background(Color(.systemGray6))
+                        .cornerRadius(10)
+                        .accessibilityIdentifier("usernameField")
+
+                        // Passphrase field
                         Group {
                             if UITestingHelpers.isUITesting {
-                                // Use TextField in UI testing mode to avoid autofill issues
-                                TextField("Enter password", text: $viewModel.unlockPassword)
+                                TextField("Passphrase", text: $viewModel.unlockPassword)
                             } else {
-                                SecureField("Enter password", text: $viewModel.unlockPassword)
+                                SecureField("Passphrase", text: $viewModel.unlockPassword)
                                     .textContentType(.password)
                             }
                         }
-                        .textFieldStyle(.roundedBorder)
-                        .autocorrectionDisabled()
+                        .focused($focusedField, equals: .passphrase)
                         .submitLabel(.done)
-                        .onSubmit {
-                            Task {
-                                await viewModel.unlockWithPassword()
-                            }
-                        }
+                        .onSubmit { submitUnlock() }
                         .disabled(viewModel.isLockedOut)
-                        .accessibilityIdentifier("passwordField")
+                        .padding()
+                        .background(Color(.systemGray6))
+                        .cornerRadius(10)
+                        .accessibilityIdentifier("passphraseField")
 
-                        Button(action: {
-                            Task {
-                                await viewModel.unlockWithPassword()
-                            }
-                        }, label: {
+                        // Unlock button
+                        Button(action: submitUnlock) {
                             if viewModel.isLoading {
                                 ProgressView()
                                     .progressViewStyle(.circular)
-                                    .tint(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .padding()
                             } else {
-                                Text("Unlock")
+                                Text("Sign In")
                                     .fontWeight(.semibold)
+                                    .frame(maxWidth: .infinity)
+                                    .padding()
                             }
-                        })
-                        .frame(maxWidth: .infinity)
-                        .padding()
+                        }
                         .background(viewModel.unlockPassword.isEmpty || viewModel.isLockedOut ? Color.gray : Color.blue)
                         .foregroundColor(.white)
-                        .cornerRadius(12)
+                        .cornerRadius(10)
                         .disabled(viewModel.unlockPassword.isEmpty || viewModel.isLockedOut || viewModel.isLoading)
                         .accessibilityIdentifier("unlockButton")
+                    }
+                    .onAppear {
+                        displayedUsername = viewModel.storedUsername
+                        focusedField = .passphrase
                     }
 
                     // Switch back to biometric if available
@@ -112,7 +135,7 @@ struct UnlockView: View {
                         .accessibilityIdentifier("failedAttemptsLabel")
                 }
 
-                // Lockout message
+                // Lockout message with live countdown
                 if viewModel.isLockedOut {
                     Text("Too many failed attempts. Try again in \(formattedLockoutTime)")
                         .font(.callout)
@@ -141,6 +164,12 @@ struct UnlockView: View {
         .task {
             await viewModel.attemptBiometricOnAppear()
         }
+        .onAppear {
+            startLockoutTimer()
+        }
+        .onDisappear {
+            timerCancellable?.cancel()
+        }
     }
 
     private var formattedLockoutTime: String {
@@ -153,6 +182,21 @@ struct UnlockView: View {
         } else {
             return "\(remainingSeconds)s"
         }
+    }
+
+    private func submitUnlock() {
+        Task {
+            await viewModel.unlockWithPassword()
+        }
+    }
+
+    private func startLockoutTimer() {
+        timerCancellable = Timer.publish(every: 1, on: .main, in: .common)
+            .autoconnect()
+            .sink { _ in
+                // Increment tick to force SwiftUI re-render and update countdown
+                timerTick += 1
+            }
     }
 }
 

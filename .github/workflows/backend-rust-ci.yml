@@ -1,0 +1,205 @@
+name: Backend Rust CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend-rust/**'
+      - '.github/workflows/backend-rust-ci.yml'
+  pull_request:
+    paths:
+      - 'backend-rust/**'
+      - '.github/workflows/backend-rust-ci.yml'
+
+env:
+  CARGO_TERM_COLOR: always
+  WORKERS_SUBDOMAIN: cynexia
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: backend-rust
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+          targets: wasm32-unknown-unknown
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: backend-rust
+
+      - name: Check formatting
+        run: cargo fmt --check
+
+      - name: Clippy
+        run: cargo clippy --all-targets -- -D warnings
+
+  deploy-preview:
+    name: Deploy Preview
+    needs: [lint]
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend-rust
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: backend-rust
+
+      - name: Install Wrangler v4
+        run: npm install -g wrangler@4
+
+      - name: Deploy PR preview
+        id: deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: wrangler deploy --env preview --name "recordwell-opaque-pr-${PR_NUMBER}-preview"
+
+      - name: Set secret
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          OPAQUE_SECRET: ${{ secrets.TEST_OPAQUE_SERVER_SETUP }}
+        run: echo "$OPAQUE_SECRET" | wrangler secret put OPAQUE_SERVER_SETUP --env preview --name "recordwell-opaque-pr-${PR_NUMBER}-preview"
+
+  smoke-test:
+    name: Smoke Test
+    needs: [deploy-preview]
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pull-requests: write
+    defaults:
+      run:
+        working-directory: backend-rust
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run smoke tests
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          sleep 3  # Brief wait for deployment propagation
+          chmod +x tests/smoke_test.sh
+          ./tests/smoke_test.sh "https://recordwell-opaque-pr-${PR_NUMBER}-preview.${{ env.WORKERS_SUBDOMAIN }}.workers.dev"
+
+      - name: Comment preview URL
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = context.payload.pull_request.number;
+            const url = `https://recordwell-opaque-pr-${prNumber}-preview.${{ env.WORKERS_SUBDOMAIN }}.workers.dev`;
+
+            // Check for existing comment to avoid duplicates
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+            });
+
+            const marker = '<!-- backend-preview-url -->';
+            const existing = comments.find(c => c.body.includes(marker));
+
+            const body = `${marker}\n🚀 **Backend Preview**\n\nAPI: \`${url}\`\n\nSmoke tests: ✅ Passed`;
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body,
+              });
+            }
+
+  deploy-production:
+    name: Deploy Production
+    needs: [lint]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend-rust
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: backend-rust
+
+      - name: Install Wrangler v4
+        run: npm install -g wrangler@4
+
+      - name: Deploy to production
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+        run: wrangler deploy --name "recordwell-opaque"
+
+  smoke-test-production:
+    name: Smoke Test Production
+    needs: [deploy-production]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: backend-rust
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run smoke tests
+        run: |
+          sleep 3  # Brief wait for deployment propagation
+          chmod +x tests/smoke_test.sh
+          ./tests/smoke_test.sh "https://api.recordwell.app"
+
+  summary:
+    name: CI Summary
+    needs: [lint]
+    if: always() && github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check required jobs
+        run: |
+          if [[ "${{ needs.lint.result }}" != "success" ]]; then
+            echo "Required jobs failed"
+            exit 1
+          fi
+          echo "CI passed"

@@ -19,6 +19,12 @@ enum AuthenticationError: LocalizedError, Equatable, Hashable {
     case accountLocked(remainingSeconds: Int)
     case verificationFailed
     case keychainError(String)
+    case networkError(String)
+    case opaqueError(String)
+
+    /// Registration failed, but login probe succeeded - account exists (user proved ownership)
+    /// The associated value contains the OPAQUE login result to complete authentication
+    case accountExistsConfirmed(loginResult: OpaqueLoginResult)
 
     var errorDescription: String? {
         switch self {
@@ -55,6 +61,12 @@ enum AuthenticationError: LocalizedError, Equatable, Hashable {
             return "Authentication verification failed"
         case let .keychainError(message):
             return "Keychain error: \(message)"
+        case let .networkError(message):
+            return "Network error: \(message)"
+        case let .opaqueError(message):
+            return "Authentication error: \(message)"
+        case .accountExistsConfirmed:
+            return "Looks like you already have an account!"
         }
     }
 }
