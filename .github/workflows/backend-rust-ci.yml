@@ -110,7 +110,7 @@ jobs:
           ./tests/smoke_test.sh "https://recordwell-opaque-pr-${PR_NUMBER}-preview.${{ env.WORKERS_SUBDOMAIN }}.workers.dev"
 
       - name: Comment preview URL
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const prNumber = context.payload.pull_request.number;
