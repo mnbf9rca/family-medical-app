@@ -13,6 +13,11 @@
 //  File picker and share sheet interactions are limited in UI tests due to
 //  system dialog restrictions. Tests focus on app-controlled UI elements.
 //
+//  ## Note on XCTest Ordering
+//  XCTest does NOT guarantee test execution order. Account creation is expensive,
+//  so all backup flow tests are consolidated into a single method that creates
+//  the account once and tests all functionality sequentially.
+//
 
 import XCTest
 
@@ -35,14 +40,38 @@ final class BackupFlowUITests: XCTestCase {
         app = nil
     }
 
-    // MARK: - Settings Access Tests
+    // MARK: - Consolidated Backup Flow Test
+    //
+    // This test consolidates all backup operations into a single method.
+    // XCTest does NOT guarantee test ordering, and account creation is expensive.
+    // Creating the account once and testing sequentially saves significant time.
 
-    func testOpenSettingsFromGearMenu() throws {
-        // Setup: Create account and get to home screen
+    func testBackupFlowWorkflow() throws {
+        // Setup: Create account and get to home screen (done ONCE)
         app = XCUIApplication()
         app.launchForUITesting(resetState: true)
         app.createAccount()
 
+        // --- Step 1: Verify Settings Access from Gear Menu ---
+        verifySettingsAccess()
+
+        // --- Step 2: Verify Export Options Sheet ---
+        verifyExportOptionsSheet()
+
+        // --- Step 3: Verify Export Password Validation ---
+        verifyExportPasswordValidation()
+
+        // --- Step 4: Verify Encryption Toggle Exists ---
+        verifyEncryptionToggle()
+
+        // --- Step 5: Verify Import Shows File Picker ---
+        verifyImportFilePicker()
+    }
+
+    // MARK: - Test Steps
+
+    /// Step 1: Verify Settings can be opened from the gear menu
+    private func verifySettingsAccess() {
         // Verify we're on the main screen
         let membersNav = app.navigationBars["Members"]
         XCTAssertTrue(membersNav.waitForExistence(timeout: 5), "Should be on Members screen")
@@ -77,13 +106,8 @@ final class BackupFlowUITests: XCTestCase {
         XCTAssertTrue(membersNav.waitForExistence(timeout: 3), "Should return to Members screen")
     }
 
-    // MARK: - Export Flow Tests
-
-    func testExportBackupShowsOptions() throws {
-        // Setup
-        app = XCUIApplication()
-        app.launchForUITesting(resetState: true)
-        app.createAccount()
+    /// Step 2: Verify Export Backup shows options sheet with password fields
+    private func verifyExportOptionsSheet() {
         openSettings()
 
         // Tap Export Backup
@@ -111,13 +135,13 @@ final class BackupFlowUITests: XCTestCase {
         // Verify back on settings
         let settingsTitle = app.navigationBars["Settings"]
         XCTAssertTrue(settingsTitle.waitForExistence(timeout: 2), "Should return to Settings")
+
+        // Dismiss settings to return to home
+        dismissSettings()
     }
 
-    func testExportPasswordValidation() throws {
-        // Setup
-        app = XCUIApplication()
-        app.launchForUITesting(resetState: true)
-        app.createAccount()
+    /// Step 3: Verify password validation (weak password disables export, strong enables)
+    private func verifyExportPasswordValidation() {
         openSettings()
 
         // Open export options
@@ -157,15 +181,13 @@ final class BackupFlowUITests: XCTestCase {
 
         // Cancel
         app.buttons["Cancel"].tap()
+
+        // Dismiss settings
+        dismissSettings()
     }
 
-    /// Test that toggling encryption off shows a warning
-    /// - Note: SwiftUI confirmationDialog testing is unreliable; this test verifies the toggle exists
-    func testUnencryptedExportToggleExists() throws {
-        // Setup
-        app = XCUIApplication()
-        app.launchForUITesting(resetState: true)
-        app.createAccount()
+    /// Step 4: Verify encryption toggle exists and defaults to on
+    private func verifyEncryptionToggle() {
         openSettings()
 
         // Open export options
@@ -186,15 +208,13 @@ final class BackupFlowUITests: XCTestCase {
         let cancelButton = app.navigationBars["Export Backup"].buttons["Cancel"]
         XCTAssertTrue(cancelButton.exists)
         cancelButton.tap()
+
+        // Dismiss settings
+        dismissSettings()
     }
 
-    // MARK: - Import Flow Tests
-
-    func testImportBackupShowsFilePicker() throws {
-        // Setup
-        app = XCUIApplication()
-        app.launchForUITesting(resetState: true)
-        app.createAccount()
+    /// Step 5: Verify Import shows file picker
+    private func verifyImportFilePicker() {
         openSettings()
 
         // Tap Import Backup
@@ -216,6 +236,9 @@ final class BackupFlowUITests: XCTestCase {
         // Should be back on Settings
         let settingsTitle = app.navigationBars["Settings"]
         XCTAssertTrue(settingsTitle.waitForExistence(timeout: 5), "Should return to Settings after dismissing picker")
+
+        // Dismiss settings
+        dismissSettings()
     }
 
     // MARK: - Helpers
@@ -231,6 +254,16 @@ final class BackupFlowUITests: XCTestCase {
 
         let settingsTitle = app.navigationBars["Settings"]
         XCTAssertTrue(settingsTitle.waitForExistence(timeout: 3))
+    }
+
+    private func dismissSettings() {
+        let doneButton = app.buttons["Done"]
+        if doneButton.waitForExistence(timeout: 2) {
+            doneButton.tap()
+        }
+
+        let membersNav = app.navigationBars["Members"]
+        XCTAssertTrue(membersNav.waitForExistence(timeout: 3), "Should return to Members screen")
     }
 }
 

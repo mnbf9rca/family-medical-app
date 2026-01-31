@@ -184,7 +184,7 @@ final class MyUITests: XCTestCase {
 
 **References:**
 
-- Consolidated: `MedicalRecordFlowUITests.swift`, `NewUserFlowUITests.swift`
+- Consolidated: `MedicalRecordFlowUITests.swift`, `NewUserFlowUITests.swift`, `BackupFlowUITests.swift`
 - Shared setup: `ExistingUserFlowUITests.swift`, `AddPersonFlowUITests.swift`
 
 ## SwiftUI View Testing Strategy
