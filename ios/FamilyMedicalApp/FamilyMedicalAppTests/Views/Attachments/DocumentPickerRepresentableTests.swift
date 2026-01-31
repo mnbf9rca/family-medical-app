@@ -49,10 +49,8 @@ struct DocumentPickerRepresentableTests {
             onCancel: { wasCancelled = true }
         )
 
-        let coordinator = representable.makeCoordinator()
-
-        // Coordinator should be created
-        #expect(coordinator != nil)
+        // makeCoordinator() returns non-optional
+        _ = representable.makeCoordinator()
         _ = pickedURLs
         _ = wasCancelled
     }

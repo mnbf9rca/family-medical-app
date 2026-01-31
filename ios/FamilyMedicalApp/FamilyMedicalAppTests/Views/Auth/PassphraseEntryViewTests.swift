@@ -14,9 +14,8 @@ struct PassphraseEntryViewTests {
         let view = PassphraseEntryView(viewModel: viewModel, username: testUsername)
 
         let sut = try view.inspect()
-        let field = try sut.find(viewWithAccessibilityIdentifier: "passphraseField")
-
-        #expect(field != nil)
+        // find() throws if not found
+        _ = try sut.find(viewWithAccessibilityIdentifier: "passphraseField")
     }
 
     @Test
@@ -25,9 +24,8 @@ struct PassphraseEntryViewTests {
         let view = PassphraseEntryView(viewModel: viewModel, username: testUsername)
 
         let sut = try view.inspect()
-        let button = try sut.find(viewWithAccessibilityIdentifier: "continueButton")
-
-        #expect(button != nil)
+        // find() throws if not found
+        _ = try sut.find(viewWithAccessibilityIdentifier: "continueButton")
     }
 
     @Test
@@ -36,9 +34,8 @@ struct PassphraseEntryViewTests {
         let view = PassphraseEntryView(viewModel: viewModel, username: testUsername)
 
         let sut = try view.inspect()
-        let button = try sut.find(viewWithAccessibilityIdentifier: "backButton")
-
-        #expect(button != nil)
+        // find() throws if not found
+        _ = try sut.find(viewWithAccessibilityIdentifier: "backButton")
     }
 
     // MARK: - Button State Tests
@@ -76,9 +73,8 @@ struct PassphraseEntryViewTests {
         let view = PassphraseEntryView(viewModel: viewModel, username: testUsername)
 
         let sut = try view.inspect()
-        let errorLabel = try sut.find(viewWithAccessibilityIdentifier: "errorLabel")
-
-        #expect(errorLabel != nil)
+        // find() throws if not found
+        _ = try sut.find(viewWithAccessibilityIdentifier: "errorLabel")
     }
 
     @Test

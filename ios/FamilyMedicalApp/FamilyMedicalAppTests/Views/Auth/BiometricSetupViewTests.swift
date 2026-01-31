@@ -15,9 +15,8 @@ struct BiometricSetupViewTests {
         let view = BiometricSetupView(viewModel: viewModel, username: testUsername, passphrase: testPassphrase)
 
         let sut = try view.inspect()
-        let button = try sut.find(viewWithAccessibilityIdentifier: "enableBiometricButton")
-
-        #expect(button != nil)
+        // find() throws if not found
+        _ = try sut.find(viewWithAccessibilityIdentifier: "enableBiometricButton")
     }
 
     @Test
@@ -26,9 +25,8 @@ struct BiometricSetupViewTests {
         let view = BiometricSetupView(viewModel: viewModel, username: testUsername, passphrase: testPassphrase)
 
         let sut = try view.inspect()
-        let button = try sut.find(viewWithAccessibilityIdentifier: "skipButton")
-
-        #expect(button != nil)
+        // find() throws if not found
+        _ = try sut.find(viewWithAccessibilityIdentifier: "skipButton")
     }
 
     @Test
@@ -37,9 +35,8 @@ struct BiometricSetupViewTests {
         let view = BiometricSetupView(viewModel: viewModel, username: testUsername, passphrase: testPassphrase)
 
         let sut = try view.inspect()
-        let button = try sut.find(viewWithAccessibilityIdentifier: "backButton")
-
-        #expect(button != nil)
+        // find() throws if not found
+        _ = try sut.find(viewWithAccessibilityIdentifier: "backButton")
     }
 
     // MARK: - Button State Tests
@@ -77,9 +74,8 @@ struct BiometricSetupViewTests {
         let view = BiometricSetupView(viewModel: viewModel, username: testUsername, passphrase: testPassphrase)
 
         let sut = try view.inspect()
-        let errorLabel = try sut.find(viewWithAccessibilityIdentifier: "errorLabel")
-
-        #expect(errorLabel != nil)
+        // find() throws if not found
+        _ = try sut.find(viewWithAccessibilityIdentifier: "errorLabel")
     }
 
     @Test
