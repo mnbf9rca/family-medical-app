@@ -25,7 +25,7 @@ import SwiftUI
 /// #expect(harness.value == "updated")
 /// ```
 @Observable
-final class BindingTestHarness<Value> {
+final class BindingTestHarness<Value>: @unchecked Sendable {
     /// The current value, updated when the binding's setter is called
     var value: Value
 
