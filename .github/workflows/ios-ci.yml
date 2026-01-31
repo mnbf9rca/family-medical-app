@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'ios/**'
+      - 'opaque-swift/**'
       - '.github/workflows/ios-ci.yml'
       - '.swiftlint.yml'
       - '.swiftformat'
@@ -12,11 +13,11 @@ on:
     branches: [main]
     paths:
       - 'ios/**'
+      - 'opaque-swift/**'
       - '.github/workflows/ios-ci.yml'
       - '.swiftlint.yml'
       - '.swiftformat'
 
-# Cancel in-progress runs when a new workflow with the same group name starts
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -25,17 +26,11 @@ jobs:
   lint:
     name: Lint
     runs-on: macos-26
-    timeout-minutes: 10  # Prevent runaway costs
-
+    timeout-minutes: 10
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install SwiftLint
-        run: brew install swiftlint
-
-      - name: SwiftLint
-        run: |
+      - uses: actions/checkout@v6
+      - run: brew install swiftlint
+      - run: |
           cd ios/FamilyMedicalApp
           swiftlint lint --config ../../.swiftlint.yml --strict --reporter github-actions-logging
 
@@ -43,73 +38,94 @@ jobs:
     name: Format Check
     runs-on: macos-26
     timeout-minutes: 10
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v6
+      - run: brew install swiftformat
+      - run: swiftformat --config .swiftformat --lint ios/FamilyMedicalApp/FamilyMedicalApp
 
-      - name: Install SwiftFormat
-        run: brew install swiftformat
-
-      - name: Check formatting
-        run: |
-          swiftformat --config .swiftformat --lint ios/FamilyMedicalApp/FamilyMedicalApp
-
-  build:
-    name: Build & Test
-    runs-on: macos-26  # Required for Xcode 26 / iOS 26.2 simulators
-    timeout-minutes: 25  # Allows headroom for full test suite including UI tests
-
-    strategy:
-      matrix:
-        # Test on multiple device types (no OS version = Xcode picks latest available)
-        destination:
-          - platform=iOS Simulator,name=iPhone 17 Pro
-          - platform=iOS Simulator,name=iPad Pro 13-inch (M5)
-
+  xcframework:
+    name: Build XCFramework
+    runs-on: macos-26
+    timeout-minutes: 10
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - name: Select Xcode version
-        run: sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
+      - name: Get Xcode version
+        id: xcode-version
+        run: echo "version=$(xcodebuild -version | head -n1 | awk '{print $2}')" >> "$GITHUB_OUTPUT"
 
-      - name: Show Xcode and Swift versions
-        run: |
-          xcodebuild -version
-          swift --version
-
-      - name: List available simulators (debug)
-        run: xcrun simctl list devices available | head -50
+      - name: Restore XCFramework cache
+        id: cache
+        uses: actions/cache@v5
+        with:
+          path: |
+            opaque-swift/OpaqueSwift.xcframework
+            opaque-swift/generated
+            opaque-swift/Sources
+          key: ${{ runner.os }}-xcframework-xcode${{ steps.xcode-version.outputs.version }}-${{ hashFiles('opaque-swift/src/lib.rs', 'opaque-swift/Cargo.toml', 'opaque-swift/build-xcframework.sh', 'opaque-swift/uniffi-bindgen.rs') }}
 
       - name: Install Rust toolchain
+        if: steps.cache.outputs.cache-hit != 'true'
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-apple-ios,aarch64-apple-ios-sim,x86_64-apple-ios
 
       - name: Cache Rust dependencies
+        if: steps.cache.outputs.cache-hit != 'true'
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: opaque-swift
 
-      - name: Build OpaqueSwift XCFramework
-        run: |
-          cd opaque-swift
-          chmod +x build-xcframework.sh
-          ./build-xcframework.sh
+      - name: Build XCFramework
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: cd opaque-swift && chmod +x build-xcframework.sh && ./build-xcframework.sh
 
-      - name: Generate cache key
-        id: cache-key
-        run: echo "key=$(echo '${{ matrix.destination }}' | shasum -a 256 | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+      - name: Upload XCFramework artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: OpaqueSwift-xcframework
+          path: |
+            opaque-swift/OpaqueSwift.xcframework
+            opaque-swift/generated
+            opaque-swift/Sources
+          retention-days: 1
+
+  build:
+    name: Build & Test (${{ matrix.device }})
+    needs: [xcframework]
+    runs-on: macos-26
+    timeout-minutes: 25
+    strategy:
+      matrix:
+        include:
+          - device: iPhone
+            destination: platform=iOS Simulator,name=iPhone 17 Pro
+          - device: iPad
+            destination: platform=iOS Simulator,name=iPad Pro 13-inch (M5)
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Select Xcode version
+        run: sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
+
+      - name: Get Xcode version
+        id: xcode-version
+        run: echo "version=$(xcodebuild -version | head -n1 | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+
+      - name: Download XCFramework
+        uses: actions/download-artifact@v5
+        with:
+          name: OpaqueSwift-xcframework
+          path: .
 
       - name: Restore DerivedData cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           path: ~/Library/Developer/Xcode/DerivedData
-          key: ${{ runner.os }}-deriveddata-${{ steps.cache-key.outputs.key }}-${{ hashFiles('ios/**/*.swift') }}
+          key: ${{ runner.os }}-deriveddata-xcode${{ steps.xcode-version.outputs.version }}-${{ matrix.device }}-${{ hashFiles('ios/**/*.swift') }}
           restore-keys: |
-            ${{ runner.os }}-deriveddata-${{ steps.cache-key.outputs.key }}-
-            ${{ runner.os }}-deriveddata-
+            ${{ runner.os }}-deriveddata-xcode${{ steps.xcode-version.outputs.version }}-${{ matrix.device }}-
+            ${{ runner.os }}-deriveddata-xcode${{ steps.xcode-version.outputs.version }}-
 
       - name: Build
         run: |
@@ -122,53 +138,44 @@ jobs:
             CODE_SIGNING_REQUIRED=NO
 
       - name: Save DerivedData cache
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         if: always()
         with:
           path: ~/Library/Developer/Xcode/DerivedData
-          key: ${{ runner.os }}-deriveddata-${{ steps.cache-key.outputs.key }}-${{ hashFiles('ios/**/*.swift') }}
+          key: ${{ runner.os }}-deriveddata-xcode${{ steps.xcode-version.outputs.version }}-${{ matrix.device }}-${{ hashFiles('ios/**/*.swift') }}
 
       - name: Disable CPU-intensive services
         run: |
-          # Disable PerfPowerServices (power management analytics that causes simulator hangs)
           sudo launchctl bootout system/com.apple.PerfPowerServices 2>/dev/null || true
-
-          # Disable Spotlight indexing (CPU-intensive during tests)
           sudo launchctl bootout system/com.apple.metadata.mds 2>/dev/null || true
 
-          echo "Disabled CPU-intensive services for stable simulator testing"
-
-      - name: Run Unit Tests
-        env:
-          DESTINATION: ${{ matrix.destination }}
-        run: ./scripts/run-tests.sh --destination "$DESTINATION"
+      - name: Run Tests
+        run: ./scripts/run-tests.sh --destination "${{ matrix.destination }}"
 
       - name: Generate coverage JSON
-        if: matrix.destination == 'platform=iOS Simulator,name=iPhone 17 Pro'
+        if: matrix.device == 'iPhone'
         run: |
           cd ios/FamilyMedicalApp
           xcrun xccov view --report --json test-results/TestResults.xcresult > test-results/coverage.json
 
       - name: Upload coverage reports
-        if: matrix.destination == 'platform=iOS Simulator,name=iPhone 17 Pro'
-        uses: actions/upload-artifact@v4
+        if: matrix.device == 'iPhone'
+        uses: actions/upload-artifact@v6
         with:
           name: coverage-report
           path: ios/FamilyMedicalApp/test-results/coverage.json
           retention-days: 30
 
       - name: Check coverage thresholds
-        if: matrix.destination == 'platform=iOS Simulator,name=iPhone 17 Pro'
+        if: matrix.device == 'iPhone'
         run: ./scripts/check-coverage.sh
 
   security-scan:
     name: Security Scan
     runs-on: macos-26
     timeout-minutes: 15
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Run SwiftLint security rules
         run: |
@@ -176,7 +183,6 @@ jobs:
           cd ios/FamilyMedicalApp
           swiftlint lint --config ../../.swiftlint.yml --strict --reporter json > swiftlint-results.json || true
 
-          # Check for security-related violations
           SECURITY_ISSUES=$(cat swiftlint-results.json | python3 -c "
           import sys, json
           results = json.load(sys.stdin)
@@ -200,7 +206,6 @@ jobs:
 
       - name: Check for sensitive files
         run: |
-          # Ensure no sensitive files are committed
           SENSITIVE_FILES=$(find . -type f \( -name "*.p12" -o -name "*.mobileprovision" -o -name "*_key.pem" -o -name "*.keystore" \) | grep -v ".git" || true)
           if [ -n "$SENSITIVE_FILES" ]; then
             echo "❌ Found sensitive files in repository:"
@@ -211,11 +216,10 @@ jobs:
 
   summary:
     name: CI Summary
-    runs-on: ubuntu-latest
     needs: [lint, format-check, build, security-scan]
     if: always()
+    runs-on: ubuntu-latest
     timeout-minutes: 5
-
     steps:
       - name: Check results
         run: |
