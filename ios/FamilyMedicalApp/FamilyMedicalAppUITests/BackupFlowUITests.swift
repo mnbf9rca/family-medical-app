@@ -36,8 +36,11 @@ final class BackupFlowUITests: XCTestCase {
     }
 
     override func tearDownWithError() throws {
-        app?.terminate()
+        let appRef = app
         app = nil
+        MainActor.assumeIsolated {
+            appRef?.terminate()
+        }
     }
 
     // MARK: - Consolidated Backup Flow Test
