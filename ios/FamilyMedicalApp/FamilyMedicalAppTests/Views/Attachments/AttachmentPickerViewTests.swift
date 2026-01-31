@@ -113,18 +113,14 @@ struct AttachmentPickerViewTests {
 
     @Test
     func viewCallsOnChangeWhenAttachmentsUpdate() throws {
-        var receivedIds: [UUID]?
         let viewModel = makeViewModel()
 
-        let view = AttachmentPickerView(viewModel: viewModel) { ids in
-            receivedIds = ids
+        let view = AttachmentPickerView(viewModel: viewModel) { _ in
+            // Callback is set but ViewInspector can't trigger onChange in LazyVGrid
         }
 
-        // Initial render should call onChange with empty array
+        // Verify view renders correctly with callback set
         _ = try view.inspect()
-
-        // Note: ViewInspector can't easily trigger the onChange in LazyVGrid,
-        // but we verify the view renders correctly with the callback set
     }
 
     // MARK: - Error Display Tests
