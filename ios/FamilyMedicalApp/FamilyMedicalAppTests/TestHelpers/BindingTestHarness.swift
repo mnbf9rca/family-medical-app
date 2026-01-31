@@ -24,6 +24,12 @@ import SwiftUI
 /// // Verify binding was updated
 /// #expect(harness.value == "updated")
 /// ```
+///
+/// ## Thread Safety
+/// Marked `@unchecked Sendable` because:
+/// - Test-only helper, never used in production code
+/// - All usage is single-threaded within XCTest (tests run serially on main thread)
+/// - The mutable state (`value`) is only accessed synchronously via the binding
 @Observable
 final class BindingTestHarness<Value>: @unchecked Sendable {
     /// The current value, updated when the binding's setter is called
