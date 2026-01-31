@@ -117,6 +117,15 @@ if [[ "$UNIT_TESTS_ONLY" == "true" ]]; then
     echo "  Mode: Unit tests only (skipping UI tests)"
 fi
 
+# Show warning if xcpretty is not installed (output can be 100x larger without it)
+if [[ "$XCPRETTY_AVAILABLE" == "false" && "$RESULTS_ONLY" == "false" ]]; then
+    echo ""
+    echo "${YELLOW}⚠️  WARNING: xcpretty is not installed${NC}"
+    echo "${YELLOW}   Test output will be MASSIVE (100x larger than with xcpretty)${NC}"
+    echo "${YELLOW}   Install with: gem install xcpretty${NC}"
+    echo ""
+fi
+
 # Clean previous test results
 rm -rf test-results* DerivedData/TestResults.xcresult
 
@@ -191,7 +200,6 @@ else
     if [[ "$XCPRETTY_AVAILABLE" == "true" ]]; then
         "${TEST_CMD[@]}" 2>&1 | xcpretty || true
     else
-        echo "${YELLOW}💡 Tip: Install xcpretty for cleaner output (gem install xcpretty)${NC}"
         "${TEST_CMD[@]}" || true
     fi
 
@@ -376,6 +384,14 @@ sys.exit(1 if failed > 0 else 0)
 PYEOF
 
 SUMMARY_EXIT=$?
+
+# Repeat xcpretty warning at the end so it's visible after scrolling through logs
+if [[ "$XCPRETTY_AVAILABLE" == "false" && "$RESULTS_ONLY" == "false" ]]; then
+    echo ""
+    echo "${YELLOW}⚠️  WARNING: xcpretty is not installed${NC}"
+    echo "${YELLOW}   Test output was ~100x larger than necessary${NC}"
+    echo "${YELLOW}   Install with: gem install xcpretty${NC}"
+fi
 
 # Print duration and return the summary exit code (temp files cleaned by trap)
 print_duration
