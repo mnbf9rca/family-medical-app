@@ -134,7 +134,14 @@ final class ImportService: ImportServiceProtocol, @unchecked Sendable {
         }
 
         // Convert to RecordContent and encrypt
-        let content = backup.toRecordContent()
+        let content: RecordContent
+        do {
+            content = try backup.toRecordContent()
+        } catch let error as FieldValueConversionError {
+            logger.error("Invalid field value in backup record: \(error.localizedDescription)")
+            throw BackupError.corruptedFile
+        }
+
         let encryptedContent: Data
         do {
             encryptedContent = try recordContentService.encrypt(content, using: fmk)
@@ -192,7 +199,9 @@ final class ImportService: ImportServiceProtocol, @unchecked Sendable {
         }
 
         // Use AttachmentService to add (which handles encryption, thumbnails, etc.)
+        // Pass backup.id to preserve attachment IDs for attachmentIds field references
         let input = AddAttachmentInput(
+            id: backup.id,
             data: content,
             fileName: backup.fileName,
             mimeType: backup.mimeType,

@@ -85,7 +85,7 @@
         "value": {
           "type": "string",
           "contentEncoding": "base64",
-          "description": "Base64-encoded hash. For encrypted: SHA-256 of raw ciphertext bytes (before base64). For unencrypted: SHA-256 of JSON-serialized data object (UTF-8 bytes)."
+          "description": "Base64-encoded hash. For encrypted: SHA-256 of AES-256-GCM combined bytes (nonce + ciphertext + tag). For unencrypted: SHA-256 of JSON-serialized data object (UTF-8 bytes)."
         }
       }
     },

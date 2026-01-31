@@ -1,5 +1,33 @@
 import Foundation
 
+/// Errors that can occur when converting backup field values to app field values
+enum FieldValueConversionError: Error, LocalizedError, Equatable {
+    /// The field type is not recognized
+    case unknownType(String)
+
+    /// The value type doesn't match the declared type
+    case typeMismatch(expected: String, got: String)
+
+    /// The date string could not be parsed
+    case invalidDateString(String)
+
+    /// A UUID string in the attachmentIds array is invalid
+    case invalidUUID(String)
+
+    var errorDescription: String? {
+        switch self {
+        case let .unknownType(type):
+            "Unknown field type: \(type)"
+        case let .typeMismatch(expected, got):
+            "Type mismatch: expected \(expected), got \(got)"
+        case let .invalidDateString(dateString):
+            "Invalid date string: \(dateString)"
+        case let .invalidUUID(uuid):
+            "Invalid UUID: \(uuid)"
+        }
+    }
+}
+
 /// Decrypted medical record data for backup
 struct MedicalRecordBackup: Codable, Equatable {
     let id: UUID
@@ -45,8 +73,13 @@ struct MedicalRecordBackup: Codable, Equatable {
     }
 
     /// Convert to RecordContent for import
-    func toRecordContent() -> RecordContent {
-        let originalFields = fields.mapValues { $0.toFieldValue() }
+    ///
+    /// - Throws: FieldValueConversionError if any field value cannot be converted
+    func toRecordContent() throws -> RecordContent {
+        var originalFields: [String: FieldValue] = [:]
+        for (key, backupValue) in fields {
+            originalFields[key] = try backupValue.toFieldValue()
+        }
         return RecordContent(schemaId: schemaId, fields: originalFields)
     }
 }
@@ -89,34 +122,85 @@ struct FieldValueBackup: Codable, Equatable {
         }
     }
 
-    func toFieldValue() -> FieldValue {
+    func toFieldValue() throws -> FieldValue {
         switch type {
         case "string":
-            if case let .string(stringVal) = value { return .string(stringVal) }
+            return try convertString()
         case "int":
-            if case let .int(intVal) = value { return .int(intVal) }
+            return try convertInt()
         case "double":
-            if case let .double(doubleVal) = value { return .double(doubleVal) }
+            return try convertDouble()
         case "bool":
-            if case let .bool(boolVal) = value { return .bool(boolVal) }
+            return try convertBool()
         case "date":
-            if case let .string(stringVal) = value {
-                let formatter = ISO8601DateFormatter()
-                formatter.formatOptions = [.withFullDate]
-                if let date = formatter.date(from: stringVal) {
-                    return .date(date)
-                }
-            }
+            return try convertDate()
         case "attachmentIds":
-            if case let .stringArray(arr) = value {
-                return .attachmentIds(arr.compactMap { UUID(uuidString: $0) })
-            }
+            return try convertAttachmentIds()
         case "stringArray":
-            if case let .stringArray(arr) = value { return .stringArray(arr) }
+            return try convertStringArray()
         default:
-            break
+            throw FieldValueConversionError.unknownType(type)
         }
-        return .string("") // Fallback
+    }
+
+    private func convertString() throws -> FieldValue {
+        guard case let .string(stringVal) = value else {
+            throw FieldValueConversionError.typeMismatch(expected: "string", got: value.typeName)
+        }
+        return .string(stringVal)
+    }
+
+    private func convertInt() throws -> FieldValue {
+        guard case let .int(intVal) = value else {
+            throw FieldValueConversionError.typeMismatch(expected: "int", got: value.typeName)
+        }
+        return .int(intVal)
+    }
+
+    private func convertDouble() throws -> FieldValue {
+        guard case let .double(doubleVal) = value else {
+            throw FieldValueConversionError.typeMismatch(expected: "double", got: value.typeName)
+        }
+        return .double(doubleVal)
+    }
+
+    private func convertBool() throws -> FieldValue {
+        guard case let .bool(boolVal) = value else {
+            throw FieldValueConversionError.typeMismatch(expected: "bool", got: value.typeName)
+        }
+        return .bool(boolVal)
+    }
+
+    private func convertDate() throws -> FieldValue {
+        guard case let .string(stringVal) = value else {
+            throw FieldValueConversionError.typeMismatch(expected: "date (string)", got: value.typeName)
+        }
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withFullDate]
+        guard let date = formatter.date(from: stringVal) else {
+            throw FieldValueConversionError.invalidDateString(stringVal)
+        }
+        return .date(date)
+    }
+
+    private func convertAttachmentIds() throws -> FieldValue {
+        guard case let .stringArray(arr) = value else {
+            throw FieldValueConversionError.typeMismatch(expected: "attachmentIds (stringArray)", got: value.typeName)
+        }
+        let uuids = try arr.map { uuidString -> UUID in
+            guard let uuid = UUID(uuidString: uuidString) else {
+                throw FieldValueConversionError.invalidUUID(uuidString)
+            }
+            return uuid
+        }
+        return .attachmentIds(uuids)
+    }
+
+    private func convertStringArray() throws -> FieldValue {
+        guard case let .stringArray(arr) = value else {
+            throw FieldValueConversionError.typeMismatch(expected: "stringArray", got: value.typeName)
+        }
+        return .stringArray(arr)
     }
 }
 
@@ -127,6 +211,17 @@ enum FieldValueBackupValue: Codable, Equatable {
     case double(Double)
     case bool(Bool)
     case stringArray([String])
+
+    /// Human-readable type name for error messages
+    var typeName: String {
+        switch self {
+        case .string: "string"
+        case .int: "int"
+        case .double: "double"
+        case .bool: "bool"
+        case .stringArray: "stringArray"
+        }
+    }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()

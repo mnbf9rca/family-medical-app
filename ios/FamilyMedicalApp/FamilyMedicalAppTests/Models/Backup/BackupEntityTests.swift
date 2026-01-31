@@ -87,7 +87,7 @@ struct MedicalRecordBackupTests {
     }
 
     @Test("MedicalRecordBackup toRecordContent works")
-    func medicalRecordBackupToContent() {
+    func medicalRecordBackupToContent() throws {
         let backup = MedicalRecordBackup(
             id: UUID(),
             personId: UUID(),
@@ -101,7 +101,7 @@ struct MedicalRecordBackupTests {
             previousVersionId: nil
         )
 
-        let content = backup.toRecordContent()
+        let content = try backup.toRecordContent()
 
         #expect(content.schemaId == "vaccine")
     }
@@ -183,33 +183,33 @@ struct FieldValueBackupTests {
     }
 
     @Test("FieldValueBackup converts back to FieldValue")
-    func fieldValueBackupToFieldValue() {
-        let stringValue = FieldValueBackup(type: "string", value: .string("test")).toFieldValue()
+    func fieldValueBackupToFieldValue() throws {
+        let stringValue = try FieldValueBackup(type: "string", value: .string("test")).toFieldValue()
         #expect(stringValue == .string("test"))
 
-        let intValue = FieldValueBackup(type: "int", value: .int(42)).toFieldValue()
+        let intValue = try FieldValueBackup(type: "int", value: .int(42)).toFieldValue()
         #expect(intValue == .int(42))
 
-        let boolValue = FieldValueBackup(type: "bool", value: .bool(true)).toFieldValue()
+        let boolValue = try FieldValueBackup(type: "bool", value: .bool(true)).toFieldValue()
         #expect(boolValue == .bool(true))
     }
 
     @Test("FieldValueBackup converts double back to FieldValue")
-    func fieldValueBackupDoubleToFieldValue() {
+    func fieldValueBackupDoubleToFieldValue() throws {
         let doubleBackup = FieldValueBackup(from: .double(3.14))
         #expect(doubleBackup.type == "double")
 
-        let doubleValue = FieldValueBackup(type: "double", value: .double(3.14)).toFieldValue()
+        let doubleValue = try FieldValueBackup(type: "double", value: .double(3.14)).toFieldValue()
         #expect(doubleValue == .double(3.14))
     }
 
     @Test("FieldValueBackup converts date back to FieldValue")
-    func fieldValueBackupDateToFieldValue() {
+    func fieldValueBackupDateToFieldValue() throws {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withFullDate]
         let dateString = "2025-01-30"
 
-        let dateValue = FieldValueBackup(type: "date", value: .string(dateString)).toFieldValue()
+        let dateValue = try FieldValueBackup(type: "date", value: .string(dateString)).toFieldValue()
 
         if case let .date(date) = dateValue {
             #expect(formatter.string(from: date) == dateString)
@@ -219,20 +219,20 @@ struct FieldValueBackupTests {
     }
 
     @Test("FieldValueBackup converts stringArray back to FieldValue")
-    func fieldValueBackupStringArrayToFieldValue() {
+    func fieldValueBackupStringArrayToFieldValue() throws {
         let stringArrayBackup = FieldValueBackup(from: .stringArray(["a", "b", "c"]))
         #expect(stringArrayBackup.type == "stringArray")
 
-        let stringArrayValue = FieldValueBackup(type: "stringArray", value: .stringArray(["x", "y"])).toFieldValue()
+        let stringArrayValue = try FieldValueBackup(type: "stringArray", value: .stringArray(["x", "y"])).toFieldValue()
         #expect(stringArrayValue == .stringArray(["x", "y"]))
     }
 
     @Test("FieldValueBackup converts attachmentIds back to FieldValue")
-    func fieldValueBackupAttachmentIdsToFieldValue() {
+    func fieldValueBackupAttachmentIdsToFieldValue() throws {
         let id1 = UUID()
         let id2 = UUID()
 
-        let attachmentValue = FieldValueBackup(
+        let attachmentValue = try FieldValueBackup(
             type: "attachmentIds",
             value: .stringArray([id1.uuidString, id2.uuidString])
         ).toFieldValue()
@@ -246,16 +246,20 @@ struct FieldValueBackupTests {
         }
     }
 
-    @Test("FieldValueBackup returns fallback for unknown type")
-    func fieldValueBackupUnknownTypeFallback() {
-        let unknownValue = FieldValueBackup(type: "unknownType", value: .string("test")).toFieldValue()
-        #expect(unknownValue == .string(""))
+    @Test("FieldValueBackup throws for unknown type")
+    func fieldValueBackupUnknownTypeThrows() {
+        let backup = FieldValueBackup(type: "unknownType", value: .string("test"))
+        #expect(throws: FieldValueConversionError.self) {
+            _ = try backup.toFieldValue()
+        }
     }
 
-    @Test("FieldValueBackup returns fallback for invalid date string")
-    func fieldValueBackupInvalidDateFallback() {
-        let invalidDateValue = FieldValueBackup(type: "date", value: .string("not-a-date")).toFieldValue()
-        #expect(invalidDateValue == .string(""))
+    @Test("FieldValueBackup throws for invalid date string")
+    func fieldValueBackupInvalidDateThrows() {
+        let backup = FieldValueBackup(type: "date", value: .string("not-a-date"))
+        #expect(throws: FieldValueConversionError.self) {
+            _ = try backup.toFieldValue()
+        }
     }
 
     @Test("FieldValueBackupValue decodes from JSON correctly")

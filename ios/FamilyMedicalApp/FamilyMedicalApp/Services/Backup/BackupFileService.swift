@@ -165,8 +165,10 @@ final class BackupFileService: BackupFileServiceProtocol, @unchecked Sendable {
         do {
             key = try keyDerivationService.derivePrimaryKey(from: passwordBytes, salt: salt)
         } catch {
-            logger.error("Key derivation failed during backup decryption")
-            throw BackupError.invalidPassword
+            // Argon2id doesn't fail on wrong password - it produces a different key.
+            // KDF failure indicates corrupted salt/params, not an invalid password.
+            logger.error("Key derivation failed during backup decryption - corrupted KDF params")
+            throw BackupError.corruptedFile
         }
 
         // Reconstruct encrypted payload
@@ -249,11 +251,26 @@ final class BackupFileService: BackupFileServiceProtocol, @unchecked Sendable {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
 
+        let file: BackupFile
         do {
-            return try decoder.decode(BackupFile.self, from: data)
+            file = try decoder.decode(BackupFile.self, from: data)
         } catch {
             throw BackupError.corruptedFile
         }
+
+        // Validate format name
+        guard file.formatName == BackupFile.formatNameValue else {
+            logger.error("Invalid format name: \(file.formatName)")
+            throw BackupError.corruptedFile
+        }
+
+        // Validate format version
+        guard file.formatVersion == BackupFile.currentVersion else {
+            logger.error("Unsupported format version: \(file.formatVersion)")
+            throw BackupError.unsupportedVersion(file.formatVersion)
+        }
+
+        return file
     }
 
     // MARK: - Private

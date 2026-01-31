@@ -302,6 +302,91 @@ struct BackupFileServiceTests {
         }
     }
 
+    // MARK: - Format Validation Tests
+
+    @Test("Throws unsupportedVersion for wrong formatVersion")
+    func throwsForUnsupportedVersion() throws {
+        let service = BackupFileService(
+            keyDerivationService: KeyDerivationService(),
+            encryptionService: EncryptionService()
+        )
+
+        // Create a valid backup and modify the version
+        let payload = makeTestPayload()
+        let original = try service.createUnencryptedBackup(payload: payload)
+
+        // Create a file with unsupported version
+        let unsupportedFile = BackupFile(
+            schema: original.schema,
+            formatName: original.formatName,
+            formatVersion: "2.0", // Unsupported version
+            generator: original.generator,
+            encrypted: original.encrypted,
+            checksum: original.checksum,
+            encryption: original.encryption,
+            ciphertext: original.ciphertext,
+            data: original.data
+        )
+
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        let json = try encoder.encode(unsupportedFile)
+
+        #expect(throws: BackupError.unsupportedVersion("2.0")) {
+            _ = try service.deserializeFromJSON(json)
+        }
+    }
+
+    @Test("Throws corruptedFile for wrong formatName")
+    func throwsForInvalidFormatName() throws {
+        let service = BackupFileService(
+            keyDerivationService: KeyDerivationService(),
+            encryptionService: EncryptionService()
+        )
+
+        // Create a valid backup and modify the format name
+        let payload = makeTestPayload()
+        let original = try service.createUnencryptedBackup(payload: payload)
+
+        // Create a file with invalid format name
+        let invalidFile = BackupFile(
+            schema: original.schema,
+            formatName: "Invalid Format Name",
+            formatVersion: original.formatVersion,
+            generator: original.generator,
+            encrypted: original.encrypted,
+            checksum: original.checksum,
+            encryption: original.encryption,
+            ciphertext: original.ciphertext,
+            data: original.data
+        )
+
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        let json = try encoder.encode(invalidFile)
+
+        #expect(throws: BackupError.corruptedFile) {
+            _ = try service.deserializeFromJSON(json)
+        }
+    }
+
+    @Test("Accepts valid formatName and formatVersion")
+    func acceptsValidFormatNameAndVersion() throws {
+        let service = BackupFileService(
+            keyDerivationService: KeyDerivationService(),
+            encryptionService: EncryptionService()
+        )
+
+        let payload = makeTestPayload()
+        let file = try service.createUnencryptedBackup(payload: payload)
+        let json = try service.serializeToJSON(file: file)
+
+        // Should not throw
+        let restored = try service.deserializeFromJSON(json)
+        #expect(restored.formatName == BackupFile.formatNameValue)
+        #expect(restored.formatVersion == BackupFile.currentVersion)
+    }
+
     // MARK: - Helpers
 
     func makeTestPayload() -> BackupPayload {

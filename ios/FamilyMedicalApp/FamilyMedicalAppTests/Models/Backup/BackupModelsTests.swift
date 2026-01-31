@@ -219,3 +219,303 @@ struct BackupErrorTests {
         #expect(!error.localizedDescription.isEmpty)
     }
 }
+
+@Suite("FieldValueBackup Conversion Tests")
+struct FieldValueBackupConversionTests {
+    // MARK: - Successful Conversions
+
+    @Test("toFieldValue converts string correctly")
+    func convertsString() throws {
+        let backup = FieldValueBackup(type: "string", value: .string("hello"))
+        let result = try backup.toFieldValue()
+        #expect(result == .string("hello"))
+    }
+
+    @Test("toFieldValue converts int correctly")
+    func convertsInt() throws {
+        let backup = FieldValueBackup(type: "int", value: .int(42))
+        let result = try backup.toFieldValue()
+        #expect(result == .int(42))
+    }
+
+    @Test("toFieldValue converts double correctly")
+    func convertsDouble() throws {
+        let backup = FieldValueBackup(type: "double", value: .double(3.14))
+        let result = try backup.toFieldValue()
+        #expect(result == .double(3.14))
+    }
+
+    @Test("toFieldValue converts bool correctly")
+    func convertsBool() throws {
+        let backup = FieldValueBackup(type: "bool", value: .bool(true))
+        let result = try backup.toFieldValue()
+        #expect(result == .bool(true))
+    }
+
+    @Test("toFieldValue converts date correctly")
+    func convertsDate() throws {
+        let backup = FieldValueBackup(type: "date", value: .string("2024-01-15"))
+        let result = try backup.toFieldValue()
+
+        if case let .date(date) = result {
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withFullDate]
+            #expect(formatter.string(from: date) == "2024-01-15")
+        } else {
+            Issue.record("Expected date result")
+        }
+    }
+
+    @Test("toFieldValue converts stringArray correctly")
+    func convertsStringArray() throws {
+        let backup = FieldValueBackup(type: "stringArray", value: .stringArray(["a", "b", "c"]))
+        let result = try backup.toFieldValue()
+        #expect(result == .stringArray(["a", "b", "c"]))
+    }
+
+    @Test("toFieldValue converts attachmentIds correctly")
+    func convertsAttachmentIds() throws {
+        let uuid1 = UUID()
+        let uuid2 = UUID()
+        let backup = FieldValueBackup(
+            type: "attachmentIds",
+            value: .stringArray([uuid1.uuidString, uuid2.uuidString])
+        )
+        let result = try backup.toFieldValue()
+        #expect(result == .attachmentIds([uuid1, uuid2]))
+    }
+
+    // MARK: - Error Cases
+
+    @Test("toFieldValue throws unknownType for unrecognized type")
+    func throwsUnknownType() throws {
+        let backup = FieldValueBackup(type: "unknownType", value: .string("value"))
+
+        #expect(throws: FieldValueConversionError.self) {
+            _ = try backup.toFieldValue()
+        }
+
+        do {
+            _ = try backup.toFieldValue()
+            Issue.record("Expected error to be thrown")
+        } catch let error as FieldValueConversionError {
+            if case let .unknownType(type) = error {
+                #expect(type == "unknownType")
+            } else {
+                Issue.record("Expected unknownType error")
+            }
+        }
+    }
+
+    @Test("toFieldValue throws typeMismatch for string type with int value")
+    func throwsTypeMismatchStringInt() throws {
+        let backup = FieldValueBackup(type: "string", value: .int(42))
+
+        #expect(throws: FieldValueConversionError.self) {
+            _ = try backup.toFieldValue()
+        }
+
+        do {
+            _ = try backup.toFieldValue()
+        } catch let error as FieldValueConversionError {
+            if case let .typeMismatch(expected, got) = error {
+                #expect(expected == "string")
+                #expect(got == "int")
+            } else {
+                Issue.record("Expected typeMismatch error")
+            }
+        }
+    }
+
+    @Test("toFieldValue throws typeMismatch for int type with string value")
+    func throwsTypeMismatchIntString() throws {
+        let backup = FieldValueBackup(type: "int", value: .string("not a number"))
+
+        #expect(throws: FieldValueConversionError.self) {
+            _ = try backup.toFieldValue()
+        }
+    }
+
+    @Test("toFieldValue throws typeMismatch for double type with bool value")
+    func throwsTypeMismatchDoubleBool() throws {
+        let backup = FieldValueBackup(type: "double", value: .bool(true))
+
+        #expect(throws: FieldValueConversionError.self) {
+            _ = try backup.toFieldValue()
+        }
+    }
+
+    @Test("toFieldValue throws typeMismatch for bool type with double value")
+    func throwsTypeMismatchBoolDouble() throws {
+        let backup = FieldValueBackup(type: "bool", value: .double(1.0))
+
+        #expect(throws: FieldValueConversionError.self) {
+            _ = try backup.toFieldValue()
+        }
+    }
+
+    @Test("toFieldValue throws invalidDateString for unparseable date")
+    func throwsInvalidDateString() throws {
+        let backup = FieldValueBackup(type: "date", value: .string("not-a-date"))
+
+        #expect(throws: FieldValueConversionError.self) {
+            _ = try backup.toFieldValue()
+        }
+
+        do {
+            _ = try backup.toFieldValue()
+        } catch let error as FieldValueConversionError {
+            if case let .invalidDateString(dateString) = error {
+                #expect(dateString == "not-a-date")
+            } else {
+                Issue.record("Expected invalidDateString error")
+            }
+        }
+    }
+
+    @Test("toFieldValue throws typeMismatch for date type with non-string value")
+    func throwsTypeMismatchDateInt() throws {
+        let backup = FieldValueBackup(type: "date", value: .int(20_240_115))
+
+        #expect(throws: FieldValueConversionError.self) {
+            _ = try backup.toFieldValue()
+        }
+    }
+
+    @Test("toFieldValue throws invalidUUID for malformed UUID in attachmentIds")
+    func throwsInvalidUUID() throws {
+        let validUUID = UUID()
+        let backup = FieldValueBackup(
+            type: "attachmentIds",
+            value: .stringArray([validUUID.uuidString, "not-a-valid-uuid"])
+        )
+
+        #expect(throws: FieldValueConversionError.self) {
+            _ = try backup.toFieldValue()
+        }
+
+        do {
+            _ = try backup.toFieldValue()
+        } catch let error as FieldValueConversionError {
+            if case let .invalidUUID(uuidString) = error {
+                #expect(uuidString == "not-a-valid-uuid")
+            } else {
+                Issue.record("Expected invalidUUID error")
+            }
+        }
+    }
+
+    @Test("toFieldValue throws typeMismatch for attachmentIds type with non-array value")
+    func throwsTypeMismatchAttachmentIdsString() throws {
+        let backup = FieldValueBackup(type: "attachmentIds", value: .string("not-an-array"))
+
+        #expect(throws: FieldValueConversionError.self) {
+            _ = try backup.toFieldValue()
+        }
+    }
+
+    @Test("toFieldValue throws typeMismatch for stringArray type with non-array value")
+    func throwsTypeMismatchStringArrayString() throws {
+        let backup = FieldValueBackup(type: "stringArray", value: .string("not-an-array"))
+
+        #expect(throws: FieldValueConversionError.self) {
+            _ = try backup.toFieldValue()
+        }
+    }
+}
+
+@Suite("FieldValueConversionError Tests")
+struct FieldValueConversionErrorTests {
+    @Test("FieldValueConversionError provides descriptive messages")
+    func fieldValueConversionErrorDescriptions() {
+        let errors: [FieldValueConversionError] = [
+            .unknownType("customType"),
+            .typeMismatch(expected: "string", got: "int"),
+            .invalidDateString("bad-date"),
+            .invalidUUID("bad-uuid")
+        ]
+
+        for error in errors {
+            let description = error.errorDescription
+            #expect(description != nil)
+            #expect(description?.isEmpty == false)
+        }
+    }
+
+    @Test("FieldValueConversionError is Equatable")
+    func fieldValueConversionErrorEquatable() {
+        #expect(FieldValueConversionError.unknownType("a") == FieldValueConversionError.unknownType("a"))
+        #expect(FieldValueConversionError.unknownType("a") != FieldValueConversionError.unknownType("b"))
+        #expect(
+            FieldValueConversionError.typeMismatch(expected: "x", got: "y") ==
+                FieldValueConversionError.typeMismatch(expected: "x", got: "y")
+        )
+    }
+}
+
+@Suite("MedicalRecordBackup Content Conversion Tests")
+struct MedicalRecordBackupContentTests {
+    @Test("toRecordContent converts valid fields correctly")
+    func toRecordContentValid() throws {
+        let backup = MedicalRecordBackup(
+            id: UUID(),
+            personId: UUID(),
+            schemaId: "vaccine",
+            fields: [
+                "name": FieldValueBackup(type: "string", value: .string("COVID-19")),
+                "dose": FieldValueBackup(type: "int", value: .int(1))
+            ],
+            createdAt: Date(),
+            updatedAt: Date(),
+            version: 1,
+            previousVersionId: nil
+        )
+
+        let content = try backup.toRecordContent()
+
+        #expect(content.schemaId == "vaccine")
+        #expect(content.allFields["name"] == .string("COVID-19"))
+        #expect(content.allFields["dose"] == .int(1))
+    }
+
+    @Test("toRecordContent throws on invalid field value")
+    func toRecordContentThrowsOnInvalidField() throws {
+        let backup = MedicalRecordBackup(
+            id: UUID(),
+            personId: UUID(),
+            schemaId: "vaccine",
+            fields: [
+                "name": FieldValueBackup(type: "string", value: .string("COVID-19")),
+                "badField": FieldValueBackup(type: "unknownType", value: .string("value"))
+            ],
+            createdAt: Date(),
+            updatedAt: Date(),
+            version: 1,
+            previousVersionId: nil
+        )
+
+        #expect(throws: FieldValueConversionError.self) {
+            _ = try backup.toRecordContent()
+        }
+    }
+
+    @Test("toRecordContent throws on type mismatch")
+    func toRecordContentThrowsOnTypeMismatch() throws {
+        let backup = MedicalRecordBackup(
+            id: UUID(),
+            personId: UUID(),
+            schemaId: "vaccine",
+            fields: [
+                "dose": FieldValueBackup(type: "int", value: .string("one")) // Should be int
+            ],
+            createdAt: Date(),
+            updatedAt: Date(),
+            version: 1,
+            previousVersionId: nil
+        )
+
+        #expect(throws: FieldValueConversionError.self) {
+            _ = try backup.toRecordContent()
+        }
+    }
+}
