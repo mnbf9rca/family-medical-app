@@ -15,7 +15,7 @@ import XCTest
 /// Tests for medical record creation, viewing, editing, and deletion
 @MainActor
 final class MedicalRecordFlowUITests: XCTestCase {
-    var app: XCUIApplication!
+    nonisolated(unsafe) var app: XCUIApplication!
 
     // Test person name - unique to avoid conflicts with other tests
     let testPersonName = "MedRecordTest User"
@@ -28,8 +28,11 @@ final class MedicalRecordFlowUITests: XCTestCase {
     }
 
     override func tearDownWithError() throws {
-        app?.terminate()
+        let appRef = app
         app = nil
+        MainActor.assumeIsolated {
+            appRef?.terminate()
+        }
     }
 
     // MARK: - Helper Methods
