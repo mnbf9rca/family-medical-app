@@ -50,6 +50,9 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Select Xcode version
+        run: sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
+
       - name: Get Xcode version
         id: xcode-version
         run: echo "version=$(xcodebuild -version | head -n1 | awk '{print $2}')" >> "$GITHUB_OUTPUT"
