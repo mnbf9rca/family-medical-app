@@ -116,7 +116,7 @@ jobs:
         uses: actions/download-artifact@v5
         with:
           name: OpaqueSwift-xcframework
-          path: .
+          path: opaque-swift
 
       - name: Restore DerivedData cache
         uses: actions/cache/restore@v5
