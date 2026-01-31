@@ -21,6 +21,12 @@ set -u
 command -v python3 >/dev/null 2>&1 || { echo "Error: python3 is required"; exit 2; }
 command -v xcrun >/dev/null 2>&1 || { echo "Error: xcrun is required"; exit 2; }
 
+# Check for xcpretty (optional but recommended for cleaner output)
+XCPRETTY_AVAILABLE=false
+if command -v xcpretty >/dev/null 2>&1; then
+    XCPRETTY_AVAILABLE=true
+fi
+
 # Parse arguments
 RESULTS_ONLY=false
 UNIT_TESTS_ONLY=false
@@ -181,7 +187,13 @@ if [[ "$RESULTS_ONLY" == "true" ]]; then
     rm -f "$TEMP_OUTPUT"
 else
     # Show output so user can see progress (default)
-    "${TEST_CMD[@]}" || true
+    # Use xcpretty if available for cleaner output, otherwise raw xcodebuild
+    if [[ "$XCPRETTY_AVAILABLE" == "true" ]]; then
+        "${TEST_CMD[@]}" 2>&1 | xcpretty || true
+    else
+        echo "${YELLOW}💡 Tip: Install xcpretty for cleaner output (gem install xcpretty)${NC}"
+        "${TEST_CMD[@]}" || true
+    fi
 
     # Check if xcresult exists (indicates tests ran, even if some failed)
     if [[ ! -d "test-results/TestResults.xcresult" ]]; then
