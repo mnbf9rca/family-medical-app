@@ -34,7 +34,7 @@ struct PrimaryKeyProviderTests {
     }
 
     @Test
-    func getPrimaryKeyUsesCorrectIdentifier() throws {
+    func getPrimaryKeyUsesCorrectIdentifier() {
         let mockKeychain = MockKeychainService()
         let provider = PrimaryKeyProvider(keychainService: mockKeychain)
 

@@ -62,7 +62,7 @@ struct SchemaEditorViewModelExtendedTests {
     // MARK: - Field Management Tests
 
     @Test
-    func createNewFieldGeneratesUniqueId() async throws {
+    func createNewFieldGeneratesUniqueId() throws {
         let person = try createTestPerson()
         let schema = createTestSchema()
 
@@ -91,7 +91,7 @@ struct SchemaEditorViewModelExtendedTests {
     }
 
     @Test
-    func createNewFieldSetsDisplayOrderAfterExisting() async throws {
+    func createNewFieldSetsDisplayOrderAfterExisting() throws {
         let person = try createTestPerson()
         let existingField = createTestField(displayOrder: 5)
         let schema = createTestSchema(fields: [existingField])
@@ -115,7 +115,7 @@ struct SchemaEditorViewModelExtendedTests {
     }
 
     @Test
-    func addFieldAppendsToList() async throws {
+    func addFieldAppendsToList() throws {
         let person = try createTestPerson()
         let schema = createTestSchema()
 
@@ -141,7 +141,7 @@ struct SchemaEditorViewModelExtendedTests {
     }
 
     @Test
-    func updateFieldModifiesExisting() async throws {
+    func updateFieldModifiesExisting() throws {
         let person = try createTestPerson()
         let fieldId = UUID()
         let field = createTestField(id: fieldId, displayName: "Original")
@@ -163,7 +163,7 @@ struct SchemaEditorViewModelExtendedTests {
     }
 
     @Test
-    func hideFieldSetsVisibilityToHidden() async throws {
+    func hideFieldSetsVisibilityToHidden() throws {
         let person = try createTestPerson()
         let fieldId = UUID()
         let field = createTestField(id: fieldId, visibility: .active)
@@ -183,7 +183,7 @@ struct SchemaEditorViewModelExtendedTests {
     }
 
     @Test
-    func unhideFieldSetsVisibilityToActive() async throws {
+    func unhideFieldSetsVisibilityToActive() throws {
         let person = try createTestPerson()
         let fieldId = UUID()
         let field = createTestField(id: fieldId, visibility: .hidden)
@@ -203,7 +203,7 @@ struct SchemaEditorViewModelExtendedTests {
     }
 
     @Test
-    func deleteFieldSucceedsForCustomField() async throws {
+    func deleteFieldSucceedsForCustomField() throws {
         let person = try createTestPerson()
         let customFieldId = UUID()
         let field = createTestField(id: customFieldId)
@@ -225,7 +225,7 @@ struct SchemaEditorViewModelExtendedTests {
     }
 
     @Test
-    func deleteFieldFailsForBuiltInField() async throws {
+    func deleteFieldFailsForBuiltInField() throws {
         let person = try createTestPerson()
         let builtInFieldId = BuiltInFieldIds.Vaccine.name
         var field = createTestField(id: builtInFieldId)
@@ -254,7 +254,7 @@ struct SchemaEditorViewModelExtendedTests {
     }
 
     @Test
-    func moveFieldsUpdatesDisplayOrder() async throws {
+    func moveFieldsUpdatesDisplayOrder() throws {
         let person = try createTestPerson()
         let field1 = createTestField(id: UUID(), displayName: "First", displayOrder: 1)
         let field2 = createTestField(id: UUID(), displayName: "Second", displayOrder: 2)
@@ -282,7 +282,7 @@ struct SchemaEditorViewModelExtendedTests {
 
 extension SchemaEditorViewModelExtendedTests {
     @Test
-    func validateFailsWithEmptyName() async throws {
+    func validateFailsWithEmptyName() throws {
         let person = try createTestPerson()
         let field = createTestField()
         let schema = createTestSchema(fields: [field])
@@ -304,7 +304,7 @@ extension SchemaEditorViewModelExtendedTests {
     }
 
     @Test
-    func validateFailsWithNoActiveFields() async throws {
+    func validateFailsWithNoActiveFields() throws {
         let person = try createTestPerson()
         let schema = createTestSchema(fields: [])
 
@@ -323,7 +323,7 @@ extension SchemaEditorViewModelExtendedTests {
     }
 
     @Test
-    func validateSucceedsWithValidSchema() async throws {
+    func validateSucceedsWithValidSchema() throws {
         let person = try createTestPerson()
         let field = createTestField()
         let schema = createTestSchema(displayName: "Valid Schema", fields: [field])
@@ -430,7 +430,7 @@ extension SchemaEditorViewModelExtendedTests {
 
 extension SchemaEditorViewModelExtendedTests {
     @Test
-    func createPreviewSchemaReturnsCurrentState() async throws {
+    func createPreviewSchemaReturnsCurrentState() throws {
         let person = try createTestPerson()
         let field = createTestField(displayName: "Preview Field")
         let schema = createTestSchema(fields: [field])

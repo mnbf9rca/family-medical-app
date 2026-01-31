@@ -25,7 +25,9 @@ struct UnlockViewTestCase: Sendable {
 }
 
 extension UnlockViewTestCase: CustomTestStringConvertible {
-    var testDescription: String { name }
+    var testDescription: String {
+        name
+    }
 }
 
 /// Test cases for UnlockView - defined at module level to avoid actor isolation issues with @Test(arguments:)

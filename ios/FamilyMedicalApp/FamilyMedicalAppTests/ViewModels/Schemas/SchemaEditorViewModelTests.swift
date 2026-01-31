@@ -61,7 +61,7 @@ struct SchemaEditorViewModelTests {
     // MARK: - Initialization Tests
 
     @Test
-    func initWithExistingSchemaPopulatesState() async throws {
+    func initWithExistingSchemaPopulatesState() throws {
         let person = try createTestPerson()
         let field1 = createTestField(displayName: "Field 1", displayOrder: 1)
         let field2 = createTestField(displayName: "Field 2", displayOrder: 2)
@@ -88,7 +88,7 @@ struct SchemaEditorViewModelTests {
     }
 
     @Test
-    func initForNewSchemaCreatesEmptyState() async throws {
+    func initForNewSchemaCreatesEmptyState() throws {
         let person = try createTestPerson()
         let template = createTestSchema(id: "new-schema", displayName: "New Schema")
 
@@ -111,7 +111,7 @@ struct SchemaEditorViewModelTests {
 
 extension SchemaEditorViewModelTests {
     @Test
-    func isBuiltInSchemaReturnsTrueForBuiltIn() async throws {
+    func isBuiltInSchemaReturnsTrueForBuiltIn() throws {
         let person = try createTestPerson()
         let schema = createTestSchema(isBuiltIn: true)
 
@@ -128,7 +128,7 @@ extension SchemaEditorViewModelTests {
     }
 
     @Test
-    func isBuiltInSchemaReturnsFalseForCustom() async throws {
+    func isBuiltInSchemaReturnsFalseForCustom() throws {
         let person = try createTestPerson()
         let schema = createTestSchema(isBuiltIn: false)
 
@@ -145,7 +145,7 @@ extension SchemaEditorViewModelTests {
     }
 
     @Test
-    func nextVersionIncrementsFromOriginal() async throws {
+    func nextVersionIncrementsFromOriginal() throws {
         let person = try createTestPerson()
         var schema = createTestSchema()
         // Manually set version (normally done via unsafeId initializer)
@@ -171,7 +171,7 @@ extension SchemaEditorViewModelTests {
     }
 
     @Test
-    func activeFieldsFiltersAndSorts() async throws {
+    func activeFieldsFiltersAndSorts() throws {
         let person = try createTestPerson()
         let field1 = createTestField(displayName: "C Field", displayOrder: 3, visibility: .active)
         let field2 = createTestField(displayName: "A Field", displayOrder: 1, visibility: .active)
@@ -193,7 +193,7 @@ extension SchemaEditorViewModelTests {
     }
 
     @Test
-    func hiddenFieldsFiltersCorrectly() async throws {
+    func hiddenFieldsFiltersCorrectly() throws {
         let person = try createTestPerson()
         let field1 = createTestField(displayName: "Active", visibility: .active)
         let field2 = createTestField(displayName: "Hidden", visibility: .hidden)
@@ -216,7 +216,7 @@ extension SchemaEditorViewModelTests {
 
 extension SchemaEditorViewModelTests {
     @Test
-    func hasUnsavedChangesDetectsNameChange() async throws {
+    func hasUnsavedChangesDetectsNameChange() throws {
         let person = try createTestPerson()
         let field = createTestField()
         let schema = createTestSchema(displayName: "Original", fields: [field])
@@ -237,7 +237,7 @@ extension SchemaEditorViewModelTests {
     }
 
     @Test
-    func hasUnsavedChangesDetectsFieldAddition() async throws {
+    func hasUnsavedChangesDetectsFieldAddition() throws {
         let person = try createTestPerson()
         let schema = createTestSchema(fields: [])
 
@@ -263,7 +263,7 @@ extension SchemaEditorViewModelTests {
     }
 
     @Test
-    func hasUnsavedChangesDetectsFieldVisibilityChange() async throws {
+    func hasUnsavedChangesDetectsFieldVisibilityChange() throws {
         let person = try createTestPerson()
         let fieldId = UUID()
         let field = createTestField(id: fieldId, visibility: .active)

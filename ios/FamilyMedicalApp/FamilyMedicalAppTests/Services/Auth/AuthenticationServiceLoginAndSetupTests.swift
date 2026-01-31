@@ -9,7 +9,7 @@ import Testing
 struct AuthenticationServiceLoginAndSetupTests {
     @Test
     func loginAndSetupSucceedsWithValidCredentials() async throws {
-        let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let keychainService = MockKeychainService()
         let opaqueAuthService = MockOpaqueAuthService()
         let service = AuthenticationService(
@@ -34,7 +34,7 @@ struct AuthenticationServiceLoginAndSetupTests {
 
     @Test
     func loginAndSetupStoresUsername() async throws {
-        let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let opaqueAuthService = MockOpaqueAuthService()
         let service = AuthenticationService(
             keychainService: MockKeychainService(),
@@ -50,7 +50,7 @@ struct AuthenticationServiceLoginAndSetupTests {
 
     @Test
     func loginAndSetupEnablesBiometricWhenRequested() async throws {
-        let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let biometricService = MockBiometricService(isAvailable: true)
         let opaqueAuthService = MockOpaqueAuthService()
         let service = AuthenticationService(
@@ -67,7 +67,7 @@ struct AuthenticationServiceLoginAndSetupTests {
 
     @Test
     func loginAndSetupThrowsWrongPasswordOnAuthFailure() async throws {
-        let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let opaqueAuthService = MockOpaqueAuthService()
         opaqueAuthService.shouldFailLogin = true
         let service = AuthenticationService(

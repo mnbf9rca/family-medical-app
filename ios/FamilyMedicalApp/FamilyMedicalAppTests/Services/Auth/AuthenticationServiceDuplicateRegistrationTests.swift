@@ -11,7 +11,7 @@ struct AuthenticationServiceDuplicateRegistrationTests {
 
     @Test
     func setUpThrowsAccountExistsConfirmedWhenAccountExists() async throws {
-        let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let opaqueAuthService = MockOpaqueAuthService()
         opaqueAuthService.shouldThrowAccountExistsConfirmed = true
 
@@ -35,7 +35,7 @@ struct AuthenticationServiceDuplicateRegistrationTests {
 
     @Test
     func completeLoginFromExistingAccountSetsUpAccount() async throws {
-        let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let keychainService = MockAuthKeychainService()
         let opaqueAuthService = MockOpaqueAuthService()
 
@@ -69,7 +69,7 @@ struct AuthenticationServiceDuplicateRegistrationTests {
 
     @Test
     func completeLoginFromExistingAccountEnablesBiometric() async throws {
-        let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let biometricService = MockAuthBiometricService(isAvailable: true, shouldSucceed: true)
         let opaqueAuthService = MockOpaqueAuthService()
 

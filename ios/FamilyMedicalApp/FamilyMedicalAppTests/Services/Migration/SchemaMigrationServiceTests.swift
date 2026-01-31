@@ -30,7 +30,9 @@ private struct TestMocks {
 // MARK: - Preview Migration Tests
 
 struct SchemaMigrationServicePreviewTests {
-    private func makeMocks() -> TestMocks { TestMocks() }
+    private func makeMocks() -> TestMocks {
+        TestMocks()
+    }
 
     private func makeTestRecord(personId: UUID, content: RecordContent) throws -> MedicalRecord {
         let encoder = JSONEncoder()
@@ -117,7 +119,9 @@ struct SchemaMigrationServicePreviewTests {
 // MARK: - Execute Migration Tests
 
 struct SchemaMigrationServiceExecuteTests {
-    private func makeMocks() -> TestMocks { TestMocks() }
+    private func makeMocks() -> TestMocks {
+        TestMocks()
+    }
 
     private func makeTestRecord(personId: UUID, content: RecordContent) throws -> MedicalRecord {
         let encoder = JSONEncoder()
@@ -386,7 +390,9 @@ struct SchemaMigrationServiceExecuteTests {
 // MARK: - Merge Migration Tests
 
 struct SchemaMigrationServiceMergeTests {
-    private func makeMocks() -> TestMocks { TestMocks() }
+    private func makeMocks() -> TestMocks {
+        TestMocks()
+    }
 
     private func makeTestRecord(personId: UUID, content: RecordContent) throws -> MedicalRecord {
         let encoder = JSONEncoder()
@@ -550,7 +556,9 @@ final class MockMigrationCheckpointService: MigrationCheckpointServiceProtocol, 
         checkpoints.removeValue(forKey: migrationId)
     }
 
-    func hasCheckpoint(migrationId: UUID) async throws -> Bool { checkpoints[migrationId] != nil }
+    func hasCheckpoint(migrationId: UUID) async throws -> Bool {
+        checkpoints[migrationId] != nil
+    }
 }
 
 // MARK: - Progress Collector (Thread-safe)

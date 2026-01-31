@@ -163,7 +163,7 @@ struct AttachmentPickerViewModelExtendedTests {
     }
 
     @Test
-    func addFromPhotoLibrary_atLimit_setsError() async throws {
+    func addFromPhotoLibrary_atLimit_setsError() throws {
         var attachments: [FamilyMedicalApp.Attachment] = []
         for index in 0 ..< AttachmentPickerViewModel.maxAttachments {
             try attachments.append(makeTestAttachment(fileName: "file\(index).jpg"))

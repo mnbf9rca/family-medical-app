@@ -5,7 +5,9 @@ import Testing
 
 // MARK: - Shared Test Helpers
 
-private func makePerson() throws -> Person { try Person(name: "Test Person") }
+private func makePerson() throws -> Person {
+    try Person(name: "Test Person")
+}
 
 private func makeMigration() throws -> SchemaMigration {
     try SchemaMigration(

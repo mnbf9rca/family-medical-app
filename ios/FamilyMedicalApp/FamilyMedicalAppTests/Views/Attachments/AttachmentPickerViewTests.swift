@@ -126,7 +126,7 @@ struct AttachmentPickerViewTests {
     // MARK: - Error Display Tests
 
     @Test
-    func viewDisplaysErrorMessage() async throws {
+    func viewDisplaysErrorMessage() throws {
         let viewModel = makeViewModel()
         viewModel.errorMessage = "Test error message"
 
@@ -255,7 +255,7 @@ struct AttachmentPickerViewTests {
     // MARK: - Picker Sheet State Tests
 
     @Test
-    func photoPickerBinding_updatesViewModel() throws {
+    func photoPickerBinding_updatesViewModel() {
         let viewModel = makeViewModel()
         #expect(!viewModel.showingPhotoLibrary)
 
@@ -264,7 +264,7 @@ struct AttachmentPickerViewTests {
     }
 
     @Test
-    func documentPickerBinding_updatesViewModel() throws {
+    func documentPickerBinding_updatesViewModel() {
         let viewModel = makeViewModel()
         #expect(!viewModel.showingDocumentPicker)
 
@@ -273,7 +273,7 @@ struct AttachmentPickerViewTests {
     }
 
     @Test
-    func cameraBinding_updatesViewModel() throws {
+    func cameraBinding_updatesViewModel() {
         let viewModel = makeViewModel()
         #expect(!viewModel.showingCamera)
 

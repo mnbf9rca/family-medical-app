@@ -4,7 +4,7 @@ import Testing
 
 struct DecryptedRecordTests {
     @Test
-    func identifiableUsesRecordId() throws {
+    func identifiableUsesRecordId() {
         let recordId = UUID()
         let record = MedicalRecord(id: recordId, personId: UUID(), encryptedContent: Data())
         let content = RecordContent(schemaId: "vaccine")
@@ -14,7 +14,7 @@ struct DecryptedRecordTests {
     }
 
     @Test
-    func hashUsesRecordId() throws {
+    func hashUsesRecordId() {
         let recordId = UUID()
         let record1 = MedicalRecord(id: recordId, personId: UUID(), encryptedContent: Data())
         let record2 = MedicalRecord(id: recordId, personId: UUID(), encryptedContent: Data())
@@ -34,7 +34,7 @@ struct DecryptedRecordTests {
     }
 
     @Test
-    func equatableComparesRecordIds() throws {
+    func equatableComparesRecordIds() {
         let recordId1 = UUID()
         let recordId2 = UUID()
 
@@ -55,7 +55,7 @@ struct DecryptedRecordTests {
     }
 
     @Test
-    func canBeUsedInSet() throws {
+    func canBeUsedInSet() {
         let recordId1 = UUID()
         let recordId2 = UUID()
 

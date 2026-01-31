@@ -100,7 +100,7 @@ struct AttachmentServiceContentTests {
             ctx.fill(CGRect(origin: .zero, size: size))
         }
         // swiftlint:disable:next force_unwrapping
-        let pngData = image.pngData()!
+        let pngData = try #require(image.pngData())
 
         let attachment = try await fixtures.service.addAttachment(
             fixtures.makeInput(data: pngData, fileName: "test.png", mimeType: "image/png")

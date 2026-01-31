@@ -10,16 +10,24 @@ struct MedicalRecordViewTests {
     // MARK: - Test Helpers
 
     /// Returns the comprehensive example schema that exercises all field types
-    var testSchema: RecordSchema { ExampleSchema.comprehensiveExample }
+    var testSchema: RecordSchema {
+        ExampleSchema.comprehensiveExample
+    }
 
     /// Schema ID for the comprehensive example schema
-    var testSchemaId: String { "comprehensive_example" }
+    var testSchemaId: String {
+        "comprehensive_example"
+    }
 
     /// Required string field UUID in the comprehensive schema
-    var requiredStringFieldId: UUID { ExampleSchema.FieldIds.exampleName }
+    var requiredStringFieldId: UUID {
+        ExampleSchema.FieldIds.exampleName
+    }
 
     /// Required date field UUID in the comprehensive schema
-    var requiredDateFieldId: UUID { ExampleSchema.FieldIds.recordedDate }
+    var requiredDateFieldId: UUID {
+        ExampleSchema.FieldIds.recordedDate
+    }
 
     // MARK: - MedicalRecordRowView Tests (using generic schema)
 

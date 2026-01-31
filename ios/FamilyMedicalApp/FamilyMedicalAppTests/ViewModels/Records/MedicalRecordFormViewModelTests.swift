@@ -24,13 +24,19 @@ struct MedicalRecordFormViewModelTests {
     }
 
     /// Schema ID for the comprehensive example schema
-    var testSchemaId: String { "comprehensive_example" }
+    var testSchemaId: String {
+        "comprehensive_example"
+    }
 
     /// Required string field ID in the comprehensive schema (UUID string key for fieldValues)
-    var requiredStringFieldId: String { ExampleSchema.FieldIds.exampleName.uuidString }
+    var requiredStringFieldId: String {
+        ExampleSchema.FieldIds.exampleName.uuidString
+    }
 
     /// Required date field ID in the comprehensive schema (UUID string key for fieldValues)
-    var requiredDateFieldId: String { ExampleSchema.FieldIds.recordedDate.uuidString }
+    var requiredDateFieldId: String {
+        ExampleSchema.FieldIds.recordedDate.uuidString
+    }
 
     /// Creates a ViewModel wrapped with test dependencies
     func makeViewModel(
