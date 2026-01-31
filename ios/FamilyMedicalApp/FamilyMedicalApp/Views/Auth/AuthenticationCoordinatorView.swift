@@ -1,3 +1,4 @@
+import CryptoKit
 import SwiftUI
 
 struct AuthenticationCoordinatorView: View {
@@ -68,6 +69,16 @@ struct AuthenticationCoordinatorView: View {
 /// Main app view (placeholder - will be replaced with actual content)
 struct MainAppView: View {
     @Bindable var viewModel: AuthenticationViewModel
+    @State private var showingSettings = false
+    @State private var settingsViewModel = SettingsViewModel.makeDefault()
+    @State private var primaryKeyError: String?
+
+    private let primaryKeyProvider: PrimaryKeyProviderProtocol
+
+    init(viewModel: AuthenticationViewModel, primaryKeyProvider: PrimaryKeyProviderProtocol = PrimaryKeyProvider()) {
+        self.viewModel = viewModel
+        self.primaryKeyProvider = primaryKeyProvider
+    }
 
     var body: some View {
         NavigationStack {
@@ -76,6 +87,14 @@ struct MainAppView: View {
                 .toolbar {
                     ToolbarItem(placement: .navigationBarTrailing) {
                         Menu {
+                            Button(action: {
+                                openSettings()
+                            }, label: {
+                                Label("Settings", systemImage: "gearshape")
+                            })
+
+                            Divider()
+
                             Button(action: {
                                 viewModel.lock()
                             }, label: {
@@ -96,8 +115,31 @@ struct MainAppView: View {
                         } label: {
                             Image(systemName: "gearshape.fill")
                         }
+                        .accessibilityIdentifier("settingsMenuButton")
                     }
                 }
+                .sheet(isPresented: $showingSettings) {
+                    if let primaryKey = try? primaryKeyProvider.getPrimaryKey() {
+                        SettingsView(viewModel: settingsViewModel, primaryKey: primaryKey)
+                    }
+                }
+                .alert("Error", isPresented: Binding(
+                    get: { primaryKeyError != nil },
+                    set: { if !$0 { primaryKeyError = nil } }
+                )) {
+                    Button("OK", role: .cancel) {}
+                } message: {
+                    Text(primaryKeyError ?? "")
+                }
+        }
+    }
+
+    private func openSettings() {
+        do {
+            _ = try primaryKeyProvider.getPrimaryKey()
+            showingSettings = true
+        } catch {
+            primaryKeyError = "Unable to access encryption key. Please try locking and unlocking the app."
         }
     }
 }

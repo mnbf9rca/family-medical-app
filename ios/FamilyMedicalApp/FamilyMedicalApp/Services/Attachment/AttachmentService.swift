@@ -5,12 +5,34 @@ import Foundation
 
 /// Input parameters for adding an attachment
 struct AddAttachmentInput {
+    /// Optional ID to use for the attachment (for backup restoration).
+    /// If nil, a new UUID will be generated.
+    let id: UUID?
     let data: Data
     let fileName: String
     let mimeType: String
     let recordId: UUID
     let personId: UUID
     let primaryKey: SymmetricKey
+
+    /// Initialize with optional ID (for backup restoration)
+    init(
+        id: UUID? = nil,
+        data: Data,
+        fileName: String,
+        mimeType: String,
+        recordId: UUID,
+        personId: UUID,
+        primaryKey: SymmetricKey
+    ) {
+        self.id = id
+        self.data = data
+        self.fileName = fileName
+        self.mimeType = mimeType
+        self.recordId = recordId
+        self.personId = personId
+        self.primaryKey = primaryKey
+    }
 }
 
 /// Protocol for high-level attachment operations
@@ -240,7 +262,7 @@ final class AttachmentService: AttachmentServiceProtocol, @unchecked Sendable {
         thumbnailData: Data?
     ) async throws -> Attachment {
         let attachment = try Attachment(
-            id: UUID(),
+            id: input.id ?? UUID(),
             fileName: input.fileName,
             mimeType: input.mimeType,
             contentHMAC: contentHMAC,

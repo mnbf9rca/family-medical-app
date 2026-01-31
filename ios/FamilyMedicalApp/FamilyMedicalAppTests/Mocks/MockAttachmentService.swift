@@ -7,6 +7,7 @@ final class MockAttachmentService: AttachmentServiceProtocol, @unchecked Sendabl
     // MARK: - Call Record Types
 
     struct AddAttachmentCall {
+        let id: UUID?
         let data: Data
         let fileName: String
         let mimeType: String
@@ -62,6 +63,7 @@ final class MockAttachmentService: AttachmentServiceProtocol, @unchecked Sendabl
 
     func addAttachment(_ input: AddAttachmentInput) async throws -> Attachment {
         addAttachmentCalls.append(AddAttachmentCall(
+            id: input.id,
             data: input.data,
             fileName: input.fileName,
             mimeType: input.mimeType,
@@ -73,9 +75,9 @@ final class MockAttachmentService: AttachmentServiceProtocol, @unchecked Sendabl
             throw ModelError.attachmentStorageFailed(reason: "Mock add failure")
         }
 
-        // Create a mock attachment
+        // Create a mock attachment - use provided ID or generate new one
         let attachment = try Attachment(
-            id: UUID(),
+            id: input.id ?? UUID(),
             fileName: input.fileName,
             mimeType: input.mimeType,
             contentHMAC: Data(repeating: UInt8.random(in: 0 ... 255), count: 32),
