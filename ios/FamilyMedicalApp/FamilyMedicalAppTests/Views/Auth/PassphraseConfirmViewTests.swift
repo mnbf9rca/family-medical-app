@@ -15,9 +15,8 @@ struct PassphraseConfirmViewTests {
         let view = PassphraseConfirmView(viewModel: viewModel, username: testUsername, passphrase: testPassphrase)
 
         let sut = try view.inspect()
-        let field = try sut.find(viewWithAccessibilityIdentifier: "confirmPassphraseField")
-
-        #expect(field != nil)
+        // find() throws if not found
+        _ = try sut.find(viewWithAccessibilityIdentifier: "confirmPassphraseField")
     }
 
     @Test
@@ -26,9 +25,8 @@ struct PassphraseConfirmViewTests {
         let view = PassphraseConfirmView(viewModel: viewModel, username: testUsername, passphrase: testPassphrase)
 
         let sut = try view.inspect()
-        let button = try sut.find(viewWithAccessibilityIdentifier: "continueButton")
-
-        #expect(button != nil)
+        // find() throws if not found
+        _ = try sut.find(viewWithAccessibilityIdentifier: "continueButton")
     }
 
     @Test
@@ -37,9 +35,8 @@ struct PassphraseConfirmViewTests {
         let view = PassphraseConfirmView(viewModel: viewModel, username: testUsername, passphrase: testPassphrase)
 
         let sut = try view.inspect()
-        let button = try sut.find(viewWithAccessibilityIdentifier: "backButton")
-
-        #expect(button != nil)
+        // find() throws if not found
+        _ = try sut.find(viewWithAccessibilityIdentifier: "backButton")
     }
 
     // MARK: - Button State Tests
@@ -89,9 +86,8 @@ struct PassphraseConfirmViewTests {
         let view = PassphraseConfirmView(viewModel: viewModel, username: testUsername, passphrase: testPassphrase)
 
         let sut = try view.inspect()
-        let label = try sut.find(viewWithAccessibilityIdentifier: "mismatchLabel")
-
-        #expect(label != nil)
+        // find() throws if not found
+        _ = try sut.find(viewWithAccessibilityIdentifier: "mismatchLabel")
     }
 
     @Test
@@ -101,9 +97,8 @@ struct PassphraseConfirmViewTests {
         let view = PassphraseConfirmView(viewModel: viewModel, username: testUsername, passphrase: testPassphrase)
 
         let sut = try view.inspect()
-        let label = try sut.find(viewWithAccessibilityIdentifier: "matchLabel")
-
-        #expect(label != nil)
+        // find() throws if not found
+        _ = try sut.find(viewWithAccessibilityIdentifier: "matchLabel")
     }
 
     @Test

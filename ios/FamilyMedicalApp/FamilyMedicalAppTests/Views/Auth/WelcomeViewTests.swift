@@ -13,9 +13,8 @@ struct WelcomeViewTests {
 
         let sut = try view.inspect()
 
-        // Verify app icon exists
-        let icon = try sut.find(viewWithAccessibilityLabel: "Family Medical App icon")
-        #expect(icon != nil)
+        // find() throws if not found
+        _ = try sut.find(viewWithAccessibilityLabel: "Family Medical App icon")
     }
 
     @Test
@@ -24,9 +23,8 @@ struct WelcomeViewTests {
         let view = WelcomeView(viewModel: viewModel)
 
         let sut = try view.inspect()
-
-        let button = try sut.find(viewWithAccessibilityIdentifier: "createAccountButton")
-        #expect(button != nil)
+        // find() throws if not found
+        _ = try sut.find(viewWithAccessibilityIdentifier: "createAccountButton")
     }
 
     @Test
@@ -35,8 +33,7 @@ struct WelcomeViewTests {
         let view = WelcomeView(viewModel: viewModel)
 
         let sut = try view.inspect()
-
-        let button = try sut.find(viewWithAccessibilityIdentifier: "signInButton")
-        #expect(button != nil)
+        // find() throws if not found
+        _ = try sut.find(viewWithAccessibilityIdentifier: "signInButton")
     }
 }

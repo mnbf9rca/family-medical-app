@@ -11,7 +11,7 @@ import XCTest
 /// Uses consolidated test methods to minimize app launches
 @MainActor
 final class AttachmentFlowUITests: XCTestCase {
-    var app: XCUIApplication!
+    nonisolated(unsafe) var app: XCUIApplication!
 
     // Test person name - unique to avoid conflicts with other tests
     let testPersonName = "AttachmentTest User"
@@ -24,8 +24,11 @@ final class AttachmentFlowUITests: XCTestCase {
     }
 
     override func tearDownWithError() throws {
-        app?.terminate()
+        let appRef = app
         app = nil
+        MainActor.assumeIsolated {
+            appRef?.terminate()
+        }
     }
 
     // MARK: - Consolidated Attachment Flow Test

@@ -15,9 +15,8 @@ struct AccountExistsConfirmationViewTests {
 
         let sut = try view.inspect()
 
-        // Should have the "Account Found" title
-        let title = try sut.find(text: "Account Found")
-        #expect(title != nil)
+        // find() throws if not found
+        _ = try sut.find(text: "Account Found")
     }
 
     @Test
@@ -27,12 +26,11 @@ struct AccountExistsConfirmationViewTests {
 
         let sut = try view.inspect()
 
-        // Should show the username in the message
-        let messageText = try sut.find(ViewType.Text.self) { text in
+        // find() throws if not found
+        _ = try sut.find(ViewType.Text.self) { text in
             let string = try? text.string()
             return string?.contains("myusername") == true
         }
-        #expect(messageText != nil)
     }
 
     @Test
@@ -42,9 +40,8 @@ struct AccountExistsConfirmationViewTests {
 
         let sut = try view.inspect()
 
-        // Should have a "Log In" button
-        let button = try sut.find(viewWithAccessibilityIdentifier: "confirmLoginButton")
-        #expect(button != nil)
+        // find() throws if not found
+        _ = try sut.find(viewWithAccessibilityIdentifier: "confirmLoginButton")
     }
 
     @Test
@@ -54,8 +51,7 @@ struct AccountExistsConfirmationViewTests {
 
         let sut = try view.inspect()
 
-        // Should have a "Cancel" button
-        let button = try sut.find(viewWithAccessibilityIdentifier: "cancelButton")
-        #expect(button != nil)
+        // find() throws if not found
+        _ = try sut.find(viewWithAccessibilityIdentifier: "cancelButton")
     }
 }

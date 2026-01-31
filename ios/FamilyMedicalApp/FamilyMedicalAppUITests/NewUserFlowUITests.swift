@@ -36,8 +36,11 @@ final class NewUserFlowUITests: XCTestCase {
     }
 
     override func tearDownWithError() throws {
-        app?.terminate()
+        let appRef = app
         app = nil
+        MainActor.assumeIsolated {
+            appRef?.terminate()
+        }
     }
 
     // MARK: - Independent Tests (Fresh App Launch Required)
