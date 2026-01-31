@@ -1,4 +1,3 @@
-// swiftlint:disable force_unwrapping
 import CryptoKit
 import Foundation
 import Testing
@@ -94,5 +93,3 @@ struct AuthenticationServiceDuplicateRegistrationTests {
         #expect(service.isBiometricEnabled == true)
     }
 }
-
-// swiftlint:enable force_unwrapping

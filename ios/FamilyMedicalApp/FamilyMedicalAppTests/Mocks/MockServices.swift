@@ -2,6 +2,8 @@ import CryptoKit
 import Foundation
 @testable import FamilyMedicalApp
 
+// swiftlint:disable unneeded_throws_rethrows
+
 // MARK: - Mock Authentication Service
 
 final class MockAuthenticationService: AuthenticationServiceProtocol {
@@ -127,7 +129,7 @@ final class MockAuthenticationService: AuthenticationServiceProtocol {
         isBiometricEnabled = false
     }
 
-    func logout() throws {
+    func logout() {
         if shouldFailLogout {
             throw AuthenticationError.keychainError("Logout failed")
         }
@@ -373,3 +375,5 @@ final class MockPrimaryKeyProvider: PrimaryKeyProviderProtocol, @unchecked Senda
         return key
     }
 }
+
+// swiftlint:enable unneeded_throws_rethrows

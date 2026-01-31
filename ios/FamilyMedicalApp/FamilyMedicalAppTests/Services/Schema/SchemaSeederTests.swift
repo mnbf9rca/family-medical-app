@@ -128,7 +128,6 @@ struct SchemaSeederTests {
 
     @Test
     func seedBuiltInSchemas_multiplePersons_seedsIndependently() async throws {
-        // swiftlint:disable:next force_unwrapping
         let person2Id = try #require(UUID(uuidString: "AAAAAAAA-0000-0000-0000-000000000002"))
         let (seeder, repo) = makeSeeder()
 

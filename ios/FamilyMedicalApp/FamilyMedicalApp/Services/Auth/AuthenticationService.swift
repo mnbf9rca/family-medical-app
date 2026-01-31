@@ -60,7 +60,7 @@ protocol AuthenticationServiceProtocol {
     func lock()
 
     /// Logout and clear all authentication data
-    func logout() throws
+    func logout()
 
     /// Disable biometric authentication
     func disableBiometric()
@@ -297,7 +297,7 @@ final class AuthenticationService: AuthenticationServiceProtocol {
         // not transient lock state which is handled at the UI layer
     }
 
-    func logout() throws {
+    func logout() {
         logger.logOperation("logout", state: "started")
 
         // Delete all keys from Keychain

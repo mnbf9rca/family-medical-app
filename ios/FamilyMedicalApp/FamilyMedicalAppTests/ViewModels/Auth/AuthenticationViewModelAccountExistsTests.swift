@@ -2,6 +2,8 @@ import Foundation
 import Testing
 @testable import FamilyMedicalApp
 
+// swiftlint:disable unneeded_throws_rethrows
+
 /// Tests for AuthenticationViewModel account exists confirmation flow (duplicate registration)
 @MainActor
 struct AuthenticationViewModelAccountExistsTests {
@@ -170,7 +172,7 @@ private final class MockAuthenticationServiceWithAccountExists: AuthenticationSe
 
     func unlockWithBiometric() async throws {}
     func lock() {}
-    func logout() throws {
+    func logout() {
         isSetUp = false
     }
 
@@ -182,3 +184,5 @@ private final class MockAuthenticationServiceWithAccountExists: AuthenticationSe
         isBiometricEnabled = true
     }
 }
+
+// swiftlint:enable unneeded_throws_rethrows

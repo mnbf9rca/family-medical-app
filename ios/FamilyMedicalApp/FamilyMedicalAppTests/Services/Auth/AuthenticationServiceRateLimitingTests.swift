@@ -1,4 +1,3 @@
-// swiftlint:disable force_unwrapping
 import CryptoKit
 import Foundation
 import Testing
@@ -115,5 +114,3 @@ struct AuthenticationServiceRateLimitingTests {
         #expect(service.failedAttemptCount == 0)
     }
 }
-
-// swiftlint:enable force_unwrapping

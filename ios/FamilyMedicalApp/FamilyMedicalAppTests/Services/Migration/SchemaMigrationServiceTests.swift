@@ -556,6 +556,7 @@ final class MockMigrationCheckpointService: MigrationCheckpointServiceProtocol, 
         checkpoints.removeValue(forKey: migrationId)
     }
 
+    // swiftlint:disable:next unneeded_throws_rethrows
     func hasCheckpoint(migrationId: UUID) async throws -> Bool {
         checkpoints[migrationId] != nil
     }

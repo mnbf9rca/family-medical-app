@@ -153,7 +153,6 @@ struct CustomSchemaRepositoryTests {
 
     @Test
     func save_sameSchemaIdDifferentPersons_storedSeparately() async throws {
-        // swiftlint:disable:next force_unwrapping
         let person2Id = try #require(UUID(uuidString: "33333333-0000-0000-0000-000000000002"))
         let repo = makeRepository()
         let schema1 = try makeTestSchema(id: "shared-schema", version: 1)
@@ -265,7 +264,6 @@ struct CustomSchemaRepositoryTests {
 
     @Test
     func fetch_wrongPerson_returnsNil() async throws {
-        // swiftlint:disable:next force_unwrapping
         let person2Id = try #require(UUID(uuidString: "33333333-0000-0000-0000-000000000002"))
         let repo = makeRepository()
         let schema = try makeTestSchema()
@@ -325,7 +323,6 @@ struct CustomSchemaRepositoryTests {
 
     @Test
     func fetchAll_onlyReturnsForSpecifiedPerson() async throws {
-        // swiftlint:disable:next force_unwrapping
         let person2Id = try #require(UUID(uuidString: "33333333-0000-0000-0000-000000000002"))
         let repo = makeRepository()
         let schema1 = try makeTestSchema(id: "schema-a")
@@ -392,7 +389,6 @@ struct CustomSchemaRepositoryTests {
 
     @Test
     func delete_onlyDeletesForSpecifiedPerson() async throws {
-        // swiftlint:disable:next force_unwrapping
         let person2Id = try #require(UUID(uuidString: "33333333-0000-0000-0000-000000000002"))
         let repo = makeRepository()
         let schema = try makeTestSchema(id: "shared-schema")
@@ -445,7 +441,6 @@ struct CustomSchemaRepositoryTests {
 
     @Test
     func exists_wrongPerson_returnsFalse() async throws {
-        // swiftlint:disable:next force_unwrapping
         let person2Id = try #require(UUID(uuidString: "33333333-0000-0000-0000-000000000002"))
         let repo = makeRepository()
         let schema = try makeTestSchema()

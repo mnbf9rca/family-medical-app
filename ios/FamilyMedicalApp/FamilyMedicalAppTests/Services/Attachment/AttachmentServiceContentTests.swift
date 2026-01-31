@@ -99,7 +99,6 @@ struct AttachmentServiceContentTests {
             UIColor.green.setFill()
             ctx.fill(CGRect(origin: .zero, size: size))
         }
-        // swiftlint:disable:next force_unwrapping
         let pngData = try #require(image.pngData())
 
         let attachment = try await fixtures.service.addAttachment(

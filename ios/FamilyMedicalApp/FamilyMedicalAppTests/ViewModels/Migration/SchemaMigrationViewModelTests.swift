@@ -361,7 +361,7 @@ final class MockSchemaMigrationService: SchemaMigrationServiceProtocol, @uncheck
         forPerson personId: UUID,
         primaryKey: SymmetricKey,
         options: MigrationOptions,
-        progressHandler: @escaping @Sendable (MigrationProgress) -> Void
+        progressHandler: @Sendable (MigrationProgress) -> Void
     ) async throws -> MigrationResult {
         executeCalled = true
         if shouldFailExecute { throw RepositoryError.migrationFailed("Mock execute failed") }

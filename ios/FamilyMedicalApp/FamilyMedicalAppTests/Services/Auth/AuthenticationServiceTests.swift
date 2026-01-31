@@ -1,4 +1,3 @@
-// swiftlint:disable force_unwrapping
 import CryptoKit
 import Foundation
 import Testing
@@ -364,6 +363,7 @@ private final class MockKeychainService: KeychainServiceProtocol, @unchecked Sen
     private var keys: [String: SymmetricKey] = [:]
     private var data: [String: Data] = [:]
 
+    // swiftlint:disable:next unneeded_throws_rethrows
     func storeKey(_ key: SymmetricKey, identifier: String, accessControl: KeychainAccessControl) throws {
         keys[identifier] = key
     }
@@ -386,6 +386,7 @@ private final class MockKeychainService: KeychainServiceProtocol, @unchecked Sen
         keys[identifier] != nil
     }
 
+    // swiftlint:disable:next unneeded_throws_rethrows
     func storeData(_ dataToStore: Data, identifier: String, accessControl: KeychainAccessControl) throws {
         data[identifier] = dataToStore
     }
@@ -432,5 +433,3 @@ private final class MockBiometricService: BiometricServiceProtocol {
         }
     }
 }
-
-// swiftlint:enable force_unwrapping

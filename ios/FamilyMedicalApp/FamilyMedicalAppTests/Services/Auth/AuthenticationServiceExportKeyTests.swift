@@ -1,4 +1,3 @@
-// swiftlint:disable force_unwrapping
 import CryptoKit
 import Foundation
 import Testing
@@ -133,5 +132,3 @@ struct AuthenticationServiceExportKeyTests {
         }
     }
 }
-
-// swiftlint:enable force_unwrapping

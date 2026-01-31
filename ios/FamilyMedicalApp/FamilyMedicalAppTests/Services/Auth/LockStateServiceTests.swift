@@ -1,4 +1,3 @@
-// swiftlint:disable force_unwrapping
 import Foundation
 import Testing
 @testable import FamilyMedicalApp
@@ -149,5 +148,3 @@ struct LockStateServiceTests {
         #expect(recordedTime > firstTime)
     }
 }
-
-// swiftlint:enable force_unwrapping

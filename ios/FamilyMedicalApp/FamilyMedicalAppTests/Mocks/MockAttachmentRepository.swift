@@ -2,6 +2,8 @@ import CryptoKit
 import Foundation
 @testable import FamilyMedicalApp
 
+// swiftlint:disable unneeded_throws_rethrows
+
 /// Mock implementation of AttachmentRepository for testing
 final class MockAttachmentRepository: AttachmentRepositoryProtocol, @unchecked Sendable {
     // MARK: - State
@@ -176,3 +178,5 @@ final class MockAttachmentRepository: AttachmentRepositoryProtocol, @unchecked S
         attachments[id]
     }
 }
+
+// swiftlint:enable unneeded_throws_rethrows
