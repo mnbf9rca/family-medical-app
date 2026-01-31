@@ -178,6 +178,14 @@ final class ImportService: ImportServiceProtocol, @unchecked Sendable {
             throw BackupError.importFailed("Attachment has no linked record")
         }
 
+        // Log notice if attachment has multiple linked records (not currently supported)
+        if backup.linkedRecordIds.count > 1 {
+            logger.notice(
+                "Attachment \(backup.id) has \(backup.linkedRecordIds.count) linked records; " +
+                    "only importing link to first record \(recordId)"
+            )
+        }
+
         guard let content = backup.contentData else {
             logger.error("Attachment has no content data")
             throw BackupError.importFailed("Attachment content is missing")

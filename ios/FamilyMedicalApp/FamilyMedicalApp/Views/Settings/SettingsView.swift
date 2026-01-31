@@ -385,64 +385,6 @@ struct InfoRow: View {
     }
 }
 
-// MARK: - Share Sheet
-
-struct BackupShareSheet: UIViewControllerRepresentable {
-    let items: [Any]
-
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(activityItems: items, applicationActivities: nil)
-    }
-
-    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
-}
-
-// MARK: - Backup File Item for Sharing
-
-final class BackupFileItem: NSObject, UIActivityItemSource {
-    let data: Data
-    let fileName: String
-
-    init(data: Data, fileName: String) {
-        self.data = data
-        self.fileName = fileName
-    }
-
-    func activityViewControllerPlaceholderItem(_ activityViewController: UIActivityViewController) -> Any {
-        URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent(fileName)
-    }
-
-    func activityViewController(
-        _ activityViewController: UIActivityViewController,
-        itemForActivityType activityType: UIActivity.ActivityType?
-    ) -> Any? {
-        // Write to temp file for sharing
-        let tempURL = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent(fileName)
-        try? data.write(to: tempURL)
-        return tempURL
-    }
-
-    func activityViewController(
-        _ activityViewController: UIActivityViewController,
-        subjectForActivityType activityType: UIActivity.ActivityType?
-    ) -> String {
-        "Family Medical App Backup"
-    }
-
-    func activityViewController(
-        _ activityViewController: UIActivityViewController,
-        dataTypeIdentifierForActivityType activityType: UIActivity.ActivityType?
-    ) -> String {
-        UTType.fmaBackup.identifier
-    }
-}
-
-// MARK: - UTType Extension
-
-extension UTType {
-    static let fmaBackup = UTType(exportedAs: "com.cynexia.familymedicalapp.backup")
-}
-
 // MARK: - Preview
 
 #Preview {

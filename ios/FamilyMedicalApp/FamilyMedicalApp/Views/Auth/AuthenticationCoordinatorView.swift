@@ -71,6 +71,7 @@ struct MainAppView: View {
     @Bindable var viewModel: AuthenticationViewModel
     @State private var showingSettings = false
     @State private var settingsViewModel = SettingsViewModel.makeDefault()
+    @State private var primaryKeyError: String?
 
     private let primaryKeyProvider: PrimaryKeyProviderProtocol
 
@@ -87,7 +88,7 @@ struct MainAppView: View {
                     ToolbarItem(placement: .navigationBarTrailing) {
                         Menu {
                             Button(action: {
-                                showingSettings = true
+                                openSettings()
                             }, label: {
                                 Label("Settings", systemImage: "gearshape")
                             })
@@ -122,6 +123,23 @@ struct MainAppView: View {
                         SettingsView(viewModel: settingsViewModel, primaryKey: primaryKey)
                     }
                 }
+                .alert("Error", isPresented: Binding(
+                    get: { primaryKeyError != nil },
+                    set: { if !$0 { primaryKeyError = nil } }
+                )) {
+                    Button("OK", role: .cancel) {}
+                } message: {
+                    Text(primaryKeyError ?? "")
+                }
+        }
+    }
+
+    private func openSettings() {
+        do {
+            _ = try primaryKeyProvider.getPrimaryKey()
+            showingSettings = true
+        } catch {
+            primaryKeyError = "Unable to access encryption key. Please try locking and unlocking the app."
         }
     }
 }

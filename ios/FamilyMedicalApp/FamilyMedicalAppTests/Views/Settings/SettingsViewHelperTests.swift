@@ -86,9 +86,59 @@ struct SettingsViewHelperTests {
             // Verify file was written
             let readData = try? Data(contentsOf: url)
             #expect(readData == testData)
-            // Cleanup
-            try? FileManager.default.removeItem(at: url)
         }
+        // Cleanup via the cleanup method
+        BackupFileItem.cleanupTempFiles()
+    }
+
+    @Test("BackupFileItem cleanup removes temp directory")
+    @MainActor
+    func backupFileItemCleanup() {
+        // First create a temp file
+        let testData = Data("cleanup test".utf8)
+        let item = BackupFileItem(data: testData, fileName: "cleanup-test.fmabackup")
+
+        let result = item.activityViewController(
+            UIActivityViewController(activityItems: [], applicationActivities: nil),
+            itemForActivityType: nil
+        )
+
+        guard let url = result as? URL else {
+            Issue.record("Expected URL result")
+            return
+        }
+
+        // Verify file exists
+        #expect(FileManager.default.fileExists(atPath: url.path))
+
+        // Call cleanup
+        BackupFileItem.cleanupTempFiles()
+
+        // Verify file no longer exists
+        #expect(!FileManager.default.fileExists(atPath: url.path))
+    }
+
+    @Test("BackupFileItem uses dedicated export directory")
+    @MainActor
+    func backupFileItemExportDirectory() {
+        let testData = Data("directory test".utf8)
+        let item = BackupFileItem(data: testData, fileName: "dir-test.fmabackup")
+
+        let result = item.activityViewController(
+            UIActivityViewController(activityItems: [], applicationActivities: nil),
+            itemForActivityType: nil
+        )
+
+        guard let url = result as? URL else {
+            Issue.record("Expected URL result")
+            return
+        }
+
+        // Verify path contains the export directory
+        #expect(url.path.contains("FamilyMedicalAppExports"))
+
+        // Cleanup
+        BackupFileItem.cleanupTempFiles()
     }
 
     // MARK: - UTType Extension Tests
