@@ -129,13 +129,15 @@ jobs:
 
       - name: Build
         run: |
+          set -o pipefail
           cd ios/FamilyMedicalApp
           xcodebuild build \
             -project FamilyMedicalApp.xcodeproj \
             -scheme FamilyMedicalApp \
             -destination "${{ matrix.destination }}" \
             CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO
+            CODE_SIGNING_REQUIRED=NO \
+            | xcpretty
 
       - name: Save DerivedData cache
         uses: actions/cache/save@v5
