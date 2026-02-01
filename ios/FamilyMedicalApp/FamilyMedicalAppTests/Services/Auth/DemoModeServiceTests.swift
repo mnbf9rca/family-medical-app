@@ -151,7 +151,7 @@ struct DemoModeServiceTests {
     // MARK: - isInDemoMode Tests
 
     @Test
-    func isInDemoMode_returnsFalseInitially() {
+    func isInDemoMode_returnsFalseInitially() throws {
         let testDefaults = try makeTestDefaults()
         let mockKeychainService = MockDemoKeychainService()
         let mockLockStateService = MockLockStateService()
