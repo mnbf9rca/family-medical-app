@@ -377,23 +377,6 @@ final class AuthenticationViewModel {
 
     /// Creates default DemoDataSeeder with production dependencies
     private static func makeDefaultDemoDataSeeder() -> DemoDataSeederProtocol {
-        let coreDataStack = CoreDataStack.shared
-        let encryptionService = EncryptionService()
-        let fmkService = FamilyMemberKeyService()
-        let personRepository = PersonRepository(
-            coreDataStack: coreDataStack,
-            encryptionService: encryptionService,
-            fmkService: fmkService
-        )
-        let schemaRepository = CustomSchemaRepository(
-            coreDataStack: coreDataStack,
-            encryptionService: encryptionService
-        )
-        let schemaSeeder = SchemaSeeder(schemaRepository: schemaRepository)
-        return DemoDataSeeder(
-            personRepository: personRepository,
-            schemaSeeder: schemaSeeder,
-            fmkService: fmkService
-        )
+        DemoDataSeeder()
     }
 }
