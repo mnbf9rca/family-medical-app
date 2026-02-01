@@ -73,7 +73,8 @@ FILE_EXCEPTIONS = {
     # Coverage varies as code is refactored; tested via MockOpaqueAuthService in unit tests
     "OpaqueAuthService.swift": 13.0,  # Requires running OPAQUE server; actual ~15.8%
     # Test infrastructure - ViewModifier for UI testing that can't be easily unit tested
-    "UITestingHelpers.swift": 82.0,  # Test-only code with conditional compilation
+    # Includes shouldUseDemoMode which reads CommandLine.arguments (covered by UI tests)
+    "UITestingHelpers.swift": 75.0,  # Test-only code with conditional compilation
 }
 
 # Load coverage data

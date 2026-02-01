@@ -49,7 +49,7 @@ struct DemoModeServiceTests {
             userDefaults: testDefaults
         )
 
-        try await sut.enterDemoMode()
+        _ = try await sut.enterDemoMode()
 
         #expect(mockLockStateService.isDemoMode == true)
     }
@@ -65,7 +65,7 @@ struct DemoModeServiceTests {
             userDefaults: testDefaults
         )
 
-        try await sut.enterDemoMode()
+        _ = try await sut.enterDemoMode()
 
         #expect(mockKeychainService.storeKeyIdentifiers.contains(DemoModeService.demoPrimaryKeyIdentifier))
     }
@@ -81,7 +81,7 @@ struct DemoModeServiceTests {
             userDefaults: testDefaults
         )
 
-        try await sut.enterDemoMode()
+        _ = try await sut.enterDemoMode()
 
         #expect(testDefaults.string(forKey: "com.family-medical-app.demo.username") == "demo-user")
     }
@@ -100,7 +100,7 @@ struct DemoModeServiceTests {
         )
 
         // Enter demo mode first
-        try await sut.enterDemoMode()
+        _ = try await sut.enterDemoMode()
 
         // Exit demo mode
         await sut.exitDemoMode()
@@ -120,7 +120,7 @@ struct DemoModeServiceTests {
         )
 
         // Enter demo mode first
-        try await sut.enterDemoMode()
+        _ = try await sut.enterDemoMode()
 
         // Exit demo mode
         await sut.exitDemoMode()
@@ -140,7 +140,7 @@ struct DemoModeServiceTests {
         )
 
         // Enter demo mode first
-        try await sut.enterDemoMode()
+        _ = try await sut.enterDemoMode()
 
         // Exit demo mode
         await sut.exitDemoMode()
@@ -175,8 +175,29 @@ struct DemoModeServiceTests {
             userDefaults: testDefaults
         )
 
-        try await sut.enterDemoMode()
+        _ = try await sut.enterDemoMode()
 
         #expect(sut.isInDemoMode == true)
+    }
+
+    @Test
+    func enterDemoMode_returnsDeterministicKey() async throws {
+        let testDefaults = try makeTestDefaults()
+        let mockKeychainService = MockDemoKeychainService()
+        let mockLockStateService = MockLockStateService()
+        let sut = DemoModeService(
+            keychainService: mockKeychainService,
+            lockStateService: mockLockStateService,
+            userDefaults: testDefaults
+        )
+
+        let key = try await sut.enterDemoMode()
+
+        // Verify the key is derived from the demo passphrase
+        let expectedKeyData = Data(DemoModeService.demoPassphrase.utf8)
+        let expectedKey = SymmetricKey(data: SHA256.hash(data: expectedKeyData))
+
+        // Keys should match when derived from same passphrase
+        #expect(key.withUnsafeBytes { Array($0) } == expectedKey.withUnsafeBytes { Array($0) })
     }
 }

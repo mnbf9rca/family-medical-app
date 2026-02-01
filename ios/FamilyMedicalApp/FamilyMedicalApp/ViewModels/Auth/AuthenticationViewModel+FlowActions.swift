@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 import OSLog
 
@@ -180,7 +181,12 @@ extension AuthenticationViewModel {
         errorMessage = nil
 
         do {
-            try await demoModeService.enterDemoMode()
+            // Create demo account and get demo key
+            let demoKey = try await demoModeService.enterDemoMode()
+
+            // Seed sample data with the demo key
+            try await seedDemoData(primaryKey: demoKey)
+
             isAuthenticated = true
             flowState = .authenticated
         } catch {
@@ -204,6 +210,13 @@ extension AuthenticationViewModel {
         flowState = .welcome
 
         isLoading = false
+    }
+
+    // MARK: - Demo Mode Helpers
+
+    /// Seeds demo data (persons, schemas) for demo mode
+    private func seedDemoData(primaryKey: CryptoKit.SymmetricKey) async throws {
+        try await demoDataSeeder.seedDemoData(primaryKey: primaryKey)
     }
 
     // MARK: - Flow Navigation

@@ -77,6 +77,11 @@ struct SettingsView: View {
             } message: {
                 Text("All demo data will be deleted. You'll return to the welcome screen.")
             }
+            .onChange(of: viewModel.demoModeExited) { _, exited in
+                if exited {
+                    dismiss()
+                }
+            }
         }
     }
 

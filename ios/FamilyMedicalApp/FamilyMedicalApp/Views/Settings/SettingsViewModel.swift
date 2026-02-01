@@ -411,5 +411,16 @@ extension SettingsViewModel {
         await demoModeService.exitDemoMode()
         showingExitDemoConfirmation = false
         demoModeExited = true
+
+        // Notify the app that demo mode has exited
+        // MainAppView observes this to trigger the auth flow reset
+        NotificationCenter.default.post(name: .demoModeExitRequested, object: nil)
     }
+}
+
+// MARK: - Demo Mode Notifications
+
+extension Notification.Name {
+    /// Posted when the user requests to exit demo mode from Settings
+    static let demoModeExitRequested = Notification.Name("demoModeExitRequested")
 }

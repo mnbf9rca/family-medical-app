@@ -134,6 +134,11 @@ struct MainAppView: View {
                 } message: {
                     Text(primaryKeyError ?? "")
                 }
+                .onReceive(NotificationCenter.default.publisher(for: .demoModeExitRequested)) { _ in
+                    Task {
+                        await viewModel.exitDemoMode()
+                    }
+                }
         }
     }
 

@@ -28,13 +28,26 @@ struct AuthenticationViewModelDemoTests {
         #expect(viewModel.errorMessage == nil)
     }
 
+    // MARK: - Helper
+
+    private func makeViewModel(
+        mockDemoModeService: MockDemoModeService = MockDemoModeService(),
+        mockDemoDataSeeder: MockDemoDataSeeder = MockDemoDataSeeder()
+    ) -> AuthenticationViewModel {
+        AuthenticationViewModel(
+            authService: MockAuthenticationService(isSetUp: false),
+            demoModeService: mockDemoModeService,
+            demoDataSeeder: mockDemoDataSeeder
+        )
+    }
+
     @Test
     func enterDemoModeSetsIsAuthenticatedTrue() async {
-        let authService = MockAuthenticationService(isSetUp: false)
         let mockDemoModeService = MockDemoModeService()
-        let viewModel = AuthenticationViewModel(
-            authService: authService,
-            demoModeService: mockDemoModeService
+        let mockDemoDataSeeder = MockDemoDataSeeder()
+        let viewModel = makeViewModel(
+            mockDemoModeService: mockDemoModeService,
+            mockDemoDataSeeder: mockDemoDataSeeder
         )
 
         await viewModel.enterDemoMode()
@@ -44,11 +57,11 @@ struct AuthenticationViewModelDemoTests {
 
     @Test
     func enterDemoModeSetsFlowStateToAuthenticated() async {
-        let authService = MockAuthenticationService(isSetUp: false)
         let mockDemoModeService = MockDemoModeService()
-        let viewModel = AuthenticationViewModel(
-            authService: authService,
-            demoModeService: mockDemoModeService
+        let mockDemoDataSeeder = MockDemoDataSeeder()
+        let viewModel = makeViewModel(
+            mockDemoModeService: mockDemoModeService,
+            mockDemoDataSeeder: mockDemoDataSeeder
         )
 
         await viewModel.enterDemoMode()
@@ -58,11 +71,11 @@ struct AuthenticationViewModelDemoTests {
 
     @Test
     func enterDemoModeCallsDemoModeService() async {
-        let authService = MockAuthenticationService(isSetUp: false)
         let mockDemoModeService = MockDemoModeService()
-        let viewModel = AuthenticationViewModel(
-            authService: authService,
-            demoModeService: mockDemoModeService
+        let mockDemoDataSeeder = MockDemoDataSeeder()
+        let viewModel = makeViewModel(
+            mockDemoModeService: mockDemoModeService,
+            mockDemoDataSeeder: mockDemoDataSeeder
         )
 
         await viewModel.enterDemoMode()
@@ -71,14 +84,24 @@ struct AuthenticationViewModelDemoTests {
     }
 
     @Test
+    func enterDemoModeSeedsDemoData() async {
+        let mockDemoModeService = MockDemoModeService()
+        let mockDemoDataSeeder = MockDemoDataSeeder()
+        let viewModel = makeViewModel(
+            mockDemoModeService: mockDemoModeService,
+            mockDemoDataSeeder: mockDemoDataSeeder
+        )
+
+        await viewModel.enterDemoMode()
+
+        #expect(mockDemoDataSeeder.seedDemoDataCalled == true)
+    }
+
+    @Test
     func enterDemoModeFailureShowsError() async {
-        let authService = MockAuthenticationService(isSetUp: false)
         let mockDemoModeService = MockDemoModeService()
         mockDemoModeService.shouldFailEnter = true
-        let viewModel = AuthenticationViewModel(
-            authService: authService,
-            demoModeService: mockDemoModeService
-        )
+        let viewModel = makeViewModel(mockDemoModeService: mockDemoModeService)
 
         await viewModel.enterDemoMode()
 
@@ -88,11 +111,11 @@ struct AuthenticationViewModelDemoTests {
 
     @Test
     func exitDemoModeResetsToWelcome() async {
-        let authService = MockAuthenticationService(isSetUp: false)
         let mockDemoModeService = MockDemoModeService()
-        let viewModel = AuthenticationViewModel(
-            authService: authService,
-            demoModeService: mockDemoModeService
+        let mockDemoDataSeeder = MockDemoDataSeeder()
+        let viewModel = makeViewModel(
+            mockDemoModeService: mockDemoModeService,
+            mockDemoDataSeeder: mockDemoDataSeeder
         )
 
         await viewModel.enterDemoMode()
@@ -104,11 +127,11 @@ struct AuthenticationViewModelDemoTests {
 
     @Test
     func exitDemoModeCallsDemoModeService() async {
-        let authService = MockAuthenticationService(isSetUp: false)
         let mockDemoModeService = MockDemoModeService()
-        let viewModel = AuthenticationViewModel(
-            authService: authService,
-            demoModeService: mockDemoModeService
+        let mockDemoDataSeeder = MockDemoDataSeeder()
+        let viewModel = makeViewModel(
+            mockDemoModeService: mockDemoModeService,
+            mockDemoDataSeeder: mockDemoDataSeeder
         )
 
         await viewModel.enterDemoMode()
@@ -122,11 +145,11 @@ struct AuthenticationViewModelDemoTests {
     @Test("Complete demo flow from welcome to exit")
     func completeDemoFlowFromWelcomeToExit() async {
         // Setup
-        let authService = MockAuthenticationService(isSetUp: false)
         let mockDemoModeService = MockDemoModeService()
-        let viewModel = AuthenticationViewModel(
-            authService: authService,
-            demoModeService: mockDemoModeService
+        let mockDemoDataSeeder = MockDemoDataSeeder()
+        let viewModel = makeViewModel(
+            mockDemoModeService: mockDemoModeService,
+            mockDemoDataSeeder: mockDemoDataSeeder
         )
 
         // 1. Start at welcome
@@ -142,6 +165,7 @@ struct AuthenticationViewModelDemoTests {
         #expect(viewModel.isAuthenticated == true)
         #expect(viewModel.flowState == .authenticated)
         #expect(mockDemoModeService.isInDemoMode == true)
+        #expect(mockDemoDataSeeder.seedDemoDataCalled == true)
 
         // 4. Exit demo mode - cleans up and returns to welcome
         await viewModel.exitDemoMode()

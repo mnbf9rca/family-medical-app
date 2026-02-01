@@ -122,6 +122,8 @@ final class AuthenticationViewModel {
     private let passwordValidator: PasswordValidationServiceProtocol
     let lockStateService: LockStateServiceProtocol
     let demoModeService: DemoModeServiceProtocol
+    let demoDataSeeder: DemoDataSeederProtocol
+    let keychainService: KeychainServiceProtocol
 
     // MARK: - Initialization
 
@@ -130,13 +132,17 @@ final class AuthenticationViewModel {
         biometricService: BiometricServiceProtocol? = nil,
         passwordValidator: PasswordValidationServiceProtocol = PasswordValidationService(),
         lockStateService: LockStateServiceProtocol = LockStateService(),
-        demoModeService: DemoModeServiceProtocol = DemoModeService()
+        demoModeService: DemoModeServiceProtocol = DemoModeService(),
+        demoDataSeeder: DemoDataSeederProtocol? = nil,
+        keychainService: KeychainServiceProtocol = KeychainService()
     ) {
         self.authService = authService ?? AuthenticationService()
         self.biometricService = biometricService ?? BiometricService()
         self.passwordValidator = passwordValidator
         self.lockStateService = lockStateService
         self.demoModeService = demoModeService
+        self.keychainService = keychainService
+        self.demoDataSeeder = demoDataSeeder ?? Self.makeDefaultDemoDataSeeder()
 
         // Initialize setup state from authService
         isSetUp = self.authService.isSetUp
@@ -365,5 +371,29 @@ final class AuthenticationViewModel {
         confirmPassphrase = ""
         password = ""
         confirmPassword = ""
+    }
+
+    // MARK: - Factory Methods
+
+    /// Creates default DemoDataSeeder with production dependencies
+    private static func makeDefaultDemoDataSeeder() -> DemoDataSeederProtocol {
+        let coreDataStack = CoreDataStack.shared
+        let encryptionService = EncryptionService()
+        let fmkService = FamilyMemberKeyService()
+        let personRepository = PersonRepository(
+            coreDataStack: coreDataStack,
+            encryptionService: encryptionService,
+            fmkService: fmkService
+        )
+        let schemaRepository = CustomSchemaRepository(
+            coreDataStack: coreDataStack,
+            encryptionService: encryptionService
+        )
+        let schemaSeeder = SchemaSeeder(schemaRepository: schemaRepository)
+        return DemoDataSeeder(
+            personRepository: personRepository,
+            schemaSeeder: schemaSeeder,
+            fmkService: fmkService
+        )
     }
 }

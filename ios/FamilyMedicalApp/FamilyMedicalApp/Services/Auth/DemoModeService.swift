@@ -4,7 +4,8 @@ import Foundation
 /// Protocol for demo mode management
 protocol DemoModeServiceProtocol: Sendable {
     /// Enter demo mode - creates demo account with deterministic key
-    func enterDemoMode() async throws
+    /// - Returns: The demo primary key for data seeding
+    func enterDemoMode() async throws -> CryptoKit.SymmetricKey
 
     /// Exit demo mode - deletes all demo data
     func exitDemoMode() async
@@ -61,7 +62,7 @@ final class DemoModeService: DemoModeServiceProtocol, @unchecked Sendable {
         lockStateService.isDemoMode
     }
 
-    func enterDemoMode() async throws {
+    func enterDemoMode() async throws -> SymmetricKey {
         logger.logOperation("enterDemoMode", state: "started")
 
         // Generate deterministic demo primary key
@@ -84,6 +85,8 @@ final class DemoModeService: DemoModeServiceProtocol, @unchecked Sendable {
         lockStateService.isDemoMode = true
 
         logger.logOperation("enterDemoMode", state: "completed")
+
+        return demoKey
     }
 
     func exitDemoMode() async {

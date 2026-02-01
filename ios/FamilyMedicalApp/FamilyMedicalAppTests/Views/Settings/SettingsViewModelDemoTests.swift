@@ -37,7 +37,7 @@ struct SettingsViewModelDemoTests {
     @MainActor
     func isDemoModeTrueWhenActive() async throws {
         let demoService = MockDemoModeService()
-        try await demoService.enterDemoMode()
+        _ = try await demoService.enterDemoMode()
         let viewModel = makeViewModel(demoModeService: demoService)
 
         #expect(viewModel.isDemoMode == true)
@@ -49,7 +49,7 @@ struct SettingsViewModelDemoTests {
     @MainActor
     func showExitDemoConfirmationSetsFlag() async throws {
         let demoService = MockDemoModeService()
-        try await demoService.enterDemoMode()
+        _ = try await demoService.enterDemoMode()
         let viewModel = makeViewModel(demoModeService: demoService)
 
         viewModel.showExitDemoConfirmation()
@@ -61,7 +61,7 @@ struct SettingsViewModelDemoTests {
     @MainActor
     func cancelExitDemoClearsFlag() async throws {
         let demoService = MockDemoModeService()
-        try await demoService.enterDemoMode()
+        _ = try await demoService.enterDemoMode()
         let viewModel = makeViewModel(demoModeService: demoService)
         viewModel.showExitDemoConfirmation()
 
@@ -74,7 +74,7 @@ struct SettingsViewModelDemoTests {
     @MainActor
     func confirmExitDemoCallsService() async throws {
         let demoService = MockDemoModeService()
-        try await demoService.enterDemoMode()
+        _ = try await demoService.enterDemoMode()
         let viewModel = makeViewModel(demoModeService: demoService)
         viewModel.showExitDemoConfirmation()
 
@@ -88,7 +88,7 @@ struct SettingsViewModelDemoTests {
     @MainActor
     func confirmExitDemoSetsExitedFlag() async throws {
         let demoService = MockDemoModeService()
-        try await demoService.enterDemoMode()
+        _ = try await demoService.enterDemoMode()
         let viewModel = makeViewModel(demoModeService: demoService)
 
         await viewModel.confirmExitDemo()
@@ -100,7 +100,7 @@ struct SettingsViewModelDemoTests {
     @MainActor
     func isDemoModeFalseAfterExit() async throws {
         let demoService = MockDemoModeService()
-        try await demoService.enterDemoMode()
+        _ = try await demoService.enterDemoMode()
         let viewModel = makeViewModel(demoModeService: demoService)
         #expect(viewModel.isDemoMode == true)
 

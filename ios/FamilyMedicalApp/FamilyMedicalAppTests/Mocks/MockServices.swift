@@ -425,6 +425,30 @@ final class MockPrimaryKeyProvider: PrimaryKeyProviderProtocol, @unchecked Senda
     }
 }
 
+// MARK: - Mock Demo Data Seeder
+
+/// Mock demo data seeder for testing demo flows
+final class MockDemoDataSeeder: DemoDataSeederProtocol, @unchecked Sendable {
+    // MARK: - Tracking
+
+    var seedDemoDataCalled = false
+    var seedDemoDataCallCount = 0
+
+    // MARK: - Configuration
+
+    var shouldFail = false
+
+    // MARK: - DemoDataSeederProtocol
+
+    func seedDemoData(primaryKey: CryptoKit.SymmetricKey) async throws {
+        seedDemoDataCalled = true
+        seedDemoDataCallCount += 1
+        if shouldFail {
+            throw CryptoError.keyDerivationFailed("Mock seed failure")
+        }
+    }
+}
+
 // MARK: - Mock Demo Mode Service
 
 /// Mock demo mode service for testing demo flows
@@ -439,18 +463,22 @@ final class MockDemoModeService: DemoModeServiceProtocol, @unchecked Sendable {
     var shouldFailEnter = false
     private(set) var inDemoMode = false
 
+    /// Test key returned from enterDemoMode
+    let testDemoKey = CryptoKit.SymmetricKey(size: .bits256)
+
     // MARK: - DemoModeServiceProtocol
 
     var isInDemoMode: Bool {
         inDemoMode
     }
 
-    func enterDemoMode() async throws {
+    func enterDemoMode() async throws -> CryptoKit.SymmetricKey {
         enterDemoModeCalled = true
         if shouldFailEnter {
             throw CryptoError.keyDerivationFailed("Mock failure")
         }
         inDemoMode = true
+        return testDemoKey
     }
 
     func exitDemoMode() async {
