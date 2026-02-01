@@ -6,13 +6,13 @@ import Testing
 struct BackupSchemaVersionTests {
     @Test("Validator reports schema version")
     func validatorReportsSchemaVersion() {
-        let validator = BackupSchemaValidator()
+        let validator = BackupSchemaValidator.forTesting()
         #expect(validator.schemaVersion == "1.0")
     }
 
     @Test("Future version detection")
     func futureVersionDetected() {
-        let validator = BackupSchemaValidator()
+        let validator = BackupSchemaValidator.forTesting()
 
         // JSON with formatVersion 2.0 (future)
         let futureJSON = Data("""

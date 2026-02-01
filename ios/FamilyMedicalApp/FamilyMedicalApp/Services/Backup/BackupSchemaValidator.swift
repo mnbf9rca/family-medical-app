@@ -57,10 +57,12 @@ final class BackupSchemaValidator: BackupSchemaValidatorProtocol, @unchecked Sen
     /// - Parameters:
     ///   - maxNestingDepth: Maximum nesting depth (default: 20)
     ///   - maxArraySize: Maximum array size (default: 100_000)
+    ///   - bundle: Bundle to load schema from (default: .main for app, pass test bundle for tests)
     ///   - logger: Optional logger for debug output
     init(
         maxNestingDepth: Int = 20,
         maxArraySize: Int = 100_000,
+        bundle: Bundle = .main,
         logger: CategoryLoggerProtocol? = nil
     ) {
         self.maxNestingDepth = maxNestingDepth
@@ -68,7 +70,7 @@ final class BackupSchemaValidator: BackupSchemaValidatorProtocol, @unchecked Sen
         self.logger = logger ?? LoggingService.shared.logger(category: .storage)
 
         // Load schema from bundle
-        self.schema = Self.loadSchema()
+        self.schema = Self.loadSchema(from: bundle)
     }
 
     // MARK: - BackupSchemaValidatorProtocol
@@ -92,10 +94,11 @@ final class BackupSchemaValidator: BackupSchemaValidatorProtocol, @unchecked Sen
             return dosResult
         }
 
-        // Step 3: Validate against schema (if available)
+        // Step 3: Validate against schema (fail closed if unavailable)
         guard let schema else {
-            logger.notice("Schema not available, skipping schema validation")
-            return .valid
+            let errorMessage = "Backup schema not available; validation cannot proceed"
+            logger.error("\(errorMessage)")
+            return .invalid([errorMessage])
         }
 
         // Convert to JSONValue for schema validation
@@ -122,11 +125,11 @@ final class BackupSchemaValidator: BackupSchemaValidatorProtocol, @unchecked Sen
 
     // MARK: - Private Methods
 
-    private static func loadSchema() -> Schema? {
+    private static func loadSchema(from bundle: Bundle) -> Schema? {
         let logger = LoggingService.shared.logger(category: .storage)
 
-        // Try loading from bundle first
-        if let schemaURL = Bundle.main.url(forResource: "backup-v1", withExtension: "json", subdirectory: "Schemas"),
+        // Try loading from Schemas subdirectory first
+        if let schemaURL = bundle.url(forResource: "backup-v1", withExtension: "json", subdirectory: "Schemas"),
            let schemaData = try? Data(contentsOf: schemaURL),
            let schemaString = String(data: schemaData, encoding: .utf8) {
             do {
@@ -137,33 +140,13 @@ final class BackupSchemaValidator: BackupSchemaValidatorProtocol, @unchecked Sen
         }
 
         // Try loading from Resources directory (flat structure)
-        if let schemaURL = Bundle.main.url(forResource: "backup-v1", withExtension: "json"),
+        if let schemaURL = bundle.url(forResource: "backup-v1", withExtension: "json"),
            let schemaData = try? Data(contentsOf: schemaURL),
            let schemaString = String(data: schemaData, encoding: .utf8) {
             do {
                 return try Schema(instance: schemaString)
             } catch {
                 logger.notice("Failed to parse schema from Resources: \(error.localizedDescription)")
-            }
-        }
-
-        // During tests, try loading from project directory
-        let projectSchemaPath = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent() // Backup
-            .deletingLastPathComponent() // Services
-            .deletingLastPathComponent() // FamilyMedicalApp
-            .deletingLastPathComponent() // FamilyMedicalApp
-            .deletingLastPathComponent() // ios
-            .appendingPathComponent("docs")
-            .appendingPathComponent("schemas")
-            .appendingPathComponent("backup-v1.json")
-
-        if let schemaData = try? Data(contentsOf: projectSchemaPath),
-           let schemaString = String(data: schemaData, encoding: .utf8) {
-            do {
-                return try Schema(instance: schemaString)
-            } catch {
-                logger.notice("Failed to parse project schema: \(error.localizedDescription)")
             }
         }
 
@@ -188,31 +171,67 @@ final class BackupSchemaValidator: BackupSchemaValidatorProtocol, @unchecked Sen
         return errors.isEmpty ? .valid : .invalid(errors)
     }
 
-    private func calculateDepth(_ value: Any, currentDepth: Int = 1) -> Int {
-        switch value {
-        case let dict as [String: Any]:
-            let childDepths = dict.values.map { calculateDepth($0, currentDepth: currentDepth + 1) }
-            return childDepths.max() ?? currentDepth
-        case let array as [Any]:
-            let childDepths = array.map { calculateDepth($0, currentDepth: currentDepth + 1) }
-            return childDepths.max() ?? currentDepth
-        default:
-            return currentDepth
+    /// Calculates maximum nesting depth using iterative traversal with explicit stack.
+    /// Uses early exit optimization when maxNestingDepth is exceeded.
+    private func calculateDepth(_ value: Any) -> Int {
+        // Stack stores tuples of (value, depth)
+        var stack: [(Any, Int)] = [(value, 1)]
+        var maxDepth = 1
+
+        while let (current, depth) = stack.popLast() {
+            maxDepth = max(maxDepth, depth)
+
+            // Early exit: if we've already exceeded the limit, no need to continue
+            if maxDepth > maxNestingDepth {
+                return maxDepth
+            }
+
+            switch current {
+            case let dict as [String: Any]:
+                for child in dict.values {
+                    stack.append((child, depth + 1))
+                }
+            case let array as [Any]:
+                for child in array {
+                    stack.append((child, depth + 1))
+                }
+            default:
+                break
+            }
         }
+
+        return maxDepth
     }
 
+    /// Finds maximum array size using iterative traversal with explicit stack.
+    /// Uses early exit optimization when maxArraySize is exceeded.
     private func findMaxArraySize(_ value: Any) -> Int {
-        switch value {
-        case let dict as [String: Any]:
-            let childMaxes = dict.values.map { findMaxArraySize($0) }
-            return childMaxes.max() ?? 0
-        case let array as [Any]:
-            let selfSize = array.count
-            let childMaxes = array.map { findMaxArraySize($0) }
-            return max(selfSize, childMaxes.max() ?? 0)
-        default:
-            return 0
+        var stack: [Any] = [value]
+        var maxSize = 0
+
+        while let current = stack.popLast() {
+            switch current {
+            case let dict as [String: Any]:
+                for child in dict.values {
+                    stack.append(child)
+                }
+            case let array as [Any]:
+                maxSize = max(maxSize, array.count)
+
+                // Early exit: if we've already exceeded the limit, no need to continue
+                if maxSize > maxArraySize {
+                    return maxSize
+                }
+
+                for child in array {
+                    stack.append(child)
+                }
+            default:
+                break
+            }
         }
+
+        return maxSize
     }
 
     /// Flatten nested validation errors into simple string messages

@@ -268,7 +268,7 @@
 /* Begin PBXShellScriptBuildPhase section */
 		D4BACKUP012F4000000099999 /* Verify Backup Schema Sync */ = {
 			isa = PBXShellScriptBuildPhase;
-			alwaysOutOfDate = 1;
+			alwaysOutOfDate = 0;
 			buildActionMask = 2147483647;
 			files = (
 			);

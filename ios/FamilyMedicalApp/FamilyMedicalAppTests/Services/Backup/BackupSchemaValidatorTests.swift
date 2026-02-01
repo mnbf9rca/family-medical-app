@@ -39,7 +39,7 @@ struct BackupSchemaValidatorTests {
         let jsonData = try encoder.encode(file)
 
         // Validate against the JSON Schema
-        let validator = BackupSchemaValidator()
+        let validator = BackupSchemaValidator.forTesting()
         let result = validator.validate(jsonData: jsonData)
 
         // The serialized Swift model MUST validate against the schema
@@ -102,7 +102,7 @@ struct BackupSchemaValidatorTests {
         let jsonData = try encoder.encode(file)
 
         // Validate against the JSON Schema
-        let validator = BackupSchemaValidator()
+        let validator = BackupSchemaValidator.forTesting()
         let result = validator.validate(jsonData: jsonData)
 
         // The serialized Swift model MUST validate against the schema
@@ -113,7 +113,7 @@ struct BackupSchemaValidatorTests {
 
     @Test("Valid encrypted backup passes validation")
     func validEncryptedBackupPassesValidation() {
-        let validator = BackupSchemaValidator()
+        let validator = BackupSchemaValidator.forTesting()
         let validJSON = Data("""
         {
             "$schema": "https://recordwell.app/schemas/backup-v1.json",
@@ -146,7 +146,7 @@ struct BackupSchemaValidatorTests {
 
     @Test("Valid unencrypted backup passes validation")
     func validUnencryptedBackupPassesValidation() {
-        let validator = BackupSchemaValidator()
+        let validator = BackupSchemaValidator.forTesting()
         let validJSON = Data("""
         {
             "formatName": "RecordWell Backup",
@@ -174,7 +174,7 @@ struct BackupSchemaValidatorTests {
 
     @Test("Missing required field fails validation")
     func missingRequiredFieldFailsValidation() {
-        let validator = BackupSchemaValidator()
+        let validator = BackupSchemaValidator.forTesting()
         let invalidJSON = Data("""
         {
             "formatName": "RecordWell Backup",
@@ -191,7 +191,7 @@ struct BackupSchemaValidatorTests {
 
     @Test("Wrong formatName fails validation")
     func wrongFormatNameFailsValidation() {
-        let validator = BackupSchemaValidator()
+        let validator = BackupSchemaValidator.forTesting()
         let invalidJSON = Data("""
         {
             "formatName": "Wrong Format",
@@ -217,7 +217,7 @@ struct BackupSchemaValidatorTests {
 
     @Test("Invalid version format fails validation")
     func invalidVersionFormatFailsValidation() {
-        let validator = BackupSchemaValidator()
+        let validator = BackupSchemaValidator.forTesting()
         let invalidJSON = Data("""
         {
             "formatName": "RecordWell Backup",
@@ -245,7 +245,7 @@ struct BackupSchemaValidatorTests {
 
     @Test("Exceeding max nesting depth fails validation")
     func exceedingMaxNestingDepthFailsValidation() {
-        let validator = BackupSchemaValidator(maxNestingDepth: 5)
+        let validator = BackupSchemaValidator.forTesting(maxNestingDepth: 5)
 
         // Create deeply nested JSON (deeper than 5 levels)
         let deeplyNested = Data("""
@@ -259,7 +259,7 @@ struct BackupSchemaValidatorTests {
 
     @Test("Exceeding max array size fails validation")
     func exceedingMaxArraySizeFailsValidation() throws {
-        let validator = BackupSchemaValidator(maxArraySize: 10)
+        let validator = BackupSchemaValidator.forTesting(maxArraySize: 10)
 
         // Create JSON with array larger than 10 items
         let largeArray = Array(repeating: "item", count: 20)
@@ -274,7 +274,7 @@ struct BackupSchemaValidatorTests {
 
     @Test("Malformed JSON fails validation")
     func malformedJSONFailsValidation() {
-        let validator = BackupSchemaValidator()
+        let validator = BackupSchemaValidator.forTesting()
         let malformedJSON = Data("{ not valid json }".utf8)
 
         let result = validator.validate(jsonData: malformedJSON)
@@ -286,7 +286,7 @@ struct BackupSchemaValidatorTests {
 
     @Test("Returns correct schema version")
     func returnsCorrectSchemaVersion() {
-        let validator = BackupSchemaValidator()
+        let validator = BackupSchemaValidator.forTesting()
         #expect(validator.schemaVersion == "1.0")
     }
 
@@ -294,7 +294,7 @@ struct BackupSchemaValidatorTests {
 
     @Test("Empty arrays pass DoS validation")
     func emptyArraysPassDoSValidation() {
-        let validator = BackupSchemaValidator(maxArraySize: 10)
+        let validator = BackupSchemaValidator.forTesting(maxArraySize: 10)
         let json = Data("""
         {"items": [], "nested": {"more": []}}
         """.utf8)
@@ -306,7 +306,7 @@ struct BackupSchemaValidatorTests {
 
     @Test("Empty dictionaries pass DoS validation")
     func emptyDictionariesPassDoSValidation() {
-        let validator = BackupSchemaValidator(maxNestingDepth: 3)
+        let validator = BackupSchemaValidator.forTesting(maxNestingDepth: 3)
         let json = Data("""
         {"a": {}, "b": {"c": {}}}
         """.utf8)
@@ -318,7 +318,7 @@ struct BackupSchemaValidatorTests {
 
     @Test("Primitive root value passes depth check")
     func primitiveRootValuePassesDepthCheck() {
-        let validator = BackupSchemaValidator(maxNestingDepth: 1)
+        let validator = BackupSchemaValidator.forTesting(maxNestingDepth: 1)
         let json = Data("\"just a string\"".utf8)
 
         let result = validator.validate(jsonData: json)
@@ -328,7 +328,7 @@ struct BackupSchemaValidatorTests {
 
     @Test("Deeply nested arrays trigger depth limit")
     func deeplyNestedArraysTriggerDepthLimit() {
-        let validator = BackupSchemaValidator(maxNestingDepth: 3)
+        let validator = BackupSchemaValidator.forTesting(maxNestingDepth: 3)
         let json = Data("""
         [[[[["too deep"]]]]]
         """.utf8)
@@ -340,7 +340,7 @@ struct BackupSchemaValidatorTests {
 
     @Test("Nested array sizes are checked")
     func nestedArraySizesAreChecked() {
-        let validator = BackupSchemaValidator(maxArraySize: 5)
+        let validator = BackupSchemaValidator.forTesting(maxArraySize: 5)
         let json = Data("""
         {"outer": [{"inner": [1, 2, 3, 4, 5, 6, 7]}]}
         """.utf8)
@@ -352,7 +352,7 @@ struct BackupSchemaValidatorTests {
 
     @Test("Within limits passes DoS checks")
     func withinLimitsPassesDoSChecks() {
-        let validator = BackupSchemaValidator(maxNestingDepth: 10, maxArraySize: 100)
+        let validator = BackupSchemaValidator.forTesting(maxNestingDepth: 10, maxArraySize: 100)
         let json = Data("""
         {"a": {"b": {"c": [1, 2, 3]}}}
         """.utf8)
