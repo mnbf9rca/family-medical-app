@@ -62,6 +62,8 @@ FILE_EXCEPTIONS = {
     "BackupShareSheet.swift": 60.0,  # UIActivityViewController wrapper - completion handler needs UIKit context
     # Settings View - SwiftUI sheets/alerts/buttons don't execute in unit tests; delegates to SettingsViewModel (87%+)
     "SettingsView.swift": 0.0,
+    # Demo Setup View - loading screen with animated sparkles; .task modifier calls ViewModel which is fully tested
+    "DemoSetupView.swift": 0.0,
     # ViewModels with static factory methods that use production dependencies
     "AttachmentViewerViewModel.swift": 71.0,  # createDefaultAttachmentService() uses real Core Data/services
     "AttachmentPickerViewModel.swift": 73.0,  # createDefaultAttachmentService() + test seeding code (raised from 58% after fixing test determinism)
