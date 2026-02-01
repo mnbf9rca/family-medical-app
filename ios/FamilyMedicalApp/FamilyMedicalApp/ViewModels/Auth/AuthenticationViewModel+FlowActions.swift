@@ -165,6 +165,47 @@ extension AuthenticationViewModel {
         errorMessage = nil
     }
 
+    // MARK: - Demo Mode Actions
+
+    /// User selected "Try Demo" from welcome screen
+    func selectDemo() {
+        flowState = .demo
+        errorMessage = nil
+    }
+
+    /// Enter demo mode - creates demo account with sample data
+    @MainActor
+    func enterDemoMode() async {
+        isLoading = true
+        errorMessage = nil
+
+        do {
+            try await demoModeService.enterDemoMode()
+            isAuthenticated = true
+            flowState = .authenticated
+        } catch {
+            errorMessage = "Failed to start demo: \(error.localizedDescription)"
+            flowState = .welcome
+        }
+
+        isLoading = false
+    }
+
+    /// Exit demo mode - deletes all demo data and returns to welcome
+    @MainActor
+    func exitDemoMode() async {
+        isLoading = true
+
+        // Exit demo mode (clears keys)
+        await demoModeService.exitDemoMode()
+
+        isSetUp = false
+        isAuthenticated = false
+        flowState = .welcome
+
+        isLoading = false
+    }
+
     // MARK: - Flow Navigation
 
     func goBack() {

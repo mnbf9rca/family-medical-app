@@ -425,4 +425,38 @@ final class MockPrimaryKeyProvider: PrimaryKeyProviderProtocol, @unchecked Senda
     }
 }
 
+// MARK: - Mock Demo Mode Service
+
+/// Mock demo mode service for testing demo flows
+final class MockDemoModeService: DemoModeServiceProtocol, @unchecked Sendable {
+    // MARK: - Tracking
+
+    var enterDemoModeCalled = false
+    var exitDemoModeCalled = false
+
+    // MARK: - Configuration
+
+    var shouldFailEnter = false
+    private(set) var inDemoMode = false
+
+    // MARK: - DemoModeServiceProtocol
+
+    var isInDemoMode: Bool {
+        inDemoMode
+    }
+
+    func enterDemoMode() async throws {
+        enterDemoModeCalled = true
+        if shouldFailEnter {
+            throw CryptoError.keyDerivationFailed("Mock failure")
+        }
+        inDemoMode = true
+    }
+
+    func exitDemoMode() async {
+        exitDemoModeCalled = true
+        inDemoMode = false
+    }
+}
+
 // swiftlint:enable unneeded_throws_rethrows

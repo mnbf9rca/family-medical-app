@@ -121,6 +121,7 @@ final class AuthenticationViewModel {
     private let biometricService: BiometricServiceProtocol
     private let passwordValidator: PasswordValidationServiceProtocol
     let lockStateService: LockStateServiceProtocol
+    let demoModeService: DemoModeServiceProtocol
 
     // MARK: - Initialization
 
@@ -128,12 +129,14 @@ final class AuthenticationViewModel {
         authService: AuthenticationServiceProtocol? = nil,
         biometricService: BiometricServiceProtocol? = nil,
         passwordValidator: PasswordValidationServiceProtocol = PasswordValidationService(),
-        lockStateService: LockStateServiceProtocol = LockStateService()
+        lockStateService: LockStateServiceProtocol = LockStateService(),
+        demoModeService: DemoModeServiceProtocol = DemoModeService()
     ) {
         self.authService = authService ?? AuthenticationService()
         self.biometricService = biometricService ?? BiometricService()
         self.passwordValidator = passwordValidator
         self.lockStateService = lockStateService
+        self.demoModeService = demoModeService
 
         // Initialize setup state from authService
         isSetUp = self.authService.isSetUp

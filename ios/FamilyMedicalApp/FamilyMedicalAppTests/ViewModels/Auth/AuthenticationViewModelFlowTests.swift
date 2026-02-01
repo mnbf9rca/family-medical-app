@@ -395,4 +395,5 @@ struct AuthenticationViewModelFlowTests {
     }
 
     // Account Exists Confirmation Tests moved to AuthenticationViewModelAccountExistsTests.swift
+    // Demo Mode Tests moved to AuthenticationViewModelDemoTests.swift
 }
