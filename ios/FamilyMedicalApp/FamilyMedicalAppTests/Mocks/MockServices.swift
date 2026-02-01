@@ -175,6 +175,7 @@ final class MockViewModelBiometricService: BiometricServiceProtocol {
 final class MockLockStateService: LockStateServiceProtocol {
     var isLocked: Bool = false
     var lockTimeoutSeconds: Int = 300
+    var isDemoMode: Bool = false
 
     // Tracking properties for testing
     var recordBackgroundTimeCalled = false
