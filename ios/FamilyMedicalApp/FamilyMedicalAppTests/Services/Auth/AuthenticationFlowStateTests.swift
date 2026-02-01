@@ -87,6 +87,7 @@ struct AuthenticationFlowStateTests {
             .passphraseEntry(username: "testuser", isReturningUser: true),
             .biometricSetup(username: "testuser", passphrase: "pass", isReturningUser: false),
             .accountExistsConfirmation(username: "testuser", loginResult: loginResult, enableBiometric: false),
+            .demo,
             .unlock,
             .authenticated
         ]
@@ -155,5 +156,23 @@ struct AuthenticationFlowStateTests {
             enableBiometric: false
         )
         #expect(state1 != state2)
+    }
+
+    // MARK: - Demo Mode Tests
+
+    @Test
+    func demoStateExists() {
+        let state = AuthenticationFlowState.demo
+        #expect(state == .demo)
+    }
+
+    @Test
+    func demoStateIsDistinctFromOtherStates() {
+        let demoState = AuthenticationFlowState.demo
+        let welcomeState = AuthenticationFlowState.welcome
+        let authenticatedState = AuthenticationFlowState.authenticated
+
+        #expect(demoState != welcomeState)
+        #expect(demoState != authenticatedState)
     }
 }
