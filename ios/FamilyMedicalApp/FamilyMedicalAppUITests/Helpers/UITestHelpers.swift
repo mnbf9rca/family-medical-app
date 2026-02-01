@@ -178,6 +178,24 @@ extension XCUIApplication {
         XCTAssertTrue(navTitle.waitForExistence(timeout: timeout), "Should navigate to main app")
     }
 
+    /// Enter demo mode for fast test setup (skips account creation)
+    /// - Parameter timeout: Max wait time for demo setup (default: 10s for key generation and data seeding)
+    /// - Note: This is faster than createAccount() because it skips OPAQUE registration
+    func enterDemoMode(timeout: TimeInterval = 10) {
+        // Step 1: Welcome Screen - tap "Try Demo"
+        let welcomeHeader = staticTexts["Family Medical"]
+        XCTAssertTrue(welcomeHeader.waitForExistence(timeout: timeout), "Welcome view should appear")
+
+        let tryDemoButton = buttons["tryDemoButton"]
+        XCTAssertTrue(tryDemoButton.waitForExistence(timeout: timeout), "Try Demo button should exist")
+        tryDemoButton.tap()
+
+        // Step 2: Wait for demo setup to complete
+        // Demo setup shows a loading screen while creating demo key and seeding data
+        let navTitle = navigationBars["Members"]
+        XCTAssertTrue(navTitle.waitForExistence(timeout: timeout), "Should navigate to main app after demo setup")
+    }
+
     /// Unlock app with passphrase (for returning user)
     /// - Parameters:
     ///   - passphrase: Passphrase to use (default: "Unique-Horse-Battery-Staple-2024")
