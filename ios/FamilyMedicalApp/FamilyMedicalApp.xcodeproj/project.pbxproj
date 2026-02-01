@@ -13,6 +13,7 @@
 		D445F7DE2EFB435900E07F78 /* Clibsodium in Frameworks */ = {isa = PBXBuildFile; productRef = D445F7DD2EFB435900E07F78 /* Clibsodium */; };
 		D445F7E02EFB435900E07F78 /* Sodium in Frameworks */ = {isa = PBXBuildFile; productRef = D445F7DF2EFB435900E07F78 /* Sodium */; };
 		D49F98D32F2A9E5B00E436A0 /* OpaqueSwift in Frameworks */ = {isa = PBXBuildFile; productRef = D49F98D22F2A9E5B00E436A0 /* OpaqueSwift */; };
+		D4SCHEMA012F3000000099999 /* JSONSchema in Frameworks */ = {isa = PBXBuildFile; productRef = D4SCHEMA002F3000000099999 /* JSONSchema */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -66,6 +67,7 @@
 				D445F7DE2EFB435900E07F78 /* Clibsodium in Frameworks */,
 				D445F7E02EFB435900E07F78 /* Sodium in Frameworks */,
 				D49F98D32F2A9E5B00E436A0 /* OpaqueSwift in Frameworks */,
+				D4SCHEMA012F3000000099999 /* JSONSchema in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -133,6 +135,7 @@
 				D445F7DD2EFB435900E07F78 /* Clibsodium */,
 				D445F7DF2EFB435900E07F78 /* Sodium */,
 				D49F98D22F2A9E5B00E436A0 /* OpaqueSwift */,
+				D4SCHEMA002F3000000099999 /* JSONSchema */,
 			);
 			productName = FamilyMedicalApp;
 			productReference = D445F79A2EF7E93C00E07F78 /* FamilyMedicalApp.app */;
@@ -223,6 +226,7 @@
 				D445F7DC2EFB435900E07F78 /* XCRemoteSwiftPackageReference "swift-sodium" */,
 				D40AC5A22F0332AD00564AAD /* XCRemoteSwiftPackageReference "ViewInspector" */,
 				D49F98D12F2A9E5B00E436A0 /* XCLocalSwiftPackageReference "../../opaque-swift" */,
+				D4SCHEMA032F3000000099999 /* XCRemoteSwiftPackageReference "swift-json-schema" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = D445F79B2EF7E93C00E07F78 /* Products */;
@@ -676,6 +680,14 @@
 				minimumVersion = 0.9.1;
 			};
 		};
+		D4SCHEMA032F3000000099999 /* XCRemoteSwiftPackageReference "swift-json-schema" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/ajevans99/swift-json-schema";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.2.1;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -707,6 +719,11 @@
 		D49F98D22F2A9E5B00E436A0 /* OpaqueSwift */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = OpaqueSwift;
+		};
+		D4SCHEMA002F3000000099999 /* JSONSchema */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D4SCHEMA032F3000000099999 /* XCRemoteSwiftPackageReference "swift-json-schema" */;
+			productName = JSONSchema;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
