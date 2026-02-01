@@ -1,13 +1,6 @@
 import CryptoKit
 import Foundation
 
-/// Configuration for a demo person
-struct DemoPersonConfig {
-    let name: String
-    let labels: [String]
-    let notes: String?
-}
-
 /// Protocol for seeding demo data
 protocol DemoDataSeederProtocol: Sendable {
     /// Seed sample data for demo mode
@@ -15,47 +8,23 @@ protocol DemoDataSeederProtocol: Sendable {
     func seedDemoData(primaryKey: SymmetricKey) async throws
 }
 
-/// Service that creates sample data for demo mode
+/// Service that imports demo data from bundled JSON file
 final class DemoDataSeeder: DemoDataSeederProtocol, @unchecked Sendable {
-    // MARK: - Demo Data Templates
-
-    /// Pre-defined demo persons for sample data
-    static let demoPersons: [DemoPersonConfig] = [
-        DemoPersonConfig(
-            name: "Alex Johnson",
-            labels: ["Self"],
-            notes: "Demo account holder"
-        ),
-        DemoPersonConfig(
-            name: "Sam Johnson",
-            labels: ["Spouse", "Household Member"],
-            notes: nil
-        ),
-        DemoPersonConfig(
-            name: "Jamie Johnson",
-            labels: ["Child", "Dependent"],
-            notes: "Age 8"
-        )
-    ]
-
     // MARK: - Dependencies
 
-    private let personRepository: PersonRepositoryProtocol
-    private let schemaSeeder: SchemaSeederProtocol
-    private let fmkService: FamilyMemberKeyServiceProtocol
+    private let demoDataLoader: DemoDataLoaderProtocol
+    private let importService: ImportServiceProtocol
     private let logger: CategoryLoggerProtocol
 
     // MARK: - Initialization
 
     init(
-        personRepository: PersonRepositoryProtocol,
-        schemaSeeder: SchemaSeederProtocol,
-        fmkService: FamilyMemberKeyServiceProtocol,
+        demoDataLoader: DemoDataLoaderProtocol = DemoDataLoader(),
+        importService: ImportServiceProtocol? = nil,
         logger: CategoryLoggerProtocol? = nil
     ) {
-        self.personRepository = personRepository
-        self.schemaSeeder = schemaSeeder
-        self.fmkService = fmkService
+        self.demoDataLoader = demoDataLoader
+        self.importService = importService ?? Self.makeDefaultImportService()
         self.logger = logger ?? LoggingService.shared.logger(category: .storage)
     }
 
@@ -64,35 +33,58 @@ final class DemoDataSeeder: DemoDataSeederProtocol, @unchecked Sendable {
     func seedDemoData(primaryKey: SymmetricKey) async throws {
         logger.logOperation("seedDemoData", state: "started")
 
-        for personConfig in Self.demoPersons {
-            // Create person
-            let person = try Person(
-                name: personConfig.name,
-                labels: personConfig.labels,
-                notes: personConfig.notes
-            )
+        // Load demo data from bundled JSON
+        let payload = try demoDataLoader.loadDemoData()
 
-            // Generate and store FMK for this person
-            let fmk = fmkService.generateFMK()
-            try fmkService.storeFMK(
-                fmk,
-                familyMemberID: person.id.uuidString,
-                primaryKey: primaryKey
-            )
-
-            // Save person (encrypted with FMK via repository)
-            try await personRepository.save(person, primaryKey: primaryKey)
-
-            // Seed schemas for this person
-            try await schemaSeeder.seedBuiltInSchemas(
-                forPerson: person.id,
-                familyMemberKey: fmk
-            )
-
-            logger.debug("Created demo person: \(personConfig.name)")
-        }
+        // Import using standard import service
+        try await importService.importData(payload, primaryKey: primaryKey)
 
         logger.logOperation("seedDemoData", state: "completed")
-        logger.info("Seeded \(Self.demoPersons.count) demo persons")
+        logger.info("Seeded \(payload.persons.count) demo persons, \(payload.records.count) records")
+    }
+
+    // MARK: - Factory
+
+    private static func makeDefaultImportService() -> ImportServiceProtocol {
+        let coreDataStack = CoreDataStack.shared
+        let encryptionService = EncryptionService()
+        let fmkService = FamilyMemberKeyService()
+
+        // AttachmentFileStorageService init can throw, but if it fails we have bigger problems
+        // Use fatalError since this is called during app initialization
+        let fileStorage: AttachmentFileStorageServiceProtocol
+        do {
+            fileStorage = try AttachmentFileStorageService()
+        } catch {
+            fatalError("Failed to initialize attachment file storage: \(error)")
+        }
+
+        return ImportService(
+            personRepository: PersonRepository(
+                coreDataStack: coreDataStack,
+                encryptionService: encryptionService,
+                fmkService: fmkService
+            ),
+            recordRepository: MedicalRecordRepository(
+                coreDataStack: coreDataStack
+            ),
+            recordContentService: RecordContentService(encryptionService: encryptionService),
+            attachmentService: AttachmentService(
+                attachmentRepository: AttachmentRepository(
+                    coreDataStack: coreDataStack,
+                    encryptionService: encryptionService,
+                    fmkService: fmkService
+                ),
+                fileStorage: fileStorage,
+                imageProcessor: ImageProcessingService(),
+                encryptionService: encryptionService,
+                fmkService: fmkService
+            ),
+            customSchemaRepository: CustomSchemaRepository(
+                coreDataStack: coreDataStack,
+                encryptionService: encryptionService
+            ),
+            fmkService: fmkService
+        )
     }
 }

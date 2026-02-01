@@ -42,9 +42,13 @@ final class MockExportService: ExportServiceProtocol, @unchecked Sendable {
 final class MockImportService: ImportServiceProtocol, @unchecked Sendable {
     var shouldFail = false
     var importCallCount = 0
+    var lastImportedPayload: BackupPayload?
+    var lastPrimaryKey: SymmetricKey?
 
-    func importData(_: BackupPayload, primaryKey _: SymmetricKey) async throws {
+    func importData(_ payload: BackupPayload, primaryKey: SymmetricKey) async throws {
         importCallCount += 1
+        lastImportedPayload = payload
+        lastPrimaryKey = primaryKey
         if shouldFail {
             throw BackupError.importFailed("Mock failure")
         }

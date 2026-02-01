@@ -4,101 +4,135 @@ import Testing
 @testable import FamilyMedicalApp
 
 struct DemoDataSeederTests {
-    // MARK: - Demo Persons Tests
-
-    @Test
-    func demoPersons_hasAtLeastOnePerson() {
-        let persons = DemoDataSeeder.demoPersons
-        #expect(persons.isEmpty == false)
-    }
-
-    @Test
-    func demoPersons_haveRealisticNames() {
-        let persons = DemoDataSeeder.demoPersons
-        for person in persons {
-            #expect(!person.name.isEmpty)
-        }
-    }
-
-    @Test
-    func demoPersons_includeVariousLabels() {
-        let allLabels = DemoDataSeeder.demoPersons.flatMap(\.labels)
-        // Should have at least Self, Spouse, and Child labels
-        #expect(allLabels.contains("Self"))
-        #expect(allLabels.contains("Spouse") || allLabels.contains("Household Member"))
-        #expect(allLabels.contains("Child") || allLabels.contains("Dependent"))
-    }
-
     // MARK: - Seed Demo Data Tests
 
     @Test
-    func seedDemoData_savesPersonsToRepository() async throws {
-        let mockPersonRepository = MockPersonRepository()
-        let mockSchemaSeeder = MockSchemaSeeder()
-        let mockFMKService = MockFamilyMemberKeyService()
-        let sut = DemoDataSeeder(
-            personRepository: mockPersonRepository,
-            schemaSeeder: mockSchemaSeeder,
-            fmkService: mockFMKService
+    func seedDemoDataCallsLoaderAndImport() async throws {
+        let mockLoader = MockDemoDataLoader()
+        let mockImport = MockImportService()
+        let testKey = SymmetricKey(size: .bits256)
+
+        let seeder = DemoDataSeeder(
+            demoDataLoader: mockLoader,
+            importService: mockImport
         )
 
-        let demoKey = SymmetricKey(size: .bits256)
-        try await sut.seedDemoData(primaryKey: demoKey)
+        try await seeder.seedDemoData(primaryKey: testKey)
 
-        #expect(mockPersonRepository.saveCallCount == DemoDataSeeder.demoPersons.count)
+        #expect(mockLoader.loadCalled == true)
+        #expect(mockImport.importCallCount == 1)
     }
 
     @Test
-    func seedDemoData_seedsSchemasForEachPerson() async throws {
-        let mockPersonRepository = MockPersonRepository()
-        let mockSchemaSeeder = MockSchemaSeeder()
-        let mockFMKService = MockFamilyMemberKeyService()
-        let sut = DemoDataSeeder(
-            personRepository: mockPersonRepository,
-            schemaSeeder: mockSchemaSeeder,
-            fmkService: mockFMKService
+    func seedDemoDataPassesPayloadToImportService() async throws {
+        let mockLoader = MockDemoDataLoader()
+        let expectedPersonCount = 5
+        mockLoader.payload = BackupPayload(
+            exportedAt: Date(),
+            appVersion: "1.0",
+            metadata: BackupMetadata(
+                personCount: expectedPersonCount,
+                recordCount: 0,
+                attachmentCount: 0,
+                schemaCount: 0
+            ),
+            persons: (0 ..< expectedPersonCount).map { index in
+                PersonBackup(
+                    id: UUID(),
+                    name: "Test Person \(index)",
+                    dateOfBirth: nil,
+                    labels: [],
+                    notes: nil,
+                    createdAt: Date(),
+                    updatedAt: Date()
+                )
+            },
+            records: [],
+            attachments: [],
+            schemas: []
         )
 
-        let demoKey = SymmetricKey(size: .bits256)
-        try await sut.seedDemoData(primaryKey: demoKey)
+        let mockImport = MockImportService()
+        let testKey = SymmetricKey(size: .bits256)
 
-        #expect(mockSchemaSeeder.seedCallCount == DemoDataSeeder.demoPersons.count)
+        let seeder = DemoDataSeeder(
+            demoDataLoader: mockLoader,
+            importService: mockImport
+        )
+
+        try await seeder.seedDemoData(primaryKey: testKey)
+
+        #expect(mockImport.lastImportedPayload?.persons.count == expectedPersonCount)
     }
 
     @Test
-    func seedDemoData_createsFMKForEachPerson() async throws {
-        let mockPersonRepository = MockPersonRepository()
-        let mockSchemaSeeder = MockSchemaSeeder()
-        let mockFMKService = MockFamilyMemberKeyService()
-        let sut = DemoDataSeeder(
-            personRepository: mockPersonRepository,
-            schemaSeeder: mockSchemaSeeder,
-            fmkService: mockFMKService
+    func seedDemoDataHandlesLoaderFailure() async throws {
+        let mockLoader = MockDemoDataLoader()
+        mockLoader.shouldFail = true
+
+        let mockImport = MockImportService()
+        let testKey = SymmetricKey(size: .bits256)
+
+        let seeder = DemoDataSeeder(
+            demoDataLoader: mockLoader,
+            importService: mockImport
         )
 
-        let demoKey = SymmetricKey(size: .bits256)
-        try await sut.seedDemoData(primaryKey: demoKey)
-
-        // FMK service should have stored FMKs for each person
-        #expect(mockFMKService.storedFMKs.count == DemoDataSeeder.demoPersons.count)
-    }
-
-    @Test
-    func seedDemoData_handlesRepositoryFailure() async throws {
-        let mockPersonRepository = MockPersonRepository()
-        mockPersonRepository.shouldFailSave = true
-        let mockSchemaSeeder = MockSchemaSeeder()
-        let mockFMKService = MockFamilyMemberKeyService()
-        let sut = DemoDataSeeder(
-            personRepository: mockPersonRepository,
-            schemaSeeder: mockSchemaSeeder,
-            fmkService: mockFMKService
-        )
-
-        let demoKey = SymmetricKey(size: .bits256)
-
-        await #expect(throws: RepositoryError.self) {
-            try await sut.seedDemoData(primaryKey: demoKey)
+        await #expect(throws: DemoDataLoaderError.self) {
+            try await seeder.seedDemoData(primaryKey: testKey)
         }
+
+        #expect(mockImport.importCallCount == 0)
+    }
+
+    @Test
+    func seedDemoDataHandlesImportFailure() async throws {
+        let mockLoader = MockDemoDataLoader()
+        let mockImport = MockImportService()
+        mockImport.shouldFail = true
+
+        let testKey = SymmetricKey(size: .bits256)
+
+        let seeder = DemoDataSeeder(
+            demoDataLoader: mockLoader,
+            importService: mockImport
+        )
+
+        await #expect(throws: BackupError.self) {
+            try await seeder.seedDemoData(primaryKey: testKey)
+        }
+    }
+
+    @Test
+    func initWithDefaultsCreatesValidSeeder() {
+        // Just verify the default initializer doesn't crash
+        // Actual functionality tested with mocks
+        // The initializer exercises makeDefaultImportService factory
+        let seeder = DemoDataSeeder()
+        _ = seeder // Use to silence warning
+    }
+}
+
+// MARK: - Mock Demo Data Loader
+
+final class MockDemoDataLoader: DemoDataLoaderProtocol, @unchecked Sendable {
+    var loadCalled = false
+    var shouldFail = false
+    var payload = BackupPayload(
+        exportedAt: Date(),
+        appVersion: "1.0",
+        metadata: BackupMetadata(personCount: 0, recordCount: 0, attachmentCount: 0, schemaCount: 0),
+        persons: [],
+        records: [],
+        attachments: [],
+        schemas: []
+    )
+
+    func loadDemoData() throws -> BackupPayload {
+        loadCalled = true
+        if shouldFail {
+            throw DemoDataLoaderError.fileNotFound
+        }
+        return payload
     }
 }
