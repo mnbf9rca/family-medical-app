@@ -25,6 +25,12 @@ enum UITestingHelpers {
         isUITesting && CommandLine.arguments.contains("--seed-test-attachments")
     }
 
+    /// Returns true if demo mode should be used for faster test setup
+    /// - Note: When enabled, tests can use demo mode instead of full account creation
+    static var shouldUseDemoMode: Bool {
+        isUITesting && CommandLine.arguments.contains("--use-demo-mode")
+    }
+
     /// Test attachment data for UI coverage testing
     struct TestAttachmentData {
         let id: UUID

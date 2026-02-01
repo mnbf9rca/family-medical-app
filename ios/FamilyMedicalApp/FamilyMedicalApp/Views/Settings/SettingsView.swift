@@ -13,6 +13,9 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             List {
+                if viewModel.isDemoMode {
+                    demoModeSection
+                }
                 backupSection
             }
             .navigationTitle("Settings")
@@ -58,6 +61,49 @@ struct SettingsView: View {
             } message: {
                 Text("Your data has been successfully imported.")
             }
+            .confirmationDialog(
+                "Exit Demo Mode?",
+                isPresented: $viewModel.showingExitDemoConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button("Exit Demo", role: .destructive) {
+                    Task {
+                        await viewModel.confirmExitDemo()
+                    }
+                }
+                Button("Cancel", role: .cancel) {
+                    viewModel.cancelExitDemo()
+                }
+            } message: {
+                Text("All demo data will be deleted. You'll return to the welcome screen.")
+            }
+            .onChange(of: viewModel.demoModeExited) { _, exited in
+                if exited {
+                    dismiss()
+                }
+            }
+        }
+    }
+
+    private var demoModeSection: some View {
+        Section {
+            HStack {
+                Image(systemName: "sparkles")
+                    .foregroundColor(.orange)
+                Text("Demo Mode Active")
+                    .fontWeight(.medium)
+                Spacer()
+            }
+            .accessibilityIdentifier("demoModeIndicator")
+
+            Button(role: .destructive) {
+                viewModel.showExitDemoConfirmation()
+            } label: {
+                Label("Exit Demo Mode", systemImage: "rectangle.portrait.and.arrow.right")
+            }
+            .accessibilityIdentifier("exitDemoButton")
+        } footer: {
+            Text("You're using demo mode with sample data. No real account has been created.")
         }
     }
 

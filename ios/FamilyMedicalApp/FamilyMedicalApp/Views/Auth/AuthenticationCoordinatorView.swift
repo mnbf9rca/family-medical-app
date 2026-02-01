@@ -34,6 +34,9 @@ struct AuthenticationCoordinatorView: View {
             case let .accountExistsConfirmation(username, _, _):
                 AccountExistsConfirmationView(viewModel: viewModel, username: username)
 
+            case .demo:
+                DemoSetupView(viewModel: viewModel)
+
             case .unlock:
                 UnlockView(viewModel: viewModel)
 
@@ -130,6 +133,11 @@ struct MainAppView: View {
                     Button("OK", role: .cancel) {}
                 } message: {
                     Text(primaryKeyError ?? "")
+                }
+                .onReceive(NotificationCenter.default.publisher(for: .demoModeExitRequested)) { _ in
+                    Task {
+                        await viewModel.exitDemoMode()
+                    }
                 }
         }
     }

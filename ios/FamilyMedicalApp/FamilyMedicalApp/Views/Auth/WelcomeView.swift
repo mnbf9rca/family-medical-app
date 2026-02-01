@@ -57,6 +57,30 @@ struct WelcomeView: View {
                 .foregroundColor(.primary)
                 .cornerRadius(10)
                 .accessibilityIdentifier("signInButton")
+
+                // Demo mode separator
+                HStack {
+                    Rectangle()
+                        .fill(Color(.systemGray4))
+                        .frame(height: 1)
+                    Text("or")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Rectangle()
+                        .fill(Color(.systemGray4))
+                        .frame(height: 1)
+                }
+                .padding(.vertical, 8)
+
+                // Demo mode button
+                Button {
+                    viewModel.selectDemo()
+                } label: {
+                    Label("Try Demo", systemImage: "sparkles")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+                .accessibilityIdentifier("tryDemoButton")
             }
             .padding(.horizontal)
 

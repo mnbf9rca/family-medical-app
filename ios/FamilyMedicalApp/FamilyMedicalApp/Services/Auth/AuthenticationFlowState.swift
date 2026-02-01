@@ -14,6 +14,9 @@ import Foundation
 ///
 /// ## Daily Unlock (existing device)
 /// `.unlock` → `.authenticated`
+///
+/// ## Demo Mode Flow
+/// `.welcome` → `.demo` → `.authenticated`
 enum AuthenticationFlowState: Equatable {
     // MARK: - Initial State
 
@@ -51,6 +54,9 @@ enum AuthenticationFlowState: Equatable {
     ///   - loginResult: The pre-authenticated login result from the silent probe
     ///   - enableBiometric: Whether user wants biometric enabled
     case accountExistsConfirmation(username: String, loginResult: OpaqueLoginResult, enableBiometric: Bool)
+
+    /// Demo mode - instant access with sample data
+    case demo
 
     /// Daily unlock (existing device with setup complete)
     case unlock

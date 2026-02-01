@@ -9,6 +9,9 @@ protocol LockStateServiceProtocol {
     /// Lock timeout in seconds (default 300 = 5 minutes)
     var lockTimeoutSeconds: Int { get set }
 
+    /// Whether the app is in demo mode
+    var isDemoMode: Bool { get set }
+
     /// Record the time when app goes to background
     func recordBackgroundTime()
 
@@ -30,6 +33,7 @@ final class LockStateService: LockStateServiceProtocol {
 
     private static let backgroundTimeKey = "com.family-medical-app.background-time"
     private static let lockTimeoutKey = "com.family-medical-app.lock-timeout"
+    private static let demoModeKey = "com.family-medical-app.demo-mode"
     private static let defaultTimeout = 300 // 5 minutes
 
     // MARK: - Properties
@@ -42,6 +46,15 @@ final class LockStateService: LockStateServiceProtocol {
         }
         set {
             userDefaults.set(newValue, forKey: Self.lockTimeoutKey)
+        }
+    }
+
+    var isDemoMode: Bool {
+        get {
+            userDefaults.bool(forKey: Self.demoModeKey)
+        }
+        set {
+            userDefaults.set(newValue, forKey: Self.demoModeKey)
         }
     }
 

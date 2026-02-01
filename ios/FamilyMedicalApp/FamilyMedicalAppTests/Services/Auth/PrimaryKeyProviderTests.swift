@@ -4,7 +4,7 @@ import Testing
 @testable import FamilyMedicalApp
 
 struct PrimaryKeyProviderTests {
-    // MARK: - Tests
+    // MARK: - Normal Mode Tests
 
     @Test
     func getPrimaryKeyRetrievesKeyFromKeychain() throws {
@@ -12,8 +12,9 @@ struct PrimaryKeyProviderTests {
         let testKey = SymmetricKey(size: .bits256)
         let mockKeychain = MockKeychainService()
         mockKeychain.storedKeys["com.family-medical-app.primary-key"] = testKey
+        let mockLockState = MockLockStateService()
 
-        let provider = PrimaryKeyProvider(keychainService: mockKeychain)
+        let provider = PrimaryKeyProvider(keychainService: mockKeychain, lockStateService: mockLockState)
 
         // Retrieve key
         let retrievedKey = try provider.getPrimaryKey()
@@ -25,7 +26,8 @@ struct PrimaryKeyProviderTests {
     @Test
     func getPrimaryKeyThrowsWhenKeyNotFound() throws {
         let mockKeychain = MockKeychainService()
-        let provider = PrimaryKeyProvider(keychainService: mockKeychain)
+        let mockLockState = MockLockStateService()
+        let provider = PrimaryKeyProvider(keychainService: mockKeychain, lockStateService: mockLockState)
 
         // Expect error when no key exists
         #expect(throws: KeychainError.self) {
@@ -36,13 +38,61 @@ struct PrimaryKeyProviderTests {
     @Test
     func getPrimaryKeyUsesCorrectIdentifier() {
         let mockKeychain = MockKeychainService()
-        let provider = PrimaryKeyProvider(keychainService: mockKeychain)
+        let mockLockState = MockLockStateService()
+        let provider = PrimaryKeyProvider(keychainService: mockKeychain, lockStateService: mockLockState)
 
         // Try to get key (will fail, but we can verify the identifier used)
         _ = try? provider.getPrimaryKey()
 
         // Verify the correct identifier was requested
         #expect(mockKeychain.lastRetrievedIdentifier == "com.family-medical-app.primary-key")
+    }
+
+    // MARK: - Demo Mode Tests
+
+    @Test
+    func getPrimaryKeyUsesDemoIdentifierWhenInDemoMode() {
+        let mockKeychain = MockKeychainService()
+        let mockLockState = MockLockStateService()
+        mockLockState.isDemoMode = true
+
+        let provider = PrimaryKeyProvider(keychainService: mockKeychain, lockStateService: mockLockState)
+
+        // Try to get key (will fail, but we can verify the identifier used)
+        _ = try? provider.getPrimaryKey()
+
+        // Verify the demo identifier was requested
+        #expect(mockKeychain.lastRetrievedIdentifier == DemoModeService.demoPrimaryKeyIdentifier)
+    }
+
+    @Test
+    func getPrimaryKeyRetrievesDemoKeyWhenInDemoMode() throws {
+        let testKey = SymmetricKey(size: .bits256)
+        let mockKeychain = MockKeychainService()
+        mockKeychain.storedKeys[DemoModeService.demoPrimaryKeyIdentifier] = testKey
+        let mockLockState = MockLockStateService()
+        mockLockState.isDemoMode = true
+
+        let provider = PrimaryKeyProvider(keychainService: mockKeychain, lockStateService: mockLockState)
+
+        // Retrieve key
+        let retrievedKey = try provider.getPrimaryKey()
+
+        // Verify key matches the demo key
+        #expect(retrievedKey.withUnsafeBytes { Data($0) } == testKey.withUnsafeBytes { Data($0) })
+    }
+
+    @Test
+    func getPrimaryKeyThrowsInDemoModeWhenDemoKeyNotFound() {
+        let mockKeychain = MockKeychainService()
+        let mockLockState = MockLockStateService()
+        mockLockState.isDemoMode = true
+        let provider = PrimaryKeyProvider(keychainService: mockKeychain, lockStateService: mockLockState)
+
+        // Expect error when demo key doesn't exist
+        #expect(throws: KeychainError.self) {
+            try provider.getPrimaryKey()
+        }
     }
 }
 

@@ -83,9 +83,14 @@ extension XCUIApplication {
     /// - Parameters:
     ///   - resetState: If true, clears all app data (keychain + Core Data)
     ///   - seedTestAttachments: If true, automatically creates test attachments for coverage
+    ///   - useDemoMode: If true, signals that demo mode should be used for faster test setup
     /// - Note: For best results, ensure hardware keyboard is disabled in the simulator:
     ///   I/O → Keyboard → Connect Hardware Keyboard (should be unchecked)
-    func launchForUITesting(resetState: Bool = false, seedTestAttachments: Bool = false) {
+    func launchForUITesting(
+        resetState: Bool = false,
+        seedTestAttachments: Bool = false,
+        useDemoMode: Bool = false
+    ) {
         launchArguments = ["--uitesting"]
 
         if resetState {
@@ -94,6 +99,10 @@ extension XCUIApplication {
 
         if seedTestAttachments {
             launchArguments.append("--seed-test-attachments")
+        }
+
+        if useDemoMode {
+            launchArguments.append("--use-demo-mode")
         }
 
         launch()
@@ -176,6 +185,24 @@ extension XCUIApplication {
         // Wait for HomeView to appear
         let navTitle = navigationBars["Members"]
         XCTAssertTrue(navTitle.waitForExistence(timeout: timeout), "Should navigate to main app")
+    }
+
+    /// Enter demo mode for fast test setup (skips account creation)
+    /// - Parameter timeout: Max wait time for demo setup (default: 10s for key generation and data seeding)
+    /// - Note: This is faster than createAccount() because it skips OPAQUE registration
+    func enterDemoMode(timeout: TimeInterval = 10) {
+        // Step 1: Welcome Screen - tap "Try Demo"
+        let welcomeHeader = staticTexts["Family Medical"]
+        XCTAssertTrue(welcomeHeader.waitForExistence(timeout: timeout), "Welcome view should appear")
+
+        let tryDemoButton = buttons["tryDemoButton"]
+        XCTAssertTrue(tryDemoButton.waitForExistence(timeout: timeout), "Try Demo button should exist")
+        tryDemoButton.tap()
+
+        // Step 2: Wait for demo setup to complete
+        // Demo setup shows a loading screen while creating demo key and seeding data
+        let navTitle = navigationBars["Members"]
+        XCTAssertTrue(navTitle.waitForExistence(timeout: timeout), "Should navigate to main app after demo setup")
     }
 
     /// Unlock app with passphrase (for returning user)

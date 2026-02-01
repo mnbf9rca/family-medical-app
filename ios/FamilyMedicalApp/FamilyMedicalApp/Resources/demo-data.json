@@ -1,0 +1,55 @@
+{
+  "$schema": "https://recordwell.app/schemas/backup-v1.json",
+  "formatName": "RecordWell Backup",
+  "formatVersion": "1.0",
+  "generator": "DemoDataGenerator/1.0",
+  "encrypted": false,
+  "checksum": {
+    "algorithm": "SHA-256",
+    "value": ""
+  },
+  "encryption": null,
+  "ciphertext": null,
+  "data": {
+    "exportedAt": "2026-02-01T00:00:00Z",
+    "appVersion": "1.0.0",
+    "metadata": {
+      "personCount": 3,
+      "recordCount": 0,
+      "attachmentCount": 0,
+      "schemaCount": 0
+    },
+    "persons": [
+      {
+        "id": "11111111-1111-1111-1111-111111111111",
+        "name": "Alex Johnson",
+        "dateOfBirth": null,
+        "labels": ["Self"],
+        "notes": "Demo account holder",
+        "createdAt": "2026-01-01T00:00:00Z",
+        "updatedAt": "2026-01-01T00:00:00Z"
+      },
+      {
+        "id": "22222222-2222-2222-2222-222222222222",
+        "name": "Sam Johnson",
+        "dateOfBirth": null,
+        "labels": ["Spouse", "Household Member"],
+        "notes": null,
+        "createdAt": "2026-01-01T00:00:00Z",
+        "updatedAt": "2026-01-01T00:00:00Z"
+      },
+      {
+        "id": "33333333-3333-3333-3333-333333333333",
+        "name": "Jamie Johnson",
+        "dateOfBirth": null,
+        "labels": ["Child", "Dependent"],
+        "notes": null,
+        "createdAt": "2026-01-01T00:00:00Z",
+        "updatedAt": "2026-01-01T00:00:00Z"
+      }
+    ],
+    "records": [],
+    "attachments": [],
+    "schemas": []
+  }
+}

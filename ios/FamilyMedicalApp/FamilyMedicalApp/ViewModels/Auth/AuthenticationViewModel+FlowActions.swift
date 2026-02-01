@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 import OSLog
 
@@ -163,6 +164,60 @@ extension AuthenticationViewModel {
         flowState = .usernameEntry(isNewUser: true)
         clearSensitiveFields()
         errorMessage = nil
+    }
+
+    // MARK: - Demo Mode Actions
+
+    /// User selected "Try Demo" from welcome screen
+    func selectDemo() {
+        flowState = .demo
+        errorMessage = nil
+    }
+
+    /// Enter demo mode - creates demo account with sample data
+    @MainActor
+    func enterDemoMode() async {
+        isLoading = true
+        errorMessage = nil
+
+        do {
+            // Create demo account and get demo key
+            let demoKey = try await demoModeService.enterDemoMode()
+
+            // Seed sample data with the demo key
+            try await seedDemoData(primaryKey: demoKey)
+
+            isAuthenticated = true
+            flowState = .authenticated
+        } catch {
+            logger.error("[demo] Failed to enter demo mode: \(error.localizedDescription, privacy: .public)")
+            errorMessage = "Failed to start demo: \(error.localizedDescription)"
+            flowState = .welcome
+        }
+
+        isLoading = false
+    }
+
+    /// Exit demo mode - deletes all demo data and returns to welcome
+    @MainActor
+    func exitDemoMode() async {
+        isLoading = true
+
+        // Exit demo mode (clears keys)
+        await demoModeService.exitDemoMode()
+
+        isSetUp = false
+        isAuthenticated = false
+        flowState = .welcome
+
+        isLoading = false
+    }
+
+    // MARK: - Demo Mode Helpers
+
+    /// Seeds demo data (persons, schemas) for demo mode
+    private func seedDemoData(primaryKey: CryptoKit.SymmetricKey) async throws {
+        try await demoDataSeeder.seedDemoData(primaryKey: primaryKey)
     }
 
     // MARK: - Flow Navigation

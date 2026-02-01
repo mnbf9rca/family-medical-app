@@ -121,6 +121,9 @@ final class AuthenticationViewModel {
     private let biometricService: BiometricServiceProtocol
     private let passwordValidator: PasswordValidationServiceProtocol
     let lockStateService: LockStateServiceProtocol
+    let demoModeService: DemoModeServiceProtocol
+    let demoDataSeeder: DemoDataSeederProtocol
+    let keychainService: KeychainServiceProtocol
 
     // MARK: - Initialization
 
@@ -128,12 +131,18 @@ final class AuthenticationViewModel {
         authService: AuthenticationServiceProtocol? = nil,
         biometricService: BiometricServiceProtocol? = nil,
         passwordValidator: PasswordValidationServiceProtocol = PasswordValidationService(),
-        lockStateService: LockStateServiceProtocol = LockStateService()
+        lockStateService: LockStateServiceProtocol = LockStateService(),
+        demoModeService: DemoModeServiceProtocol = DemoModeService(),
+        demoDataSeeder: DemoDataSeederProtocol? = nil,
+        keychainService: KeychainServiceProtocol = KeychainService()
     ) {
         self.authService = authService ?? AuthenticationService()
         self.biometricService = biometricService ?? BiometricService()
         self.passwordValidator = passwordValidator
         self.lockStateService = lockStateService
+        self.demoModeService = demoModeService
+        self.keychainService = keychainService
+        self.demoDataSeeder = demoDataSeeder ?? Self.makeDefaultDemoDataSeeder()
 
         // Initialize setup state from authService
         isSetUp = self.authService.isSetUp
@@ -362,5 +371,12 @@ final class AuthenticationViewModel {
         confirmPassphrase = ""
         password = ""
         confirmPassword = ""
+    }
+
+    // MARK: - Factory Methods
+
+    /// Creates default DemoDataSeeder with production dependencies
+    private static func makeDefaultDemoDataSeeder() -> DemoDataSeederProtocol {
+        DemoDataSeeder()
     }
 }

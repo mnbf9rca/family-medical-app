@@ -73,3 +73,5 @@ ralph-loop.local.md
 
 # Debug/repro folders
 workers-rs-secret-store-repro/
+
+docs/plans/

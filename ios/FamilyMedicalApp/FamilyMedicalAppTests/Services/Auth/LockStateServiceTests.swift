@@ -147,4 +147,36 @@ struct LockStateServiceTests {
         let recordedTime = userDefaults.double(forKey: "com.family-medical-app.background-time")
         #expect(recordedTime > firstTime)
     }
+
+    // MARK: - Demo Mode Tests
+
+    @Test
+    func isDemoMode_defaultsFalse() throws {
+        let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
+        let service = LockStateService(userDefaults: userDefaults)
+
+        #expect(service.isDemoMode == false)
+    }
+
+    @Test
+    func setDemoMode_persistsToUserDefaults() throws {
+        let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
+        let service = LockStateService(userDefaults: userDefaults)
+
+        service.isDemoMode = true
+
+        #expect(service.isDemoMode == true)
+        #expect(userDefaults.bool(forKey: "com.family-medical-app.demo-mode") == true)
+    }
+
+    @Test
+    func clearDemoMode_removesFromUserDefaults() throws {
+        let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
+        let service = LockStateService(userDefaults: userDefaults)
+
+        service.isDemoMode = true
+        service.isDemoMode = false
+
+        #expect(service.isDemoMode == false)
+    }
 }

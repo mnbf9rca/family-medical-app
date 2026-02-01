@@ -175,6 +175,7 @@ final class MockViewModelBiometricService: BiometricServiceProtocol {
 final class MockLockStateService: LockStateServiceProtocol {
     var isLocked: Bool = false
     var lockTimeoutSeconds: Int = 300
+    var isDemoMode: Bool = false
 
     // Tracking properties for testing
     var recordBackgroundTimeCalled = false
@@ -318,6 +319,60 @@ final class MockAuthKeychainService: KeychainServiceProtocol, @unchecked Sendabl
     }
 }
 
+// MARK: - Mock Keychain Service (with tracking)
+
+/// Mock keychain service with operation tracking for testing demo mode
+final class MockDemoKeychainService: KeychainServiceProtocol, @unchecked Sendable {
+    private var keys: [String: SymmetricKey] = [:]
+    private var data: [String: Data] = [:]
+
+    // Tracking for assertions
+    var storeKeyIdentifiers: [String] = []
+    var deletedKeyIdentifiers: [String] = []
+    var deletedDataIdentifiers: [String] = []
+
+    func storeKey(_ key: SymmetricKey, identifier: String, accessControl: KeychainAccessControl) throws {
+        keys[identifier] = key
+        storeKeyIdentifiers.append(identifier)
+    }
+
+    func retrieveKey(identifier: String) throws -> SymmetricKey {
+        guard let key = keys[identifier] else {
+            throw KeychainError.keyNotFound(identifier)
+        }
+        return key
+    }
+
+    func deleteKey(identifier: String) throws {
+        keys.removeValue(forKey: identifier)
+        deletedKeyIdentifiers.append(identifier)
+    }
+
+    func keyExists(identifier: String) -> Bool {
+        keys[identifier] != nil
+    }
+
+    func storeData(_ dataToStore: Data, identifier: String, accessControl: KeychainAccessControl) throws {
+        data[identifier] = dataToStore
+    }
+
+    func retrieveData(identifier: String) throws -> Data {
+        guard let storedData = data[identifier] else {
+            throw KeychainError.keyNotFound(identifier)
+        }
+        return storedData
+    }
+
+    func deleteData(identifier: String) throws {
+        data.removeValue(forKey: identifier)
+        deletedDataIdentifiers.append(identifier)
+    }
+
+    func dataExists(identifier: String) -> Bool {
+        data[identifier] != nil
+    }
+}
+
 // MARK: - Mock Biometric Service
 
 /// Mock biometric service for testing authentication flows
@@ -367,6 +422,68 @@ final class MockPrimaryKeyProvider: PrimaryKeyProviderProtocol, @unchecked Senda
         }
 
         return key
+    }
+}
+
+// MARK: - Mock Demo Data Seeder
+
+/// Mock demo data seeder for testing demo flows
+final class MockDemoDataSeeder: DemoDataSeederProtocol, @unchecked Sendable {
+    // MARK: - Tracking
+
+    var seedDemoDataCalled = false
+    var seedDemoDataCallCount = 0
+
+    // MARK: - Configuration
+
+    var shouldFail = false
+
+    // MARK: - DemoDataSeederProtocol
+
+    func seedDemoData(primaryKey: CryptoKit.SymmetricKey) async throws {
+        seedDemoDataCalled = true
+        seedDemoDataCallCount += 1
+        if shouldFail {
+            throw CryptoError.keyDerivationFailed("Mock seed failure")
+        }
+    }
+}
+
+// MARK: - Mock Demo Mode Service
+
+/// Mock demo mode service for testing demo flows
+final class MockDemoModeService: DemoModeServiceProtocol, @unchecked Sendable {
+    // MARK: - Tracking
+
+    var enterDemoModeCalled = false
+    var exitDemoModeCalled = false
+
+    // MARK: - Configuration
+
+    var shouldFailEnter = false
+    private(set) var inDemoMode = false
+
+    /// Test key returned from enterDemoMode
+    let testDemoKey = CryptoKit.SymmetricKey(size: .bits256)
+
+    // MARK: - DemoModeServiceProtocol
+
+    var isInDemoMode: Bool {
+        inDemoMode
+    }
+
+    func enterDemoMode() async throws -> CryptoKit.SymmetricKey {
+        enterDemoModeCalled = true
+        if shouldFailEnter {
+            throw CryptoError.keyDerivationFailed("Mock failure")
+        }
+        inDemoMode = true
+        return testDemoKey
+    }
+
+    func exitDemoMode() async {
+        exitDemoModeCalled = true
+        inDemoMode = false
     }
 }
 

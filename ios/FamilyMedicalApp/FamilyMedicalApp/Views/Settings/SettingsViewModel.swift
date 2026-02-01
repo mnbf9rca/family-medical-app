@@ -12,6 +12,7 @@ final class SettingsViewModel {
     private let importService: ImportServiceProtocol
     private let backupFileService: BackupFileServiceProtocol
     private let passwordValidationService: PasswordValidationServiceProtocol
+    private let demoModeService: DemoModeServiceProtocol
     private let logger: CategoryLoggerProtocol
 
     // MARK: - Export State
@@ -40,6 +41,11 @@ final class SettingsViewModel {
 
     var errorMessage: String?
 
+    // MARK: - Demo Mode State
+
+    var showingExitDemoConfirmation = false
+    var demoModeExited = false
+
     // MARK: - Computed Properties
 
     var passwordStrength: PasswordStrength {
@@ -53,6 +59,10 @@ final class SettingsViewModel {
                 passwordStrength >= .fair
         }
         return true
+    }
+
+    var isDemoMode: Bool {
+        demoModeService.isInDemoMode
     }
 
     var exportFileName: String {
@@ -69,12 +79,14 @@ final class SettingsViewModel {
         importService: ImportServiceProtocol,
         backupFileService: BackupFileServiceProtocol,
         passwordValidationService: PasswordValidationServiceProtocol = PasswordValidationService(),
+        demoModeService: DemoModeServiceProtocol = DemoModeService(),
         logger: CategoryLoggerProtocol? = nil
     ) {
         self.exportService = exportService
         self.importService = importService
         self.backupFileService = backupFileService
         self.passwordValidationService = passwordValidationService
+        self.demoModeService = demoModeService
         self.logger = logger ?? LoggingService.shared.logger(category: .storage)
     }
 
@@ -384,4 +396,31 @@ extension SettingsViewModel {
     func dismissImportCompleted() {
         importCompleted = false
     }
+
+    // MARK: - Demo Mode Methods
+
+    func showExitDemoConfirmation() {
+        showingExitDemoConfirmation = true
+    }
+
+    func cancelExitDemo() {
+        showingExitDemoConfirmation = false
+    }
+
+    func confirmExitDemo() async {
+        showingExitDemoConfirmation = false
+        demoModeExited = true
+
+        // Notify the app that demo mode has exited
+        // MainAppView observes this to trigger AuthenticationViewModel.exitDemoMode()
+        // which handles the actual demoModeService.exitDemoMode() call
+        NotificationCenter.default.post(name: .demoModeExitRequested, object: nil)
+    }
+}
+
+// MARK: - Demo Mode Notifications
+
+extension Notification.Name {
+    /// Posted when the user requests to exit demo mode from Settings
+    static let demoModeExitRequested = Notification.Name("demoModeExitRequested")
 }

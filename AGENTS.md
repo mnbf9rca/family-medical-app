@@ -24,7 +24,7 @@
 - ⚠️ **ALWAYS** achieve required code coverage thresholds, validated through testing:
   - **Overall project coverage: 87% minimum** (temporarily reduced from 90% for OPAQUE auth, see Issue #78) and **individual file coverage: 85% minimum** (with exceptions for specific files, see `scripts/check-coverage.sh` - only add exceptions with explicit user consent)
   - Coverage applies to existing, new, **and changed** code
-  - Use `{projectRoot}/scripts/run-tests.sh` to run iOS tests - this is the same script used in CI. Note that it can take up to 15 minutes for the full (UI) test suite to run.
+  - Use `{projectRoot}/scripts/run-tests.sh` to run iOS tests - this is the same script used in CI. Note that it can take up to 15 minutes for the full (UI) test suite to run. Do **NOT** tail results - the script already uses xcpretty, and tail will prevent you seeing warnings.
   - **After** running tests, use `{projectRoot}/scripts/check-coverage.sh` to validate iOS coverage - this is the same script used in CI
   - Use `--detailed` flag with check-coverage.sh to see function-level coverage details for files below 100%
   - **Using other methods will fail CI** meaning the PR cannot be merged
