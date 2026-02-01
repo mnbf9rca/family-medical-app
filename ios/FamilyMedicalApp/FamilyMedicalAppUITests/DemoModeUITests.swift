@@ -13,7 +13,7 @@ import XCTest
 /// Tests for demo mode flow
 @MainActor
 final class DemoModeUITests: XCTestCase {
-    var app: XCUIApplication!
+    nonisolated(unsafe) var app: XCUIApplication!
 
     override func setUpWithError() throws {
         continueAfterFailure = false
