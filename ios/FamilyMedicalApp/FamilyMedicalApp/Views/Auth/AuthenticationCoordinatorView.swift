@@ -35,9 +35,7 @@ struct AuthenticationCoordinatorView: View {
                 AccountExistsConfirmationView(viewModel: viewModel, username: username)
 
             case .demo:
-                // Placeholder - DemoSetupView will be created in Task 7
-                // enterDemoMode() will be added in Task 5
-                ProgressView("Setting up demo...")
+                DemoSetupView(viewModel: viewModel)
 
             case .unlock:
                 UnlockView(viewModel: viewModel)
