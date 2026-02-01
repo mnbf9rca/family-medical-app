@@ -126,7 +126,7 @@ struct AuthenticationServiceTests {
         try await service.setUp(passwordBytes: &passwordBytes, username: "testuser", enableBiometric: false)
         #expect(service.storedUsername == "testuser")
 
-        try service.logout()
+        service.logout()
         #expect(service.storedUsername == nil)
     }
 
@@ -348,7 +348,7 @@ struct AuthenticationServiceTests {
 
         #expect(service.isSetUp == true)
 
-        try service.logout()
+        service.logout()
 
         #expect(service.isSetUp == false)
         #expect(userDefaults.bool(forKey: "com.family-medical-app.use-opaque") == false)
