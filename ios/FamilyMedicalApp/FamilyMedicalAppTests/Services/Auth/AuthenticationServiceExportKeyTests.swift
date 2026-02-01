@@ -1,4 +1,3 @@
-// swiftlint:disable force_unwrapping
 import CryptoKit
 import Foundation
 import Testing
@@ -11,7 +10,7 @@ struct AuthenticationServiceExportKeyTests {
 
     @Test
     func setUpRejectsEmptyExportKey() async throws {
-        let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let opaqueAuthService = MockOpaqueAuthService()
         opaqueAuthService.testExportKey = Data() // Empty export key
 
@@ -29,7 +28,7 @@ struct AuthenticationServiceExportKeyTests {
 
     @Test
     func setUpRejectsInvalidExportKeyLength() async throws {
-        let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let opaqueAuthService = MockOpaqueAuthService()
         opaqueAuthService.testExportKey = Data(repeating: 0x42, count: 16) // Wrong length (not 32 or 64)
 
@@ -47,7 +46,7 @@ struct AuthenticationServiceExportKeyTests {
 
     @Test
     func setUpAccepts32ByteExportKey() async throws {
-        let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let opaqueAuthService = MockOpaqueAuthService()
         opaqueAuthService.testExportKey = Data(repeating: 0x42, count: 32)
 
@@ -64,7 +63,7 @@ struct AuthenticationServiceExportKeyTests {
 
     @Test
     func setUpAccepts64ByteExportKey() async throws {
-        let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let opaqueAuthService = MockOpaqueAuthService()
         opaqueAuthService.testExportKey = Data(repeating: 0x42, count: 64)
 
@@ -83,7 +82,7 @@ struct AuthenticationServiceExportKeyTests {
 
     @Test
     func unlockRejectsEmptyExportKey() async throws {
-        let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let opaqueAuthService = MockOpaqueAuthService()
         let keychainService = MockAuthKeychainService()
 
@@ -109,7 +108,7 @@ struct AuthenticationServiceExportKeyTests {
 
     @Test
     func unlockRejectsInvalidExportKeyLength() async throws {
-        let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let opaqueAuthService = MockOpaqueAuthService()
         let keychainService = MockAuthKeychainService()
 
@@ -133,5 +132,3 @@ struct AuthenticationServiceExportKeyTests {
         }
     }
 }
-
-// swiftlint:enable force_unwrapping

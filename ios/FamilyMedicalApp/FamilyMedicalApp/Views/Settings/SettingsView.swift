@@ -400,6 +400,7 @@ struct InfoRow: View {
 
 // MARK: - Preview Helpers
 
+// swiftlint:disable unneeded_throws_rethrows
 private final class PreviewExportService: ExportServiceProtocol, @unchecked Sendable {
     func exportData(primaryKey: SymmetricKey) async throws -> BackupPayload {
         BackupPayload(
@@ -498,3 +499,5 @@ private final class PreviewBackupFileService: BackupFileServiceProtocol, @unchec
         )
     }
 }
+
+// swiftlint:enable unneeded_throws_rethrows

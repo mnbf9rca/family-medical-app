@@ -2,6 +2,8 @@ import CryptoKit
 import Foundation
 @testable import FamilyMedicalApp
 
+// swiftlint:disable unneeded_throws_rethrows
+
 /// Mock implementation of AttachmentService for testing
 final class MockAttachmentService: AttachmentServiceProtocol, @unchecked Sendable {
     // MARK: - Call Record Types
@@ -187,3 +189,5 @@ final class MockAttachmentService: AttachmentServiceProtocol, @unchecked Sendabl
         recordLinks[recordId] = links
     }
 }
+
+// swiftlint:enable unneeded_throws_rethrows

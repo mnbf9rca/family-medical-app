@@ -5,7 +5,9 @@ import Testing
 
 // MARK: - Shared Test Helpers
 
-private func makePerson() throws -> Person { try Person(name: "Test Person") }
+private func makePerson() throws -> Person {
+    try Person(name: "Test Person")
+}
 
 private func makeMigration() throws -> SchemaMigration {
     try SchemaMigration(
@@ -359,7 +361,7 @@ final class MockSchemaMigrationService: SchemaMigrationServiceProtocol, @uncheck
         forPerson personId: UUID,
         primaryKey: SymmetricKey,
         options: MigrationOptions,
-        progressHandler: @escaping @Sendable (MigrationProgress) -> Void
+        progressHandler: @Sendable (MigrationProgress) -> Void
     ) async throws -> MigrationResult {
         executeCalled = true
         if shouldFailExecute { throw RepositoryError.migrationFailed("Mock execute failed") }

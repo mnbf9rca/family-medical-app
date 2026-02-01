@@ -21,7 +21,9 @@ private struct CheckpointTestMocks {
 
 /// Tests for MigrationCheckpointService
 struct MigrationCheckpointServiceTests {
-    private func makeMocks() -> CheckpointTestMocks { CheckpointTestMocks() }
+    private func makeMocks() -> CheckpointTestMocks {
+        CheckpointTestMocks()
+    }
 
     private func makeTestRecord(personId: UUID = UUID()) -> MedicalRecord {
         MedicalRecord(personId: personId, encryptedContent: Data("test content".utf8))

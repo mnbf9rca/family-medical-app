@@ -2,6 +2,8 @@ import CryptoKit
 import Foundation
 @testable import FamilyMedicalApp
 
+// swiftlint:disable unneeded_throws_rethrows
+
 // MARK: - Mock Authentication Service
 
 final class MockAuthenticationService: AuthenticationServiceProtocol {
@@ -13,7 +15,6 @@ final class MockAuthenticationService: AuthenticationServiceProtocol {
     var storedUsername: String?
 
     var shouldFailUnlock: Bool
-    var shouldFailLogout: Bool
     var shouldFailLoginAndSetup: Bool
 
     private let biometricService: BiometricServiceProtocol?
@@ -26,7 +27,6 @@ final class MockAuthenticationService: AuthenticationServiceProtocol {
         lockoutRemainingSeconds: Int = 0,
         storedUsername: String? = nil,
         shouldFailUnlock: Bool = false,
-        shouldFailLogout: Bool = false,
         shouldFailLoginAndSetup: Bool = false,
         biometricService: BiometricServiceProtocol? = nil
     ) {
@@ -37,7 +37,6 @@ final class MockAuthenticationService: AuthenticationServiceProtocol {
         self.lockoutRemainingSeconds = lockoutRemainingSeconds
         self.storedUsername = storedUsername
         self.shouldFailUnlock = shouldFailUnlock
-        self.shouldFailLogout = shouldFailLogout
         self.shouldFailLoginAndSetup = shouldFailLoginAndSetup
         self.biometricService = biometricService
     }
@@ -127,10 +126,7 @@ final class MockAuthenticationService: AuthenticationServiceProtocol {
         isBiometricEnabled = false
     }
 
-    func logout() throws {
-        if shouldFailLogout {
-            throw AuthenticationError.keychainError("Logout failed")
-        }
+    func logout() {
         isSetUp = false
         isBiometricEnabled = false
         failedAttemptCount = 0
@@ -373,3 +369,5 @@ final class MockPrimaryKeyProvider: PrimaryKeyProviderProtocol, @unchecked Senda
         return key
     }
 }
+
+// swiftlint:enable unneeded_throws_rethrows

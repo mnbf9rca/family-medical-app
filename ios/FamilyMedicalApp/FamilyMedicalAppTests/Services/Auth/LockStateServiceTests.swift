@@ -1,4 +1,3 @@
-// swiftlint:disable force_unwrapping
 import Foundation
 import Testing
 @testable import FamilyMedicalApp
@@ -7,16 +6,16 @@ struct LockStateServiceTests {
     // MARK: - Initialization Tests
 
     @Test
-    func defaultTimeoutIsFiveMinutes() {
-        let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+    func defaultTimeoutIsFiveMinutes() throws {
+        let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let service = LockStateService(userDefaults: userDefaults)
 
         #expect(service.lockTimeoutSeconds == 300)
     }
 
     @Test
-    func initiallyNotLocked() {
-        let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+    func initiallyNotLocked() throws {
+        let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let service = LockStateService(userDefaults: userDefaults)
 
         #expect(service.isLocked == false)
@@ -25,8 +24,8 @@ struct LockStateServiceTests {
     // MARK: - Lock/Unlock Tests
 
     @Test
-    func lockSetsIsLockedToTrue() {
-        let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+    func lockSetsIsLockedToTrue() throws {
+        let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let service = LockStateService(userDefaults: userDefaults)
 
         service.lock()
@@ -34,8 +33,8 @@ struct LockStateServiceTests {
     }
 
     @Test
-    func unlockSetsIsLockedToFalse() {
-        let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+    func unlockSetsIsLockedToFalse() throws {
+        let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let service = LockStateService(userDefaults: userDefaults)
 
         service.lock()
@@ -46,8 +45,8 @@ struct LockStateServiceTests {
     // MARK: - Timeout Configuration Tests
 
     @Test
-    func timeoutCanBeCustomized() {
-        let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+    func timeoutCanBeCustomized() throws {
+        let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let service = LockStateService(userDefaults: userDefaults)
 
         service.lockTimeoutSeconds = 600 // 10 minutes
@@ -55,9 +54,9 @@ struct LockStateServiceTests {
     }
 
     @Test
-    func timeoutPersistsAcrossInstances() {
+    func timeoutPersistsAcrossInstances() throws {
         let suiteName = "test-\(UUID().uuidString)"
-        let userDefaults = UserDefaults(suiteName: suiteName)!
+        let userDefaults = try #require(UserDefaults(suiteName: suiteName))
 
         let service1 = LockStateService(userDefaults: userDefaults)
         service1.lockTimeoutSeconds = 900 // 15 minutes
@@ -69,8 +68,8 @@ struct LockStateServiceTests {
     // MARK: - Background Tracking Tests
 
     @Test
-    func shouldNotLockWhenNoBackgroundTimeRecorded() {
-        let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+    func shouldNotLockWhenNoBackgroundTimeRecorded() throws {
+        let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let service = LockStateService(userDefaults: userDefaults)
 
         let shouldLock = service.shouldLockOnForeground()
@@ -78,8 +77,8 @@ struct LockStateServiceTests {
     }
 
     @Test
-    func shouldNotLockWhenBackgroundTimeIsShort() {
-        let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+    func shouldNotLockWhenBackgroundTimeIsShort() throws {
+        let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let service = LockStateService(userDefaults: userDefaults)
 
         // Record background time just now
@@ -91,8 +90,8 @@ struct LockStateServiceTests {
     }
 
     @Test
-    func shouldLockWhenBackgroundTimeExceedsTimeout() {
-        let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+    func shouldLockWhenBackgroundTimeExceedsTimeout() throws {
+        let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let service = LockStateService(userDefaults: userDefaults)
 
         // Set a short timeout for testing
@@ -108,8 +107,8 @@ struct LockStateServiceTests {
     }
 
     @Test
-    func shouldLockClearsBackgroundTime() {
-        let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+    func shouldLockClearsBackgroundTime() throws {
+        let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let service = LockStateService(userDefaults: userDefaults)
 
         service.recordBackgroundTime()
@@ -121,8 +120,8 @@ struct LockStateServiceTests {
     }
 
     @Test
-    func unlockClearsBackgroundTime() {
-        let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+    func unlockClearsBackgroundTime() throws {
+        let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let service = LockStateService(userDefaults: userDefaults)
 
         service.recordBackgroundTime()
@@ -135,8 +134,8 @@ struct LockStateServiceTests {
     // MARK: - Edge Cases
 
     @Test
-    func multipleBackgroundRecordingsUseLatest() {
-        let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+    func multipleBackgroundRecordingsUseLatest() throws {
+        let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let service = LockStateService(userDefaults: userDefaults)
 
         let firstTime = Date().timeIntervalSince1970 - 10
@@ -149,5 +148,3 @@ struct LockStateServiceTests {
         #expect(recordedTime > firstTime)
     }
 }
-
-// swiftlint:enable force_unwrapping

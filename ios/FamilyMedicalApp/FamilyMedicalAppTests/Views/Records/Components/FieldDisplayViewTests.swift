@@ -32,7 +32,9 @@ struct FieldDisplayTestCase: Sendable {
 }
 
 extension FieldDisplayTestCase: CustomTestStringConvertible {
-    var testDescription: String { name }
+    var testDescription: String {
+        name
+    }
 }
 
 // MARK: - Test Cases
@@ -193,7 +195,7 @@ struct FieldDisplayViewTests {
 
     // MARK: - Date Display Tests
 
-    // Date tests are separate because the formatted output is locale-dependent
+    /// Date tests are separate because the formatted output is locale-dependent
     @Test
     func fieldDisplayViewShowsDateValue() throws {
         let testDate = Date(timeIntervalSince1970: 631_152_000) // Jan 1, 1990

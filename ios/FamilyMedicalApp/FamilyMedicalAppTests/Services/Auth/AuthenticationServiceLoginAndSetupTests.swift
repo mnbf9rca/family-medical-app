@@ -1,4 +1,3 @@
-// swiftlint:disable force_unwrapping
 import CryptoKit
 import Foundation
 import Testing
@@ -9,7 +8,7 @@ import Testing
 struct AuthenticationServiceLoginAndSetupTests {
     @Test
     func loginAndSetupSucceedsWithValidCredentials() async throws {
-        let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let keychainService = MockKeychainService()
         let opaqueAuthService = MockOpaqueAuthService()
         let service = AuthenticationService(
@@ -34,7 +33,7 @@ struct AuthenticationServiceLoginAndSetupTests {
 
     @Test
     func loginAndSetupStoresUsername() async throws {
-        let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let opaqueAuthService = MockOpaqueAuthService()
         let service = AuthenticationService(
             keychainService: MockKeychainService(),
@@ -50,7 +49,7 @@ struct AuthenticationServiceLoginAndSetupTests {
 
     @Test
     func loginAndSetupEnablesBiometricWhenRequested() async throws {
-        let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let biometricService = MockBiometricService(isAvailable: true)
         let opaqueAuthService = MockOpaqueAuthService()
         let service = AuthenticationService(
@@ -67,7 +66,7 @@ struct AuthenticationServiceLoginAndSetupTests {
 
     @Test
     func loginAndSetupThrowsWrongPasswordOnAuthFailure() async throws {
-        let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let opaqueAuthService = MockOpaqueAuthService()
         opaqueAuthService.shouldFailLogin = true
         let service = AuthenticationService(
@@ -92,6 +91,7 @@ private final class MockKeychainService: KeychainServiceProtocol, @unchecked Sen
     private var keys: [String: SymmetricKey] = [:]
     private var data: [String: Data] = [:]
 
+    // swiftlint:disable:next unneeded_throws_rethrows
     func storeKey(_ key: SymmetricKey, identifier: String, accessControl: KeychainAccessControl) throws {
         keys[identifier] = key
     }
@@ -114,6 +114,7 @@ private final class MockKeychainService: KeychainServiceProtocol, @unchecked Sen
         keys[identifier] != nil
     }
 
+    // swiftlint:disable:next unneeded_throws_rethrows
     func storeData(_ dataToStore: Data, identifier: String, accessControl: KeychainAccessControl) throws {
         data[identifier] = dataToStore
     }
@@ -160,5 +161,3 @@ private final class MockBiometricService: BiometricServiceProtocol {
         }
     }
 }
-
-// swiftlint:enable force_unwrapping

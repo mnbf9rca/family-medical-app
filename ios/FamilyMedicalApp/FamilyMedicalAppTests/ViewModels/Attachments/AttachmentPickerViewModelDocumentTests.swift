@@ -303,7 +303,7 @@ struct AttachmentPickerViewModelDocumentTests {
     // MARK: - Non-Existent File Tests
 
     @Test
-    func addFromDocumentPicker_nonExistentFile_setsError() async throws {
+    func addFromDocumentPicker_nonExistentFile_setsError() async {
         let fixtures = makeFixtures()
 
         // URL to a file that doesn't exist - won't be able to access it

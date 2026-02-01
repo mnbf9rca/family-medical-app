@@ -277,24 +277,20 @@ final class AuthenticationViewModel {
 
     @MainActor
     func logout() async {
-        do {
-            try authService.logout()
-            isSetUp = false
-            isAuthenticated = false
-            flowState = .welcome
-            lockStateService.unlock()
-            errorMessage = nil
+        authService.logout()
+        isSetUp = false
+        isAuthenticated = false
+        flowState = .welcome
+        lockStateService.unlock()
+        errorMessage = nil
 
-            password = ""
-            confirmPassword = ""
-            unlockPassword = ""
-            username = ""
-            passphrase = ""
-            confirmPassphrase = ""
-            showBiometricPrompt = false
-        } catch {
-            errorMessage = "Unable to logout. Please try again or restart the app."
-        }
+        password = ""
+        confirmPassword = ""
+        unlockPassword = ""
+        username = ""
+        passphrase = ""
+        confirmPassphrase = ""
+        showBiometricPrompt = false
     }
 
     // MARK: - Biometric Settings

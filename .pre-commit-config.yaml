@@ -5,7 +5,7 @@
 repos:
   # Swift code formatting
   - repo: https://github.com/nicklockwood/SwiftFormat
-    rev: 0.58.7  # Latest as of Dec 2025
+    rev: 0.59.1  # Latest as of Jan 2026
     hooks:
       - id: swiftformat
         args:
@@ -14,7 +14,7 @@ repos:
 
   # Swift linting
   - repo: https://github.com/realm/SwiftLint
-    rev: 0.62.2  # Latest as of Dec 2025
+    rev: 0.63.2  # Latest as of Jan 2026
     hooks:
       - id: swiftlint
         args:

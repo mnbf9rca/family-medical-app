@@ -270,7 +270,7 @@ struct SchemaListViewModelTests {
 
 extension SchemaListViewModelTests {
     @Test
-    func createNewSchemaTemplateReturnsSchemaWithValidStructure() async throws {
+    func createNewSchemaTemplateReturnsSchemaWithValidStructure() throws {
         let person = try createTestPerson()
 
         // Use a fixed UUID to test deterministic behavior
@@ -298,7 +298,7 @@ extension SchemaListViewModelTests {
     }
 
     @Test
-    func createNewSchemaTemplateGeneratesUniqueIdsWithDifferentUUIDs() async throws {
+    func createNewSchemaTemplateGeneratesUniqueIdsWithDifferentUUIDs() throws {
         let person = try createTestPerson()
 
         // Create two ViewModels with different UUID generators

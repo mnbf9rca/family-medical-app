@@ -143,7 +143,7 @@ final class SchemaMigrationService: SchemaMigrationServiceProtocol, @unchecked S
             migrationId: migration.id, personId: personId, schemaId: migration.schemaId, records: recordsToMigrate
         )
 
-        let errors = try await processRecords(
+        let errors = await processRecords(
             recordsToMigrate, migration: migration, options: options, fmk: fmk, progressHandler: progressHandler
         )
 
@@ -203,8 +203,8 @@ final class SchemaMigrationService: SchemaMigrationServiceProtocol, @unchecked S
         migration: SchemaMigration,
         options: MigrationOptions,
         fmk: SymmetricKey,
-        progressHandler: @escaping @Sendable (MigrationProgress) -> Void
-    ) async throws -> [MigrationRecordError] {
+        progressHandler: @Sendable (MigrationProgress) -> Void
+    ) async -> [MigrationRecordError] {
         var errors: [MigrationRecordError] = []
         var processedCount = 0
         let totalRecords = records.count

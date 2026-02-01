@@ -216,8 +216,7 @@ struct SchemaServiceTests {
 
     @Test
     func schema_differentPersons_returnsIndependentSchemas() async throws {
-        // swiftlint:disable:next force_unwrapping
-        let person2Id = UUID(uuidString: "BBBBBBBB-0000-0000-0000-000000000002")!
+        let person2Id = try #require(UUID(uuidString: "BBBBBBBB-0000-0000-0000-000000000002"))
         let (service, repo) = makeService()
 
         // Add different schemas for each person

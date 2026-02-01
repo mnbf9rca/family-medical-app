@@ -1,4 +1,3 @@
-// swiftlint:disable force_unwrapping
 import CryptoKit
 import Foundation
 import Testing
@@ -10,7 +9,7 @@ struct AuthenticationServiceTests {
 
     @Test
     func setUpCreatesUserAccount() async throws {
-        let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let keychainService = MockKeychainService()
         let opaqueAuthService = MockOpaqueAuthService()
         let service = AuthenticationService(
@@ -34,7 +33,7 @@ struct AuthenticationServiceTests {
 
     @Test
     func setUpStoresCurve25519PublicKey() async throws {
-        let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let opaqueAuthService = MockOpaqueAuthService()
         let service = AuthenticationService(
             keychainService: MockKeychainService(),
@@ -52,7 +51,7 @@ struct AuthenticationServiceTests {
 
     @Test
     func setUpEnablesBiometricWhenRequested() async throws {
-        let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let biometricService = MockBiometricService(isAvailable: true)
         let opaqueAuthService = MockOpaqueAuthService()
         let service = AuthenticationService(
@@ -69,7 +68,7 @@ struct AuthenticationServiceTests {
 
     @Test
     func setUpDoesNotEnableBiometricWhenNotAvailable() async throws {
-        let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let biometricService = MockBiometricService(isAvailable: false)
         let opaqueAuthService = MockOpaqueAuthService()
         let service = AuthenticationService(
@@ -86,7 +85,7 @@ struct AuthenticationServiceTests {
 
     @Test
     func setUpStoresUsername() async throws {
-        let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let opaqueAuthService = MockOpaqueAuthService()
         let service = AuthenticationService(
             keychainService: MockKeychainService(),
@@ -101,8 +100,8 @@ struct AuthenticationServiceTests {
     }
 
     @Test
-    func storedUsernameReturnsNilBeforeSetup() async throws {
-        let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+    func storedUsernameReturnsNilBeforeSetup() throws {
+        let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let service = AuthenticationService(
             keychainService: MockKeychainService(),
             userDefaults: userDefaults
@@ -115,7 +114,7 @@ struct AuthenticationServiceTests {
 
     @Test
     func logoutClearsUsername() async throws {
-        let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let opaqueAuthService = MockOpaqueAuthService()
         let service = AuthenticationService(
             keychainService: MockKeychainService(),
@@ -127,7 +126,7 @@ struct AuthenticationServiceTests {
         try await service.setUp(passwordBytes: &passwordBytes, username: "testuser", enableBiometric: false)
         #expect(service.storedUsername == "testuser")
 
-        try service.logout()
+        service.logout()
         #expect(service.storedUsername == nil)
     }
 
@@ -135,7 +134,7 @@ struct AuthenticationServiceTests {
 
     @Test
     func setUpCallsOpaqueRegister() async throws {
-        let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let opaqueAuthService = MockOpaqueAuthService()
         let service = AuthenticationService(
             keychainService: MockKeychainService(),
@@ -154,7 +153,7 @@ struct AuthenticationServiceTests {
 
     @Test
     func unlockWithCorrectPasswordSucceeds() async throws {
-        let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let opaqueAuthService = MockOpaqueAuthService()
         let service = AuthenticationService(
             keychainService: MockKeychainService(),
@@ -172,7 +171,7 @@ struct AuthenticationServiceTests {
 
     @Test
     func unlockWithWrongPasswordFails() async throws {
-        let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let opaqueAuthService = MockOpaqueAuthService()
         let service = AuthenticationService(
             keychainService: MockKeychainService(),
@@ -194,7 +193,7 @@ struct AuthenticationServiceTests {
 
     @Test
     func unlockWithoutSetUpFails() async throws {
-        let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let service = AuthenticationService(
             keychainService: MockKeychainService(),
             userDefaults: userDefaults
@@ -212,7 +211,7 @@ struct AuthenticationServiceTests {
 
     @Test
     func unlockWithBiometricSucceeds() async throws {
-        let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let biometricService = MockBiometricService(isAvailable: true, shouldSucceed: true)
         let opaqueAuthService = MockOpaqueAuthService()
         let service = AuthenticationService(
@@ -230,7 +229,7 @@ struct AuthenticationServiceTests {
 
     @Test
     func unlockWithBiometricFailsWhenNotEnabled() async throws {
-        let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let opaqueAuthService = MockOpaqueAuthService()
         let service = AuthenticationService(
             biometricService: MockBiometricService(isAvailable: true),
@@ -248,7 +247,7 @@ struct AuthenticationServiceTests {
 
     @Test
     func unlockWithBiometricResetsFailedAttempts() async throws {
-        let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let biometricService = MockBiometricService(isAvailable: true, shouldSucceed: true)
         let opaqueAuthService = MockOpaqueAuthService()
         let service = AuthenticationService(
@@ -279,7 +278,7 @@ struct AuthenticationServiceTests {
 
     @Test
     func enableBiometricSucceedsWhenAvailable() async throws {
-        let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let biometricService = MockBiometricService(isAvailable: true, shouldSucceed: true)
         let service = AuthenticationService(
             biometricService: biometricService,
@@ -295,7 +294,7 @@ struct AuthenticationServiceTests {
 
     @Test
     func enableBiometricFailsWhenNotAvailable() async throws {
-        let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let service = AuthenticationService(
             biometricService: MockBiometricService(isAvailable: false),
             userDefaults: userDefaults
@@ -310,7 +309,7 @@ struct AuthenticationServiceTests {
 
     @Test
     func disableBiometricWorks() async throws {
-        let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let opaqueAuthService = MockOpaqueAuthService()
         let service = AuthenticationService(
             biometricService: MockBiometricService(isAvailable: true),
@@ -335,7 +334,7 @@ struct AuthenticationServiceTests {
 
     @Test
     func logoutClearsAllData() async throws {
-        let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let keychainService = MockKeychainService()
         let opaqueAuthService = MockOpaqueAuthService()
         let service = AuthenticationService(
@@ -349,7 +348,7 @@ struct AuthenticationServiceTests {
 
         #expect(service.isSetUp == true)
 
-        try service.logout()
+        service.logout()
 
         #expect(service.isSetUp == false)
         #expect(userDefaults.bool(forKey: "com.family-medical-app.use-opaque") == false)
@@ -364,6 +363,7 @@ private final class MockKeychainService: KeychainServiceProtocol, @unchecked Sen
     private var keys: [String: SymmetricKey] = [:]
     private var data: [String: Data] = [:]
 
+    // swiftlint:disable:next unneeded_throws_rethrows
     func storeKey(_ key: SymmetricKey, identifier: String, accessControl: KeychainAccessControl) throws {
         keys[identifier] = key
     }
@@ -386,6 +386,7 @@ private final class MockKeychainService: KeychainServiceProtocol, @unchecked Sen
         keys[identifier] != nil
     }
 
+    // swiftlint:disable:next unneeded_throws_rethrows
     func storeData(_ dataToStore: Data, identifier: String, accessControl: KeychainAccessControl) throws {
         data[identifier] = dataToStore
     }
@@ -432,5 +433,3 @@ private final class MockBiometricService: BiometricServiceProtocol {
         }
     }
 }
-
-// swiftlint:enable force_unwrapping

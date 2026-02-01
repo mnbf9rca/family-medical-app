@@ -34,7 +34,7 @@ struct PrimaryKeyProviderTests {
     }
 
     @Test
-    func getPrimaryKeyUsesCorrectIdentifier() throws {
+    func getPrimaryKeyUsesCorrectIdentifier() {
         let mockKeychain = MockKeychainService()
         let provider = PrimaryKeyProvider(keychainService: mockKeychain)
 
@@ -53,6 +53,7 @@ private final class MockKeychainService: KeychainServiceProtocol, @unchecked Sen
     var storedData: [String: Data] = [:]
     var lastRetrievedIdentifier: String?
 
+    // swiftlint:disable:next unneeded_throws_rethrows
     func storeKey(_ key: SymmetricKey, identifier: String, accessControl: KeychainAccessControl) throws {
         storedKeys[identifier] = key
     }
@@ -65,6 +66,7 @@ private final class MockKeychainService: KeychainServiceProtocol, @unchecked Sen
         return key
     }
 
+    // swiftlint:disable:next unneeded_throws_rethrows
     func deleteKey(identifier: String) throws {
         storedKeys.removeValue(forKey: identifier)
     }
@@ -73,6 +75,7 @@ private final class MockKeychainService: KeychainServiceProtocol, @unchecked Sen
         storedKeys[identifier] != nil
     }
 
+    // swiftlint:disable:next unneeded_throws_rethrows
     func storeData(_ data: Data, identifier: String, accessControl: KeychainAccessControl) throws {
         storedData[identifier] = data
     }
@@ -84,6 +87,7 @@ private final class MockKeychainService: KeychainServiceProtocol, @unchecked Sen
         return data
     }
 
+    // swiftlint:disable:next unneeded_throws_rethrows
     func deleteData(identifier: String) throws {
         storedData.removeValue(forKey: identifier)
     }

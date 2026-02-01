@@ -140,7 +140,7 @@ struct BackupChecksumTests {
 @Suite("BackupPayload Tests")
 struct BackupPayloadTests {
     @Test("BackupPayload isEmpty works correctly")
-    func payloadIsEmpty() throws {
+    func payloadIsEmpty() {
         let empty = BackupPayload(
             exportedAt: Date(),
             appVersion: "1.0",

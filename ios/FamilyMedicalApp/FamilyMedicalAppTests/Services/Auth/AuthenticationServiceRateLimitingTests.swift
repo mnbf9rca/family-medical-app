@@ -1,4 +1,3 @@
-// swiftlint:disable force_unwrapping
 import CryptoKit
 import Foundation
 import Testing
@@ -10,7 +9,7 @@ import Testing
 struct AuthenticationServiceRateLimitingTests {
     @Test
     func threeFailedAttemptsTriggersLockout() async throws {
-        let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let opaqueAuthService = MockOpaqueAuthService()
         let service = AuthenticationService(
             keychainService: MockAuthKeychainService(),
@@ -50,7 +49,7 @@ struct AuthenticationServiceRateLimitingTests {
 
     @Test
     func lockoutPreventsUnlockEvenWithCorrectPassword() async throws {
-        let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let opaqueAuthService = MockOpaqueAuthService()
         let service = AuthenticationService(
             keychainService: MockAuthKeychainService(),
@@ -87,7 +86,7 @@ struct AuthenticationServiceRateLimitingTests {
 
     @Test
     func successfulUnlockResetsFailedAttempts() async throws {
-        let userDefaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let opaqueAuthService = MockOpaqueAuthService()
         let service = AuthenticationService(
             keychainService: MockAuthKeychainService(),
@@ -115,5 +114,3 @@ struct AuthenticationServiceRateLimitingTests {
         #expect(service.failedAttemptCount == 0)
     }
 }
-
-// swiftlint:enable force_unwrapping

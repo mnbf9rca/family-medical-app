@@ -68,3 +68,5 @@
 --disable redundantOptionalBinding  # Explicit checks OK in crypto code
 --disable redundantSelf  # Swift 6 concurrency requires explicit self in closures
 --disable wrapMultilineStatementBraces  # SwiftLint requires braces on same line
+--disable redundantMemberwiseInit  # Keep explicit inits for crypto types (audit trail)
+--disable redundantEquatable  # Keep explicit Equatable for crypto types

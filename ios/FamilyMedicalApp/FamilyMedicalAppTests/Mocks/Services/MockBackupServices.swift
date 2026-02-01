@@ -2,6 +2,8 @@ import CryptoKit
 import Foundation
 @testable import FamilyMedicalApp
 
+// swiftlint:disable unneeded_throws_rethrows
+
 // MARK: - Mock Export Service
 
 final class MockExportService: ExportServiceProtocol, @unchecked Sendable {
@@ -147,3 +149,5 @@ final class MockBackupFileService: BackupFileServiceProtocol, @unchecked Sendabl
         )
     }
 }
+
+// swiftlint:enable unneeded_throws_rethrows
