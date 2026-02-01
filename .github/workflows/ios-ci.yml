@@ -121,6 +121,9 @@ jobs:
           name: OpaqueSwift-xcframework
           path: opaque-swift
 
+      - name: List available simulators (debug)
+        run: xcrun simctl list devices available | head -50
+
       - name: Restore DerivedData cache
         uses: actions/cache/restore@v5
         with:
