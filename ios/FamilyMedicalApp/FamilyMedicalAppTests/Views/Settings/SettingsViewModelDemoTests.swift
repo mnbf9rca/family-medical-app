@@ -70,18 +70,32 @@ struct SettingsViewModelDemoTests {
         #expect(viewModel.showingExitDemoConfirmation == false)
     }
 
-    @Test("confirmExitDemo calls demo service exitDemoMode")
+    @Test("confirmExitDemo posts notification and clears confirmation flag")
     @MainActor
-    func confirmExitDemoCallsService() async throws {
+    func confirmExitDemoPostsNotification() async throws {
         let demoService = MockDemoModeService()
         _ = try await demoService.enterDemoMode()
         let viewModel = makeViewModel(demoModeService: demoService)
         viewModel.showExitDemoConfirmation()
 
+        // Track if notification is posted using nonisolated(unsafe) since observer runs on main queue
+        // and we await on MainActor before checking - safe in this test context
+        nonisolated(unsafe) var notificationReceived = false
+        let observer = NotificationCenter.default.addObserver(
+            forName: .demoModeExitRequested,
+            object: nil,
+            queue: .main
+        ) { _ in
+            notificationReceived = true
+        }
+        defer { NotificationCenter.default.removeObserver(observer) }
+
         await viewModel.confirmExitDemo()
 
-        #expect(demoService.exitDemoModeCalled == true)
+        #expect(notificationReceived == true)
         #expect(viewModel.showingExitDemoConfirmation == false)
+        // Note: Service is NOT called directly - AuthenticationViewModel handles it via notification
+        #expect(demoService.exitDemoModeCalled == false)
     }
 
     @Test("confirmExitDemo sets demoModeExited flag")
@@ -96,9 +110,9 @@ struct SettingsViewModelDemoTests {
         #expect(viewModel.demoModeExited == true)
     }
 
-    @Test("isDemoMode returns false after exiting demo mode")
+    @Test("isDemoMode unchanged by confirmExitDemo - service handles via notification")
     @MainActor
-    func isDemoModeFalseAfterExit() async throws {
+    func isDemoModeUnchangedByConfirmExitDemo() async throws {
         let demoService = MockDemoModeService()
         _ = try await demoService.enterDemoMode()
         let viewModel = makeViewModel(demoModeService: demoService)
@@ -106,6 +120,9 @@ struct SettingsViewModelDemoTests {
 
         await viewModel.confirmExitDemo()
 
-        #expect(viewModel.isDemoMode == false)
+        // isDemoMode is still true because confirmExitDemo only posts notification
+        // AuthenticationViewModel.exitDemoMode() handles the actual service call
+        #expect(viewModel.isDemoMode == true)
+        #expect(viewModel.demoModeExited == true)
     }
 }

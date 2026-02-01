@@ -190,6 +190,7 @@ extension AuthenticationViewModel {
             isAuthenticated = true
             flowState = .authenticated
         } catch {
+            logger.error("[demo] Failed to enter demo mode: \(error.localizedDescription, privacy: .public)")
             errorMessage = "Failed to start demo: \(error.localizedDescription)"
             flowState = .welcome
         }

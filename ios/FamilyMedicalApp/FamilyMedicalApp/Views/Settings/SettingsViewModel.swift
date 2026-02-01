@@ -408,12 +408,12 @@ extension SettingsViewModel {
     }
 
     func confirmExitDemo() async {
-        await demoModeService.exitDemoMode()
         showingExitDemoConfirmation = false
         demoModeExited = true
 
         // Notify the app that demo mode has exited
-        // MainAppView observes this to trigger the auth flow reset
+        // MainAppView observes this to trigger AuthenticationViewModel.exitDemoMode()
+        // which handles the actual demoModeService.exitDemoMode() call
         NotificationCenter.default.post(name: .demoModeExitRequested, object: nil)
     }
 }

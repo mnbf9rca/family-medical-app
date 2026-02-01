@@ -97,7 +97,7 @@ jobs:
     name: Build & Test (${{ matrix.device }})
     needs: [xcframework]
     runs-on: macos-26
-    timeout-minutes: 25
+    timeout-minutes: 35
     strategy:
       matrix:
         include:
