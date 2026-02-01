@@ -52,6 +52,31 @@ The validator enforces limits before schema validation:
 - Version also in `$id` URL and `formatVersion` field
 - Old schemas kept for migration support
 
+### Updating the Backup Format
+
+When modifying the backup format, update **both** the schema and Swift models manually:
+
+1. **Update the schema** - Edit `docs/schemas/backup-v1.json`:
+   - Add/modify properties in the relevant `$defs` section
+   - Update `required` arrays if adding required fields
+   - Run `./scripts/validate-backup-schema.sh` to verify schema syntax
+
+2. **Update Swift models** - Edit files in `Services/Backup/`:
+   - Modify `BackupPayload`, `PersonBackup`, `MedicalRecordBackup`, etc.
+   - Ensure `CodingKeys` match the JSON property names in the schema
+
+3. **Run tests** - The schema-model consistency tests will fail if they're out of sync:
+
+   ```bash
+   ./scripts/run-tests.sh
+   ```
+
+   Look for failures in `BackupSchemaValidatorTests` - specifically:
+   - `serializedBackupFileValidatesAgainstSchema`
+   - `serializedUnencryptedBackupFileValidatesAgainstSchema`
+
+4. **For breaking changes**, create a new schema version (`backup-v2.json`) and add migration logic.
+
 ## Consequences
 
 ### Positive
