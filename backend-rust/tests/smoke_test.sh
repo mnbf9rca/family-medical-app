@@ -57,8 +57,8 @@ else
 fi
 
 # Test 404
-echo -n "GET /nonexistent... "
-STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL/nonexistent")
+echo -n "GET /auth/opaque/nonexistent... "
+STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL/auth/opaque/nonexistent")
 if [ "$STATUS" = "404" ]; then
   echo "OK (404)"
 else
