@@ -319,6 +319,60 @@ final class MockAuthKeychainService: KeychainServiceProtocol, @unchecked Sendabl
     }
 }
 
+// MARK: - Mock Keychain Service (with tracking)
+
+/// Mock keychain service with operation tracking for testing demo mode
+final class MockDemoKeychainService: KeychainServiceProtocol, @unchecked Sendable {
+    private var keys: [String: SymmetricKey] = [:]
+    private var data: [String: Data] = [:]
+
+    // Tracking for assertions
+    var storeKeyIdentifiers: [String] = []
+    var deletedKeyIdentifiers: [String] = []
+    var deletedDataIdentifiers: [String] = []
+
+    func storeKey(_ key: SymmetricKey, identifier: String, accessControl: KeychainAccessControl) throws {
+        keys[identifier] = key
+        storeKeyIdentifiers.append(identifier)
+    }
+
+    func retrieveKey(identifier: String) throws -> SymmetricKey {
+        guard let key = keys[identifier] else {
+            throw KeychainError.keyNotFound(identifier)
+        }
+        return key
+    }
+
+    func deleteKey(identifier: String) throws {
+        keys.removeValue(forKey: identifier)
+        deletedKeyIdentifiers.append(identifier)
+    }
+
+    func keyExists(identifier: String) -> Bool {
+        keys[identifier] != nil
+    }
+
+    func storeData(_ dataToStore: Data, identifier: String, accessControl: KeychainAccessControl) throws {
+        data[identifier] = dataToStore
+    }
+
+    func retrieveData(identifier: String) throws -> Data {
+        guard let storedData = data[identifier] else {
+            throw KeychainError.keyNotFound(identifier)
+        }
+        return storedData
+    }
+
+    func deleteData(identifier: String) throws {
+        data.removeValue(forKey: identifier)
+        deletedDataIdentifiers.append(identifier)
+    }
+
+    func dataExists(identifier: String) -> Bool {
+        data[identifier] != nil
+    }
+}
+
 // MARK: - Mock Biometric Service
 
 /// Mock biometric service for testing authentication flows
