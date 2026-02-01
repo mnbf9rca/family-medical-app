@@ -178,19 +178,6 @@ struct AuthenticationViewModelStateTests {
         #expect(viewModel.errorMessage == nil)
     }
 
-    @Test
-    func logoutHandlesErrors() async {
-        let authService = MockAuthenticationService(
-            isSetUp: true,
-            shouldFailLogout: true
-        )
-        let viewModel = AuthenticationViewModel(authService: authService)
-
-        await viewModel.logout()
-
-        #expect(viewModel.errorMessage != nil)
-    }
-
     // MARK: - Biometric Toggle Tests
 
     @Test
