@@ -118,7 +118,6 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = D445F7BB2EF7E94000E07F78 /* Build configuration list for PBXNativeTarget "FamilyMedicalApp" */;
 			buildPhases = (
-				D4BACKUP012F4000000099999 /* Verify Backup Schema Sync */,
 				D445F7962EF7E93C00E07F78 /* Sources */,
 				D445F7972EF7E93C00E07F78 /* Frameworks */,
 				D445F7982EF7E93C00E07F78 /* Resources */,
@@ -264,28 +263,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
-
-/* Begin PBXShellScriptBuildPhase section */
-		D4BACKUP012F4000000099999 /* Verify Backup Schema Sync */ = {
-			isa = PBXShellScriptBuildPhase;
-			alwaysOutOfDate = 0;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-			);
-			name = "Verify Backup Schema Sync";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "# Skip in sandboxed Xcode builds - rely on pre-commit hook for schema validation\n# The pre-commit hook runs ./scripts/validate-backup-schema.sh\n# Schema-model consistency is verified via unit tests that serialize Swift models\n# and validate them against the JSON Schema at runtime\nexit 0\n";
-		};
-/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		D445F7962EF7E93C00E07F78 /* Sources */ = {
