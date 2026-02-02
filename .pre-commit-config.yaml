@@ -88,7 +88,12 @@ repos:
         name: Validate backup JSON Schema
         entry: ./scripts/validate-backup-schema.sh
         language: script
-        files: ^docs/schemas/backup-v1\.json$
+        files: |
+          (?x)^(
+            docs/schemas/backup-v1\.json|
+            ios/FamilyMedicalApp/FamilyMedicalApp/Models/Backup/.*\.swift|
+            ios/FamilyMedicalApp/FamilyMedicalApp/Services/Backup/BackupSchemaValidator\.swift
+          )$
         pass_filenames: false
 
 # Global settings
