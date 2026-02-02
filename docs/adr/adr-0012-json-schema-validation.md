@@ -54,12 +54,21 @@ The validator enforces limits before schema validation:
 
 ### Updating the Backup Format
 
-When modifying the backup format, update **both** the schema and Swift models manually:
+**Single source of truth**: `docs/schemas/backup-v1.json` is the only schema file in the repository.
+
+**Build-time copy**: Xcode build phases automatically copy the schema to the app bundle. No manual file copying required.
+
+**Pre-commit validation**: The `validate-backup-schema` hook runs automatically when:
+
+- Schema file changes (`docs/schemas/backup-v1.json`)
+- Swift model files change (`ios/.../Models/Backup/*.swift`)
+- `BackupSchemaValidator.swift` changes
+
+When modifying the backup format:
 
 1. **Update the schema** - Edit `docs/schemas/backup-v1.json`:
    - Add/modify properties in the relevant `$defs` section
    - Update `required` arrays if adding required fields
-   - Run `./scripts/validate-backup-schema.sh` to verify schema syntax
 
 2. **Update Swift models** - Edit files in `Services/Backup/`:
    - Modify `BackupPayload`, `PersonBackup`, `MedicalRecordBackup`, etc.
@@ -89,8 +98,7 @@ When modifying the backup format, update **both** the schema and Swift models ma
 
 ### Negative
 
-- Requires manual sync when schema changes
-- Two places to update: schema and Swift models
+- Two places to update: schema and Swift models (but build automation handles file copying)
 
 ### Neutral
 
