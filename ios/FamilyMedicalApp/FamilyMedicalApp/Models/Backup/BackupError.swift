@@ -29,6 +29,9 @@ enum BackupError: Error, LocalizedError, Equatable {
     /// File read/write error
     case fileOperationFailed(String)
 
+    /// The backup file failed JSON Schema validation
+    case schemaValidationFailed([String])
+
     var errorDescription: String? {
         switch self {
         case .invalidPassword:
@@ -49,6 +52,8 @@ enum BackupError: Error, LocalizedError, Equatable {
             "Please choose a stronger password (at least 8 characters)."
         case let .fileOperationFailed(reason):
             "File operation failed: \(reason)"
+        case let .schemaValidationFailed(errors):
+            "Backup file is invalid: \(errors.joined(separator: "; "))"
         }
     }
 }

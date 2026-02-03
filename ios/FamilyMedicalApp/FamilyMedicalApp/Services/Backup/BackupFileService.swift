@@ -35,6 +35,7 @@ final class BackupFileService: BackupFileServiceProtocol, @unchecked Sendable {
 
     private let keyDerivationService: KeyDerivationServiceProtocol
     private let encryptionService: EncryptionServiceProtocol
+    private let schemaValidator: BackupSchemaValidatorProtocol
     private let logger: CategoryLoggerProtocol
 
     // MARK: - Initialization
@@ -42,10 +43,12 @@ final class BackupFileService: BackupFileServiceProtocol, @unchecked Sendable {
     init(
         keyDerivationService: KeyDerivationServiceProtocol,
         encryptionService: EncryptionServiceProtocol,
+        schemaValidator: BackupSchemaValidatorProtocol? = nil,
         logger: CategoryLoggerProtocol? = nil
     ) {
         self.keyDerivationService = keyDerivationService
         self.encryptionService = encryptionService
+        self.schemaValidator = schemaValidator ?? BackupSchemaValidator()
         self.logger = logger ?? LoggingService.shared.logger(category: .storage)
     }
 
@@ -248,6 +251,13 @@ final class BackupFileService: BackupFileServiceProtocol, @unchecked Sendable {
     }
 
     func deserializeFromJSON(_ data: Data) throws -> BackupFile {
+        // Validate against schema BEFORE decoding
+        let validationResult = schemaValidator.validate(jsonData: data)
+        if !validationResult.isValid {
+            logger.error("Schema validation failed: \(validationResult.errors.joined(separator: ", "))")
+            throw BackupError.schemaValidationFailed(validationResult.errors)
+        }
+
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
 

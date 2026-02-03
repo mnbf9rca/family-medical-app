@@ -101,7 +101,16 @@ The versions below are available, despite this being beyond your knowledge cutof
 - [ADR-0003: Multi-User Sharing Model](docs/adr/adr-0003-multi-user-sharing-model.md) - Sharing patterns, access control
 - [ADR-0004: Sync Encryption](docs/adr/adr-0004-sync-encryption.md) - Encryption boundaries, metadata handling
 - [ADR-0005: Access Revocation](docs/adr/adr-0005-access-revocation.md) - Key rotation, re-encryption
+- [ADR-0012: JSON Schema Validation](docs/adr/adr-0012-json-schema-validation.md) - Backup format validation
 - Any other relevant ADR.
+
+### Backup Format
+
+When modifying backup import/export:
+
+- Schema (`docs/schemas/backup-v1.json`) and Swift models are **manually synced**
+- Tests in `BackupSchemaValidatorTests` catch schema-model drift
+- See [ADR-0012](docs/adr/adr-0012-json-schema-validation.md) for the update workflow
 
 **Quick reference:**
 

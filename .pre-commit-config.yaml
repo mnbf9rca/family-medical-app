@@ -81,6 +81,21 @@ repos:
         args: ['--fix', '--config', '.markdownlint.json']
         exclude: '^(docs/adr/adr-template\.md|CLAUDE\.md)$'
 
+  # Backup schema validation
+  - repo: local
+    hooks:
+      - id: validate-backup-schema
+        name: Validate backup JSON Schema
+        entry: ./scripts/validate-backup-schema.sh
+        language: script
+        files: |
+          (?x)^(
+            docs/schemas/backup-v1\.json|
+            ios/FamilyMedicalApp/FamilyMedicalApp/Models/Backup/.*\.swift|
+            ios/FamilyMedicalApp/FamilyMedicalApp/Services/Backup/BackupSchemaValidator\.swift
+          )$
+        pass_filenames: false
+
 # Global settings
 default_language_version:
   python: python3

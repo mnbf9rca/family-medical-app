@@ -237,6 +237,34 @@ See [ADR-0002: Key Hierarchy](adr/adr-0002-key-hierarchy.md) for specifications.
 
 ---
 
+## Backup File Schema
+
+The backup file format is defined by `docs/schemas/backup-v1.json` (JSON Schema Draft 2020-12). See [ADR-0012: JSON Schema Validation](adr/adr-0012-json-schema-validation.md) for details.
+
+### Schema-Model Consistency
+
+Consistency between the JSON Schema and Swift models is ensured through:
+
+1. **Runtime validation** - `BackupSchemaValidator` validates all imported backup files against the schema
+2. **Unit tests** - Tests serialize Swift models and validate them against the schema
+3. **Pre-commit hook** - Validates the schema file is well-formed JSON Schema
+
+### Workflow for Schema Changes
+
+1. Edit `docs/schemas/backup-v1.json`
+2. Update the corresponding Swift models in `Models/Backup/`
+3. Run tests to verify schema-model consistency
+4. Commit schema and model changes together
+
+### DoS Protection
+
+The validator enforces limits to prevent denial-of-service attacks:
+
+- **Max nesting depth**: 20 levels (default)
+- **Max array size**: 100,000 items (default)
+
+---
+
 ## Naming Conventions
 
 - ViewModels: `<Feature>ViewModel` (e.g., `HomeViewModel`)

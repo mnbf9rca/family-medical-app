@@ -16,7 +16,7 @@ struct BackupFileServiceTests {
             encryptionService: EncryptionService()
         )
 
-        let payload = makeTestPayload()
+        let payload = BackupFileServiceTestHelpers.makeTestPayload()
         let file = try service.createEncryptedBackup(payload: payload, password: testPassword)
 
         #expect(file.encrypted == true)
@@ -34,7 +34,7 @@ struct BackupFileServiceTests {
             encryptionService: EncryptionService()
         )
 
-        let original = makeTestPayload()
+        let original = BackupFileServiceTestHelpers.makeTestPayload()
         let file = try service.createEncryptedBackup(payload: original, password: testPassword)
         let decrypted = try service.decryptBackup(file: file, password: testPassword)
 
@@ -49,7 +49,7 @@ struct BackupFileServiceTests {
             encryptionService: EncryptionService()
         )
 
-        let payload = makeTestPayload()
+        let payload = BackupFileServiceTestHelpers.makeTestPayload()
         let file = try service.createEncryptedBackup(payload: payload, password: testPassword)
 
         #expect(throws: BackupError.invalidPassword) {
@@ -64,7 +64,7 @@ struct BackupFileServiceTests {
             encryptionService: EncryptionService()
         )
 
-        let payload = makeTestPayload()
+        let payload = BackupFileServiceTestHelpers.makeTestPayload()
 
         #expect(throws: BackupError.passwordTooWeak) {
             _ = try service.createEncryptedBackup(payload: payload, password: "short")
@@ -80,7 +80,7 @@ struct BackupFileServiceTests {
             encryptionService: EncryptionService()
         )
 
-        let payload = makeTestPayload()
+        let payload = BackupFileServiceTestHelpers.makeTestPayload()
         let file = try service.createUnencryptedBackup(payload: payload)
 
         #expect(file.encrypted == false)
@@ -97,7 +97,7 @@ struct BackupFileServiceTests {
             encryptionService: EncryptionService()
         )
 
-        let original = makeTestPayload()
+        let original = BackupFileServiceTestHelpers.makeTestPayload()
         let file = try service.createUnencryptedBackup(payload: original)
         let read = try service.readUnencryptedBackup(file: file)
 
@@ -113,7 +113,7 @@ struct BackupFileServiceTests {
             encryptionService: EncryptionService()
         )
 
-        let payload = makeTestPayload()
+        let payload = BackupFileServiceTestHelpers.makeTestPayload()
         let file = try service.createEncryptedBackup(payload: payload, password: testPassword)
 
         #expect(try service.verifyChecksum(file: file) == true)
@@ -126,7 +126,7 @@ struct BackupFileServiceTests {
             encryptionService: EncryptionService()
         )
 
-        let payload = makeTestPayload()
+        let payload = BackupFileServiceTestHelpers.makeTestPayload()
         let file = try service.createUnencryptedBackup(payload: payload)
 
         #expect(try service.verifyChecksum(file: file) == true)
@@ -139,7 +139,7 @@ struct BackupFileServiceTests {
             encryptionService: EncryptionService()
         )
 
-        let payload = makeTestPayload()
+        let payload = BackupFileServiceTestHelpers.makeTestPayload()
         let originalFile = try service.createEncryptedBackup(payload: payload, password: testPassword)
 
         // Corrupt the checksum
@@ -167,7 +167,7 @@ struct BackupFileServiceTests {
             encryptionService: EncryptionService()
         )
 
-        let payload = makeTestPayload()
+        let payload = BackupFileServiceTestHelpers.makeTestPayload()
         let file = try service.createEncryptedBackup(payload: payload, password: testPassword)
         let json = try service.serializeToJSON(file: file)
 
@@ -190,7 +190,7 @@ struct BackupFileServiceTests {
             encryptionService: EncryptionService()
         )
 
-        let payload = makeTestPayload()
+        let payload = BackupFileServiceTestHelpers.makeTestPayload()
         let original = try service.createEncryptedBackup(payload: payload, password: testPassword)
         let json = try service.serializeToJSON(file: original)
         let restored = try service.deserializeFromJSON(json)
@@ -206,7 +206,7 @@ struct BackupFileServiceTests {
             encryptionService: EncryptionService()
         )
 
-        let original = makeTestPayload()
+        let original = BackupFileServiceTestHelpers.makeTestPayload()
 
         // Create encrypted backup
         let file = try service.createEncryptedBackup(payload: original, password: testPassword)
@@ -236,7 +236,7 @@ struct BackupFileServiceTests {
             encryptionService: EncryptionService()
         )
 
-        let original = makeTestPayload()
+        let original = BackupFileServiceTestHelpers.makeTestPayload()
 
         // Create unencrypted backup
         let file = try service.createUnencryptedBackup(payload: original)
@@ -312,7 +312,7 @@ struct BackupFileServiceTests {
         )
 
         // Create a valid backup and modify the version
-        let payload = makeTestPayload()
+        let payload = BackupFileServiceTestHelpers.makeTestPayload()
         let original = try service.createUnencryptedBackup(payload: payload)
 
         // Create a file with unsupported version
@@ -337,7 +337,7 @@ struct BackupFileServiceTests {
         }
     }
 
-    @Test("Throws corruptedFile for wrong formatName")
+    @Test("Throws schemaValidationFailed for wrong formatName")
     func throwsForInvalidFormatName() throws {
         let service = BackupFileService(
             keyDerivationService: KeyDerivationService(),
@@ -345,7 +345,7 @@ struct BackupFileServiceTests {
         )
 
         // Create a valid backup and modify the format name
-        let payload = makeTestPayload()
+        let payload = BackupFileServiceTestHelpers.makeTestPayload()
         let original = try service.createUnencryptedBackup(payload: payload)
 
         // Create a file with invalid format name
@@ -365,8 +365,15 @@ struct BackupFileServiceTests {
         encoder.dateEncodingStrategy = .iso8601
         let json = try encoder.encode(invalidFile)
 
-        #expect(throws: BackupError.corruptedFile) {
+        // Schema validation catches the invalid format name before the decoder
+        do {
             _ = try service.deserializeFromJSON(json)
+            Issue.record("Expected error to be thrown")
+        } catch let error as BackupError {
+            guard case .schemaValidationFailed = error else {
+                Issue.record("Expected schemaValidationFailed, got \(error)")
+                return
+            }
         }
     }
 
@@ -377,7 +384,7 @@ struct BackupFileServiceTests {
             encryptionService: EncryptionService()
         )
 
-        let payload = makeTestPayload()
+        let payload = BackupFileServiceTestHelpers.makeTestPayload()
         let file = try service.createUnencryptedBackup(payload: payload)
         let json = try service.serializeToJSON(file: file)
 
@@ -386,10 +393,12 @@ struct BackupFileServiceTests {
         #expect(restored.formatName == BackupFile.formatNameValue)
         #expect(restored.formatVersion == BackupFile.currentVersion)
     }
+}
 
-    // MARK: - Helpers
+// MARK: - Helpers
 
-    func makeTestPayload() -> BackupPayload {
+private enum BackupFileServiceTestHelpers {
+    static func makeTestPayload() -> BackupPayload {
         BackupPayload(
             exportedAt: Date(),
             appVersion: "1.0.0",
