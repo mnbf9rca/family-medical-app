@@ -69,7 +69,9 @@ The helper (`UITestHelpers.swift`) tries multiple dismiss strategies in order:
 4. Swipe down (for sheets)
 5. Tap outside (for popovers)
 
-**Caveat:** `dismissCurrentView()` uses `swipeDown` as a fallback (strategy 4), which scrolls the underlying `Form`. Since `Form` is backed by a lazy container, this can remove off-screen elements from the accessibility tree. For dismissing menus over a Form, use a direct coordinate tap instead: `app.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.05)).tap()`.
+**Caveat:** `dismissCurrentView()` uses `swipeDown` as a fallback (strategy 4), which scrolls the underlying `Form`. Since `Form` is backed by a lazy container, this can remove off-screen elements from the accessibility tree.
+
+For dismissing menus over a Form, tap a known non-interactive element (e.g., the navigation bar title) instead of using coordinate taps. On iPad, `.sheet` presents as a centered card, so normalized screen coordinates can land outside the sheet (dismissing it) or on toolbar buttons like Cancel.
 
 ### When Conditional Logic IS Appropriate
 

@@ -103,10 +103,12 @@ final class AttachmentFlowUITests: XCTestCase {
             || filesOption.exists
         XCTAssertTrue(hasOptions, "Attachment picker should show add options")
 
-        // Dismiss menu by tapping outside (dismissCurrentView uses swipeDown
-        // which scrolls the Form, removing lazy-loaded Attachments from the
-        // accessibility tree and breaking the count summary check below)
-        app.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.05)).tap()
+        // Dismiss menu by tapping the nav bar title area. We can't use:
+        // - dismissCurrentView(): swipeDown scrolls the Form, removing lazy-loaded
+        //   Attachments from the accessibility tree
+        // - Coordinate taps: on iPad, .sheet is a centered card — coordinates outside
+        //   the sheet dismiss it, and top-left coordinates hit the Cancel button
+        formTitle.tap()
 
         // Wait for menu to fully dismiss from accessibility tree before
         // querying underlying form elements
