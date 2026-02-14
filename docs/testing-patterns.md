@@ -96,6 +96,22 @@ CI environments are slower than local development machines. Use appropriate time
 | Quick checks in fallback logic | 0.5-1 second |
 | Setup cleanup | 1-2 seconds |
 
+### Hittability vs Existence
+
+`waitForExistence` only checks the accessibility tree — an element can "exist" before its layout position has stabilized. For elements you need to tap, use `waitUntilHittable` (in `UITestHelpers.swift`) which polls for both `exists` and `isHittable`:
+
+```swift
+// BAD: Element may exist but not be at stable coordinates yet
+XCTAssertTrue(button.waitForExistence(timeout: 5))
+button.tap()  // May tap stale coordinates on slow CI
+
+// GOOD: Ensures element is visible and at correct position
+XCTAssertTrue(button.waitUntilHittable(timeout: 5), "Button should be hittable")
+button.tap()
+```
+
+Animations are disabled during UI testing (`UIView.setAnimationsEnabled(false)` in `FamilyMedicalAppApp.init()`) to reduce timing variance, but `waitUntilHittable` remains the safest pattern for tap targets.
+
 **References:**
 
 - Helper implementation: `FamilyMedicalAppUITests/Helpers/UITestHelpers.swift`
