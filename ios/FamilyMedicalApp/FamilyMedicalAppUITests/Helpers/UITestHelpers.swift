@@ -125,7 +125,10 @@ extension XCUIApplication {
         XCTAssertTrue(welcomeHeader.waitForExistence(timeout: timeout), "Welcome view should appear")
 
         let createAccountButton = buttons["Create Account"]
-        XCTAssertTrue(createAccountButton.waitForExistence(timeout: timeout), "Create Account button should exist")
+        XCTAssertTrue(
+            createAccountButton.waitUntilHittable(timeout: timeout),
+            "Create Account button should be hittable"
+        )
         createAccountButton.tap()
 
         // Step 1: Username Entry
