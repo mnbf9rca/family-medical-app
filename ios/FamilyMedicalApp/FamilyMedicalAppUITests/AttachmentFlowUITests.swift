@@ -108,6 +108,16 @@ final class AttachmentFlowUITests: XCTestCase {
         // accessibility tree and breaking the count summary check below)
         app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.1)).tap()
 
+        // Wait for menu to fully dismiss from accessibility tree before
+        // querying underlying form elements
+        if cameraOption.exists {
+            _ = cameraOption.waitForNonExistence(timeout: 3)
+        } else if photoLibraryOption.exists {
+            _ = photoLibraryOption.waitForNonExistence(timeout: 3)
+        } else {
+            _ = filesOption.waitForNonExistence(timeout: 3)
+        }
+
         // TEST 2: Count summary exists
         let countSummary = app.staticTexts.matching(
             NSPredicate(format: "label CONTAINS 'attachments'")
