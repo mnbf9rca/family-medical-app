@@ -103,8 +103,10 @@ final class AttachmentFlowUITests: XCTestCase {
             || filesOption.exists
         XCTAssertTrue(hasOptions, "Attachment picker should show add options")
 
-        // Dismiss menu using helper (deterministic cleanup)
-        app.dismissCurrentView()
+        // Dismiss menu by tapping outside (dismissCurrentView uses swipeDown
+        // which scrolls the Form, removing lazy-loaded Attachments from the
+        // accessibility tree and breaking the count summary check below)
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.1)).tap()
 
         // TEST 2: Count summary exists
         let countSummary = app.staticTexts.matching(
