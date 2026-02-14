@@ -106,7 +106,7 @@ final class AttachmentFlowUITests: XCTestCase {
         // Dismiss menu by tapping outside (dismissCurrentView uses swipeDown
         // which scrolls the Form, removing lazy-loaded Attachments from the
         // accessibility tree and breaking the count summary check below)
-        app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.1)).tap()
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.05)).tap()
 
         // Wait for menu to fully dismiss from accessibility tree before
         // querying underlying form elements

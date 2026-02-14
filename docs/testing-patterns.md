@@ -69,7 +69,7 @@ The helper (`UITestHelpers.swift`) tries multiple dismiss strategies in order:
 4. Swipe down (for sheets)
 5. Tap outside (for popovers)
 
-**Caveat:** `dismissCurrentView()` uses `swipeDown` as a fallback (strategy 4), which scrolls the underlying `Form`. Since `Form` is backed by a lazy container, this can remove off-screen elements from the accessibility tree. For dismissing menus over a Form, use a direct coordinate tap instead: `app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.1)).tap()`.
+**Caveat:** `dismissCurrentView()` uses `swipeDown` as a fallback (strategy 4), which scrolls the underlying `Form`. Since `Form` is backed by a lazy container, this can remove off-screen elements from the accessibility tree. For dismissing menus over a Form, use a direct coordinate tap instead: `app.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.05)).tap()`.
 
 ### When Conditional Logic IS Appropriate
 

@@ -344,7 +344,7 @@ extension XCUIApplication {
         swipeDown()
 
         // Strategy 5: Tap outside (for popovers/menus)
-        coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.1)).tap()
+        coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.05)).tap()
     }
 }
 
