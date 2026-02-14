@@ -361,4 +361,18 @@ extension XCUIElement {
         let deleteString = String(repeating: XCUIKeyboardKey.delete.rawValue, count: stringValue.count)
         self.typeText(deleteString)
     }
+
+    /// Wait for element to become hittable (visible, rendered, and tappable)
+    ///
+    /// Unlike `waitForExistence`, this ensures the element is at stable screen
+    /// coordinates and not obscured. Use before `tap()` on elements that may
+    /// still be laying out when they first appear in the accessibility tree.
+    func waitUntilHittable(timeout: TimeInterval) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if exists && isHittable { return true }
+            Thread.sleep(forTimeInterval: 0.1)
+        }
+        return exists && isHittable
+    }
 }
