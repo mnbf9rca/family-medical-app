@@ -259,6 +259,44 @@ struct PersonDetailViewModelTests {
         #expect(viewModel.isLoading == false)
     }
 
+    // MARK: - Schema Service Tests
+
+    @Test
+    func loadRecordCountsFetchesSchemasFromService() async throws {
+        let person = try createTestPerson()
+        let mockSchemaService = MockSchemaService()
+        let mockRepo = MockMedicalRecordRepository()
+        let mockContentService = MockRecordContentService()
+        let mockKeyProvider = MockPrimaryKeyProvider(primaryKey: testPrimaryKey)
+        let mockFMKService = MockFamilyMemberKeyService()
+        mockFMKService.setFMK(testFMK, for: person.id.uuidString)
+
+        // Store custom schema
+        let customSchema = RecordSchema(
+            unsafeId: "vaccine",
+            displayName: "Immunization",
+            iconSystemName: "cross.vial",
+            fields: RecordSchema.builtIn(.vaccine).fields,
+            isBuiltIn: true
+        )
+        mockSchemaService.addSchema(customSchema, forPerson: person.id)
+
+        let viewModel = PersonDetailViewModel(
+            person: person,
+            medicalRecordRepository: mockRepo,
+            recordContentService: mockContentService,
+            primaryKeyProvider: mockKeyProvider,
+            fmkService: mockFMKService,
+            schemaService: mockSchemaService
+        )
+
+        await viewModel.loadRecordCounts()
+
+        // Should expose fetched schemas
+        let vaccineSchema = viewModel.schemaForType(.vaccine)
+        #expect(vaccineSchema?.displayName == "Immunization")
+    }
+
     @Test
     func loadRecordCountsSetsErrorWhenDecryptionFails() async throws {
         let person = try createTestPerson()
