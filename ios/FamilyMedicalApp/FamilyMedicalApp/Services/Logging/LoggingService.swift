@@ -67,11 +67,17 @@ protocol CategoryLoggerProtocol: Sendable {
     /// - Parameter date: The timestamp to log
     func logTimestamp(_ date: Date)
 
-    /// Log an error with context (error details are private)
+    /// Log an error with context (error details are public)
     /// - Parameters:
     ///   - error: The error that occurred
     ///   - context: Public context (e.g., function name)
     func logError(_ error: Error, context: String)
+
+    /// Log an error where the description may contain PII (hashed for correlation)
+    /// - Parameters:
+    ///   - error: The error that occurred
+    ///   - context: Public context (e.g., function name)
+    func logSensitiveError(_ error: Error, context: String)
 }
 
 // MARK: - Implementation
@@ -241,5 +247,13 @@ final class CategoryLogger: CategoryLoggerProtocol, @unchecked Sendable {
         let errorDesc = error.localizedDescription
         osLogger
             .error("[\(context, privacy: .public)] \(errorType, privacy: .public): \(errorDesc, privacy: .public)")
+    }
+
+    func logSensitiveError(_ error: Error, context: String) {
+        let errorType = String(describing: type(of: error))
+        let desc = error.localizedDescription
+        osLogger.error(
+            "[\(context, privacy: .public)] \(errorType, privacy: .public): \(desc, privacy: .private(mask: .hash))"
+        )
     }
 }

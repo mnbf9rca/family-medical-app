@@ -122,6 +122,10 @@ final class TracingCategoryLogger: CategoryLoggerProtocol, @unchecked Sendable {
         inner.logError(error, context: context)
     }
 
+    func logSensitiveError(_ error: Error, context: String) {
+        inner.logSensitiveError(error, context: context)
+    }
+
     // MARK: - Private
 
     private func formatDuration(_ duration: Duration) -> String {

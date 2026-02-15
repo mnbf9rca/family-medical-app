@@ -188,6 +188,17 @@ final class MockCategoryLogger: CategoryLoggerProtocol, @unchecked Sendable {
         ))
     }
 
+    func logSensitiveError(_ error: Error, context: String) {
+        let errorType = String(describing: type(of: error))
+        capturedEntries.append(CapturedLogEntry(
+            level: .error,
+            message: "[\(context)] \(errorType): \(error.localizedDescription)",
+            privacy: .hashed,
+            category: category,
+            timestamp: Date()
+        ))
+    }
+
     // MARK: - Test Helpers
 
     /// Clear all captured entries
