@@ -125,7 +125,10 @@ extension XCUIApplication {
         XCTAssertTrue(welcomeHeader.waitForExistence(timeout: timeout), "Welcome view should appear")
 
         let createAccountButton = buttons["Create Account"]
-        XCTAssertTrue(createAccountButton.waitForExistence(timeout: timeout), "Create Account button should exist")
+        XCTAssertTrue(
+            createAccountButton.waitUntilHittable(timeout: timeout),
+            "Create Account button should be hittable"
+        )
         createAccountButton.tap()
 
         // Step 1: Username Entry
@@ -341,7 +344,7 @@ extension XCUIApplication {
         swipeDown()
 
         // Strategy 5: Tap outside (for popovers/menus)
-        coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.1)).tap()
+        coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.05)).tap()
     }
 }
 
@@ -360,5 +363,19 @@ extension XCUIElement {
         // Delete each character
         let deleteString = String(repeating: XCUIKeyboardKey.delete.rawValue, count: stringValue.count)
         self.typeText(deleteString)
+    }
+
+    /// Wait for element to become hittable (visible, rendered, and tappable)
+    ///
+    /// Unlike `waitForExistence`, this ensures the element is at stable screen
+    /// coordinates and not obscured. Use before `tap()` on elements that may
+    /// still be laying out when they first appear in the accessibility tree.
+    func waitUntilHittable(timeout: TimeInterval) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if exists && isHittable { return true }
+            Thread.sleep(forTimeInterval: 0.1)
+        }
+        return exists && isHittable
     }
 }

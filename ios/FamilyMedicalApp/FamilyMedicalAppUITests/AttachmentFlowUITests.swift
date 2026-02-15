@@ -103,8 +103,22 @@ final class AttachmentFlowUITests: XCTestCase {
             || filesOption.exists
         XCTAssertTrue(hasOptions, "Attachment picker should show add options")
 
-        // Dismiss menu using helper (deterministic cleanup)
-        app.dismissCurrentView()
+        // Dismiss menu by tapping the nav bar title area. We can't use:
+        // - dismissCurrentView(): swipeDown scrolls the Form, removing lazy-loaded
+        //   Attachments from the accessibility tree
+        // - Coordinate taps: on iPad, .sheet is a centered card — coordinates outside
+        //   the sheet dismiss it, and top-left coordinates hit the Cancel button
+        formTitle.tap()
+
+        // Wait for menu to fully dismiss from accessibility tree before
+        // querying underlying form elements
+        if cameraOption.exists {
+            _ = cameraOption.waitForNonExistence(timeout: 3)
+        } else if photoLibraryOption.exists {
+            _ = photoLibraryOption.waitForNonExistence(timeout: 3)
+        } else {
+            _ = filesOption.waitForNonExistence(timeout: 3)
+        }
 
         // TEST 2: Count summary exists
         let countSummary = app.staticTexts.matching(

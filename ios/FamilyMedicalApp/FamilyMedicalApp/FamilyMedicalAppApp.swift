@@ -1,10 +1,13 @@
 import SwiftUI
+import UIKit
 
 @main
 struct FamilyMedicalAppApp: App {
     init() {
         // Handle UI testing launch arguments
         if CommandLine.arguments.contains("--uitesting") {
+            UIView.setAnimationsEnabled(false)
+
             if CommandLine.arguments.contains("--reset-state") {
                 resetAppState()
             }
