@@ -83,9 +83,13 @@ struct TracingCategoryLoggerTests {
 
         tracer.debug("msg", privacy: .hashed)
         tracer.info("msg", privacy: .sensitive)
+        tracer.notice("msg", privacy: .public)
+        tracer.error("msg", privacy: .hashed)
+        tracer.fault("msg", privacy: .sensitive)
 
-        #expect(mock.entriesWithPrivacy(.hashed).count == 1)
-        #expect(mock.entriesWithPrivacy(.sensitive).count == 1)
+        #expect(mock.entriesWithPrivacy(.hashed).count == 2)
+        #expect(mock.entriesWithPrivacy(.sensitive).count == 2)
+        #expect(mock.entriesWithPrivacy(.public).count == 1)
     }
 
     @Test
@@ -100,5 +104,18 @@ struct TracingCategoryLoggerTests {
         tracer.logError(NSError(domain: "test", code: 1), context: "TestContext")
 
         #expect(mock.capturedEntries.count == 5)
+    }
+
+    @Test
+    func delegatesLogSensitiveError() {
+        let mock = MockCategoryLogger(category: .auth)
+        let tracer = TracingCategoryLogger(wrapping: mock)
+
+        let error = NSError(domain: "test", code: 42, userInfo: [
+            NSLocalizedDescriptionKey: "Sensitive data in error"
+        ])
+        tracer.logSensitiveError(error, context: "TestContext")
+
+        #expect(mock.capturedEntries.count == 1)
     }
 }

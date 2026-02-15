@@ -178,7 +178,7 @@ final class MigrationCheckpointService: MigrationCheckpointServiceProtocol, @unc
 
             guard let entity = try context.fetch(request).first else {
                 // Not found is not an error - checkpoint may have already been deleted
-                logger.debug(
+                self.logger.debug(
                     "Checkpoint not found for migration \(migrationId) - may have already been deleted"
                 )
                 return
