@@ -17,16 +17,20 @@ final class DemoModeUITests: XCTestCase {
 
     override func setUpWithError() throws {
         continueAfterFailure = false
-        MainActor.assumeIsolated {
-            app = XCUIApplication()
-            app.launchForUITesting(resetState: true)
+        // Use local to avoid sending `self` into MainActor isolation domain
+        let newApp = MainActor.assumeIsolated {
+            let a = XCUIApplication()
+            a.launchForUITesting(resetState: true)
+            return a
         }
+        app = newApp
     }
 
     override func tearDownWithError() throws {
+        let currentApp = app
+        app = nil
         MainActor.assumeIsolated {
-            app?.terminate()
-            app = nil
+            currentApp?.terminate()
         }
     }
 
