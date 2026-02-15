@@ -43,17 +43,21 @@ final class ImageProcessingService: ImageProcessingServiceProtocol, @unchecked S
 
     // MARK: - Properties
 
-    private let logger: CategoryLoggerProtocol
+    private let logger: TracingCategoryLogger
 
     // MARK: - Initialization
 
     init(logger: CategoryLoggerProtocol? = nil) {
-        self.logger = logger ?? LoggingService.shared.logger(category: .storage)
+        self.logger = TracingCategoryLogger(
+            wrapping: logger ?? LoggingService.shared.logger(category: .storage)
+        )
     }
 
     // MARK: - ImageProcessingServiceProtocol
 
     func compress(_ imageData: Data, maxSizeBytes: Int, maxDimension: Int) throws -> Data {
+        let start = ContinuousClock.now
+        logger.entry("compress")
         guard let image = UIImage(data: imageData) else {
             logger.error("Failed to create image from data")
             throw ModelError.imageProcessingFailed(reason: "Could not create image from data")
@@ -71,10 +75,13 @@ final class ImageProcessingService: ImageProcessingServiceProtocol, @unchecked S
         let ratio = Double(compressedData.count) / Double(imageData.count) * 100
         logger.debug("Compressed image: \(imageData.count) → \(compressedData.count) bytes (\(Int(ratio))%)")
 
+        logger.exit("compress", duration: ContinuousClock.now - start)
         return compressedData
     }
 
     func generateThumbnail(_ imageData: Data, maxDimension: Int) throws -> Data {
+        let start = ContinuousClock.now
+        logger.entry("generateThumbnail")
         guard let image = UIImage(data: imageData) else {
             logger.error("Failed to create image for thumbnail")
             throw ModelError.imageProcessingFailed(reason: "Could not create image from data")
@@ -91,6 +98,7 @@ final class ImageProcessingService: ImageProcessingServiceProtocol, @unchecked S
 
         logger.debug("Generated thumbnail: \(thumbnailData.count) bytes")
 
+        logger.exit("generateThumbnail", duration: ContinuousClock.now - start)
         return thumbnailData
     }
 
