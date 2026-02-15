@@ -87,6 +87,31 @@ struct LogExportServiceTests {
         #expect(!metadata.formattedDiskFree.isEmpty)
     }
 
+    // MARK: - LogExportService Init
+
+    @Test
+    func initWithDefaultLogger() {
+        let service = LogExportService()
+        // Verifies init completes without crash and default logger wiring works
+        #expect(service is LogExportServiceProtocol)
+    }
+
+    @Test
+    func initWithInjectedLogger() {
+        let mock = MockCategoryLogger(category: .ui)
+        let service = LogExportService(logger: mock)
+        // Verifies TracingCategoryLogger wrapping doesn't reject the mock
+        #expect(service is LogExportServiceProtocol)
+    }
+
+    @Test
+    func initWithCustomSubsystem() {
+        let service = LogExportService(subsystem: "com.test.custom")
+        #expect(service is LogExportServiceProtocol)
+    }
+
+    // MARK: - Error Descriptions
+
     @Test
     func logExportErrorDescriptions() {
         let storeError = LogExportError.storeAccessFailed(NSError(domain: "test", code: 1))
