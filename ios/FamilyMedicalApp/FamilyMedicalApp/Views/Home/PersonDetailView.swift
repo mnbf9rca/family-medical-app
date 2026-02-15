@@ -21,7 +21,7 @@ struct PersonDetailView: View {
                     ForEach(BuiltInSchemaType.allCases, id: \.self) { schemaType in
                         NavigationLink(value: schemaType) {
                             RecordTypeRowView(
-                                schemaType: schemaType,
+                                schema: viewModel.schemaForType(schemaType) ?? schemaType.schema,
                                 recordCount: viewModel.recordCounts[schemaType.rawValue] ?? 0
                             )
                         }

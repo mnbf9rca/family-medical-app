@@ -2,17 +2,17 @@ import SwiftUI
 
 /// Row view for displaying a record type with icon and count
 struct RecordTypeRowView: View {
-    let schemaType: BuiltInSchemaType
+    let schema: RecordSchema
     let recordCount: Int
 
     var body: some View {
         HStack {
-            Image(systemName: schemaType.iconSystemName)
+            Image(systemName: schema.iconSystemName)
                 .foregroundStyle(.tint)
                 .frame(width: 30)
                 .accessibilityHidden(true)
 
-            Text(schemaType.displayName)
+            Text(schema.displayName)
                 .font(.body)
 
             Spacer()
@@ -29,29 +29,29 @@ struct RecordTypeRowView: View {
 
     private var accessibilityDescription: String {
         if recordCount == 0 {
-            "\(schemaType.displayName), no records"
+            "\(schema.displayName), no records"
         } else if recordCount == 1 {
-            "\(schemaType.displayName), 1 record"
+            "\(schema.displayName), 1 record"
         } else {
-            "\(schemaType.displayName), \(recordCount) records"
+            "\(schema.displayName), \(recordCount) records"
         }
     }
 }
 
 #Preview("With Records") {
     List {
-        RecordTypeRowView(schemaType: .vaccine, recordCount: 3)
-        RecordTypeRowView(schemaType: .condition, recordCount: 1)
-        RecordTypeRowView(schemaType: .medication, recordCount: 5)
-        RecordTypeRowView(schemaType: .allergy, recordCount: 2)
-        RecordTypeRowView(schemaType: .note, recordCount: 10)
+        RecordTypeRowView(schema: RecordSchema.builtIn(.vaccine), recordCount: 3)
+        RecordTypeRowView(schema: RecordSchema.builtIn(.condition), recordCount: 1)
+        RecordTypeRowView(schema: RecordSchema.builtIn(.medication), recordCount: 5)
+        RecordTypeRowView(schema: RecordSchema.builtIn(.allergy), recordCount: 2)
+        RecordTypeRowView(schema: RecordSchema.builtIn(.note), recordCount: 10)
     }
 }
 
 #Preview("Without Records") {
     List {
-        RecordTypeRowView(schemaType: .vaccine, recordCount: 0)
-        RecordTypeRowView(schemaType: .condition, recordCount: 0)
-        RecordTypeRowView(schemaType: .medication, recordCount: 0)
+        RecordTypeRowView(schema: RecordSchema.builtIn(.vaccine), recordCount: 0)
+        RecordTypeRowView(schema: RecordSchema.builtIn(.condition), recordCount: 0)
+        RecordTypeRowView(schema: RecordSchema.builtIn(.medication), recordCount: 0)
     }
 }
