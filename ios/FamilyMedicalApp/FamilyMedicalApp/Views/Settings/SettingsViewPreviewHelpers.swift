@@ -10,7 +10,8 @@ import SwiftUI
         viewModel: SettingsViewModel(
             exportService: PreviewExportService(),
             importService: PreviewImportService(),
-            backupFileService: PreviewBackupFileService()
+            backupFileService: PreviewBackupFileService(),
+            logExportService: PreviewLogExportService()
         ),
         primaryKey: SymmetricKey(size: .bits256)
     )
@@ -128,6 +129,16 @@ final class PreviewBackupFileService: BackupFileServiceProtocol, @unchecked Send
             ciphertext: nil,
             data: nil
         )
+    }
+}
+
+final class PreviewLogExportService: LogExportServiceProtocol, @unchecked Sendable {
+    func exportLogs(timeWindow: LogTimeWindow) async throws -> URL {
+        // Write a stub diagnostic file for preview interaction
+        let url = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("preview-diagnostics.txt")
+        try Data("Preview diagnostic logs".utf8).write(to: url)
+        return url
     }
 }
 
