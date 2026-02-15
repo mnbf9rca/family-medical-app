@@ -265,6 +265,29 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		D4COPYSC2F35000000SCHEMA1 /* Copy Backup Schema */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${SRCROOT}/../../docs/schemas/backup-v1.json",
+			);
+			name = "Copy Backup Schema";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"${BUILT_PRODUCTS_DIR}/${PRODUCT_NAME}.app/Schemas/backup-v1.json",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "mkdir -p \"${BUILT_PRODUCTS_DIR}/${PRODUCT_NAME}.app/Schemas\"\ncp \"${SRCROOT}/../../docs/schemas/backup-v1.json\" \"${BUILT_PRODUCTS_DIR}/${PRODUCT_NAME}.app/Schemas/\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		D445F7962EF7E93C00E07F78 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -288,29 +311,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
-
-/* Begin PBXShellScriptBuildPhase section */
-		D4COPYSC2F35000000SCHEMA1 /* Copy Backup Schema */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-				"${SRCROOT}/../../docs/schemas/backup-v1.json",
-			);
-			name = "Copy Backup Schema";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-				"${BUILT_PRODUCTS_DIR}/${PRODUCT_NAME}.app/Schemas/backup-v1.json",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "mkdir -p \"${BUILT_PRODUCTS_DIR}/${PRODUCT_NAME}.app/Schemas\"\ncp \"${SRCROOT}/../../docs/schemas/backup-v1.json\" \"${BUILT_PRODUCTS_DIR}/${PRODUCT_NAME}.app/Schemas/\"\n";
-		};
-/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXTargetDependency section */
 		D445F7A92EF7E94000E07F78 /* PBXTargetDependency */ = {
