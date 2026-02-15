@@ -35,6 +35,9 @@ protocol PasswordValidationServiceProtocol {
 }
 
 /// Service for validating passwords following NIST SP 800-63B guidelines
+///
+/// Note: No TracingCategoryLogger tracing in this service — `validate()` and `passwordStrength()`
+/// are called per-keystroke from SwiftUI bindings and would produce excessive log spam.
 final class PasswordValidationService: PasswordValidationServiceProtocol {
     // MARK: - Constants
 

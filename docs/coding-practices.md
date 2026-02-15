@@ -96,6 +96,8 @@ See [ADR-0013](adr/adr-0013-logging-privacy-and-export.md) for full specificatio
 
 All service methods **must** use `TracingCategoryLogger` for structured entry/exit tracing with timing.
 
+**Exception:** Methods called per-keystroke or from SwiftUI computed property re-evaluation (e.g., password validation during typing) should omit tracing to avoid log spam and UI performance impact. Add a code comment explaining why tracing is absent.
+
 **✅ DO** wrap loggers with `TracingCategoryLogger`:
 
 ```swift
