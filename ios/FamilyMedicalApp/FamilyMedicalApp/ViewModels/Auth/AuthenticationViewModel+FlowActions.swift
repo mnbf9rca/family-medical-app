@@ -1,8 +1,9 @@
 import CryptoKit
 import Foundation
-import OSLog
 
-private let logger = Logger(subsystem: "com.cynexia.FamilyMedicalApp", category: "AuthFlow")
+private let logger = TracingCategoryLogger(
+    wrapping: LoggingService.shared.logger(category: .auth)
+)
 
 /// OPAQUE authentication flow actions for AuthenticationViewModel
 extension AuthenticationViewModel {
@@ -114,7 +115,7 @@ extension AuthenticationViewModel {
         } catch let error as AuthenticationError {
             if case let .accountExistsConfirmed(loginResult) = error {
                 // Account exists and user proved ownership - show confirmation dialog
-                logger.info("[auth] Account exists (confirmed) - showing confirmation dialog")
+                logger.info("Account exists (confirmed) - showing confirmation dialog")
                 flowState = .accountExistsConfirmation(
                     username: username,
                     loginResult: loginResult,
@@ -122,11 +123,11 @@ extension AuthenticationViewModel {
                 )
                 clearSensitiveFields()
             } else {
-                logger.error("[auth] Setup failed: \(error.localizedDescription, privacy: .public)")
+                logger.logError(error, context: "AuthenticationViewModel.completeSetup")
                 errorMessage = error.localizedDescription
             }
         } catch {
-            logger.error("[auth] Setup failed: \(error.localizedDescription, privacy: .public)")
+            logger.logError(error, context: "AuthenticationViewModel.completeSetup")
             errorMessage = error.localizedDescription
         }
 
@@ -152,7 +153,7 @@ extension AuthenticationViewModel {
             flowState = .authenticated
             clearSensitiveFields()
         } catch {
-            logger.error("[auth] Complete login failed: \(error.localizedDescription, privacy: .public)")
+            logger.logError(error, context: "AuthenticationViewModel.confirmExistingAccount")
             errorMessage = error.localizedDescription
         }
 
@@ -190,7 +191,7 @@ extension AuthenticationViewModel {
             isAuthenticated = true
             flowState = .authenticated
         } catch {
-            logger.error("[demo] Failed to enter demo mode: \(error.localizedDescription, privacy: .public)")
+            logger.logError(error, context: "AuthenticationViewModel.enterDemoMode")
             errorMessage = "Failed to start demo: \(error.localizedDescription)"
             flowState = .welcome
         }
