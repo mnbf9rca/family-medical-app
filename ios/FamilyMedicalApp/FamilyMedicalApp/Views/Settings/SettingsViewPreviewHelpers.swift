@@ -1,7 +1,9 @@
 import CryptoKit
 import SwiftUI
 
-// MARK: - Preview
+// MARK: - Preview & Preview Helpers
+
+#if DEBUG
 
 #Preview {
     SettingsView(
@@ -13,8 +15,6 @@ import SwiftUI
         primaryKey: SymmetricKey(size: .bits256)
     )
 }
-
-// MARK: - Preview Helpers
 
 // swiftlint:disable unneeded_throws_rethrows
 final class PreviewExportService: ExportServiceProtocol, @unchecked Sendable {
@@ -132,3 +132,5 @@ final class PreviewBackupFileService: BackupFileServiceProtocol, @unchecked Send
 }
 
 // swiftlint:enable unneeded_throws_rethrows
+
+#endif
