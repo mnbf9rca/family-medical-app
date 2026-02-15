@@ -17,13 +17,17 @@ final class DemoModeUITests: XCTestCase {
 
     override func setUpWithError() throws {
         continueAfterFailure = false
-        app = XCUIApplication()
-        app.launchForUITesting(resetState: true)
+        MainActor.assumeIsolated {
+            app = XCUIApplication()
+            app.launchForUITesting(resetState: true)
+        }
     }
 
     override func tearDownWithError() throws {
-        app?.terminate()
-        app = nil
+        MainActor.assumeIsolated {
+            app?.terminate()
+            app = nil
+        }
     }
 
     // MARK: - Demo Mode Entry Tests
