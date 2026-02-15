@@ -38,6 +38,10 @@ final class LockStateService: LockStateServiceProtocol {
 
     // MARK: - Properties
 
+    private let logger = TracingCategoryLogger(
+        wrapping: LoggingService.shared.logger(category: .auth)
+    )
+
     var isLocked: Bool = false
 
     var lockTimeoutSeconds: Int {
@@ -74,15 +78,21 @@ final class LockStateService: LockStateServiceProtocol {
     // MARK: - LockStateServiceProtocol
 
     func recordBackgroundTime() {
+        let start = ContinuousClock.now
+        logger.entry("recordBackgroundTime")
         let now = Date().timeIntervalSince1970
         userDefaults.set(now, forKey: Self.backgroundTimeKey)
+        logger.exit("recordBackgroundTime", duration: ContinuousClock.now - start)
     }
 
     func shouldLockOnForeground() -> Bool {
+        let start = ContinuousClock.now
+        logger.entry("shouldLockOnForeground")
         let backgroundTime = userDefaults.double(forKey: Self.backgroundTimeKey)
 
         // If no background time recorded, don't lock
         guard backgroundTime > 0 else {
+            logger.exit("shouldLockOnForeground", duration: ContinuousClock.now - start)
             return false
         }
 
@@ -93,17 +103,23 @@ final class LockStateService: LockStateServiceProtocol {
         // Clear the background time
         userDefaults.removeObject(forKey: Self.backgroundTimeKey)
 
-        return elapsed >= timeout
+        let shouldLock = elapsed >= timeout
+        logger.exit("shouldLockOnForeground", duration: ContinuousClock.now - start)
+        return shouldLock
     }
 
     func lock() {
+        logger.entry("lock")
         isLocked = true
+        logger.exit("lock", duration: .zero)
     }
 
     func unlock() {
+        logger.entry("unlock")
         isLocked = false
         // Clear background time when unlocking
         userDefaults.removeObject(forKey: Self.backgroundTimeKey)
+        logger.exit("unlock", duration: .zero)
     }
 }
 

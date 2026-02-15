@@ -40,6 +40,12 @@ final class PasswordValidationService: PasswordValidationServiceProtocol {
 
     private static let minimumLength = 12
 
+    // MARK: - Properties
+
+    private let logger = TracingCategoryLogger(
+        wrapping: LoggingService.shared.logger(category: .auth)
+    )
+
     // Common passwords loaded from SecLists (10,000 most common)
     // Source: https://github.com/danielmiessler/SecLists/blob/master/Passwords/Common-Credentials/10k-most-common.txt
     private static let commonPasswords: Set<String> = {
@@ -59,6 +65,8 @@ final class PasswordValidationService: PasswordValidationServiceProtocol {
     // MARK: - Public Methods
 
     func validate(_ password: String) -> [AuthenticationError] {
+        let start = ContinuousClock.now
+        logger.entry("validate", "length=\(password.count)")
         var errors = Set<AuthenticationError>()
 
         // NIST Rule 1: Minimum length (12 chars is good)
@@ -84,10 +92,13 @@ final class PasswordValidationService: PasswordValidationServiceProtocol {
             errors.insert(.passwordTooCommon)
         }
 
+        logger.exit("validate", duration: ContinuousClock.now - start)
         return Array(errors)
     }
 
     func passwordStrength(_ password: String) -> PasswordStrength {
+        let start = ContinuousClock.now
+        logger.entry("passwordStrength", "length=\(password.count)")
         var score = 0
 
         // Length-based scoring (NIST emphasizes length over complexity)
@@ -104,27 +115,8 @@ final class PasswordValidationService: PasswordValidationServiceProtocol {
             score += 0
         }
 
-        // Character variety bonus (not required, but helps)
-        var varietyScore = 0
-        if password.contains(where: \.isUppercase) {
-            varietyScore += 1
-        }
-        if password.contains(where: \.isLowercase) {
-            varietyScore += 1
-        }
-        if password.contains(where: \.isNumber) {
-            varietyScore += 1
-        }
-        if password.contains(where: { !$0.isLetter && !$0.isNumber }) {
-            varietyScore += 1
-        }
-
-        // Add variety bonus (max 2 points)
-        if varietyScore >= 4 {
-            score += 2
-        } else if varietyScore >= 3 {
-            score += 1
-        }
+        // Character variety bonus (max 2 points, not required but helps)
+        score += characterVarietyBonus(password)
 
         // Check for repetitive patterns (penalty)
         if hasRepetitivePatterns(password) {
@@ -137,21 +129,35 @@ final class PasswordValidationService: PasswordValidationServiceProtocol {
         }
 
         // Map score to strength
-        switch max(0, score) {
+        let strength: PasswordStrength = switch max(0, score) {
         case 0 ... 1:
-            return .weak
+            .weak
         case 2:
-            return .fair
+            .fair
         case 3 ... 4:
-            return .good
+            .good
         case 5...:
-            return .strong
+            .strong
         default:
-            return .weak
+            .weak
         }
+        logger.exit("passwordStrength", duration: ContinuousClock.now - start)
+        return strength
     }
 
     // MARK: - Private Methods
+
+    private func characterVarietyBonus(_ password: String) -> Int {
+        var varietyScore = 0
+        if password.contains(where: \.isUppercase) { varietyScore += 1 }
+        if password.contains(where: \.isLowercase) { varietyScore += 1 }
+        if password.contains(where: \.isNumber) { varietyScore += 1 }
+        if password.contains(where: { !$0.isLetter && !$0.isNumber }) { varietyScore += 1 }
+
+        if varietyScore >= 4 { return 2 }
+        if varietyScore >= 3 { return 1 }
+        return 0
+    }
 
     private func hasRepetitivePatterns(_ password: String) -> Bool {
         // Check for simple repetition like "aaaa", "1111", "abcabc"
