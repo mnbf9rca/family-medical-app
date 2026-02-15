@@ -80,7 +80,7 @@ struct LoggingConvenienceMethodsTests {
 
         let entries = mockLogger.entriesContaining("testFunction")
         #expect(entries.count == 1)
-        #expect(entries.first?.privacy == .private) // Error details are private
+        #expect(entries.first?.privacy == .public) // Error details are now public
         #expect(entries.first?.level == .error)
     }
 }

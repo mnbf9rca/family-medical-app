@@ -19,4 +19,10 @@ enum LogCategory: String, CaseIterable, Sendable {
 
     /// User interface and view operations
     case ui
+
+    /// Backup export/import operations
+    case backup
+
+    /// Schema migration operations
+    case migration
 }

@@ -182,7 +182,7 @@ final class MockCategoryLogger: CategoryLoggerProtocol, @unchecked Sendable {
         capturedEntries.append(CapturedLogEntry(
             level: .error,
             message: "[\(context)] \(errorType): \(error.localizedDescription)",
-            privacy: .private,
+            privacy: .public,
             category: category,
             timestamp: Date()
         ))

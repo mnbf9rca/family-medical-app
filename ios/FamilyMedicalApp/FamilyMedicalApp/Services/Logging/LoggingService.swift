@@ -178,8 +178,6 @@ final class CategoryLogger: CategoryLoggerProtocol, @unchecked Sendable {
         // Debug level
         case (.debug, .public):
             osLogger.debug("\(message, privacy: .public)")
-        case (.debug, .private):
-            osLogger.debug("\(message, privacy: .private)")
         case (.debug, .hashed):
             osLogger.debug("\(message, privacy: .private(mask: .hash))")
         case (.debug, .sensitive):
@@ -187,8 +185,6 @@ final class CategoryLogger: CategoryLoggerProtocol, @unchecked Sendable {
         // Info level
         case (.info, .public):
             osLogger.info("\(message, privacy: .public)")
-        case (.info, .private):
-            osLogger.info("\(message, privacy: .private)")
         case (.info, .hashed):
             osLogger.info("\(message, privacy: .private(mask: .hash))")
         case (.info, .sensitive):
@@ -196,8 +192,6 @@ final class CategoryLogger: CategoryLoggerProtocol, @unchecked Sendable {
         // Notice level
         case (.notice, .public):
             osLogger.notice("\(message, privacy: .public)")
-        case (.notice, .private):
-            osLogger.notice("\(message, privacy: .private)")
         case (.notice, .hashed):
             osLogger.notice("\(message, privacy: .private(mask: .hash))")
         case (.notice, .sensitive):
@@ -205,8 +199,6 @@ final class CategoryLogger: CategoryLoggerProtocol, @unchecked Sendable {
         // Error level
         case (.error, .public):
             osLogger.error("\(message, privacy: .public)")
-        case (.error, .private):
-            osLogger.error("\(message, privacy: .private)")
         case (.error, .hashed):
             osLogger.error("\(message, privacy: .private(mask: .hash))")
         case (.error, .sensitive):
@@ -214,8 +206,6 @@ final class CategoryLogger: CategoryLoggerProtocol, @unchecked Sendable {
         // Fault level
         case (.fault, .public):
             osLogger.fault("\(message, privacy: .public)")
-        case (.fault, .private):
-            osLogger.fault("\(message, privacy: .private)")
         case (.fault, .hashed):
             osLogger.fault("\(message, privacy: .private(mask: .hash))")
         case (.fault, .sensitive):
@@ -247,10 +237,9 @@ final class CategoryLogger: CategoryLoggerProtocol, @unchecked Sendable {
     }
 
     func logError(_ error: Error, context: String) {
-        // Log context publicly, error type publicly, but details are private
         let errorType = String(describing: type(of: error))
         let errorDesc = error.localizedDescription
         osLogger
-            .error("[\(context, privacy: .public)] \(errorType, privacy: .public): \(errorDesc, privacy: .private)")
+            .error("[\(context, privacy: .public)] \(errorType, privacy: .public): \(errorDesc, privacy: .public)")
     }
 }

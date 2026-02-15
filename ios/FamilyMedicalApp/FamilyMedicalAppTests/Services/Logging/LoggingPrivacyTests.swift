@@ -7,12 +7,12 @@ struct LoggingPrivacyTests {
     // MARK: - Privacy Redaction Tests
 
     @Test
-    func privateDataMarkedAsPrivate() {
+    func hashedDataMarkedAsHashed() {
         let mockLogger = MockCategoryLogger(category: .auth)
 
-        mockLogger.info("userEmail: user@test.com", privacy: .private)
+        mockLogger.info("userEmail: user@test.com", privacy: .hashed)
 
-        let entries = mockLogger.entriesWithPrivacy(.private)
+        let entries = mockLogger.entriesWithPrivacy(.hashed)
         #expect(entries.count == 1)
         #expect(entries.first?.message.contains("user@test.com") == true)
     }
@@ -112,55 +112,55 @@ struct LoggingPrivacyTests {
     func debugWithPrivacyLevel() {
         let mockLogger = MockCategoryLogger(category: .auth)
 
-        mockLogger.debug("Private debug message", privacy: .private)
+        mockLogger.debug("Hashed debug message", privacy: .hashed)
 
         let entries = mockLogger.entriesWithLevel(.debug)
         #expect(entries.count == 1)
-        #expect(entries.first?.privacy == .private)
+        #expect(entries.first?.privacy == .hashed)
     }
 
     @Test
     func infoWithPrivacyLevel() {
         let mockLogger = MockCategoryLogger(category: .auth)
 
-        mockLogger.info("Private info message", privacy: .private)
+        mockLogger.info("Hashed info message", privacy: .hashed)
 
         let entries = mockLogger.entriesWithLevel(.info)
         #expect(entries.count == 1)
-        #expect(entries.first?.privacy == .private)
+        #expect(entries.first?.privacy == .hashed)
     }
 
     @Test
     func noticeWithPrivacyLevel() {
         let mockLogger = MockCategoryLogger(category: .auth)
 
-        mockLogger.notice("Private notice message", privacy: .private)
+        mockLogger.notice("Hashed notice message", privacy: .hashed)
 
         let entries = mockLogger.entriesWithLevel(.notice)
         #expect(entries.count == 1)
-        #expect(entries.first?.privacy == .private)
+        #expect(entries.first?.privacy == .hashed)
     }
 
     @Test
     func errorWithPrivacyLevel() {
         let mockLogger = MockCategoryLogger(category: .auth)
 
-        mockLogger.error("Private error message", privacy: .private)
+        mockLogger.error("Hashed error message", privacy: .hashed)
 
         let entries = mockLogger.entriesWithLevel(.error)
         #expect(entries.count == 1)
-        #expect(entries.first?.privacy == .private)
+        #expect(entries.first?.privacy == .hashed)
     }
 
     @Test
     func faultWithPrivacyLevel() {
         let mockLogger = MockCategoryLogger(category: .auth)
 
-        mockLogger.fault("Private fault message", privacy: .private)
+        mockLogger.fault("Hashed fault message", privacy: .hashed)
 
         let entries = mockLogger.entriesWithLevel(.fault)
         #expect(entries.count == 1)
-        #expect(entries.first?.privacy == .private)
+        #expect(entries.first?.privacy == .hashed)
     }
 
     @Test

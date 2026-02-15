@@ -81,7 +81,7 @@ final class KeychainService: KeychainServiceProtocol, @unchecked Sendable {
     }
 
     func storeKey(_ key: SymmetricKey, identifier: String, accessControl: KeychainAccessControl) throws {
-        logger.debug("Storing key with identifier: \(identifier)", privacy: .private)
+        logger.debug("Storing key with identifier: \(identifier)", privacy: .hashed)
 
         // Delete existing key first (upsert pattern). Only ignore "not found" errors, propagate others.
         do {
@@ -103,15 +103,15 @@ final class KeychainService: KeychainServiceProtocol, @unchecked Sendable {
         let status = SecItemAdd(query as CFDictionary, nil)
 
         guard status == errSecSuccess else {
-            logger.error("Failed to store key: \(identifier), status: \(status)", privacy: .private)
+            logger.error("Failed to store key: \(identifier), status: \(status)", privacy: .hashed)
             throw KeychainError.storeFailed(status)
         }
 
-        logger.debug("Successfully stored key: \(identifier)", privacy: .private)
+        logger.debug("Successfully stored key: \(identifier)", privacy: .hashed)
     }
 
     func retrieveKey(identifier: String) throws -> SymmetricKey {
-        logger.debug("Retrieving key with identifier: \(identifier)", privacy: .private)
+        logger.debug("Retrieving key with identifier: \(identifier)", privacy: .hashed)
 
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
@@ -128,19 +128,19 @@ final class KeychainService: KeychainServiceProtocol, @unchecked Sendable {
               let keyData = result as? Data
         else {
             if status == errSecItemNotFound {
-                logger.error("Key not found: \(identifier)", privacy: .private)
+                logger.error("Key not found: \(identifier)", privacy: .hashed)
                 throw KeychainError.keyNotFound(identifier)
             }
-            logger.error("Failed to retrieve key: \(identifier), status: \(status)", privacy: .private)
+            logger.error("Failed to retrieve key: \(identifier), status: \(status)", privacy: .hashed)
             throw KeychainError.retrieveFailed(status)
         }
 
-        logger.debug("Successfully retrieved key: \(identifier)", privacy: .private)
+        logger.debug("Successfully retrieved key: \(identifier)", privacy: .hashed)
         return SymmetricKey(data: keyData)
     }
 
     func deleteKey(identifier: String) throws {
-        logger.debug("Deleting key with identifier: \(identifier)", privacy: .private)
+        logger.debug("Deleting key with identifier: \(identifier)", privacy: .hashed)
 
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
@@ -151,16 +151,16 @@ final class KeychainService: KeychainServiceProtocol, @unchecked Sendable {
         let status = SecItemDelete(query as CFDictionary)
 
         if status == errSecItemNotFound {
-            logger.error("Cannot delete key not found: \(identifier)", privacy: .private)
+            logger.error("Cannot delete key not found: \(identifier)", privacy: .hashed)
             throw KeychainError.keyNotFound(identifier)
         }
 
         guard status == errSecSuccess else {
-            logger.error("Failed to delete key: \(identifier), status: \(status)", privacy: .private)
+            logger.error("Failed to delete key: \(identifier), status: \(status)", privacy: .hashed)
             throw KeychainError.deleteFailed(status)
         }
 
-        logger.debug("Successfully deleted key: \(identifier)", privacy: .private)
+        logger.debug("Successfully deleted key: \(identifier)", privacy: .hashed)
     }
 
     func keyExists(identifier: String) -> Bool {
@@ -176,7 +176,7 @@ final class KeychainService: KeychainServiceProtocol, @unchecked Sendable {
     }
 
     func storeData(_ data: Data, identifier: String, accessControl: KeychainAccessControl) throws {
-        logger.debug("Storing data with identifier: \(identifier)", privacy: .private)
+        logger.debug("Storing data with identifier: \(identifier)", privacy: .hashed)
 
         // Delete existing data first (upsert pattern)
         do {
@@ -203,15 +203,15 @@ final class KeychainService: KeychainServiceProtocol, @unchecked Sendable {
         let status = SecItemAdd(query as CFDictionary, nil)
 
         guard status == errSecSuccess else {
-            logger.error("Failed to store data: \(identifier), status: \(status)", privacy: .private)
+            logger.error("Failed to store data: \(identifier), status: \(status)", privacy: .hashed)
             throw KeychainError.storeFailed(status)
         }
 
-        logger.debug("Successfully stored data: \(identifier)", privacy: .private)
+        logger.debug("Successfully stored data: \(identifier)", privacy: .hashed)
     }
 
     func retrieveData(identifier: String) throws -> Data {
-        logger.debug("Retrieving data with identifier: \(identifier)", privacy: .private)
+        logger.debug("Retrieving data with identifier: \(identifier)", privacy: .hashed)
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: serviceName,
@@ -227,19 +227,19 @@ final class KeychainService: KeychainServiceProtocol, @unchecked Sendable {
               let data = result as? Data
         else {
             if status == errSecItemNotFound {
-                logger.error("Data not found: \(identifier)", privacy: .private)
+                logger.error("Data not found: \(identifier)", privacy: .hashed)
                 throw KeychainError.keyNotFound(identifier)
             }
-            logger.error("Failed to retrieve data: \(identifier), status: \(status)", privacy: .private)
+            logger.error("Failed to retrieve data: \(identifier), status: \(status)", privacy: .hashed)
             throw KeychainError.retrieveFailed(status)
         }
 
-        logger.debug("Successfully retrieved data: \(identifier)", privacy: .private)
+        logger.debug("Successfully retrieved data: \(identifier)", privacy: .hashed)
         return data
     }
 
     func deleteData(identifier: String) throws {
-        logger.debug("Deleting data with identifier: \(identifier)", privacy: .private)
+        logger.debug("Deleting data with identifier: \(identifier)", privacy: .hashed)
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: serviceName,
@@ -249,16 +249,16 @@ final class KeychainService: KeychainServiceProtocol, @unchecked Sendable {
         let status = SecItemDelete(query as CFDictionary)
 
         if status == errSecItemNotFound {
-            logger.error("Cannot delete data not found: \(identifier)", privacy: .private)
+            logger.error("Cannot delete data not found: \(identifier)", privacy: .hashed)
             throw KeychainError.keyNotFound(identifier)
         }
 
         guard status == errSecSuccess else {
-            logger.error("Failed to delete data: \(identifier), status: \(status)", privacy: .private)
+            logger.error("Failed to delete data: \(identifier), status: \(status)", privacy: .hashed)
             throw KeychainError.deleteFailed(status)
         }
 
-        logger.debug("Successfully deleted data: \(identifier)", privacy: .private)
+        logger.debug("Successfully deleted data: \(identifier)", privacy: .hashed)
     }
 
     func dataExists(identifier: String) -> Bool {
