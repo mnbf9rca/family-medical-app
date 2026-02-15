@@ -19,11 +19,13 @@ struct PersonDetailView: View {
             } else {
                 List {
                     ForEach(BuiltInSchemaType.allCases, id: \.self) { schemaType in
-                        NavigationLink(value: schemaType) {
-                            RecordTypeRowView(
-                                schema: viewModel.schemaForType(schemaType) ?? schemaType.schema,
-                                recordCount: viewModel.recordCounts[schemaType.rawValue] ?? 0
-                            )
+                        if let schema = viewModel.schemaForType(schemaType) {
+                            NavigationLink(value: schemaType) {
+                                RecordTypeRowView(
+                                    schema: schema,
+                                    recordCount: viewModel.recordCounts[schemaType.rawValue] ?? 0
+                                )
+                            }
                         }
                     }
                 }

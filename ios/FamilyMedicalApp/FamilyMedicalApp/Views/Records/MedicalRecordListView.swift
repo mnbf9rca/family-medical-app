@@ -28,7 +28,7 @@ struct MedicalRecordListView: View {
     var body: some View {
         Group {
             if viewModel.records.isEmpty, !viewModel.isLoading {
-                EmptyRecordListView(schemaType: schemaType) {
+                EmptyRecordListView(schema: viewModel.schema) {
                     showingAddForm = true
                 }
             } else {
@@ -46,7 +46,7 @@ struct MedicalRecordListView: View {
                 .listStyle(.insetGrouped)
             }
         }
-        .navigationTitle("\(person.name)'s \(schemaType.displayName)")
+        .navigationTitle("\(person.name)'s \(viewModel.schema.displayName)")
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(for: DecryptedRecord.self) { decryptedRecord in
             MedicalRecordDetailView(
@@ -68,7 +68,7 @@ struct MedicalRecordListView: View {
                 Button(action: { showingAddForm = true }, label: {
                     Image(systemName: "plus")
                 })
-                .accessibilityLabel("Add \(schemaType.displayName)")
+                .accessibilityLabel("Add \(viewModel.schema.displayName)")
             }
         }
         .sheet(isPresented: $showingAddForm) {

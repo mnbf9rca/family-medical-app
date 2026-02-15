@@ -85,18 +85,17 @@ struct MedicalRecordViewTests {
     }
 
     // MARK: - EmptyRecordListView Integration Tests
-    // Note: EmptyRecordListView requires BuiltInSchemaType, so these are integration tests
 
     @Test(arguments: BuiltInSchemaType.allCases)
     func emptyRecordListViewRendersForSchemaType(_ schemaType: BuiltInSchemaType) {
-        let view = EmptyRecordListView(schemaType: schemaType) {}
+        let view = EmptyRecordListView(schema: RecordSchema.builtIn(schemaType)) {}
         _ = view.body
     }
 
     @Test
     func emptyRecordListViewCallbackNotTriggeredOnRender() {
         var wasCallbackCalled = false
-        let view = EmptyRecordListView(schemaType: .vaccine) {
+        let view = EmptyRecordListView(schema: RecordSchema.builtIn(.vaccine)) {
             wasCallbackCalled = true
         }
 

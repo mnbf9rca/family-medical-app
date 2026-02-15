@@ -273,6 +273,39 @@ struct MedicalRecordListViewModelTests {
     }
 
     @Test
+    func loadRecordsSetsErrorWhenSchemaServiceFails() async throws {
+        let person = try makeTestPerson()
+        let mockRepo = MockMedicalRecordRepository()
+        let mockContentService = MockRecordContentService()
+        let mockPrimaryKeyProvider = MockPrimaryKeyProvider()
+        let mockFMKService = MockFamilyMemberKeyService()
+        let mockSchemaService = MockSchemaService()
+
+        mockPrimaryKeyProvider.primaryKey = SymmetricKey(size: .bits256)
+        mockFMKService.setFMK(SymmetricKey(size: .bits256), for: person.id.uuidString)
+
+        // Schema service will throw
+        mockSchemaService.shouldFailFetch = true
+
+        let viewModel = MedicalRecordListViewModel(
+            person: person,
+            schemaType: .vaccine,
+            medicalRecordRepository: mockRepo,
+            recordContentService: mockContentService,
+            primaryKeyProvider: mockPrimaryKeyProvider,
+            fmkService: mockFMKService,
+            schemaService: mockSchemaService
+        )
+
+        await viewModel.loadRecords()
+
+        // Schema fetch failure is fatal - records should not load
+        #expect(viewModel.errorMessage != nil)
+        #expect(viewModel.records.isEmpty)
+        #expect(viewModel.isLoading == false)
+    }
+
+    @Test
     func deleteRecordSetsErrorOnFailure() async throws {
         let person = try makeTestPerson()
         let mockRepo = MockMedicalRecordRepository()
