@@ -28,17 +28,37 @@ enum LogPrivacyLevel: Sendable {
     /// The actual value is never passed to os.Logger at all.
     ///
     /// Use for: encryption keys, passwords, ECDH secrets, biometric data.
-    /// See `SensitiveDataType` for the complete list.
+    /// See `NeverLogDataType` for the complete list.
     case sensitive
 }
 
-/// Types of sensitive data that should NEVER be logged
+/// Data types whose **raw values** must NEVER be passed to a logger.
 ///
-/// This enum serves as compile-time documentation. These data types
-/// should use `LogPrivacyLevel.sensitive` or not be logged at all.
+/// This enum serves as compile-time documentation. Raw values of these
+/// types must never appear in log statements — not even with `.hashed`.
 ///
-/// **CRITICAL**: Per ADR-0002 and privacy analysis, these must NEVER appear in logs:
-enum SensitiveDataType {
+/// **Permitted:** Logging *metadata about* these items (counts, types, sizes)
+/// with `.public`, or hashed *identifiers/references* with `.hashed`.
+///
+/// **Forbidden:** Logging the actual content (key bytes, password text,
+/// diagnosis text, image data, person names).
+///
+/// Examples:
+/// ```swift
+/// // OK — metadata about records
+/// logger.debug("Imported \(recordCount) records", privacy: .public)
+/// // OK — attachment size, not content
+/// logger.info("Processing attachment size=\(bytes)B type=\(mimeType)", privacy: .public)
+/// // FORBIDDEN — raw content
+/// logger.debug("Record content: \(diagnosisText)")
+/// // FORBIDDEN — raw binary data
+/// logger.debug("Attachment data: \(imageBytes)")
+/// ```
+///
+/// **CRITICAL**: Per ADR-0002 and privacy analysis:
+enum NeverLogDataType {
+    // MARK: - Cryptographic / Auth Material
+
     /// User Primary Key (Primary Key) - device-only, never transmitted
     case primaryKey
 
@@ -57,15 +77,20 @@ enum SensitiveDataType {
     /// Password hashes or verification tokens
     case passwordHash
 
+    /// Raw biometric data or templates
+    case biometricData
+
+    // MARK: - PII / Content (log metadata only, never raw values)
+
     /// Medical record content (diagnoses, medications, etc.)
+    /// Log record counts/types with `.public`; never log diagnosis text.
     case medicalRecordContent
 
     /// Family member names - encrypted with FMK
+    /// Log hashed identifiers with `.hashed`; never log plain names.
     case familyMemberName
 
     /// Document attachments (photos, PDFs of medical records)
+    /// Log size/MIME type with `.public`; never log raw bytes (too large to hash).
     case attachmentContent
-
-    /// Raw biometric data or templates
-    case biometricData
 }

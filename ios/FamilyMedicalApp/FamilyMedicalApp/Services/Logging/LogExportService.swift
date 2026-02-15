@@ -142,21 +142,70 @@ enum LogExportError: Error, LocalizedError {
 /// Service for exporting app logs from OSLogStore
 final class LogExportService: LogExportServiceProtocol, @unchecked Sendable {
     private let subsystem: String
-    private let logger: CategoryLoggerProtocol
+    private let logger: TracingCategoryLogger
 
     init(
         subsystem: String = Bundle.main.bundleIdentifier ?? "com.cynexia.FamilyMedicalApp",
         logger: CategoryLoggerProtocol? = nil
     ) {
         self.subsystem = subsystem
-        self.logger = logger ?? LoggingService.shared.logger(category: .ui)
+        self.logger = TracingCategoryLogger(
+            wrapping: logger ?? LoggingService.shared.logger(category: .ui)
+        )
     }
 
     func exportLogs(timeWindow: LogTimeWindow) async throws -> URL {
-        let metadata = DeviceMetadata.current()
-        let exportDate = Date()
+        let start = ContinuousClock.now
+        logger.entry("exportLogs", "window=\(timeWindow.rawValue)")
+        do {
+            let exportDate = Date()
+            let entries = try queryLogEntries(timeWindow: timeWindow, exportDate: exportDate)
+            let metadata = DeviceMetadata.current()
+            logger.debug("Found \(entries.count) log entries")
+            let output = formatExportOutput(
+                entries: entries,
+                metadata: metadata,
+                timeWindow: timeWindow,
+                exportDate: exportDate
+            )
+            let fileURL = try writeExportFile(output: output, exportDate: exportDate)
+            logger.exit("exportLogs", duration: ContinuousClock.now - start)
+            return fileURL
+        } catch {
+            logger.exitWithError("exportLogs", error: error, duration: ContinuousClock.now - start)
+            throw error
+        }
+    }
 
-        // Access OSLogStore
+    // MARK: - Private
+
+    private func formatExportOutput(
+        entries: [OSLogEntryLog],
+        metadata: DeviceMetadata,
+        timeWindow: LogTimeWindow,
+        exportDate: Date
+    ) -> String {
+        var output = LogExportFormatter.formatHeader(
+            metadata: metadata,
+            timeWindow: timeWindow,
+            exportDate: exportDate
+        )
+        for entry in entries {
+            let line = LogExportFormatter.formatEntry(
+                date: entry.date,
+                level: logLevelString(entry.level),
+                category: entry.category,
+                message: entry.composedMessage
+            )
+            output += line + "\n"
+        }
+        return output
+    }
+
+    private func queryLogEntries(
+        timeWindow: LogTimeWindow,
+        exportDate: Date
+    ) throws -> [OSLogEntryLog] {
         let store: OSLogStore
         do {
             store = try OSLogStore(scope: .currentProcessIdentifier)
@@ -164,7 +213,6 @@ final class LogExportService: LogExportServiceProtocol, @unchecked Sendable {
             throw LogExportError.storeAccessFailed(error)
         }
 
-        // Query entries
         let startDate = exportDate.addingTimeInterval(-timeWindow.timeInterval)
         let position = store.position(date: startDate)
         let predicate = NSPredicate(format: "subsystem == %@", subsystem)
@@ -181,40 +229,22 @@ final class LogExportService: LogExportServiceProtocol, @unchecked Sendable {
             throw LogExportError.noLogsFound
         }
 
-        // Format output
-        var output = LogExportFormatter.formatHeader(
-            metadata: metadata,
-            timeWindow: timeWindow,
-            exportDate: exportDate
-        )
+        return entries
+    }
 
-        for entry in entries {
-            let levelString = logLevelString(entry.level)
-            let line = LogExportFormatter.formatEntry(
-                date: entry.date,
-                level: levelString,
-                category: entry.category,
-                message: entry.composedMessage
-            )
-            output += line + "\n"
-        }
-
-        // Write to temp file
+    private func writeExportFile(output: String, exportDate: Date) throws -> URL {
         let fileName = "FamilyMedical-Diagnostics-\(formatDateForFilename(exportDate)).txt"
-        let tempURL = URL(fileURLWithPath: NSTemporaryDirectory())
+        let dirURL = URL(fileURLWithPath: NSTemporaryDirectory())
             .appendingPathComponent("FamilyMedicalAppDiagnostics", isDirectory: true)
-
         do {
-            try FileManager.default.createDirectory(at: tempURL, withIntermediateDirectories: true)
-            let fileURL = tempURL.appendingPathComponent(fileName)
+            try FileManager.default.createDirectory(at: dirURL, withIntermediateDirectories: true)
+            let fileURL = dirURL.appendingPathComponent(fileName)
             try output.write(to: fileURL, atomically: true, encoding: .utf8)
             return fileURL
         } catch {
             throw LogExportError.fileWriteFailed(error)
         }
     }
-
-    // MARK: - Private
 
     private func logLevelString(_ level: OSLogEntryLog.Level) -> String {
         switch level {

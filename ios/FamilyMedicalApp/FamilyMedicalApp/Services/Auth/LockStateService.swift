@@ -109,17 +109,19 @@ final class LockStateService: LockStateServiceProtocol {
     }
 
     func lock() {
+        let start = ContinuousClock.now
         logger.entry("lock")
         isLocked = true
-        logger.exit("lock", duration: .zero)
+        logger.exit("lock", duration: ContinuousClock.now - start)
     }
 
     func unlock() {
+        let start = ContinuousClock.now
         logger.entry("unlock")
         isLocked = false
         // Clear background time when unlocking
         userDefaults.removeObject(forKey: Self.backgroundTimeKey)
-        logger.exit("unlock", duration: .zero)
+        logger.exit("unlock", duration: ContinuousClock.now - start)
     }
 }
 
