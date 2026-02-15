@@ -91,23 +91,23 @@ struct LogExportServiceTests {
 
     @Test
     func initWithDefaultLogger() {
-        let service = LogExportService()
         // Verifies init completes without crash and default logger wiring works
-        #expect(service is LogExportServiceProtocol)
+        let service: LogExportServiceProtocol = LogExportService()
+        #expect(type(of: service) == LogExportService.self)
     }
 
     @Test
     func initWithInjectedLogger() {
-        let mock = MockCategoryLogger(category: .ui)
-        let service = LogExportService(logger: mock)
         // Verifies TracingCategoryLogger wrapping doesn't reject the mock
-        #expect(service is LogExportServiceProtocol)
+        let mock = MockCategoryLogger(category: .ui)
+        let service: LogExportServiceProtocol = LogExportService(logger: mock)
+        #expect(type(of: service) == LogExportService.self)
     }
 
     @Test
     func initWithCustomSubsystem() {
-        let service = LogExportService(subsystem: "com.test.custom")
-        #expect(service is LogExportServiceProtocol)
+        let service: LogExportServiceProtocol = LogExportService(subsystem: "com.test.custom")
+        #expect(type(of: service) == LogExportService.self)
     }
 
     // MARK: - Error Descriptions
