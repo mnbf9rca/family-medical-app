@@ -57,6 +57,7 @@ final class SchemaMigrationService: SchemaMigrationServiceProtocol, @unchecked S
     private let recordContentService: RecordContentServiceProtocol
     private let checkpointService: MigrationCheckpointServiceProtocol
     private let fmkService: FamilyMemberKeyServiceProtocol
+    private let logger: TracingCategoryLogger
 
     // MARK: - Initialization
 
@@ -70,6 +71,9 @@ final class SchemaMigrationService: SchemaMigrationServiceProtocol, @unchecked S
         self.recordContentService = recordContentService
         self.checkpointService = checkpointService
         self.fmkService = fmkService
+        self.logger = TracingCategoryLogger(
+            wrapping: LoggingService.shared.logger(category: .migration)
+        )
     }
 
     // MARK: - SchemaMigrationServiceProtocol
@@ -79,6 +83,8 @@ final class SchemaMigrationService: SchemaMigrationServiceProtocol, @unchecked S
         forPerson personId: UUID,
         primaryKey: SymmetricKey
     ) async throws -> MigrationPreview {
+        let start = ContinuousClock.now
+        logger.entry("previewMigration")
         // Get the FMK for this person
         let fmk = try fmkService.retrieveFMK(
             familyMemberID: personId.uuidString,
@@ -115,11 +121,13 @@ final class SchemaMigrationService: SchemaMigrationServiceProtocol, @unchecked S
             }
         }
 
-        return MigrationPreview(
+        let result = MigrationPreview(
             recordCount: matchingRecords.count,
             sampleRecordId: matchingRecords.first?.id,
             warnings: warnings
         )
+        logger.exit("previewMigration", duration: ContinuousClock.now - start)
+        return result
     }
 
     func executeMigration(
@@ -129,6 +137,8 @@ final class SchemaMigrationService: SchemaMigrationServiceProtocol, @unchecked S
         options: MigrationOptions,
         progressHandler: @escaping @Sendable (MigrationProgress) -> Void
     ) async throws -> MigrationResult {
+        let start = ContinuousClock.now
+        logger.entry("executeMigration")
         let startTime = Date()
         let fmk = try fmkService.retrieveFMK(familyMemberID: personId.uuidString, primaryKey: primaryKey)
         let recordsToMigrate = try await fetchRecordsToMigrate(migration: migration, personId: personId, fmk: fmk)
@@ -155,7 +165,7 @@ final class SchemaMigrationService: SchemaMigrationServiceProtocol, @unchecked S
             } catch {
                 // Rollback failed - keep checkpoint for manual recovery
                 rollbackSucceeded = false
-                LoggingService.shared.logger(category: .storage).logError(
+                logger.logError(
                     error, context: "SchemaMigrationService.executeMigration rollback failed"
                 )
             }
@@ -171,7 +181,7 @@ final class SchemaMigrationService: SchemaMigrationServiceProtocol, @unchecked S
             totalRecords: recordsToMigrate.count, processedRecords: recordsToMigrate.count, currentRecordId: nil
         ))
 
-        return MigrationResult(
+        let result = MigrationResult(
             migration: migration,
             recordsProcessed: recordsToMigrate.count,
             recordsSucceeded: recordsToMigrate.count - errors.count,
@@ -180,6 +190,8 @@ final class SchemaMigrationService: SchemaMigrationServiceProtocol, @unchecked S
             startTime: startTime,
             endTime: Date()
         )
+        logger.exit("executeMigration", duration: ContinuousClock.now - start)
+        return result
     }
 
     private func fetchRecordsToMigrate(

@@ -58,6 +58,7 @@ final class MigrationCheckpointService: MigrationCheckpointServiceProtocol, @unc
 
     private let coreDataStack: CoreDataStackProtocol
     private let medicalRecordRepository: MedicalRecordRepositoryProtocol
+    private let logger: TracingCategoryLogger
 
     // MARK: - Initialization
 
@@ -67,6 +68,9 @@ final class MigrationCheckpointService: MigrationCheckpointServiceProtocol, @unc
     ) {
         self.coreDataStack = coreDataStack
         self.medicalRecordRepository = medicalRecordRepository
+        self.logger = TracingCategoryLogger(
+            wrapping: LoggingService.shared.logger(category: .migration)
+        )
     }
 
     // MARK: - MigrationCheckpointServiceProtocol
@@ -77,6 +81,8 @@ final class MigrationCheckpointService: MigrationCheckpointServiceProtocol, @unc
         schemaId: String,
         records: [MedicalRecord]
     ) async throws {
+        let start = ContinuousClock.now
+        logger.entry("createCheckpoint")
         let context = coreDataStack.viewContext
 
         // Serialize records to JSON
@@ -116,9 +122,12 @@ final class MigrationCheckpointService: MigrationCheckpointServiceProtocol, @unc
                 throw RepositoryError.saveFailed("Failed to save checkpoint: \(error.localizedDescription)")
             }
         }
+        logger.exit("createCheckpoint", duration: ContinuousClock.now - start)
     }
 
     func restoreCheckpoint(migrationId: UUID) async throws -> [MedicalRecord] {
+        let start = ContinuousClock.now
+        logger.entry("restoreCheckpoint")
         let context = coreDataStack.viewContext
 
         // Fetch the checkpoint
@@ -153,10 +162,13 @@ final class MigrationCheckpointService: MigrationCheckpointServiceProtocol, @unc
             try await medicalRecordRepository.save(record)
         }
 
+        logger.exit("restoreCheckpoint", duration: ContinuousClock.now - start)
         return records
     }
 
     func deleteCheckpoint(migrationId: UUID) async throws {
+        let start = ContinuousClock.now
+        logger.entry("deleteCheckpoint")
         let context = coreDataStack.viewContext
 
         try await context.perform {
@@ -166,7 +178,7 @@ final class MigrationCheckpointService: MigrationCheckpointServiceProtocol, @unc
 
             guard let entity = try context.fetch(request).first else {
                 // Not found is not an error - checkpoint may have already been deleted
-                LoggingService.shared.logger(category: .storage).debug(
+                logger.debug(
                     "Checkpoint not found for migration \(migrationId) - may have already been deleted"
                 )
                 return
@@ -180,12 +192,15 @@ final class MigrationCheckpointService: MigrationCheckpointServiceProtocol, @unc
                 throw RepositoryError.deleteFailed("Failed to delete checkpoint: \(error.localizedDescription)")
             }
         }
+        logger.exit("deleteCheckpoint", duration: ContinuousClock.now - start)
     }
 
     func hasCheckpoint(migrationId: UUID) async throws -> Bool {
+        let start = ContinuousClock.now
+        logger.entry("hasCheckpoint")
         let context = coreDataStack.viewContext
 
-        return try await context.perform {
+        let result = try await context.perform {
             let request: NSFetchRequest<NSFetchRequestResult> = MigrationCheckpointEntity.fetchRequest()
             request.predicate = NSPredicate(format: "migrationId == %@", migrationId as CVarArg)
             request.resultType = .countResultType
@@ -193,5 +208,7 @@ final class MigrationCheckpointService: MigrationCheckpointServiceProtocol, @unc
             let count = try context.count(for: request)
             return count > 0
         }
+        logger.exit("hasCheckpoint", duration: ContinuousClock.now - start)
+        return result
     }
 }
