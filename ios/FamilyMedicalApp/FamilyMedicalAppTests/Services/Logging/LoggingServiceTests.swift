@@ -72,10 +72,10 @@ struct LoggingServiceTests {
         let mockLogger = MockCategoryLogger(category: .auth)
 
         mockLogger.info("Public message")
-        mockLogger.info("Private message", privacy: .private)
+        mockLogger.info("Hashed message", privacy: .hashed)
 
-        let privateEntries = mockLogger.entriesWithPrivacy(.private)
-        #expect(privateEntries.count == 1)
+        let hashedEntries = mockLogger.entriesWithPrivacy(.hashed)
+        #expect(hashedEntries.count == 1)
     }
 
     @Test
@@ -147,12 +147,14 @@ struct LoggingServiceTests {
     @Test
     func logCategoryHasAllCases() {
         let categories = LogCategory.allCases
-        #expect(categories.count == 5)
+        #expect(categories.count == 7)
         #expect(categories.contains(.auth))
         #expect(categories.contains(.crypto))
         #expect(categories.contains(.storage))
         #expect(categories.contains(.sync))
         #expect(categories.contains(.ui))
+        #expect(categories.contains(.backup))
+        #expect(categories.contains(.migration))
     }
 
     // MARK: - Real CategoryLogger Tests
@@ -163,7 +165,6 @@ struct LoggingServiceTests {
         let logger = service.logger(category: .auth)
 
         // Exercise the real implementation - just ensure it doesn't crash
-        logger.fault("Test fault", privacy: .private)
         logger.fault("Test fault", privacy: .public)
         logger.fault("Test fault", privacy: .hashed)
         logger.fault("Test fault", privacy: .sensitive)
@@ -225,7 +226,6 @@ struct LoggingServiceTests {
 
         // Exercise all privacy levels
         logger.debug("Public debug", privacy: .public)
-        logger.debug("Private debug", privacy: .private)
         logger.debug("Sensitive debug", privacy: .sensitive)
         logger.debug("Hashed debug", privacy: .hashed)
     }
@@ -237,7 +237,6 @@ struct LoggingServiceTests {
 
         // Exercise all privacy levels
         logger.info("Public info", privacy: .public)
-        logger.info("Private info", privacy: .private)
         logger.info("Sensitive info", privacy: .sensitive)
         logger.info("Hashed info", privacy: .hashed)
     }
@@ -249,7 +248,6 @@ struct LoggingServiceTests {
 
         // Exercise all privacy levels
         logger.notice("Public notice", privacy: .public)
-        logger.notice("Private notice", privacy: .private)
         logger.notice("Sensitive notice", privacy: .sensitive)
         logger.notice("Hashed notice", privacy: .hashed)
     }
@@ -261,7 +259,6 @@ struct LoggingServiceTests {
 
         // Exercise all privacy levels
         logger.error("Public error", privacy: .public)
-        logger.error("Private error", privacy: .private)
         logger.error("Sensitive error", privacy: .sensitive)
         logger.error("Hashed error", privacy: .hashed)
     }

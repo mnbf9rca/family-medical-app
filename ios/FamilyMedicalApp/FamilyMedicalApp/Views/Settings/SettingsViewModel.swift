@@ -13,6 +13,7 @@ final class SettingsViewModel {
     private let backupFileService: BackupFileServiceProtocol
     private let passwordValidationService: PasswordValidationServiceProtocol
     private let demoModeService: DemoModeServiceProtocol
+    private let logExportService: LogExportServiceProtocol
     private let logger: CategoryLoggerProtocol
 
     // MARK: - Export State
@@ -45,6 +46,20 @@ final class SettingsViewModel {
 
     var showingExitDemoConfirmation = false
     var demoModeExited = false
+
+    // MARK: - Log Export State
+
+    var logTimeWindow: LogTimeWindow = .last24Hours
+    var logExportState: LogExportState = .idle
+    var exportedLogURL: URL?
+    var showingLogShareSheet = false
+
+    enum LogExportState: Equatable {
+        case idle
+        case exporting
+        case ready
+        case error(String)
+    }
 
     // MARK: - Computed Properties
 
@@ -80,6 +95,7 @@ final class SettingsViewModel {
         backupFileService: BackupFileServiceProtocol,
         passwordValidationService: PasswordValidationServiceProtocol = PasswordValidationService(),
         demoModeService: DemoModeServiceProtocol = DemoModeService(),
+        logExportService: LogExportServiceProtocol? = nil,
         logger: CategoryLoggerProtocol? = nil
     ) {
         self.exportService = exportService
@@ -87,6 +103,7 @@ final class SettingsViewModel {
         self.backupFileService = backupFileService
         self.passwordValidationService = passwordValidationService
         self.demoModeService = demoModeService
+        self.logExportService = logExportService ?? LogExportService()
         self.logger = logger ?? LoggingService.shared.logger(category: .storage)
     }
 
@@ -415,6 +432,21 @@ extension SettingsViewModel {
         // MainAppView observes this to trigger AuthenticationViewModel.exitDemoMode()
         // which handles the actual demoModeService.exitDemoMode() call
         NotificationCenter.default.post(name: .demoModeExitRequested, object: nil)
+    }
+
+    // MARK: - Log Export Methods
+
+    func exportDiagnosticLogs() async {
+        logExportState = .exporting
+        do {
+            let url = try await logExportService.exportLogs(timeWindow: logTimeWindow)
+            exportedLogURL = url
+            logExportState = .ready
+            showingLogShareSheet = true
+        } catch {
+            logger.logError(error, context: "SettingsViewModel.exportDiagnosticLogs")
+            logExportState = .error(error.localizedDescription)
+        }
     }
 }
 

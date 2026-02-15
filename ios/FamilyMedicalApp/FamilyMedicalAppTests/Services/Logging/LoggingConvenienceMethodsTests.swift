@@ -80,7 +80,21 @@ struct LoggingConvenienceMethodsTests {
 
         let entries = mockLogger.entriesContaining("testFunction")
         #expect(entries.count == 1)
-        #expect(entries.first?.privacy == .private) // Error details are private
+        #expect(entries.first?.privacy == .public) // Error details are now public
         #expect(entries.first?.level == .error)
+    }
+
+    @Test
+    func logSensitiveErrorKeepsDescriptionPrivate() {
+        let mockLogger = MockCategoryLogger(category: .ui)
+        let error = NSError(domain: "test", code: 1, userInfo: [
+            NSLocalizedDescriptionKey: "Name: Alice Smith"
+        ])
+
+        mockLogger.logSensitiveError(error, context: "PersonView.save")
+
+        let entries = mockLogger.entriesWithLevel(.error)
+        #expect(entries.count == 1)
+        #expect(entries.first?.privacy == .hashed)
     }
 }

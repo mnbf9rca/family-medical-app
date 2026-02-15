@@ -90,6 +90,13 @@ ADRs document significant architectural decisions, their context, and consequenc
   - Server never learns username or password
   - opaque-ke (Rust) for both iOS (via UniFFI) and Cloudflare Workers (via wasm32)
 
+### Observability & Logging
+
+- [ADR-0013: Logging Privacy and Export](adr-0013-logging-privacy-and-export.md) - **Accepted** (2026-02-15)
+  - Three-tier privacy model: `.public` / `.hashed` / `.sensitive` (drops `.private`)
+  - OSLogStore-based log export with device metadata from Settings
+  - TracingCategoryLogger decorator for structured entry/exit tracing
+
 ### UI/UX Architecture
 <!-- Add ADRs related to SwiftUI patterns, navigation, accessibility -->
 

@@ -50,10 +50,10 @@ final class EncryptionService: EncryptionServiceProtocol, @unchecked Sendable {
             logger.debug("Successfully encrypted data, ciphertext size: \(payload.ciphertext.count) bytes")
             return payload
         } catch let error as CryptoError {
-            logger.error("Encryption failed: \(error.localizedDescription)", privacy: .private)
+            logger.error("Encryption failed: \(error.localizedDescription)", privacy: .public)
             throw error
         } catch {
-            logger.error("Encryption failed: \(error.localizedDescription)", privacy: .private)
+            logger.error("Encryption failed: \(error.localizedDescription)", privacy: .public)
             throw CryptoError.encryptionFailed(error.localizedDescription)
         }
     }
@@ -78,10 +78,10 @@ final class EncryptionService: EncryptionServiceProtocol, @unchecked Sendable {
             logger.error("Decryption failed: Authentication failure")
             throw CryptoError.decryptionFailed("Authentication failed - wrong key or corrupted data")
         } catch let error as CryptoError {
-            logger.error("Decryption failed: \(error.localizedDescription)", privacy: .private)
+            logger.error("Decryption failed: \(error.localizedDescription)", privacy: .public)
             throw error
         } catch {
-            logger.error("Decryption failed: \(error.localizedDescription)", privacy: .private)
+            logger.error("Decryption failed: \(error.localizedDescription)", privacy: .public)
             throw CryptoError.decryptionFailed(error.localizedDescription)
         }
     }

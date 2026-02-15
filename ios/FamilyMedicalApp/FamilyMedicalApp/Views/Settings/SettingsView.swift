@@ -17,6 +17,7 @@ struct SettingsView: View {
                     demoModeSection
                 }
                 backupSection
+                diagnosticLogsSection
             }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
@@ -46,6 +47,20 @@ struct SettingsView: View {
                     )
                 }
             }
+            .sheet(
+                isPresented: $viewModel.showingLogShareSheet,
+                onDismiss: {
+                    if let url = viewModel.exportedLogURL {
+                        try? FileManager.default.removeItem(at: url)
+                        viewModel.exportedLogURL = nil
+                    }
+                },
+                content: {
+                    if let url = viewModel.exportedLogURL {
+                        BackupShareSheet(items: [url])
+                    }
+                }
+            )
             .alert("Error", isPresented: Binding(
                 get: { viewModel.errorMessage != nil },
                 set: { if !$0 { viewModel.errorMessage = nil } }
@@ -124,6 +139,45 @@ struct SettingsView: View {
             Text("Backup & Restore")
         } footer: {
             Text("Export your data to a secure backup file, or restore from a previous backup.")
+        }
+    }
+
+    private var diagnosticLogsSection: some View {
+        Section {
+            Picker("Time Range", selection: $viewModel.logTimeWindow) {
+                ForEach(LogTimeWindow.allCases, id: \.self) { window in
+                    Text(window.rawValue).tag(window)
+                }
+            }
+
+            Button {
+                Task {
+                    await viewModel.exportDiagnosticLogs()
+                }
+            } label: {
+                HStack {
+                    Label("Share Diagnostic Logs", systemImage: "square.and.arrow.up")
+                    Spacer()
+                    if viewModel.logExportState == .exporting {
+                        ProgressView()
+                    }
+                }
+            }
+            .disabled(viewModel.logExportState == .exporting)
+            .accessibilityIdentifier("shareDiagnosticLogsButton")
+
+            if case let .error(message) = viewModel.logExportState {
+                Text(message)
+                    .font(.caption)
+                    .foregroundColor(.red)
+            }
+        } header: {
+            Text("Diagnostic Logs")
+        } footer: {
+            Text(
+                "Logs include app operations and errors. No medical data or passwords are included."
+                    + " Hashed identifiers may appear for correlation. Hashes change each reboot."
+            )
         }
     }
 }
@@ -430,120 +484,3 @@ struct InfoRow: View {
         }
     }
 }
-
-// MARK: - Preview
-
-#Preview {
-    SettingsView(
-        viewModel: SettingsViewModel(
-            exportService: PreviewExportService(),
-            importService: PreviewImportService(),
-            backupFileService: PreviewBackupFileService()
-        ),
-        primaryKey: SymmetricKey(size: .bits256)
-    )
-}
-
-// MARK: - Preview Helpers
-
-// swiftlint:disable unneeded_throws_rethrows
-private final class PreviewExportService: ExportServiceProtocol, @unchecked Sendable {
-    func exportData(primaryKey: SymmetricKey) async throws -> BackupPayload {
-        BackupPayload(
-            exportedAt: Date(),
-            appVersion: "1.0.0",
-            metadata: BackupMetadata(personCount: 2, recordCount: 10, attachmentCount: 3, schemaCount: 1),
-            persons: [],
-            records: [],
-            attachments: [],
-            schemas: []
-        )
-    }
-}
-
-private final class PreviewImportService: ImportServiceProtocol, @unchecked Sendable {
-    func importData(_ payload: BackupPayload, primaryKey: SymmetricKey) async throws {}
-}
-
-private final class PreviewBackupFileService: BackupFileServiceProtocol, @unchecked Sendable {
-    func createEncryptedBackup(payload: BackupPayload, password: String) throws -> BackupFile {
-        BackupFile(
-            schema: nil,
-            formatName: BackupFile.formatNameValue,
-            formatVersion: BackupFile.currentVersion,
-            generator: "Preview",
-            encrypted: true,
-            checksum: BackupChecksum(algorithm: "SHA-256", value: "test"),
-            encryption: BackupEncryption(
-                algorithm: "AES-256-GCM",
-                kdf: BackupKDF.defaultArgon2id,
-                nonce: "test",
-                tag: "test"
-            ),
-            ciphertext: "test",
-            data: nil
-        )
-    }
-
-    func createUnencryptedBackup(payload: BackupPayload) throws -> BackupFile {
-        BackupFile(
-            schema: nil,
-            formatName: BackupFile.formatNameValue,
-            formatVersion: BackupFile.currentVersion,
-            generator: "Preview",
-            encrypted: false,
-            checksum: BackupChecksum(algorithm: "SHA-256", value: "test"),
-            encryption: nil,
-            ciphertext: nil,
-            data: payload
-        )
-    }
-
-    func decryptBackup(file: BackupFile, password: String) throws -> BackupPayload {
-        BackupPayload(
-            exportedAt: Date(),
-            appVersion: "1.0.0",
-            metadata: BackupMetadata(personCount: 0, recordCount: 0, attachmentCount: 0, schemaCount: 0),
-            persons: [],
-            records: [],
-            attachments: [],
-            schemas: []
-        )
-    }
-
-    func readUnencryptedBackup(file: BackupFile) throws -> BackupPayload {
-        file.data ?? BackupPayload(
-            exportedAt: Date(),
-            appVersion: "1.0.0",
-            metadata: BackupMetadata(personCount: 0, recordCount: 0, attachmentCount: 0, schemaCount: 0),
-            persons: [],
-            records: [],
-            attachments: [],
-            schemas: []
-        )
-    }
-
-    func verifyChecksum(file: BackupFile) throws -> Bool {
-        true
-    }
-
-    func serializeToJSON(file: BackupFile) throws -> Data {
-        Data("{\"test\": true}".utf8)
-    }
-
-    func deserializeFromJSON(_ data: Data) throws -> BackupFile {
-        BackupFile(
-            schema: nil,
-            formatName: BackupFile.formatNameValue,
-            formatVersion: BackupFile.currentVersion,
-            generator: "Preview",
-            encrypted: false,
-            checksum: BackupChecksum(algorithm: "SHA-256", value: "test"),
-            encryption: nil,
-            ciphertext: nil,
-            data: nil
-        )
-    }
-}
-
-// swiftlint:enable unneeded_throws_rethrows

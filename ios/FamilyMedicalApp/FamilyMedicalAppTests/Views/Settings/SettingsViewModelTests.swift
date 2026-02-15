@@ -14,13 +14,15 @@ struct SettingsViewModelTests {
         exportService: MockExportService = MockExportService(),
         importService: MockImportService = MockImportService(),
         backupFileService: MockBackupFileService = MockBackupFileService(),
-        passwordValidationService: PasswordValidationServiceProtocol = PasswordValidationService()
+        passwordValidationService: PasswordValidationServiceProtocol = PasswordValidationService(),
+        logExportService: MockLogExportService = MockLogExportService()
     ) -> SettingsViewModel {
         SettingsViewModel(
             exportService: exportService,
             importService: importService,
             backupFileService: backupFileService,
-            passwordValidationService: passwordValidationService
+            passwordValidationService: passwordValidationService,
+            logExportService: logExportService
         )
     }
 
@@ -312,5 +314,60 @@ struct SettingsViewModelTests {
         #expect(viewModel.showingImportPreview == false)
         #expect(viewModel.selectedBackupFile == nil)
         #expect(viewModel.importPreviewPayload == nil)
+    }
+
+    // MARK: - Log Export Tests
+
+    @Test("Default log time window is 24 hours")
+    @MainActor
+    func exportLogsDefaultTimeWindow() {
+        let vm = makeViewModel()
+        #expect(vm.logTimeWindow == .last24Hours)
+    }
+
+    @Test("Export logs calls service and transitions state")
+    @MainActor
+    func exportLogsStateTransitions() async {
+        let mockExportService = MockLogExportService()
+        let vm = makeViewModel(logExportService: mockExportService)
+
+        #expect(vm.logExportState == .idle)
+
+        await vm.exportDiagnosticLogs()
+
+        #expect(mockExportService.exportCalled)
+        #expect(mockExportService.lastTimeWindow == .last24Hours)
+        #expect(vm.logExportState == .ready)
+        #expect(vm.showingLogShareSheet == true)
+        #expect(vm.exportedLogURL != nil)
+    }
+
+    @Test("Export logs failure sets error state")
+    @MainActor
+    func exportLogsFailureSetsError() async {
+        let mockExportService = MockLogExportService()
+        mockExportService.shouldThrow = LogExportError.noLogsFound
+        let vm = makeViewModel(logExportService: mockExportService)
+
+        await vm.exportDiagnosticLogs()
+
+        if case .error = vm.logExportState {
+            // Expected
+        } else {
+            #expect(Bool(false), "Expected error state")
+        }
+        #expect(vm.showingLogShareSheet == false)
+    }
+
+    @Test("Export logs uses selected time window")
+    @MainActor
+    func exportLogsUsesSelectedTimeWindow() async {
+        let mockExportService = MockLogExportService()
+        let vm = makeViewModel(logExportService: mockExportService)
+
+        vm.logTimeWindow = .lastHour
+        await vm.exportDiagnosticLogs()
+
+        #expect(mockExportService.lastTimeWindow == .lastHour)
     }
 }

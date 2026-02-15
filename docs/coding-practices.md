@@ -49,9 +49,16 @@ catch {
     // Show generic message to user
     errorMessage = "Unable to save this member. Please try again."
 
-    // Log detailed error (error details are private, context is public)
+    // Log detailed error (error details are public, context is public)
     logger.logError(error, context: "HomeViewModel.createPerson")
 }
+```
+
+**✅ DO** use `logSensitiveError()` when the error description may contain PII:
+
+```swift
+// When error.localizedDescription could contain user input or medical data
+logger.logSensitiveError(error, context: "SearchService.search")
 ```
 
 **❌ DON'T** use `print()` - SwiftLint will reject it:
@@ -61,38 +68,68 @@ catch {
 print("ERROR: \(error)")
 ```
 
-**Log Categories:**
+### Three-Tier Privacy Model
 
-- `.auth` - Authentication and user account management
-- `.crypto` - Cryptographic operations and key management
-- `.storage` - Local storage and data persistence
-- `.sync` - Cross-device synchronization
-- `.ui` - User interface and view operations
+See [ADR-0013](adr/adr-0013-logging-privacy-and-export.md) for full specification.
 
-### Service Layer Logging
+| Level | Apple Mapping | Use For | Example |
+|-------|--------------|---------|---------|
+| `.public` | `privacy: .public` | Non-PII data, error descriptions, operation names | Error types, file names, UUIDs, counts |
+| `.hashed` | `privacy: .private(mask: .hash)` | PII that needs correlation within a session | Keychain identifiers, person names, medical content |
+| `.sensitive` | Never logged (`[REDACTED]`) | Cryptographic material | Encryption keys, passwords, HMACs |
 
-**✅ DO** inject loggers via initializer with default:
+**Note:** Apple's `.private(mask: .hash)` uses a per-boot salt — hashes are stable within a single device session but change across reboots. Do not attempt cross-session hash correlation.
+
+### Log Categories
+
+| Category | Domain | Use For |
+|----------|--------|---------|
+| `.auth` | Authentication | Login, registration, biometric, lock state, password validation |
+| `.crypto` | Cryptography | Key derivation, encryption, decryption, key management |
+| `.storage` | Data persistence | Core Data operations, record content, schema, attachments |
+| `.backup` | Backup & restore | Export, import, file serialization, schema validation |
+| `.migration` | Schema migration | Migration execution, checkpoints, rollback |
+| `.sync` | Synchronization | Cross-device sync (future) |
+| `.ui` | User interface | View operations, user actions |
+
+### Service Layer Logging with TracingCategoryLogger
+
+All service methods **must** use `TracingCategoryLogger` for structured entry/exit tracing with timing.
+
+**Exception:** Methods called per-keystroke or from SwiftUI computed property re-evaluation (e.g., password validation during typing) should omit tracing to avoid log spam and UI performance impact. Add a code comment explaining why tracing is absent.
+
+**✅ DO** wrap loggers with `TracingCategoryLogger`:
 
 ```swift
-final class AttachmentService: AttachmentServiceProtocol, @unchecked Sendable {
-    private let logger: CategoryLoggerProtocol
+final class MyService: MyServiceProtocol, @unchecked Sendable {
+    private let logger: TracingCategoryLogger
 
-    init(
-        // ... other dependencies ...
-        logger: CategoryLoggerProtocol? = nil
-    ) {
-        self.logger = logger ?? LoggingService.shared.logger(category: .storage)
+    init(logger: CategoryLoggerProtocol? = nil) {
+        self.logger = TracingCategoryLogger(
+            wrapping: logger ?? LoggingService.shared.logger(category: .storage)
+        )
     }
 
-    func addAttachment(_ input: AddAttachmentInput) async throws -> Attachment {
-        // Log operations at debug level (UUIDs, file names, MIME types are safe)
-        logger.debug("Adding attachment: \(input.fileName) (\(input.mimeType))")
+    func doWork(itemId: UUID) async throws -> Result {
+        let start = ContinuousClock.now
+        logger.entry("doWork", "itemId=\(itemId)")
 
         // ... implementation ...
 
-        // Log errors with context
-        logger.logError(error, context: "AttachmentService.addAttachment")
+        logger.exit("doWork", duration: ContinuousClock.now - start)
+        return result
     }
+}
+```
+
+**✅ DO** use `exitWithError()` for error paths:
+
+```swift
+do {
+    // ... work ...
+} catch {
+    logger.exitWithError("doWork", error: error, duration: ContinuousClock.now - start)
+    throw error
 }
 ```
 
@@ -104,19 +141,14 @@ final class AttachmentService: AttachmentServiceProtocol, @unchecked Sendable {
 - `error` - Recoverable failures (network timeout, validation failed)
 - `fault` - Critical failures that indicate bugs (invariant violated)
 
-**Privacy-Safe to Log:**
+### `logError()` vs `logSensitiveError()`
 
-- UUIDs (person, record, attachment IDs)
-- File names and MIME types
-- Counts and timestamps
-- Operation names and states
+| Method | Error description privacy | Use when |
+|--------|--------------------------|----------|
+| `logError()` | `.public` | System-generated errors (Core Data, CryptoKit, FileManager) |
+| `logSensitiveError()` | `.private(mask: .hash)` | Errors that may contain user input or medical data |
 
-**Privacy-Sensitive (use `.private` or redact):**
-
-- File content or encrypted data
-- Encryption keys or HMACs
-- Error messages that may contain paths/data
-- Any medical information
+Most errors in this codebase use `logError()` since error descriptions are system-generated and don't contain PII.
 
 ### Known/Expected Errors
 

@@ -80,6 +80,12 @@ FILE_EXCEPTIONS = {
     # (bundle, Resources flat, project root) that are exercised differently in test vs app
     # Core validation logic is well-tested; loadSchema() fallbacks are runtime-dependent
     "BackupSchemaValidator.swift": 79.0,
+    # Preview helpers - stub implementations for SwiftUI previews, never called in tests
+    "SettingsViewPreviewHelpers.swift": 0.0,
+    # LogExportService - exportLogs() requires OSLogStore(scope: .currentProcessIdentifier)
+    # which needs a running app process; formatter/types are tested separately
+    # Task.detached wrapper (PR #115 review) added untestable lines, lowering ratio
+    "LogExportService.swift": 45.0,
 }
 
 # Load coverage data

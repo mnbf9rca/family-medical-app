@@ -35,6 +35,9 @@ protocol PasswordValidationServiceProtocol {
 }
 
 /// Service for validating passwords following NIST SP 800-63B guidelines
+///
+/// Note: No TracingCategoryLogger tracing in this service — `validate()` and `passwordStrength()`
+/// are called per-keystroke from SwiftUI bindings and would produce excessive log spam.
 final class PasswordValidationService: PasswordValidationServiceProtocol {
     // MARK: - Constants
 
@@ -104,27 +107,8 @@ final class PasswordValidationService: PasswordValidationServiceProtocol {
             score += 0
         }
 
-        // Character variety bonus (not required, but helps)
-        var varietyScore = 0
-        if password.contains(where: \.isUppercase) {
-            varietyScore += 1
-        }
-        if password.contains(where: \.isLowercase) {
-            varietyScore += 1
-        }
-        if password.contains(where: \.isNumber) {
-            varietyScore += 1
-        }
-        if password.contains(where: { !$0.isLetter && !$0.isNumber }) {
-            varietyScore += 1
-        }
-
-        // Add variety bonus (max 2 points)
-        if varietyScore >= 4 {
-            score += 2
-        } else if varietyScore >= 3 {
-            score += 1
-        }
+        // Character variety bonus (max 2 points, not required but helps)
+        score += characterVarietyBonus(password)
 
         // Check for repetitive patterns (penalty)
         if hasRepetitivePatterns(password) {
@@ -137,21 +121,33 @@ final class PasswordValidationService: PasswordValidationServiceProtocol {
         }
 
         // Map score to strength
-        switch max(0, score) {
+        return switch max(0, score) {
         case 0 ... 1:
-            return .weak
+            .weak
         case 2:
-            return .fair
+            .fair
         case 3 ... 4:
-            return .good
+            .good
         case 5...:
-            return .strong
+            .strong
         default:
-            return .weak
+            .weak
         }
     }
 
     // MARK: - Private Methods
+
+    private func characterVarietyBonus(_ password: String) -> Int {
+        var varietyScore = 0
+        if password.contains(where: \.isUppercase) { varietyScore += 1 }
+        if password.contains(where: \.isLowercase) { varietyScore += 1 }
+        if password.contains(where: \.isNumber) { varietyScore += 1 }
+        if password.contains(where: { !$0.isLetter && !$0.isNumber }) { varietyScore += 1 }
+
+        if varietyScore >= 4 { return 2 }
+        if varietyScore >= 3 { return 1 }
+        return 0
+    }
 
     private func hasRepetitivePatterns(_ password: String) -> Bool {
         // Check for simple repetition like "aaaa", "1111", "abcabc"

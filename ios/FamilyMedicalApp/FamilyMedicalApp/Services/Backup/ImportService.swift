@@ -33,7 +33,7 @@ final class ImportService: ImportServiceProtocol, @unchecked Sendable {
     private let attachmentService: AttachmentServiceProtocol
     private let customSchemaRepository: CustomSchemaRepositoryProtocol
     private let fmkService: FamilyMemberKeyServiceProtocol
-    private let logger: CategoryLoggerProtocol
+    private let logger: TracingCategoryLogger
 
     // MARK: - Initialization
 
@@ -52,12 +52,16 @@ final class ImportService: ImportServiceProtocol, @unchecked Sendable {
         self.attachmentService = attachmentService
         self.customSchemaRepository = customSchemaRepository
         self.fmkService = fmkService
-        self.logger = logger ?? LoggingService.shared.logger(category: .storage)
+        self.logger = TracingCategoryLogger(
+            wrapping: logger ?? LoggingService.shared.logger(category: .backup)
+        )
     }
 
     // MARK: - ImportServiceProtocol
 
     func importData(_ payload: BackupPayload, primaryKey: SymmetricKey) async throws {
+        let start = ContinuousClock.now
+        logger.entry("importData")
         logger.debug("Starting data import")
 
         // Track FMKs by person ID for record/schema imports
@@ -90,11 +94,14 @@ final class ImportService: ImportServiceProtocol, @unchecked Sendable {
                 "\(payload.attachments.count) attachments, " +
                 "\(payload.schemas.count) schemas"
         )
+        logger.exit("importData", duration: ContinuousClock.now - start)
     }
 
     // MARK: - Private Import Methods
 
     private func importPerson(_ backup: PersonBackup, primaryKey: SymmetricKey) async throws -> SymmetricKey {
+        let start = ContinuousClock.now
+        logger.entry("importPerson")
         // Convert to Person model
         let person: Person
         do {
@@ -124,10 +131,13 @@ final class ImportService: ImportServiceProtocol, @unchecked Sendable {
             throw BackupError.importFailed("Failed to save person")
         }
 
+        logger.exit("importPerson", duration: ContinuousClock.now - start)
         return fmk
     }
 
     private func importRecord(_ backup: MedicalRecordBackup, personFMKs: [UUID: SymmetricKey]) async throws {
+        let start = ContinuousClock.now
+        logger.entry("importRecord")
         guard let fmk = personFMKs[backup.personId] else {
             logger.error("No FMK found for record's person")
             throw BackupError.importFailed("Missing encryption key for record")
@@ -168,6 +178,7 @@ final class ImportService: ImportServiceProtocol, @unchecked Sendable {
             logger.error("Failed to save imported record")
             throw BackupError.importFailed("Failed to save medical record")
         }
+        logger.exit("importRecord", duration: ContinuousClock.now - start)
     }
 
     private func importAttachment(
@@ -175,6 +186,8 @@ final class ImportService: ImportServiceProtocol, @unchecked Sendable {
         personFMKs: [UUID: SymmetricKey],
         primaryKey: SymmetricKey
     ) async throws {
+        let start = ContinuousClock.now
+        logger.entry("importAttachment")
         guard personFMKs[backup.personId] != nil else {
             logger.error("No FMK found for attachment's person")
             throw BackupError.importFailed("Missing encryption key for attachment")
@@ -216,9 +229,12 @@ final class ImportService: ImportServiceProtocol, @unchecked Sendable {
             logger.error("Failed to save imported attachment")
             throw BackupError.importFailed("Failed to save attachment")
         }
+        logger.exit("importAttachment", duration: ContinuousClock.now - start)
     }
 
     private func importSchema(_ backup: SchemaBackup, personFMKs: [UUID: SymmetricKey]) async throws {
+        let start = ContinuousClock.now
+        logger.entry("importSchema")
         guard let fmk = personFMKs[backup.personId] else {
             logger.error("No FMK found for schema's person")
             throw BackupError.importFailed("Missing encryption key for schema")
@@ -230,5 +246,6 @@ final class ImportService: ImportServiceProtocol, @unchecked Sendable {
             logger.error("Failed to save imported schema")
             throw BackupError.importFailed("Failed to save custom schema")
         }
+        logger.exit("importSchema", duration: ContinuousClock.now - start)
     }
 }

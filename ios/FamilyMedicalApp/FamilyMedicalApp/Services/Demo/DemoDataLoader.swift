@@ -36,16 +36,22 @@ final class DemoDataLoader: DemoDataLoaderProtocol, @unchecked Sendable {
     // MARK: - Properties
 
     private let bundle: Bundle
+    private let logger: TracingCategoryLogger
 
     // MARK: - Initialization
 
-    init(bundle: Bundle = .main) {
+    init(bundle: Bundle = .main, logger: CategoryLoggerProtocol? = nil) {
         self.bundle = bundle
+        self.logger = TracingCategoryLogger(
+            wrapping: logger ?? LoggingService.shared.logger(category: .storage)
+        )
     }
 
     // MARK: - DemoDataLoaderProtocol
 
     func loadDemoData() throws -> BackupPayload {
+        let start = ContinuousClock.now
+        logger.entry("loadDemoData")
         // Find bundled file
         guard let url = bundle.url(forResource: "demo-data", withExtension: "json") else {
             throw DemoDataLoaderError.fileNotFound
@@ -75,6 +81,7 @@ final class DemoDataLoader: DemoDataLoaderProtocol, @unchecked Sendable {
             throw DemoDataLoaderError.decodingFailed(MissingDataFieldError())
         }
 
+        logger.exit("loadDemoData", duration: ContinuousClock.now - start)
         return payload
     }
 }

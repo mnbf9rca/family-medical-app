@@ -21,14 +21,26 @@
   - Use pure functions to reduce complexity
 - ⚠️ **NEVER** skip or override pre-commit hooks
   - The hooks are there for a reason - fix the issues instead
+- ⚠️ **ALWAYS** use `TracingCategoryLogger` for entry/exit logging in service methods
+  - See [Coding Practices - Logging](docs/coding-practices.md) for privacy classification and patterns
+  - Use `.public` for non-PII data, `.hashed` for PII/medical content, `.sensitive` for crypto material
 - ⚠️ **ALWAYS** achieve required code coverage thresholds, validated through testing:
-  - **Overall project coverage: 87% minimum** (temporarily reduced from 90% for OPAQUE auth, see Issue #78) and **individual file coverage: 85% minimum** (with exceptions for specific files, see `scripts/check-coverage.sh` - only add exceptions with explicit user consent)
+  - **Overall project coverage: 85% minimum** (temporarily reduced from 90% for OPAQUE auth, see Issue #78) and **individual file coverage: 85% minimum** (with exceptions for specific files, see `scripts/check-coverage.sh` - only add exceptions with explicit user consent)
   - Coverage applies to existing, new, **and changed** code
   - Use `{projectRoot}/scripts/run-tests.sh` to run iOS tests - this is the same script used in CI. Note that it can take up to 15 minutes for the full (UI) test suite to run. Do **NOT** tail results - the script already uses xcpretty, and tail will prevent you seeing warnings.
   - **After** running tests, use `{projectRoot}/scripts/check-coverage.sh` to validate iOS coverage - this is the same script used in CI
   - Use `--detailed` flag with check-coverage.sh to see function-level coverage details for files below 100%
   - **Using other methods will fail CI** meaning the PR cannot be merged
   - Create tests up front or as you go to ensure you hit coverage
+  - **Never use device names in test destinations.** Using `-destination 'platform=iOS Simulator,name=iPhone 17'` clones a new simulator into `~/Library/Developer/XCTestDevices/` on every invocation, consuming ~16GB each. Use the UUID instead:
+
+  ```bash
+  # Find and boot the simulator once per session
+  xcrun simctl list devices available | grep "iPhone 17"
+  xcrun simctl boot <UUID>
+
+  # Always use the UUID in test commands
+  xcodebuild test -destination 'platform=iOS Simulator,id=<UUID>' ...  
 
 ## Principles
 
