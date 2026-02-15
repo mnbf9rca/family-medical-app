@@ -34,16 +34,22 @@ final class RecordContentService: RecordContentServiceProtocol, @unchecked Senda
     // MARK: - Dependencies
 
     private let encryptionService: EncryptionServiceProtocol
+    private let logger: TracingCategoryLogger
 
     // MARK: - Initialization
 
-    init(encryptionService: EncryptionServiceProtocol) {
+    init(encryptionService: EncryptionServiceProtocol, logger: CategoryLoggerProtocol? = nil) {
         self.encryptionService = encryptionService
+        self.logger = TracingCategoryLogger(
+            wrapping: logger ?? LoggingService.shared.logger(category: .storage)
+        )
     }
 
     // MARK: - RecordContentServiceProtocol
 
     func encrypt(_ content: RecordContent, using fmk: SymmetricKey) throws -> Data {
+        let start = ContinuousClock.now
+        logger.entry("encrypt")
         do {
             // 1. Encode RecordContent to JSON
             let jsonData = try JSONEncoder().encode(content)
@@ -52,6 +58,7 @@ final class RecordContentService: RecordContentServiceProtocol, @unchecked Senda
             let encryptedPayload = try encryptionService.encrypt(jsonData, using: fmk)
 
             // 3. Return combined format (nonce + ciphertext + tag)
+            logger.exit("encrypt", duration: ContinuousClock.now - start)
             return encryptedPayload.combined
         } catch let error as CryptoError {
             throw RepositoryError.encryptionFailed(error.localizedDescription)
@@ -61,6 +68,8 @@ final class RecordContentService: RecordContentServiceProtocol, @unchecked Senda
     }
 
     func decrypt(_ encryptedData: Data, using fmk: SymmetricKey) throws -> RecordContent {
+        let start = ContinuousClock.now
+        logger.entry("decrypt")
         do {
             // 1. Parse combined format into EncryptedPayload
             let payload = try EncryptedPayload(combined: encryptedData)
@@ -69,7 +78,9 @@ final class RecordContentService: RecordContentServiceProtocol, @unchecked Senda
             let jsonData = try encryptionService.decrypt(payload, using: fmk)
 
             // 3. Decode JSON to RecordContent
-            return try JSONDecoder().decode(RecordContent.self, from: jsonData)
+            let content = try JSONDecoder().decode(RecordContent.self, from: jsonData)
+            logger.exit("decrypt", duration: ContinuousClock.now - start)
+            return content
         } catch let error as CryptoError {
             throw RepositoryError.decryptionFailed(error.localizedDescription)
         } catch {

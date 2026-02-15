@@ -33,16 +33,22 @@ final class SchemaSeeder: SchemaSeederProtocol, @unchecked Sendable {
     // MARK: - Dependencies
 
     private let schemaRepository: CustomSchemaRepositoryProtocol
+    private let logger: TracingCategoryLogger
 
     // MARK: - Initialization
 
-    init(schemaRepository: CustomSchemaRepositoryProtocol) {
+    init(schemaRepository: CustomSchemaRepositoryProtocol, logger: CategoryLoggerProtocol? = nil) {
         self.schemaRepository = schemaRepository
+        self.logger = TracingCategoryLogger(
+            wrapping: logger ?? LoggingService.shared.logger(category: .storage)
+        )
     }
 
     // MARK: - SchemaSeederProtocol
 
     func seedBuiltInSchemas(forPerson personId: UUID, familyMemberKey: SymmetricKey) async throws {
+        let start = ContinuousClock.now
+        logger.entry("seedBuiltInSchemas")
         // Get all built-in schemas
         let builtInSchemas = BuiltInSchemaType.allCases.map(\.schema)
 
@@ -54,13 +60,18 @@ final class SchemaSeeder: SchemaSeederProtocol, @unchecked Sendable {
                 familyMemberKey: familyMemberKey
             )
         }
+        logger.exit("seedBuiltInSchemas", duration: ContinuousClock.now - start)
     }
 
     func hasSchemas(forPerson personId: UUID, familyMemberKey: SymmetricKey) async throws -> Bool {
+        let start = ContinuousClock.now
+        logger.entry("hasSchemas")
         let schemas = try await schemaRepository.fetchAll(
             forPerson: personId,
             familyMemberKey: familyMemberKey
         )
-        return !schemas.isEmpty
+        let result = !schemas.isEmpty
+        logger.exit("hasSchemas", duration: ContinuousClock.now - start)
+        return result
     }
 }

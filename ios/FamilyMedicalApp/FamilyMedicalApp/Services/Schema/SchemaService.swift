@@ -74,11 +74,15 @@ final class SchemaService: SchemaServiceProtocol, @unchecked Sendable {
     // MARK: - Dependencies
 
     private let schemaRepository: CustomSchemaRepositoryProtocol
+    private let logger: TracingCategoryLogger
 
     // MARK: - Initialization
 
-    init(schemaRepository: CustomSchemaRepositoryProtocol) {
+    init(schemaRepository: CustomSchemaRepositoryProtocol, logger: CategoryLoggerProtocol? = nil) {
         self.schemaRepository = schemaRepository
+        self.logger = TracingCategoryLogger(
+            wrapping: logger ?? LoggingService.shared.logger(category: .storage)
+        )
     }
 
     // MARK: - SchemaServiceProtocol
@@ -88,20 +92,25 @@ final class SchemaService: SchemaServiceProtocol, @unchecked Sendable {
         personId: UUID,
         familyMemberKey: SymmetricKey
     ) async throws -> RecordSchema? {
+        let start = ContinuousClock.now
+        logger.entry("schema(forId:)", "schemaId=\(schemaId)")
         // Try to fetch from repository
         if let stored = try await schemaRepository.fetch(
             schemaId: schemaId,
             forPerson: personId,
             familyMemberKey: familyMemberKey
         ) {
+            logger.exit("schema(forId:)", duration: ContinuousClock.now - start)
             return stored
         }
 
         // Fall back to hardcoded built-in schema if it exists
         if let builtInType = BuiltInSchemaType(rawValue: schemaId) {
+            logger.exit("schema(forId:)", duration: ContinuousClock.now - start)
             return builtInType.schema
         }
 
+        logger.exit("schema(forId:)", duration: ContinuousClock.now - start)
         return nil
     }
 
@@ -109,6 +118,8 @@ final class SchemaService: SchemaServiceProtocol, @unchecked Sendable {
         forPerson personId: UUID,
         familyMemberKey: SymmetricKey
     ) async throws -> [RecordSchema] {
+        let start = ContinuousClock.now
+        logger.entry("allSchemas(forPerson:)")
         let stored = try await schemaRepository.fetchAll(
             forPerson: personId,
             familyMemberKey: familyMemberKey
@@ -116,17 +127,22 @@ final class SchemaService: SchemaServiceProtocol, @unchecked Sendable {
 
         // If Person has stored schemas, return those
         if !stored.isEmpty {
+            logger.exit("allSchemas(forPerson:)", duration: ContinuousClock.now - start)
             return stored
         }
 
         // Fall back to hardcoded built-in schemas
-        return BuiltInSchemaType.allCases.map(\.schema)
+        let result = BuiltInSchemaType.allCases.map(\.schema)
+        logger.exit("allSchemas(forPerson:)", duration: ContinuousClock.now - start)
+        return result
     }
 
     func builtInSchemas(
         forPerson personId: UUID,
         familyMemberKey: SymmetricKey
     ) async throws -> [RecordSchema] {
+        let start = ContinuousClock.now
+        logger.entry("builtInSchemas(forPerson:)")
         let allSchemas = try await self.allSchemas(
             forPerson: personId,
             familyMemberKey: familyMemberKey
@@ -134,7 +150,9 @@ final class SchemaService: SchemaServiceProtocol, @unchecked Sendable {
 
         // Filter to only built-in schema types
         let builtInIds = Set(BuiltInSchemaType.allCases.map(\.rawValue))
-        return allSchemas.filter { builtInIds.contains($0.id) }
+        let result = allSchemas.filter { builtInIds.contains($0.id) }
+        logger.exit("builtInSchemas(forPerson:)", duration: ContinuousClock.now - start)
+        return result
     }
 
     func save(
@@ -142,10 +160,13 @@ final class SchemaService: SchemaServiceProtocol, @unchecked Sendable {
         forPerson personId: UUID,
         familyMemberKey: SymmetricKey
     ) async throws {
+        let start = ContinuousClock.now
+        logger.entry("save", "schemaId=\(schema.id)")
         try await schemaRepository.save(
             schema,
             forPerson: personId,
             familyMemberKey: familyMemberKey
         )
+        logger.exit("save", duration: ContinuousClock.now - start)
     }
 }
