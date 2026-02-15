@@ -78,7 +78,7 @@ final class PersonDetailViewModel {
                 forPerson: person.id,
                 familyMemberKey: fmk
             )
-            schemas = Dictionary(uniqueKeysWithValues: fetchedSchemas.map { ($0.id, $0) })
+            schemas = Dictionary(fetchedSchemas.map { ($0.id, $0) }) { _, latest in latest }
 
             // Fetch all medical records for this person
             let records = try await medicalRecordRepository.fetchForPerson(personId: person.id)
