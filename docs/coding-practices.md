@@ -297,6 +297,38 @@ The validator enforces limits to prevent denial-of-service attacks:
 
 ---
 
+## Schema Access Pattern
+
+### Source of Truth: Repository, Not Code
+
+Built-in schemas (`BuiltInSchemas.swift`) are **seed templates only**. They are copied into each Person's encrypted storage at creation time by `SchemaSeeder`. After seeding, the Person's repository copy is the source of truth.
+
+**`RecordSchema.builtIn()` must only be called from:**
+
+- `SchemaSeeder` - to seed schemas for new Persons
+- `SchemaService` - as fallback when repository has no stored schema
+- `#Preview` blocks - for SwiftUI previews (not production code)
+
+**All other code must use `SchemaService`** to fetch schemas. This ensures user customizations (renamed fields, added fields, changed icons) are respected.
+
+**Why:** Once a user has a schema, it's theirs. They may customize field names, add fields, change display names, or reorder fields. Hardcoding `RecordSchema.builtIn()` ignores all user changes.
+
+### Pattern
+
+```swift
+// WRONG - ignores user customizations
+let schema = RecordSchema.builtIn(schemaType)
+
+// RIGHT - fetches user's stored schema (falls back to built-in)
+let schema = try await schemaService.schema(
+    forId: schemaType.rawValue,
+    personId: person.id,
+    familyMemberKey: fmk
+)
+```
+
+---
+
 ## Naming Conventions
 
 - ViewModels: `<Feature>ViewModel` (e.g., `HomeViewModel`)
