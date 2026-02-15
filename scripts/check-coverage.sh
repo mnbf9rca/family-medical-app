@@ -84,7 +84,7 @@ FILE_EXCEPTIONS = {
     "SettingsViewPreviewHelpers.swift": 0.0,
     # LogExportService - exportLogs() requires OSLogStore(scope: .currentProcessIdentifier)
     # which needs a running app process; formatter/types are tested separately
-    "LogExportService.swift": 50.0,
+    "LogExportService.swift": 48.0,
 }
 
 # Load coverage data
