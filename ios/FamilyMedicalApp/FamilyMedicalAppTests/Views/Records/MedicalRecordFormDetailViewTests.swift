@@ -88,8 +88,8 @@ struct MedicalRecordFormDetailViewTests {
     }
 
     // MARK: - MedicalRecordDetailView Integration Tests
-    // Note: MedicalRecordDetailView requires BuiltInSchemaType, so these are integration tests
-    // that verify all built-in schemas render correctly.
+    // Note: MedicalRecordDetailView accepts a RecordSchema. These integration tests
+    // verify all built-in schemas render correctly.
 
     @Test(arguments: BuiltInSchemaType.allCases)
     func medicalRecordDetailViewRendersForSchemaType(_ schemaType: BuiltInSchemaType) throws {
@@ -106,7 +106,7 @@ struct MedicalRecordFormDetailViewTests {
 
         let view = MedicalRecordDetailView(
             person: person,
-            schemaType: schemaType,
+            schema: RecordSchema.builtIn(schemaType),
             decryptedRecord: decryptedRecord
         )
         // Use find() for deterministic coverage
@@ -129,7 +129,7 @@ struct MedicalRecordFormDetailViewTests {
 
         let view = MedicalRecordDetailView(
             person: person,
-            schemaType: .vaccine,
+            schema: RecordSchema.builtIn(.vaccine),
             decryptedRecord: decryptedRecord
         )
 
@@ -149,7 +149,7 @@ struct MedicalRecordFormDetailViewTests {
 
         let view = MedicalRecordDetailView(
             person: person,
-            schemaType: .vaccine,
+            schema: RecordSchema.builtIn(.vaccine),
             decryptedRecord: decryptedRecord
         )
 
@@ -173,7 +173,7 @@ struct MedicalRecordFormDetailViewTests {
 
         let view = MedicalRecordDetailView(
             person: person,
-            schemaType: .vaccine,
+            schema: RecordSchema.builtIn(.vaccine),
             decryptedRecord: decryptedRecord,
             onDelete: {
                 deleteCallbackProvided = true
@@ -205,7 +205,7 @@ struct MedicalRecordFormDetailViewTests {
         // View should render without callbacks (nil defaults)
         let view = MedicalRecordDetailView(
             person: person,
-            schemaType: .vaccine,
+            schema: RecordSchema.builtIn(.vaccine),
             decryptedRecord: decryptedRecord
         )
 

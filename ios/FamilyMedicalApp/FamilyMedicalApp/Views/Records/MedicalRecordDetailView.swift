@@ -5,7 +5,7 @@ struct MedicalRecordDetailView: View {
     // MARK: - Properties
 
     let person: Person
-    let schemaType: BuiltInSchemaType
+    let schema: RecordSchema
     let decryptedRecord: DecryptedRecord
 
     /// Callback invoked when the record is deleted
@@ -99,10 +99,6 @@ struct MedicalRecordDetailView: View {
 
     // MARK: - Computed Properties
 
-    private var schema: RecordSchema {
-        RecordSchema.builtIn(schemaType)
-    }
-
     /// Value of the primary field for the title
     /// Handles different field types appropriately
     private var primaryFieldValue: String {
@@ -171,7 +167,7 @@ struct MedicalRecordDetailView: View {
         }() as DecryptedRecord? {
             MedicalRecordDetailView(
                 person: person,
-                schemaType: .vaccine,
+                schema: RecordSchema.builtIn(.vaccine),
                 decryptedRecord: decryptedRecord
             )
         }
