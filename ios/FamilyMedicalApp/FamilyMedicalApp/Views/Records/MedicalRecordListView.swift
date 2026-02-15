@@ -36,7 +36,7 @@ struct MedicalRecordListView: View {
                     ForEach(viewModel.records) { decryptedRecord in
                         NavigationLink(value: decryptedRecord) {
                             MedicalRecordRowView(
-                                schema: RecordSchema.builtIn(schemaType),
+                                schema: viewModel.schema,
                                 content: decryptedRecord.content
                             )
                         }
@@ -51,7 +51,7 @@ struct MedicalRecordListView: View {
         .navigationDestination(for: DecryptedRecord.self) { decryptedRecord in
             MedicalRecordDetailView(
                 person: person,
-                schemaType: schemaType,
+                schema: viewModel.schema,
                 decryptedRecord: decryptedRecord,
                 onDelete: {
                     await viewModel.deleteRecord(id: decryptedRecord.id)
@@ -72,7 +72,7 @@ struct MedicalRecordListView: View {
             }
         }
         .sheet(isPresented: $showingAddForm) {
-            MedicalRecordFormView(person: person, schema: RecordSchema.builtIn(schemaType))
+            MedicalRecordFormView(person: person, schema: viewModel.schema)
         }
         .overlay {
             if viewModel.isLoading {
