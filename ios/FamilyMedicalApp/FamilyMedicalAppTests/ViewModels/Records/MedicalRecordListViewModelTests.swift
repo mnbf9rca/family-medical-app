@@ -42,6 +42,7 @@ struct MedicalRecordListViewModelTests {
 
         #expect(viewModel.person.id == person.id)
         #expect(viewModel.schemaType == .vaccine)
+        #expect(viewModel.schema == nil)
         #expect(viewModel.records.isEmpty)
         #expect(viewModel.isLoading == false)
         #expect(viewModel.errorMessage == nil)
@@ -267,8 +268,8 @@ struct MedicalRecordListViewModelTests {
         await viewModel.loadRecords()
 
         // ViewModel should use the user's schema, not the hardcoded default
-        #expect(viewModel.schema.displayName == "Immunization Record")
-        #expect(viewModel.schema.iconSystemName == "cross.vial")
+        #expect(viewModel.schema?.displayName == "Immunization Record")
+        #expect(viewModel.schema?.iconSystemName == "cross.vial")
         #expect(mockSchemaService.schemaCallCount == 1)
     }
 
@@ -300,6 +301,7 @@ struct MedicalRecordListViewModelTests {
         await viewModel.loadRecords()
 
         // Schema fetch failure is fatal - records should not load
+        #expect(viewModel.schema == nil)
         #expect(viewModel.errorMessage != nil)
         #expect(viewModel.records.isEmpty)
         #expect(viewModel.isLoading == false)

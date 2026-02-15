@@ -27,55 +27,65 @@ struct MedicalRecordListView: View {
 
     var body: some View {
         Group {
-            if viewModel.records.isEmpty, !viewModel.isLoading {
-                EmptyRecordListView(schema: viewModel.schema) {
-                    showingAddForm = true
-                }
-            } else {
-                List {
-                    ForEach(viewModel.records) { decryptedRecord in
-                        NavigationLink(value: decryptedRecord) {
-                            MedicalRecordRowView(
-                                schema: viewModel.schema,
-                                content: decryptedRecord.content
-                            )
-                        }
+            if let schema = viewModel.schema {
+                if viewModel.records.isEmpty, !viewModel.isLoading {
+                    EmptyRecordListView(schema: schema) {
+                        showingAddForm = true
                     }
-                    .onDelete(perform: deleteRecords)
+                } else {
+                    List {
+                        ForEach(viewModel.records) { decryptedRecord in
+                            NavigationLink(value: decryptedRecord) {
+                                MedicalRecordRowView(
+                                    schema: schema,
+                                    content: decryptedRecord.content
+                                )
+                            }
+                        }
+                        .onDelete(perform: deleteRecords)
+                    }
+                    .listStyle(.insetGrouped)
                 }
-                .listStyle(.insetGrouped)
+            } else if viewModel.isLoading {
+                ProgressView()
             }
         }
-        .navigationTitle("\(person.name)'s \(viewModel.schema.displayName)")
+        .navigationTitle(viewModel.schema.map { "\(person.name)'s \($0.displayName)" } ?? person.name)
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(for: DecryptedRecord.self) { decryptedRecord in
-            MedicalRecordDetailView(
-                person: person,
-                schema: viewModel.schema,
-                decryptedRecord: decryptedRecord,
-                onDelete: {
-                    await viewModel.deleteRecord(id: decryptedRecord.id)
-                },
-                onRecordUpdated: {
-                    Task {
-                        await viewModel.loadRecords()
+            if let schema = viewModel.schema {
+                MedicalRecordDetailView(
+                    person: person,
+                    schema: schema,
+                    decryptedRecord: decryptedRecord,
+                    onDelete: {
+                        await viewModel.deleteRecord(id: decryptedRecord.id)
+                    },
+                    onRecordUpdated: {
+                        Task {
+                            await viewModel.loadRecords()
+                        }
                     }
-                }
-            )
+                )
+            }
         }
         .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Button(action: { showingAddForm = true }, label: {
-                    Image(systemName: "plus")
-                })
-                .accessibilityLabel("Add \(viewModel.schema.displayName)")
+            if let schema = viewModel.schema {
+                ToolbarItem(placement: .primaryAction) {
+                    Button(action: { showingAddForm = true }, label: {
+                        Image(systemName: "plus")
+                    })
+                    .accessibilityLabel("Add \(schema.displayName)")
+                }
             }
         }
         .sheet(isPresented: $showingAddForm) {
-            MedicalRecordFormView(person: person, schema: viewModel.schema)
+            if let schema = viewModel.schema {
+                MedicalRecordFormView(person: person, schema: schema)
+            }
         }
         .overlay {
-            if viewModel.isLoading {
+            if viewModel.isLoading, viewModel.schema != nil {
                 ProgressView()
             }
         }

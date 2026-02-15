@@ -13,7 +13,7 @@ final class MedicalRecordListViewModel {
     var records: [DecryptedRecord] = []
     var isLoading = false
     var errorMessage: String?
-    var schema: RecordSchema
+    var schema: RecordSchema?
 
     // MARK: - Dependencies
 
@@ -49,7 +49,6 @@ final class MedicalRecordListViewModel {
     ) {
         self.person = person
         self.schemaType = schemaType
-        self.schema = RecordSchema.builtIn(schemaType)
         // Use optional parameter pattern per ADR-0008
         self.medicalRecordRepository = medicalRecordRepository ?? MedicalRecordRepository(
             coreDataStack: CoreDataStack.shared
@@ -142,7 +141,9 @@ final class MedicalRecordListViewModel {
 
     /// Sort records by the first date field found (newest first)
     private func sortRecordsByDate(_ records: [DecryptedRecord]) -> [DecryptedRecord] {
-        let schema = self.schema
+        guard let schema = self.schema else {
+            return records
+        }
 
         // Find the first date field in the schema
         guard let dateField = schema.fields.first(where: { $0.fieldType == .date }) else {
