@@ -36,7 +36,7 @@ final class BackupFileService: BackupFileServiceProtocol, @unchecked Sendable {
     private let keyDerivationService: KeyDerivationServiceProtocol
     private let encryptionService: EncryptionServiceProtocol
     private let schemaValidator: BackupSchemaValidatorProtocol
-    private let logger: CategoryLoggerProtocol
+    private let logger: TracingCategoryLogger
 
     // MARK: - Initialization
 
@@ -49,12 +49,16 @@ final class BackupFileService: BackupFileServiceProtocol, @unchecked Sendable {
         self.keyDerivationService = keyDerivationService
         self.encryptionService = encryptionService
         self.schemaValidator = schemaValidator ?? BackupSchemaValidator()
-        self.logger = logger ?? LoggingService.shared.logger(category: .storage)
+        self.logger = TracingCategoryLogger(
+            wrapping: logger ?? LoggingService.shared.logger(category: .backup)
+        )
     }
 
     // MARK: - BackupFileServiceProtocol
 
     func createEncryptedBackup(payload: BackupPayload, password: String) throws -> BackupFile {
+        let start = ContinuousClock.now
+        logger.entry("createEncryptedBackup")
         guard password.count >= Self.minimumPasswordLength else {
             throw BackupError.passwordTooWeak
         }
@@ -101,7 +105,7 @@ final class BackupFileService: BackupFileServiceProtocol, @unchecked Sendable {
 
         logger.debug("Encrypted backup created successfully")
 
-        return BackupFile(
+        let result = BackupFile(
             schema: BackupFile.schemaURL,
             formatName: BackupFile.formatNameValue,
             formatVersion: BackupFile.currentVersion,
@@ -112,9 +116,13 @@ final class BackupFileService: BackupFileServiceProtocol, @unchecked Sendable {
             ciphertext: encrypted.ciphertext.base64EncodedString(),
             data: nil
         )
+        logger.exit("createEncryptedBackup", duration: ContinuousClock.now - start)
+        return result
     }
 
     func createUnencryptedBackup(payload: BackupPayload) throws -> BackupFile {
+        let start = ContinuousClock.now
+        logger.entry("createUnencryptedBackup")
         logger.debug("Creating unencrypted backup")
 
         // Encode payload to compute checksum
@@ -127,7 +135,7 @@ final class BackupFileService: BackupFileServiceProtocol, @unchecked Sendable {
 
         logger.debug("Unencrypted backup created successfully")
 
-        return BackupFile(
+        let result = BackupFile(
             schema: BackupFile.schemaURL,
             formatName: BackupFile.formatNameValue,
             formatVersion: BackupFile.currentVersion,
@@ -138,9 +146,13 @@ final class BackupFileService: BackupFileServiceProtocol, @unchecked Sendable {
             ciphertext: nil,
             data: payload
         )
+        logger.exit("createUnencryptedBackup", duration: ContinuousClock.now - start)
+        return result
     }
 
     func decryptBackup(file: BackupFile, password: String) throws -> BackupPayload {
+        let start = ContinuousClock.now
+        logger.entry("decryptBackup")
         guard file.encrypted else {
             throw BackupError.corruptedFile
         }
@@ -198,6 +210,7 @@ final class BackupFileService: BackupFileServiceProtocol, @unchecked Sendable {
         do {
             let payload = try decoder.decode(BackupPayload.self, from: decryptedData)
             logger.debug("Backup decrypted successfully")
+            logger.exit("decryptBackup", duration: ContinuousClock.now - start)
             return payload
         } catch {
             logger.error("Failed to decode decrypted payload")
@@ -206,6 +219,8 @@ final class BackupFileService: BackupFileServiceProtocol, @unchecked Sendable {
     }
 
     func readUnencryptedBackup(file: BackupFile) throws -> BackupPayload {
+        let start = ContinuousClock.now
+        logger.entry("readUnencryptedBackup")
         guard !file.encrypted else {
             throw BackupError.corruptedFile
         }
@@ -214,10 +229,14 @@ final class BackupFileService: BackupFileServiceProtocol, @unchecked Sendable {
             throw BackupError.corruptedFile
         }
 
+        logger.exit("readUnencryptedBackup", duration: ContinuousClock.now - start)
         return data
     }
 
     func verifyChecksum(file: BackupFile) throws -> Bool {
+        let start = ContinuousClock.now
+        logger.entry("verifyChecksum")
+        let result: Bool
         if file.encrypted {
             guard let ciphertextBase64 = file.ciphertext,
                   let nonce = file.encryption.flatMap({ Data(base64Encoded: $0.nonce) }),
@@ -230,7 +249,7 @@ final class BackupFileService: BackupFileServiceProtocol, @unchecked Sendable {
             combined.append(nonce)
             combined.append(ciphertext)
             combined.append(tag)
-            return file.checksum.verify(against: combined)
+            result = file.checksum.verify(against: combined)
         } else {
             guard let data = file.data else {
                 throw BackupError.corruptedFile
@@ -239,18 +258,26 @@ final class BackupFileService: BackupFileServiceProtocol, @unchecked Sendable {
             encoder.dateEncodingStrategy = .iso8601
             encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
             let payloadData = try encoder.encode(data)
-            return file.checksum.verify(against: payloadData)
+            result = file.checksum.verify(against: payloadData)
         }
+        logger.exit("verifyChecksum", duration: ContinuousClock.now - start)
+        return result
     }
 
     func serializeToJSON(file: BackupFile) throws -> Data {
+        let start = ContinuousClock.now
+        logger.entry("serializeToJSON")
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
-        return try encoder.encode(file)
+        let result = try encoder.encode(file)
+        logger.exit("serializeToJSON", duration: ContinuousClock.now - start)
+        return result
     }
 
     func deserializeFromJSON(_ data: Data) throws -> BackupFile {
+        let start = ContinuousClock.now
+        logger.entry("deserializeFromJSON")
         // Validate against schema BEFORE decoding
         let validationResult = schemaValidator.validate(jsonData: data)
         if !validationResult.isValid {
@@ -280,6 +307,7 @@ final class BackupFileService: BackupFileServiceProtocol, @unchecked Sendable {
             throw BackupError.unsupportedVersion(file.formatVersion)
         }
 
+        logger.exit("deserializeFromJSON", duration: ContinuousClock.now - start)
         return file
     }
 
