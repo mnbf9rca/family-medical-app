@@ -229,6 +229,49 @@ struct MedicalRecordListViewModelTests {
         #expect(mockRepo.deleteCallCount == 1)
     }
 
+    // MARK: - Schema Service Tests
+
+    @Test
+    func loadRecordsUsesSchemaFromService() async throws {
+        let person = try makeTestPerson()
+        let mockRepo = MockMedicalRecordRepository()
+        let mockContentService = MockRecordContentService()
+        let mockPrimaryKeyProvider = MockPrimaryKeyProvider()
+        let mockFMKService = MockFamilyMemberKeyService()
+        let mockSchemaService = MockSchemaService()
+
+        mockPrimaryKeyProvider.primaryKey = SymmetricKey(size: .bits256)
+        mockFMKService.setFMK(SymmetricKey(size: .bits256), for: person.id.uuidString)
+
+        // Store a MODIFIED schema in the mock service (user renamed "Vaccine" to "Immunization")
+        let customSchema = RecordSchema(
+            unsafeId: "vaccine",
+            displayName: "Immunization Record",
+            iconSystemName: "cross.vial",
+            fields: RecordSchema.builtIn(.vaccine).fields,
+            isBuiltIn: true,
+            description: nil
+        )
+        mockSchemaService.addSchema(customSchema, forPerson: person.id)
+
+        let viewModel = MedicalRecordListViewModel(
+            person: person,
+            schemaType: .vaccine,
+            medicalRecordRepository: mockRepo,
+            recordContentService: mockContentService,
+            primaryKeyProvider: mockPrimaryKeyProvider,
+            fmkService: mockFMKService,
+            schemaService: mockSchemaService
+        )
+
+        await viewModel.loadRecords()
+
+        // ViewModel should use the user's schema, not the hardcoded default
+        #expect(viewModel.schema.displayName == "Immunization Record")
+        #expect(viewModel.schema.iconSystemName == "cross.vial")
+        #expect(mockSchemaService.schemaCallCount == 1)
+    }
+
     @Test
     func deleteRecordSetsErrorOnFailure() async throws {
         let person = try makeTestPerson()
