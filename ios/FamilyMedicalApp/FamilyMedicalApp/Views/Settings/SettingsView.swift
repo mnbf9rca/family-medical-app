@@ -47,11 +47,20 @@ struct SettingsView: View {
                     )
                 }
             }
-            .sheet(isPresented: $viewModel.showingLogShareSheet) {
-                if let url = viewModel.exportedLogURL {
-                    BackupShareSheet(items: [url])
+            .sheet(
+                isPresented: $viewModel.showingLogShareSheet,
+                onDismiss: {
+                    if let url = viewModel.exportedLogURL {
+                        try? FileManager.default.removeItem(at: url)
+                        viewModel.exportedLogURL = nil
+                    }
+                },
+                content: {
+                    if let url = viewModel.exportedLogURL {
+                        BackupShareSheet(items: [url])
+                    }
                 }
-            }
+            )
             .alert("Error", isPresented: Binding(
                 get: { viewModel.errorMessage != nil },
                 set: { if !$0 { viewModel.errorMessage = nil } }

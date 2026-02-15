@@ -158,17 +158,19 @@ final class LogExportService: LogExportServiceProtocol, @unchecked Sendable {
         let start = ContinuousClock.now
         logger.entry("exportLogs", "window=\(timeWindow.rawValue)")
         do {
-            let exportDate = Date()
-            let entries = try queryLogEntries(timeWindow: timeWindow, exportDate: exportDate)
-            let metadata = DeviceMetadata.current()
-            logger.debug("Found \(entries.count) log entries")
-            let output = formatExportOutput(
-                entries: entries,
-                metadata: metadata,
-                timeWindow: timeWindow,
-                exportDate: exportDate
-            )
-            let fileURL = try writeExportFile(output: output, exportDate: exportDate)
+            let fileURL = try await Task.detached(priority: .userInitiated) { [self] in
+                let exportDate = Date()
+                let entries = try queryLogEntries(timeWindow: timeWindow, exportDate: exportDate)
+                let metadata = DeviceMetadata.current()
+                logger.debug("Found \(entries.count) log entries")
+                let output = formatExportOutput(
+                    entries: entries,
+                    metadata: metadata,
+                    timeWindow: timeWindow,
+                    exportDate: exportDate
+                )
+                return try writeExportFile(output: output, exportDate: exportDate)
+            }.value
             logger.exit("exportLogs", duration: ContinuousClock.now - start)
             return fileURL
         } catch {

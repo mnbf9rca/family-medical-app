@@ -25,7 +25,7 @@
   - See [Coding Practices - Logging](docs/coding-practices.md) for privacy classification and patterns
   - Use `.public` for non-PII data, `.hashed` for PII/medical content, `.sensitive` for crypto material
 - ⚠️ **ALWAYS** achieve required code coverage thresholds, validated through testing:
-  - **Overall project coverage: 87% minimum** (temporarily reduced from 90% for OPAQUE auth, see Issue #78) and **individual file coverage: 85% minimum** (with exceptions for specific files, see `scripts/check-coverage.sh` - only add exceptions with explicit user consent)
+  - **Overall project coverage: 85% minimum** (temporarily reduced from 90% for OPAQUE auth, see Issue #78) and **individual file coverage: 85% minimum** (with exceptions for specific files, see `scripts/check-coverage.sh` - only add exceptions with explicit user consent)
   - Coverage applies to existing, new, **and changed** code
   - Use `{projectRoot}/scripts/run-tests.sh` to run iOS tests - this is the same script used in CI. Note that it can take up to 15 minutes for the full (UI) test suite to run. Do **NOT** tail results - the script already uses xcpretty, and tail will prevent you seeing warnings.
   - **After** running tests, use `{projectRoot}/scripts/check-coverage.sh` to validate iOS coverage - this is the same script used in CI

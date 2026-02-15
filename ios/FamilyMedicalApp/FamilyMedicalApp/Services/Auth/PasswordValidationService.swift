@@ -40,12 +40,6 @@ final class PasswordValidationService: PasswordValidationServiceProtocol {
 
     private static let minimumLength = 12
 
-    // MARK: - Properties
-
-    private let logger = TracingCategoryLogger(
-        wrapping: LoggingService.shared.logger(category: .auth)
-    )
-
     // Common passwords loaded from SecLists (10,000 most common)
     // Source: https://github.com/danielmiessler/SecLists/blob/master/Passwords/Common-Credentials/10k-most-common.txt
     private static let commonPasswords: Set<String> = {
@@ -65,8 +59,6 @@ final class PasswordValidationService: PasswordValidationServiceProtocol {
     // MARK: - Public Methods
 
     func validate(_ password: String) -> [AuthenticationError] {
-        let start = ContinuousClock.now
-        logger.entry("validate", "length=\(password.count)")
         var errors = Set<AuthenticationError>()
 
         // NIST Rule 1: Minimum length (12 chars is good)
@@ -92,13 +84,10 @@ final class PasswordValidationService: PasswordValidationServiceProtocol {
             errors.insert(.passwordTooCommon)
         }
 
-        logger.exit("validate", duration: ContinuousClock.now - start)
         return Array(errors)
     }
 
     func passwordStrength(_ password: String) -> PasswordStrength {
-        let start = ContinuousClock.now
-        logger.entry("passwordStrength", "length=\(password.count)")
         var score = 0
 
         // Length-based scoring (NIST emphasizes length over complexity)
@@ -129,7 +118,7 @@ final class PasswordValidationService: PasswordValidationServiceProtocol {
         }
 
         // Map score to strength
-        let strength: PasswordStrength = switch max(0, score) {
+        return switch max(0, score) {
         case 0 ... 1:
             .weak
         case 2:
@@ -141,8 +130,6 @@ final class PasswordValidationService: PasswordValidationServiceProtocol {
         default:
             .weak
         }
-        logger.exit("passwordStrength", duration: ContinuousClock.now - start)
-        return strength
     }
 
     // MARK: - Private Methods
