@@ -21,6 +21,9 @@
   - Use pure functions to reduce complexity
 - ⚠️ **NEVER** skip or override pre-commit hooks
   - The hooks are there for a reason - fix the issues instead
+- ⚠️ **ALWAYS** use `TracingCategoryLogger` for entry/exit logging in service methods
+  - See [Coding Practices - Logging](docs/coding-practices.md) for privacy classification and patterns
+  - Use `.public` for non-PII data, `.hashed` for PII/medical content, `.sensitive` for crypto material
 - ⚠️ **ALWAYS** achieve required code coverage thresholds, validated through testing:
   - **Overall project coverage: 87% minimum** (temporarily reduced from 90% for OPAQUE auth, see Issue #78) and **individual file coverage: 85% minimum** (with exceptions for specific files, see `scripts/check-coverage.sh` - only add exceptions with explicit user consent)
   - Coverage applies to existing, new, **and changed** code
