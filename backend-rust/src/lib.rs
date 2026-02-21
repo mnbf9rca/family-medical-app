@@ -27,9 +27,12 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
 
     let path = req.path();
 
-    // Liveness check - before loading secrets
+    // Health checks - before loading secrets so they work even when secrets are misconfigured
     if req.method() == Method::Get && path == "/health/live" {
         return routes::json_response(&HealthStatus { status: "ok" }, 200);
+    }
+    if req.method() == Method::Get && path == "/health/ready" {
+        return handle_ready(&env).await;
     }
 
     console_log!("[opaque] {} {}", req.method(), path);
@@ -42,7 +45,6 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
     let server_setup = opaque::init_server_setup(Some(&setup_secret)).map_err(Error::from)?;
 
     match (req.method(), path.as_str()) {
-        (Method::Get, "/health/ready") => handle_ready(&env).await,
         (Method::Post, "/auth/opaque/register/start") => routes::handle_register_start(req, &env, &server_setup).await,
         (Method::Post, "/auth/opaque/register/finish") => routes::handle_register_finish(req, &env).await,
         (Method::Post, "/auth/opaque/login/start") => routes::handle_login_start(req, &env, &server_setup).await,
@@ -55,7 +57,7 @@ async fn handle_ready(env: &Env) -> Result<Response> {
     let mut checks = HashMap::new();
     let mut all_ok = true;
 
-    // Check OPAQUE server setup (already loaded if we got here, but verify env access)
+    // Check OPAQUE server setup is accessible
     match env.secret("OPAQUE_SERVER_SETUP") {
         Ok(_) => {
             checks.insert("opaque_setup", "ok");
