@@ -409,7 +409,7 @@ pub async fn handle_login_finish(mut req: Request, env: &Env) -> Result<Response
     )
 }
 
-fn json_response<T: Serialize>(data: &T, status: u16) -> Result<Response> {
+pub fn json_response<T: Serialize>(data: &T, status: u16) -> Result<Response> {
     let body = serde_json::to_string(data)?;
     let headers = Headers::new();
     headers.set("Content-Type", "application/json")?;

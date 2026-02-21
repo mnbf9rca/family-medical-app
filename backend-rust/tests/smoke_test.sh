@@ -5,6 +5,30 @@ BASE_URL="${1:-https://api.recordwell.app}"
 
 echo "Testing OPAQUE endpoints at $BASE_URL"
 
+# Test liveness endpoint
+echo -n "GET /health/live... "
+OUTPUT=$(curl -s -w "%{http_code}" "$BASE_URL/health/live")
+STATUS="${OUTPUT: -3}"
+RESPONSE="${OUTPUT%???}"
+if [ "$STATUS" = "200" ] && echo "$RESPONSE" | grep -q '"status":"ok"'; then
+  echo "OK"
+else
+  echo "FAIL ($STATUS: $RESPONSE)"
+  exit 1
+fi
+
+# Test readiness endpoint
+echo -n "GET /health/ready... "
+OUTPUT=$(curl -s -w "%{http_code}" "$BASE_URL/health/ready")
+STATUS="${OUTPUT: -3}"
+RESPONSE="${OUTPUT%???}"
+if [ "$STATUS" = "200" ] && echo "$RESPONSE" | grep -q '"status":"ok"'; then
+  echo "OK"
+else
+  echo "FAIL ($STATUS: $RESPONSE)"
+  exit 1
+fi
+
 # Test CORS preflight
 echo -n "OPTIONS /auth/opaque/register/start... "
 STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X OPTIONS "$BASE_URL/auth/opaque/register/start")
