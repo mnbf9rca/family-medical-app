@@ -39,7 +39,7 @@ enabled = true
 invocation_logs = true
 
 [observability.traces]
-enabled = false
+enabled = true
 
 # Secret: OPAQUE_SERVER_SETUP (set via: wrangler secret put OPAQUE_SERVER_SETUP)
 # Contains base64-encoded opaque-ke ServerSetup for OPAQUE authentication
