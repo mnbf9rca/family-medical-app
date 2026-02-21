@@ -22,14 +22,14 @@ id = "671b81ebdc2946e494d0d37c2059f9d6"
 binding = "RATE_LIMITS"
 id = "5d519620a3c341bc8821fc568ce67beb"
 
-[vars]
-ENVIRONMENT = "production"
-
 # Production routes (managed by wrangler deploy, replaces GUI-configured routes)
 routes = [
   { pattern = "api.recordwell.app/auth/opaque/*", zone_name = "recordwell.app" },
   { pattern = "api.recordwell.app/health/*", zone_name = "recordwell.app" },
 ]
+
+[vars]
+ENVIRONMENT = "production"
 
 [observability]
 enabled = true
