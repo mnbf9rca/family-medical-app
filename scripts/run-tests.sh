@@ -11,6 +11,12 @@ set -u
 #   --unit-tests-only      Only run unit tests (skip UI tests)
 #   --limit N              Limit displayed failures (0 = unlimited, default: unlimited)
 #   --destination DEST     Simulator destination (defaults to iPhone 17,OS=26.2)
+#   --only-testing FILTER  Run only a specific test (e.g. Class/testMethod)
+#
+# Examples:
+#   ./scripts/run-tests.sh                                    # Full suite
+#   ./scripts/run-tests.sh --unit-tests-only                  # Unit tests only
+#   ./scripts/run-tests.sh --only-testing MedicalRecordFlowUITests/testMedicalRecordCRUDWorkflow
 #
 # Exit codes:
 #   0 - All tests passed
@@ -32,6 +38,7 @@ RESULTS_ONLY=false
 UNIT_TESTS_ONLY=false
 LIMIT=0
 DESTINATION=""
+ONLY_TESTING=""
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -59,14 +66,22 @@ while [[ $# -gt 0 ]]; do
             DESTINATION="$2"
             shift 2
             ;;
+        --only-testing)
+            if [[ $# -lt 2 || -z "$2" || "$2" == -* ]]; then
+                echo "Error: --only-testing requires a test filter (e.g. Class/testMethod)"
+                exit 1
+            fi
+            ONLY_TESTING="$2"
+            shift 2
+            ;;
         -*)
             echo "Unknown option: $1"
-            echo "Usage: $0 [--results-only] [--unit-tests-only] [--limit N] [--destination DEST]"
+            echo "Usage: $0 [--results-only] [--unit-tests-only] [--limit N] [--destination DEST] [--only-testing FILTER]"
             exit 1
             ;;
         *)
             echo "Unexpected positional argument: $1"
-            echo "Use --destination to specify the destination"
+            echo "Use --only-testing to run a specific test"
             exit 1
             ;;
     esac
@@ -172,6 +187,15 @@ TEST_CMD=(xcodebuild test
 
 if [[ "$UNIT_TESTS_ONLY" == "true" ]]; then
     TEST_CMD+=(-skip-testing:FamilyMedicalAppUITests)
+fi
+
+if [[ -n "$ONLY_TESTING" ]]; then
+    # Determine target based on test filter path
+    if [[ "$ONLY_TESTING" == *UITests* ]]; then
+        TEST_CMD+=("-only-testing:FamilyMedicalAppUITests/$ONLY_TESTING")
+    else
+        TEST_CMD+=("-only-testing:FamilyMedicalAppTests/$ONLY_TESTING")
+    fi
 fi
 
 # Run xcodebuild
