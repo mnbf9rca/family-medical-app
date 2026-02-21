@@ -321,6 +321,7 @@ to provide initial schema definitions when a new Person is created:
 - `SchemaService` - as internal fallback when repository has no stored schema
 - `#Preview` blocks - for SwiftUI previews (not production code)
 - Test setup code - for constructing test fixtures
+- View initialization fallback - as `??` fallback in computed properties (e.g., `displaySchema`) where `if let` wrapping would cause SwiftUI view identity issues in `navigationDestination`
 
 **All other code must use `SchemaService`** to fetch schemas. ViewModels should declare
 schema properties as optional (`RecordSchema?`) and only populate them from a successful

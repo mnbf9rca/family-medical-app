@@ -25,7 +25,7 @@ struct MedicalRecordListView: View {
 
     /// Schema from SchemaService, falling back to built-in for rendering.
     /// The fallback only triggers before initial loadRecords() completes;
-    /// once loaded, viewModel.schema is always non-nil.
+    /// once loaded successfully, viewModel.schema is non-nil for built-in schema types.
     private var displaySchema: RecordSchema {
         viewModel.schema ?? RecordSchema.builtIn(schemaType)
     }
