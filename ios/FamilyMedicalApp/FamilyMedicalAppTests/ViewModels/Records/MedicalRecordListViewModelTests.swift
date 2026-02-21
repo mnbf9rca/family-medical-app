@@ -96,6 +96,58 @@ struct MedicalRecordListViewModelTests {
     }
 
     @Test
+    func loadRecordsUsesCustomSchemaFromService() async throws {
+        let person = try makeTestPerson()
+        let mockRepo = MockMedicalRecordRepository()
+        let mockContentService = MockRecordContentService()
+        let mockPrimaryKeyProvider = MockPrimaryKeyProvider()
+        let mockFMKService = MockFamilyMemberKeyService()
+        let mockSchemaService = MockSchemaService()
+
+        // Set up mocks
+        mockPrimaryKeyProvider.primaryKey = SymmetricKey(size: .bits256)
+        mockFMKService.setFMK(SymmetricKey(size: .bits256), for: person.id.uuidString)
+
+        // Create test record
+        let record = makeTestRecord(
+            personId: person.id,
+            schemaId: "vaccine",
+            dateFieldId: BuiltInFieldIds.Vaccine.dateAdministered,
+            date: Date()
+        )
+        mockRepo.addRecord(record)
+
+        // Mock decryption
+        var content = RecordContent(schemaId: "vaccine")
+        content.setDate(BuiltInFieldIds.Vaccine.dateAdministered, Date())
+        mockContentService.setContent(content, for: record.encryptedContent)
+
+        // Store custom schema with modified displayName
+        let customSchema = RecordSchema(
+            unsafeId: "vaccine",
+            displayName: "Immunization",
+            iconSystemName: "cross.vial",
+            fields: RecordSchema.builtIn(.vaccine).fields,
+            isBuiltIn: true
+        )
+        mockSchemaService.addSchema(customSchema, forPerson: person.id)
+
+        let viewModel = MedicalRecordListViewModel(
+            person: person,
+            schemaType: .vaccine,
+            medicalRecordRepository: mockRepo,
+            recordContentService: mockContentService,
+            primaryKeyProvider: mockPrimaryKeyProvider,
+            fmkService: mockFMKService,
+            schemaService: mockSchemaService
+        )
+
+        await viewModel.loadRecords()
+
+        #expect(viewModel.schema?.displayName == "Immunization")
+    }
+
+    @Test
     func loadRecordsFiltersbySchemaType() async throws {
         let person = try makeTestPerson()
         let mockRepo = MockMedicalRecordRepository()
