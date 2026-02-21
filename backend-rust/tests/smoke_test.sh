@@ -7,8 +7,9 @@ echo "Testing OPAQUE endpoints at $BASE_URL"
 
 # Test liveness endpoint
 echo -n "GET /health/live... "
-RESPONSE=$(curl -s "$BASE_URL/health/live")
-STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL/health/live")
+OUTPUT=$(curl -s -w "%{http_code}" "$BASE_URL/health/live")
+STATUS="${OUTPUT: -3}"
+RESPONSE="${OUTPUT%???}"
 if [ "$STATUS" = "200" ] && echo "$RESPONSE" | grep -q '"status":"ok"'; then
   echo "OK"
 else
@@ -18,8 +19,9 @@ fi
 
 # Test readiness endpoint
 echo -n "GET /health/ready... "
-RESPONSE=$(curl -s "$BASE_URL/health/ready")
-STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL/health/ready")
+OUTPUT=$(curl -s -w "%{http_code}" "$BASE_URL/health/ready")
+STATUS="${OUTPUT: -3}"
+RESPONSE="${OUTPUT%???}"
 if [ "$STATUS" = "200" ] && echo "$RESPONSE" | grep -q '"status":"ok"'; then
   echo "OK"
 else
