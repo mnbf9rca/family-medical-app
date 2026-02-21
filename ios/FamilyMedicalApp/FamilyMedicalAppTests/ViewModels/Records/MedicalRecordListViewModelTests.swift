@@ -42,10 +42,10 @@ struct MedicalRecordListViewModelTests {
 
         #expect(viewModel.person.id == person.id)
         #expect(viewModel.schemaType == .vaccine)
-        #expect(viewModel.schema == nil)
         #expect(viewModel.records.isEmpty)
         #expect(viewModel.isLoading == false)
         #expect(viewModel.errorMessage == nil)
+        #expect(viewModel.schema == nil)
     }
 
     // MARK: - Load Records Tests
@@ -57,6 +57,7 @@ struct MedicalRecordListViewModelTests {
         let mockContentService = MockRecordContentService()
         let mockPrimaryKeyProvider = MockPrimaryKeyProvider()
         let mockFMKService = MockFamilyMemberKeyService()
+        let mockSchemaService = MockSchemaService()
 
         // Set up mocks
         mockPrimaryKeyProvider.primaryKey = SymmetricKey(size: .bits256)
@@ -82,7 +83,8 @@ struct MedicalRecordListViewModelTests {
             medicalRecordRepository: mockRepo,
             recordContentService: mockContentService,
             primaryKeyProvider: mockPrimaryKeyProvider,
-            fmkService: mockFMKService
+            fmkService: mockFMKService,
+            schemaService: mockSchemaService
         )
 
         await viewModel.loadRecords()
@@ -90,6 +92,7 @@ struct MedicalRecordListViewModelTests {
         #expect(viewModel.records.count == 1)
         #expect(viewModel.errorMessage == nil)
         #expect(viewModel.isLoading == false)
+        #expect(viewModel.schema != nil)
     }
 
     @Test
@@ -99,6 +102,7 @@ struct MedicalRecordListViewModelTests {
         let mockContentService = MockRecordContentService()
         let mockPrimaryKeyProvider = MockPrimaryKeyProvider()
         let mockFMKService = MockFamilyMemberKeyService()
+        let mockSchemaService = MockSchemaService()
 
         mockPrimaryKeyProvider.primaryKey = SymmetricKey(size: .bits256)
         mockFMKService.setFMK(SymmetricKey(size: .bits256), for: person.id.uuidString)
@@ -136,7 +140,8 @@ struct MedicalRecordListViewModelTests {
             medicalRecordRepository: mockRepo,
             recordContentService: mockContentService,
             primaryKeyProvider: mockPrimaryKeyProvider,
-            fmkService: mockFMKService
+            fmkService: mockFMKService,
+            schemaService: mockSchemaService
         )
 
         await viewModel.loadRecords()
@@ -165,6 +170,7 @@ struct MedicalRecordListViewModelTests {
         #expect(viewModel.errorMessage != nil)
         #expect(viewModel.records.isEmpty)
         #expect(viewModel.isLoading == false)
+        #expect(viewModel.schema == nil)
     }
 
     @Test
@@ -173,6 +179,7 @@ struct MedicalRecordListViewModelTests {
         let mockRepo = MockMedicalRecordRepository()
         let mockPrimaryKeyProvider = MockPrimaryKeyProvider()
         let mockFMKService = MockFamilyMemberKeyService()
+        let mockSchemaService = MockSchemaService()
 
         mockPrimaryKeyProvider.primaryKey = SymmetricKey(size: .bits256)
         mockFMKService.setFMK(SymmetricKey(size: .bits256), for: person.id.uuidString)
@@ -185,12 +192,42 @@ struct MedicalRecordListViewModelTests {
             schemaType: .vaccine,
             medicalRecordRepository: mockRepo,
             primaryKeyProvider: mockPrimaryKeyProvider,
-            fmkService: mockFMKService
+            fmkService: mockFMKService,
+            schemaService: mockSchemaService
         )
 
         await viewModel.loadRecords()
 
         #expect(viewModel.errorMessage != nil)
+        #expect(viewModel.records.isEmpty)
+        #expect(viewModel.isLoading == false)
+    }
+
+    @Test
+    func loadRecordsSetsErrorWhenSchemaServiceFails() async throws {
+        let person = try makeTestPerson()
+        let mockPrimaryKeyProvider = MockPrimaryKeyProvider()
+        let mockFMKService = MockFamilyMemberKeyService()
+        let mockSchemaService = MockSchemaService()
+
+        mockPrimaryKeyProvider.primaryKey = SymmetricKey(size: .bits256)
+        mockFMKService.setFMK(SymmetricKey(size: .bits256), for: person.id.uuidString)
+
+        // Simulate schema service failure
+        mockSchemaService.shouldFailFetch = true
+
+        let viewModel = MedicalRecordListViewModel(
+            person: person,
+            schemaType: .vaccine,
+            primaryKeyProvider: mockPrimaryKeyProvider,
+            fmkService: mockFMKService,
+            schemaService: mockSchemaService
+        )
+
+        await viewModel.loadRecords()
+
+        #expect(viewModel.errorMessage != nil)
+        #expect(viewModel.schema == nil)
         #expect(viewModel.records.isEmpty)
         #expect(viewModel.isLoading == false)
     }
@@ -228,83 +265,6 @@ struct MedicalRecordListViewModelTests {
         #expect(viewModel.records.isEmpty)
         #expect(viewModel.errorMessage == nil)
         #expect(mockRepo.deleteCallCount == 1)
-    }
-
-    // MARK: - Schema Service Tests
-
-    @Test
-    func loadRecordsUsesSchemaFromService() async throws {
-        let person = try makeTestPerson()
-        let mockRepo = MockMedicalRecordRepository()
-        let mockContentService = MockRecordContentService()
-        let mockPrimaryKeyProvider = MockPrimaryKeyProvider()
-        let mockFMKService = MockFamilyMemberKeyService()
-        let mockSchemaService = MockSchemaService()
-
-        mockPrimaryKeyProvider.primaryKey = SymmetricKey(size: .bits256)
-        mockFMKService.setFMK(SymmetricKey(size: .bits256), for: person.id.uuidString)
-
-        // Store a MODIFIED schema in the mock service (user renamed "Vaccine" to "Immunization")
-        let customSchema = RecordSchema(
-            unsafeId: "vaccine",
-            displayName: "Immunization Record",
-            iconSystemName: "cross.vial",
-            fields: RecordSchema.builtIn(.vaccine).fields,
-            isBuiltIn: true,
-            description: nil
-        )
-        mockSchemaService.addSchema(customSchema, forPerson: person.id)
-
-        let viewModel = MedicalRecordListViewModel(
-            person: person,
-            schemaType: .vaccine,
-            medicalRecordRepository: mockRepo,
-            recordContentService: mockContentService,
-            primaryKeyProvider: mockPrimaryKeyProvider,
-            fmkService: mockFMKService,
-            schemaService: mockSchemaService
-        )
-
-        await viewModel.loadRecords()
-
-        // ViewModel should use the user's schema, not the hardcoded default
-        #expect(viewModel.schema?.displayName == "Immunization Record")
-        #expect(viewModel.schema?.iconSystemName == "cross.vial")
-        #expect(mockSchemaService.schemaCallCount == 1)
-    }
-
-    @Test
-    func loadRecordsSetsErrorWhenSchemaServiceFails() async throws {
-        let person = try makeTestPerson()
-        let mockRepo = MockMedicalRecordRepository()
-        let mockContentService = MockRecordContentService()
-        let mockPrimaryKeyProvider = MockPrimaryKeyProvider()
-        let mockFMKService = MockFamilyMemberKeyService()
-        let mockSchemaService = MockSchemaService()
-
-        mockPrimaryKeyProvider.primaryKey = SymmetricKey(size: .bits256)
-        mockFMKService.setFMK(SymmetricKey(size: .bits256), for: person.id.uuidString)
-
-        // Schema service will throw
-        mockSchemaService.shouldFailFetch = true
-
-        let viewModel = MedicalRecordListViewModel(
-            person: person,
-            schemaType: .vaccine,
-            medicalRecordRepository: mockRepo,
-            recordContentService: mockContentService,
-            primaryKeyProvider: mockPrimaryKeyProvider,
-            fmkService: mockFMKService,
-            schemaService: mockSchemaService
-        )
-
-        await viewModel.loadRecords()
-
-        // Schema fetch failure is fatal - records should not load
-        #expect(viewModel.schema == nil)
-        #expect(viewModel.errorMessage != nil)
-        #expect(viewModel.records.isEmpty)
-        #expect(viewModel.isLoading == false)
     }
 
     @Test

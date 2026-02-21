@@ -141,7 +141,7 @@ final class MedicalRecordListViewModel {
 
     /// Sort records by the first date field found (newest first)
     private func sortRecordsByDate(_ records: [DecryptedRecord]) -> [DecryptedRecord] {
-        guard let schema = self.schema else {
+        guard let schema else {
             return records
         }
 

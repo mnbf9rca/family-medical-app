@@ -4,18 +4,18 @@ import SwiftUI
 struct EmptyRecordListView: View {
     // MARK: - Properties
 
-    let schema: RecordSchema
+    let schemaType: BuiltInSchemaType
     let onAddTapped: () -> Void
 
     // MARK: - Body
 
     var body: some View {
         ContentUnavailableView {
-            Label("No \(schema.displayName) Records", systemImage: schema.iconSystemName)
+            Label("No \(schemaType.displayName) Records", systemImage: schemaType.iconSystemName)
         } description: {
-            Text("Add your first \(schema.displayName.lowercased()) record to start tracking.")
+            Text("Add your first \(schemaType.displayName.lowercased()) record to start tracking.")
         } actions: {
-            Button("Add \(schema.displayName)") {
+            Button("Add \(schemaType.displayName)") {
                 onAddTapped()
             }
             .buttonStyle(.borderedProminent)
@@ -27,13 +27,13 @@ struct EmptyRecordListView: View {
 // MARK: - Preview
 
 #Preview {
-    EmptyRecordListView(schema: RecordSchema.builtIn(.vaccine)) {}
+    EmptyRecordListView(schemaType: .vaccine) {}
 }
 
 #Preview("Medication") {
-    EmptyRecordListView(schema: RecordSchema.builtIn(.medication)) {}
+    EmptyRecordListView(schemaType: .medication) {}
 }
 
 #Preview("Condition") {
-    EmptyRecordListView(schema: RecordSchema.builtIn(.condition)) {}
+    EmptyRecordListView(schemaType: .condition) {}
 }

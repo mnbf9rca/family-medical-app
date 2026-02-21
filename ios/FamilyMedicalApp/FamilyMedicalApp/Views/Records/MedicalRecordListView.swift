@@ -23,69 +23,66 @@ struct MedicalRecordListView: View {
         ))
     }
 
+    /// Schema from SchemaService, falling back to built-in for rendering.
+    /// The fallback only triggers before initial loadRecords() completes;
+    /// once loaded, viewModel.schema is always non-nil.
+    private var displaySchema: RecordSchema {
+        viewModel.schema ?? RecordSchema.builtIn(schemaType)
+    }
+
     // MARK: - Body
 
     var body: some View {
         Group {
-            if let schema = viewModel.schema {
-                if viewModel.records.isEmpty, !viewModel.isLoading {
-                    EmptyRecordListView(schema: schema) {
-                        showingAddForm = true
-                    }
-                } else {
-                    List {
-                        ForEach(viewModel.records) { decryptedRecord in
-                            NavigationLink(value: decryptedRecord) {
-                                MedicalRecordRowView(
-                                    schema: schema,
-                                    content: decryptedRecord.content
-                                )
-                            }
-                        }
-                        .onDelete(perform: deleteRecords)
-                    }
-                    .listStyle(.insetGrouped)
+            if viewModel.records.isEmpty, !viewModel.isLoading {
+                EmptyRecordListView(schemaType: schemaType) {
+                    showingAddForm = true
                 }
-            } else if viewModel.isLoading {
-                ProgressView()
+            } else {
+                List {
+                    ForEach(viewModel.records) { decryptedRecord in
+                        NavigationLink(value: decryptedRecord) {
+                            MedicalRecordRowView(
+                                schema: displaySchema,
+                                content: decryptedRecord.content
+                            )
+                        }
+                    }
+                    .onDelete(perform: deleteRecords)
+                }
+                .listStyle(.insetGrouped)
             }
         }
-        .navigationTitle(viewModel.schema.map { "\(person.name)'s \($0.displayName)" } ?? person.name)
+        .navigationTitle("\(person.name)'s \(schemaType.displayName)")
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(for: DecryptedRecord.self) { decryptedRecord in
-            if let schema = viewModel.schema {
-                MedicalRecordDetailView(
-                    person: person,
-                    schema: schema,
-                    decryptedRecord: decryptedRecord,
-                    onDelete: {
-                        await viewModel.deleteRecord(id: decryptedRecord.id)
-                    },
-                    onRecordUpdated: {
-                        Task {
-                            await viewModel.loadRecords()
-                        }
+            MedicalRecordDetailView(
+                person: person,
+                schemaType: schemaType,
+                decryptedRecord: decryptedRecord,
+                onDelete: {
+                    await viewModel.deleteRecord(id: decryptedRecord.id)
+                },
+                onRecordUpdated: {
+                    Task {
+                        await viewModel.loadRecords()
                     }
-                )
-            }
+                }
+            )
         }
         .toolbar {
-            if let schema = viewModel.schema {
-                ToolbarItem(placement: .primaryAction) {
-                    Button(action: { showingAddForm = true }, label: {
-                        Image(systemName: "plus")
-                    })
-                    .accessibilityLabel("Add \(schema.displayName)")
-                }
+            ToolbarItem(placement: .primaryAction) {
+                Button(action: { showingAddForm = true }, label: {
+                    Image(systemName: "plus")
+                })
+                .accessibilityLabel("Add \(schemaType.displayName)")
             }
         }
         .sheet(isPresented: $showingAddForm) {
-            if let schema = viewModel.schema {
-                MedicalRecordFormView(person: person, schema: schema)
-            }
+            MedicalRecordFormView(person: person, schema: displaySchema)
         }
         .overlay {
-            if viewModel.isLoading, viewModel.schema != nil {
+            if viewModel.isLoading {
                 ProgressView()
             }
         }
