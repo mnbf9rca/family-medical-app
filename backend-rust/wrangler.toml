@@ -5,6 +5,15 @@ compatibility_date = "2024-01-01"
 [build]
 command = "cargo install -q worker-build@0.7.4 && worker-build --release"
 
+# Production routes (managed by wrangler deploy, replaces GUI-configured routes)
+[[routes]]
+pattern = "api.recordwell.app/auth/opaque/*"
+zone_id = "2bf4553c3f994e36202b5f574577d2e5"
+
+[[routes]]
+pattern = "api.recordwell.app/health/*"
+zone_id = "2bf4553c3f994e36202b5f574577d2e5"
+
 # KV Namespaces - OPAQUE Authentication
 [[kv_namespaces]]
 binding = "CREDENTIALS"
@@ -32,12 +41,17 @@ enabled = true
 enabled = true
 invocation_logs = true
 
+[observability.traces]
+enabled = true
+
 # Secret: OPAQUE_SERVER_SETUP (set via: wrangler secret put OPAQUE_SERVER_SETUP)
 # Contains base64-encoded opaque-ke ServerSetup for OPAQUE authentication
 
 # Preview environment for PR deployments
 # Worker name is overridden via --name flag at deploy time
 [env.preview]
+workers_dev = true
+routes = []
 vars = { ENVIRONMENT = "preview" }
 
 # Test KV namespaces (shared across PRs, isolated from production)
