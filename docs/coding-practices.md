@@ -297,6 +297,56 @@ The validator enforces limits to prevent denial-of-service attacks:
 
 ---
 
+## Schema Access Pattern
+
+### Schema Lifecycle
+
+Built-in schemas (`BuiltInSchemas.swift`) are **seed templates**. Their sole purpose is
+to provide initial schema definitions when a new Person is created:
+
+1. **Seeding:** `SchemaSeeder` copies built-in schemas into the Person's encrypted storage
+2. **Source of truth:** After seeding, the repository copy (accessed via `SchemaService`) is
+   authoritative. The built-in definitions are never consulted again for that Person.
+3. **Customization:** Users may rename fields, add fields, change icons, or reorder fields.
+   These changes are stored in the repository copy only.
+4. **Updates:** Built-in schema changes do NOT propagate to existing users automatically.
+   See [Issue #117](https://github.com/mnbf9rca/family-medical-app/issues/117) for the
+   schema update deployment strategy.
+
+### Allowed Callers for `RecordSchema.builtIn()`
+
+**`RecordSchema.builtIn()` must only be called from:**
+
+- `SchemaSeeder` - to seed schemas for new Persons
+- `SchemaService` - as internal fallback when repository has no stored schema
+- `#Preview` blocks - for SwiftUI previews (not production code)
+- Test setup code - for constructing test fixtures
+- View initialization fallback - as `??` fallback in computed properties (e.g., `displaySchema`) where `if let` wrapping would cause SwiftUI view identity issues in `navigationDestination`
+
+**All other code must use `SchemaService`** to fetch schemas. ViewModels should declare
+schema properties as optional (`RecordSchema?`) and only populate them from a successful
+`SchemaService` fetch. This prevents built-in schemas from leaking into the UI if the
+fetch fails.
+
+**Why:** Once a user has a schema, it's theirs. Hardcoding `RecordSchema.builtIn()` ignores
+all user changes and violates the source-of-truth contract.
+
+### Pattern
+
+```swift
+// WRONG - ignores user customizations
+let schema = RecordSchema.builtIn(schemaType)
+
+// RIGHT - fetches user's stored schema (falls back to built-in internally)
+let schema = try await schemaService.schema(
+    forId: schemaType.rawValue,
+    personId: person.id,
+    familyMemberKey: fmk
+)
+```
+
+---
+
 ## Naming Conventions
 
 - ViewModels: `<Feature>ViewModel` (e.g., `HomeViewModel`)

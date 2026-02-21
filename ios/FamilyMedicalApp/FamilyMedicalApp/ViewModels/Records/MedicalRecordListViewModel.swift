@@ -13,6 +13,7 @@ final class MedicalRecordListViewModel {
     var records: [DecryptedRecord] = []
     var isLoading = false
     var errorMessage: String?
+    var schema: RecordSchema?
 
     // MARK: - Dependencies
 
@@ -20,6 +21,7 @@ final class MedicalRecordListViewModel {
     private let recordContentService: RecordContentServiceProtocol
     private let primaryKeyProvider: PrimaryKeyProviderProtocol
     private let fmkService: FamilyMemberKeyServiceProtocol
+    private let schemaService: SchemaServiceProtocol
     private let logger = LoggingService.shared.logger(category: .storage)
 
     // MARK: - Initialization
@@ -35,13 +37,15 @@ final class MedicalRecordListViewModel {
     ///   - recordContentService: Service for encrypting/decrypting content (defaults to production)
     ///   - primaryKeyProvider: Provider for user's primary key (defaults to production)
     ///   - fmkService: Service for family member keys (defaults to production)
+    ///   - schemaService: Service for fetching user schemas (defaults to production)
     init(
         person: Person,
         schemaType: BuiltInSchemaType,
         medicalRecordRepository: MedicalRecordRepositoryProtocol? = nil,
         recordContentService: RecordContentServiceProtocol? = nil,
         primaryKeyProvider: PrimaryKeyProviderProtocol? = nil,
-        fmkService: FamilyMemberKeyServiceProtocol? = nil
+        fmkService: FamilyMemberKeyServiceProtocol? = nil,
+        schemaService: SchemaServiceProtocol? = nil
     ) {
         self.person = person
         self.schemaType = schemaType
@@ -54,6 +58,12 @@ final class MedicalRecordListViewModel {
         )
         self.primaryKeyProvider = primaryKeyProvider ?? PrimaryKeyProvider()
         self.fmkService = fmkService ?? FamilyMemberKeyService()
+        self.schemaService = schemaService ?? SchemaService(
+            schemaRepository: CustomSchemaRepository(
+                coreDataStack: CoreDataStack.shared,
+                encryptionService: EncryptionService()
+            )
+        )
     }
 
     // MARK: - Actions
@@ -70,6 +80,15 @@ final class MedicalRecordListViewModel {
                 familyMemberID: person.id.uuidString,
                 primaryKey: primaryKey
             )
+
+            // Fetch user's schema (replaces built-in default if stored)
+            if let userSchema = try await schemaService.schema(
+                forId: schemaType.rawValue,
+                personId: person.id,
+                familyMemberKey: fmk
+            ) {
+                schema = userSchema
+            }
 
             // Fetch all medical records for this person
             let allRecords = try await medicalRecordRepository.fetchForPerson(personId: person.id)
@@ -122,7 +141,9 @@ final class MedicalRecordListViewModel {
 
     /// Sort records by the first date field found (newest first)
     private func sortRecordsByDate(_ records: [DecryptedRecord]) -> [DecryptedRecord] {
-        let schema = RecordSchema.builtIn(schemaType)
+        guard let schema else {
+            return records
+        }
 
         // Find the first date field in the schema
         guard let dateField = schema.fields.first(where: { $0.fieldType == .date }) else {

@@ -253,8 +253,9 @@ extension XCUIApplication {
         timeout: TimeInterval = 5
     ) {
         // Tap Add Member button in toolbar (use unique identifier to avoid empty state button)
+        // waitUntilHittable handles iPad popover dismiss animations between sequential adds
         let addButton = buttons["toolbarAddMember"]
-        XCTAssertTrue(addButton.waitForExistence(timeout: timeout))
+        XCTAssertTrue(addButton.waitUntilHittable(timeout: timeout), "Add button should be hittable")
         addButton.tap()
 
         // Wait for sheet to appear

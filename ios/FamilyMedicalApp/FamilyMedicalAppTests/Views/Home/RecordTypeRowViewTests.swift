@@ -9,7 +9,7 @@ struct RecordTypeRowViewTests {
 
     @Test
     func viewDisplaysSchemaTypeName() throws {
-        let view = RecordTypeRowView(schemaType: .vaccine, recordCount: 3)
+        let view = RecordTypeRowView(schema: RecordSchema.builtIn(.vaccine), recordCount: 3)
 
         let hStack = try view.inspect().hStack()
         let nameText = try hStack.text(1)
@@ -18,7 +18,7 @@ struct RecordTypeRowViewTests {
 
     @Test
     func viewDisplaysRecordCount() throws {
-        let view = RecordTypeRowView(schemaType: .condition, recordCount: 5)
+        let view = RecordTypeRowView(schema: RecordSchema.builtIn(.condition), recordCount: 5)
 
         let hStack = try view.inspect().hStack()
         // HStack has: Image(0), Text(1), Spacer(2), Text(3) when count > 0
@@ -28,7 +28,7 @@ struct RecordTypeRowViewTests {
 
     @Test
     func viewHidesCountWhenZero() throws {
-        let view = RecordTypeRowView(schemaType: .medication, recordCount: 0)
+        let view = RecordTypeRowView(schema: RecordSchema.builtIn(.medication), recordCount: 0)
 
         let hStack = try view.inspect().hStack()
         // Should only have image, name text, and spacer - no count
@@ -39,7 +39,7 @@ struct RecordTypeRowViewTests {
 
     @Test
     func viewDisplaysIcon() throws {
-        let view = RecordTypeRowView(schemaType: .allergy, recordCount: 1)
+        let view = RecordTypeRowView(schema: RecordSchema.builtIn(.allergy), recordCount: 1)
 
         let hStack = try view.inspect().hStack()
         let image = try hStack.image(0)
@@ -50,7 +50,7 @@ struct RecordTypeRowViewTests {
 
     @Test
     func viewRendersSuccessfully() throws {
-        let view = RecordTypeRowView(schemaType: .note, recordCount: 2)
+        let view = RecordTypeRowView(schema: RecordSchema.builtIn(.note), recordCount: 2)
 
         // Just verify the view structure can be inspected
         _ = try view.inspect()
@@ -59,7 +59,7 @@ struct RecordTypeRowViewTests {
     @Test
     func viewHandlesMultipleRecordCounts() throws {
         for count in [0, 1, 5, 10, 100] {
-            let view = RecordTypeRowView(schemaType: .vaccine, recordCount: count)
+            let view = RecordTypeRowView(schema: RecordSchema.builtIn(.vaccine), recordCount: count)
             _ = try view.inspect()
         }
     }
@@ -67,7 +67,7 @@ struct RecordTypeRowViewTests {
     @Test
     func viewWorksWithAllSchemaTypes() throws {
         for schemaType in BuiltInSchemaType.allCases {
-            let view = RecordTypeRowView(schemaType: schemaType, recordCount: 1)
+            let view = RecordTypeRowView(schema: RecordSchema.builtIn(schemaType), recordCount: 1)
             _ = try view.inspect()
         }
     }

@@ -23,6 +23,13 @@ struct MedicalRecordListView: View {
         ))
     }
 
+    /// Schema from SchemaService, falling back to built-in for rendering.
+    /// The fallback only triggers before initial loadRecords() completes;
+    /// once loaded successfully, viewModel.schema is non-nil for built-in schema types.
+    private var displaySchema: RecordSchema {
+        viewModel.schema ?? RecordSchema.builtIn(schemaType)
+    }
+
     // MARK: - Body
 
     var body: some View {
@@ -36,7 +43,7 @@ struct MedicalRecordListView: View {
                     ForEach(viewModel.records) { decryptedRecord in
                         NavigationLink(value: decryptedRecord) {
                             MedicalRecordRowView(
-                                schema: RecordSchema.builtIn(schemaType),
+                                schema: displaySchema,
                                 content: decryptedRecord.content
                             )
                         }
@@ -72,7 +79,7 @@ struct MedicalRecordListView: View {
             }
         }
         .sheet(isPresented: $showingAddForm) {
-            MedicalRecordFormView(person: person, schema: RecordSchema.builtIn(schemaType))
+            MedicalRecordFormView(person: person, schema: displaySchema)
         }
         .overlay {
             if viewModel.isLoading {
