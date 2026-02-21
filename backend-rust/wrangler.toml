@@ -50,6 +50,8 @@ enabled = true
 # Preview environment for PR deployments
 # Worker name is overridden via --name flag at deploy time
 [env.preview]
+workers_dev = true
+routes = []
 vars = { ENVIRONMENT = "preview" }
 
 # Test KV namespaces (shared across PRs, isolated from production)
