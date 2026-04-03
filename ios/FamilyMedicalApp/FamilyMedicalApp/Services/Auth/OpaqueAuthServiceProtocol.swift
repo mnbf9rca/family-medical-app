@@ -1,13 +1,13 @@
 import Foundation
 
 /// Result of OPAQUE registration
-struct OpaqueRegistrationResult: Equatable, Sendable {
+struct OpaqueRegistrationResult: Equatable {
     /// Export key derived from OPAQUE protocol (used as basis for Primary Key)
     let exportKey: Data
 }
 
 /// Result of OPAQUE login
-struct OpaqueLoginResult: Equatable, Hashable, Sendable {
+struct OpaqueLoginResult: Equatable, Hashable {
     /// Export key derived from OPAQUE protocol (used as basis for Primary Key)
     let exportKey: Data
 

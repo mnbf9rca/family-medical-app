@@ -4,14 +4,14 @@ import Foundation
 // MARK: - Captured Log Entry
 
 /// Captured log entry for testing
-struct CapturedLogEntry: Equatable, Sendable {
+struct CapturedLogEntry: Equatable {
     let level: LogLevel
     let message: String
     let privacy: LogPrivacyLevel
     let category: LogCategory
     let timestamp: Date
 
-    enum LogLevel: String, Equatable, Sendable {
+    enum LogLevel: String, Equatable {
         case debug, info, notice, error, fault
     }
 }

@@ -4,7 +4,7 @@ import Foundation
 ///
 /// Each category represents a major functional area of the app
 /// and appears in Console.app for filtering and debugging.
-enum LogCategory: String, CaseIterable, Sendable {
+enum LogCategory: String, CaseIterable {
     /// Authentication and user account management
     case auth
 

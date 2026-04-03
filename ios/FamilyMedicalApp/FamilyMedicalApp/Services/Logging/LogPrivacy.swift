@@ -4,7 +4,7 @@ import Foundation
 ///
 /// Determines how os.Logger redacts data in production builds.
 /// See ADR-0013 for the three-tier privacy model.
-enum LogPrivacyLevel: Sendable {
+enum LogPrivacyLevel {
     /// Value is public and will always appear in logs
     ///
     /// Use for: operation names, states, timestamps, record counts, error types,

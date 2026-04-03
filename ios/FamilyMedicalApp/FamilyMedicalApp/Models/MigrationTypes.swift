@@ -3,7 +3,7 @@ import Foundation
 // MARK: - Migration Options
 
 /// User-selected options for handling migrations
-struct MigrationOptions: Codable, Equatable, Hashable, Sendable {
+struct MigrationOptions: Codable, Equatable, Hashable {
     /// How to combine values when merging fields
     /// Also used when target field has an existing value (treated as first source)
     let mergeStrategy: MergeStrategy
@@ -19,7 +19,7 @@ struct MigrationOptions: Codable, Equatable, Hashable, Sendable {
 /// In a merge operation:
 /// - **Source fields**: the fields being merged together
 /// - **Target field**: the destination field (may already have a value)
-enum MergeStrategy: Codable, Equatable, Hashable, Sendable {
+enum MergeStrategy: Codable, Equatable, Hashable {
     /// Join string representations with a separator
     case concatenate(separator: String)
 
@@ -58,7 +58,7 @@ enum MergeStrategyType: CaseIterable, Hashable {
 // MARK: - Migration Preview
 
 /// Preview of what a migration will do
-struct MigrationPreview: Equatable, Sendable {
+struct MigrationPreview: Equatable {
     /// Number of records that will be affected
     let recordCount: Int
 
@@ -75,7 +75,7 @@ struct MigrationPreview: Equatable, Sendable {
 // MARK: - Migration Progress
 
 /// Progress of an ongoing migration
-struct MigrationProgress: Equatable, Sendable {
+struct MigrationProgress: Equatable {
     /// Total number of records to migrate
     let totalRecords: Int
 
@@ -100,7 +100,7 @@ struct MigrationProgress: Equatable, Sendable {
 // MARK: - Migration Result
 
 /// Result of a completed migration
-struct MigrationResult: Equatable, Sendable {
+struct MigrationResult: Equatable {
     /// The migration that was executed
     let migration: SchemaMigration
 
@@ -134,7 +134,7 @@ struct MigrationResult: Equatable, Sendable {
 }
 
 /// Error that occurred while migrating a specific record
-struct MigrationRecordError: Equatable, Hashable, Sendable {
+struct MigrationRecordError: Equatable, Hashable {
     /// The record that failed
     let recordId: UUID
 
