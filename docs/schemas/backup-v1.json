@@ -234,6 +234,14 @@
           "type": ["string", "null"],
           "description": "General notes about this person"
         },
+        "gender": {
+          "type": ["string", "null"],
+          "description": "Gender identity (free text, optional)"
+        },
+        "bloodType": {
+          "type": ["string", "null"],
+          "description": "Blood type (e.g., 'A+', 'O-', optional)"
+        },
         "createdAt": {
           "type": "string",
           "format": "date-time"

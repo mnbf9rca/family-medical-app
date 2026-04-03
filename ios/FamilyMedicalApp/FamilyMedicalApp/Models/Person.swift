@@ -41,6 +41,12 @@ struct Person: Codable, Equatable, Hashable, Identifiable {
     /// Additional notes about this person (encrypted when stored)
     var notes: String?
 
+    /// Gender identity (free text — not everyone fits M/F, encrypted when stored)
+    var gender: String?
+
+    /// Blood type (e.g., "A+", "O-", encrypted when stored)
+    var bloodType: String?
+
     // MARK: - Initialization
 
     /// Initialize a new person record
@@ -51,6 +57,8 @@ struct Person: Codable, Equatable, Hashable, Identifiable {
     ///   - dateOfBirth: Optional date of birth
     ///   - labels: Flexible role/relationship labels (validated for content)
     ///   - notes: Optional additional notes
+    ///   - gender: Optional gender identity (free text)
+    ///   - bloodType: Optional blood type (e.g., "A+", "O-")
     ///   - createdAt: Creation timestamp (defaults to now)
     ///   - updatedAt: Last update timestamp (defaults to now)
     /// - Throws: ModelError if validation fails
@@ -60,6 +68,8 @@ struct Person: Codable, Equatable, Hashable, Identifiable {
         dateOfBirth: Date? = nil,
         labels: [String] = [],
         notes: String? = nil,
+        gender: String? = nil,
+        bloodType: String? = nil,
         createdAt: Date = Date(),
         updatedAt: Date = Date()
     ) throws {
@@ -97,6 +107,8 @@ struct Person: Codable, Equatable, Hashable, Identifiable {
         self.dateOfBirth = dateOfBirth
         self.labels = trimmedLabels
         self.notes = notes
+        self.gender = gender
+        self.bloodType = bloodType
         self.createdAt = createdAt
         self.updatedAt = updatedAt
     }
