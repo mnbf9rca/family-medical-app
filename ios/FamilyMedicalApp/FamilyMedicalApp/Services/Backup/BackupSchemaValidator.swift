@@ -106,7 +106,7 @@ final class BackupSchemaValidator: BackupSchemaValidatorProtocol, @unchecked Sen
         do {
             jsonValue = try JSONDecoder().decode(JSONSchema.JSONValue.self, from: jsonData)
         } catch {
-            logger.error("Failed to decode JSON to JSONValue: \(error.localizedDescription)")
+            logger.error("Failed to decode JSON to JSONSchema.JSONValue: \(error.localizedDescription)")
             return .invalid(["Failed to decode JSON: \(error.localizedDescription)"])
         }
 

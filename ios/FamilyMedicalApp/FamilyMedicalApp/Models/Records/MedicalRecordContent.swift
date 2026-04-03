@@ -102,6 +102,16 @@ struct RecordContentEnvelope: Codable {
     }
 
     func decode<T: MedicalRecordContent>(_ type: T.Type) throws -> T {
-        try JSONDecoder().decode(T.self, from: content)
+        guard recordType == T.recordType else {
+            throw DecodingError.typeMismatch(
+                T.self,
+                DecodingError.Context(
+                    codingPath: [],
+                    debugDescription: "Envelope recordType '\(recordType.rawValue)'"
+                        + " does not match requested type '\(T.recordType.rawValue)'"
+                )
+            )
+        }
+        return try JSONDecoder().decode(T.self, from: content)
     }
 }
