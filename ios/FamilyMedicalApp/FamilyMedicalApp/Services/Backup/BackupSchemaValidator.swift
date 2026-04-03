@@ -2,7 +2,7 @@ import Foundation
 import JSONSchema
 
 /// Result of validating JSON against the backup schema
-struct BackupValidationResult: Equatable, Sendable {
+struct BackupValidationResult: Equatable {
     /// Whether the JSON is valid according to the schema
     let isValid: Bool
 

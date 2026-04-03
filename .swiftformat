@@ -70,3 +70,4 @@
 --disable wrapMultilineStatementBraces  # SwiftLint requires braces on same line
 --disable redundantMemberwiseInit  # Keep explicit inits for crypto types (audit trail)
 --disable redundantEquatable  # Keep explicit Equatable for crypto types
+--disable swiftTestingTestCaseNames  # Conflicts with SwiftLint identifier_name rule

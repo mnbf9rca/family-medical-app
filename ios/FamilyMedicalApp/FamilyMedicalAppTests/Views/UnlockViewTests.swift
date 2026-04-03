@@ -4,7 +4,7 @@ import ViewInspector
 @testable import FamilyMedicalApp
 
 /// Test case for parameterized UnlockView testing
-struct UnlockViewTestCase: Sendable {
+struct UnlockViewTestCase {
     let name: String
     let isBiometricEnabled: Bool
     let biometryType: BiometryType

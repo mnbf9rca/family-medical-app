@@ -10,7 +10,7 @@ import Foundation
 /// - Hidden fields keep their data in records
 /// - Users can restore hidden fields later
 /// - Deprecated fields warn if old records have data
-enum FieldVisibility: String, Codable, CaseIterable, Hashable, Sendable {
+enum FieldVisibility: String, Codable, CaseIterable, Hashable {
     /// Normal field, shown in UI for viewing and editing
     case active
 

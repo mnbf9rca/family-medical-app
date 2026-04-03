@@ -6,7 +6,7 @@ import ViewInspector
 // MARK: - Test Case Structure
 
 /// Test case for parameterized FieldDisplayView testing
-struct FieldDisplayTestCase: Sendable {
+struct FieldDisplayTestCase {
     let name: String
     let field: FieldDefinition
     let value: FieldValue?

@@ -10,7 +10,7 @@ import Foundation
 ///
 /// **Encryption**: This entire struct is encrypted with the Family Member Key (FMK).
 /// The schemaId is kept inside the encrypted blob to maintain zero-knowledge privacy.
-struct RecordContent: Codable, Equatable, Sendable {
+struct RecordContent: Codable, Equatable {
     // MARK: - Properties
 
     /// Optional schema identifier (encrypted with content)

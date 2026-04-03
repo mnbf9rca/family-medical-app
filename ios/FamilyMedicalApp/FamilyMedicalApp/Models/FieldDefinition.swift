@@ -1,7 +1,7 @@
 import Foundation
 
 /// Type of a field value in a medical record
-enum FieldType: String, Codable, CaseIterable, Hashable, Sendable {
+enum FieldType: String, Codable, CaseIterable, Hashable {
     case string
     case int
     case double
@@ -54,7 +54,7 @@ enum FieldType: String, Codable, CaseIterable, Hashable, Sendable {
 }
 
 /// Validation rule for a field
-enum ValidationRule: Codable, Equatable, Hashable, Sendable {
+enum ValidationRule: Codable, Equatable, Hashable {
     case minLength(Int)
     case maxLength(Int)
     case minValue(Double)
@@ -138,7 +138,7 @@ enum ValidationRule: Codable, Equatable, Hashable, Sendable {
 ///
 /// Controls how text is automatically capitalized during input.
 /// This is a UI hint that affects the keyboard behavior, not validation.
-enum TextCapitalizationMode: String, Codable, CaseIterable, Hashable, Sendable {
+enum TextCapitalizationMode: String, Codable, CaseIterable, Hashable {
     /// No automatic capitalization
     case none
 
@@ -157,7 +157,7 @@ enum TextCapitalizationMode: String, Codable, CaseIterable, Hashable, Sendable {
 /// Describes the structure, type, and validation rules for a single field.
 /// Field IDs are UUIDs to support collision-free multi-device schema evolution
 /// per ADR-0009.
-struct FieldDefinition: Codable, Equatable, Hashable, Identifiable, Sendable {
+struct FieldDefinition: Codable, Equatable, Hashable, Identifiable {
     // MARK: - Identity (immutable after creation)
 
     /// Unique identifier for this field (UUID for collision-free multi-device support)

@@ -4,7 +4,7 @@ import OSLog
 // MARK: - Types
 
 /// Time window for log export
-enum LogTimeWindow: String, CaseIterable, Sendable {
+enum LogTimeWindow: String, CaseIterable {
     case lastHour = "Last hour"
     case last6Hours = "Last 6 hours"
     case last24Hours = "Last 24 hours"
@@ -21,7 +21,7 @@ enum LogTimeWindow: String, CaseIterable, Sendable {
 }
 
 /// Device and app metadata for export header
-struct DeviceMetadata: Sendable {
+struct DeviceMetadata {
     let appVersion: String
     let buildNumber: String
     let iosVersion: String
