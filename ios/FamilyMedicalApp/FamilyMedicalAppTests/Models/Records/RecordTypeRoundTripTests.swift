@@ -57,7 +57,7 @@ struct MedicationStatementRecordTests {
 
     @Test("Missing optional fields decode as nil")
     func missingOptionalsDecodeAsNil() throws {
-        let json = Data("""{"medicationName":"Ibuprofen","tags":[]}""".utf8)
+        let json = Data("{\"medicationName\":\"Ibuprofen\",\"tags\":[]}".utf8)
         let decoded = try iso8601Decoder.decode(MedicationStatementRecord.self, from: json)
         #expect(decoded.dosage == nil)
         #expect(decoded.frequency == nil)
@@ -110,7 +110,7 @@ struct AllergyIntoleranceRecordTests {
 
     @Test("Missing optional fields decode as nil")
     func missingOptionalsDecodeAsNil() throws {
-        let json = Data("""{"substance":"Shellfish","tags":[]}""".utf8)
+        let json = Data("{\"substance\":\"Shellfish\",\"tags\":[]}".utf8)
         let decoded = try iso8601Decoder.decode(AllergyIntoleranceRecord.self, from: json)
         #expect(decoded.reaction == nil)
         #expect(decoded.severity == nil)
@@ -162,7 +162,7 @@ struct ConditionRecordTests {
 
     @Test("Missing optional fields decode as nil")
     func missingOptionalsDecodeAsNil() throws {
-        let json = Data("""{"conditionName":"Migraine","tags":[]}""".utf8)
+        let json = Data("{\"conditionName\":\"Migraine\",\"tags\":[]}".utf8)
         let decoded = try iso8601Decoder.decode(ConditionRecord.self, from: json)
         #expect(decoded.onsetDate == nil)
         #expect(decoded.severity == nil)
@@ -289,7 +289,7 @@ struct ProcedureRecordTests {
 
     @Test("Missing optional fields decode as nil")
     func missingOptionalsDecodeAsNil() throws {
-        let json = Data("""{"procedureName":"Blood draw","tags":[]}""".utf8)
+        let json = Data("{\"procedureName\":\"Blood draw\",\"tags\":[]}".utf8)
         let decoded = try iso8601Decoder.decode(ProcedureRecord.self, from: json)
         #expect(decoded.performedDate == nil)
         #expect(decoded.reason == nil)
@@ -348,7 +348,7 @@ struct DocumentReferenceRecordTests {
 
     @Test("Missing optional fields decode as nil")
     func missingOptionalsDecodeAsNil() throws {
-        let json = Data("""{"title":"Scan","mimeType":"image / jpeg","fileSize":512,"tags":[]}""".utf8)
+        let json = Data("{\"title\":\"Scan\",\"mimeType\":\"image / jpeg\",\"fileSize\":512,\"tags\":[]}".utf8)
         let decoded = try iso8601Decoder.decode(DocumentReferenceRecord.self, from: json)
         #expect(decoded.documentType == nil)
         #expect(decoded.sourceRecordId == nil)
@@ -405,7 +405,7 @@ struct FamilyMemberHistoryRecordTests {
 
     @Test("Missing optional fields decode as nil")
     func missingOptionalsDecodeAsNil() throws {
-        let json = Data("""{"relationship":"Sister","conditionName":"Celiac disease","tags":[]}""".utf8)
+        let json = Data("{\"relationship\":\"Sister\",\"conditionName\":\"Celiac disease\",\"tags\":[]}".utf8)
         let decoded = try iso8601Decoder.decode(FamilyMemberHistoryRecord.self, from: json)
         #expect(decoded.onsetAge == nil)
         #expect(decoded.deceased == nil)
@@ -453,7 +453,7 @@ struct ClinicalNoteRecordTests {
 
     @Test("Missing optional fields decode as nil")
     func missingOptionalsDecodeAsNil() throws {
-        let json = Data("""{"title":"Quick note","tags":[]}""".utf8)
+        let json = Data("{\"title\":\"Quick note\",\"tags\":[]}".utf8)
         let decoded = try iso8601Decoder.decode(ClinicalNoteRecord.self, from: json)
         #expect(decoded.body == nil)
         #expect(decoded.notes == nil)

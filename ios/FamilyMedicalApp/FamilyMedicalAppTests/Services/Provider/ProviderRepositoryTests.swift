@@ -401,7 +401,7 @@ struct ProviderRepositorySearchTests {
         preSeedProviderFMK(fmkService: fixtures.fmkService, personId: testPersonId, primaryKey: testPrimaryKey)
 
         let provider1 = Provider(name: "Dr. Smith", organization: "Smith Medical")
-        let provider2 = Provider(name: "Dr. Jones", organization: "City Hospital")
+        let provider2 = Provider(name: "Dr. Jane Smith", organization: "City Hospital")
         try await fixtures.repository.save(provider1, personId: testPersonId, primaryKey: testPrimaryKey)
         try await fixtures.repository.save(provider2, personId: testPersonId, primaryKey: testPrimaryKey)
 

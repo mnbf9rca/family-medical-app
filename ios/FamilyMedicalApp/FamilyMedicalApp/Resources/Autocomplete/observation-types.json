@@ -1,0 +1,51 @@
+[
+    {
+        "name": "Weight",
+        "components": [
+            {"name": "Weight", "defaultUnit": "kg", "validUnits": ["kg", "lb"]}
+        ]
+    },
+    {
+        "name": "Height",
+        "components": [
+            {"name": "Height", "defaultUnit": "cm", "validUnits": ["cm", "ft/in"]}
+        ]
+    },
+    {
+        "name": "Blood Pressure",
+        "components": [
+            {"name": "Systolic", "defaultUnit": "mmHg", "validUnits": ["mmHg"]},
+            {"name": "Diastolic", "defaultUnit": "mmHg", "validUnits": ["mmHg"]}
+        ]
+    },
+    {
+        "name": "Temperature",
+        "components": [
+            {"name": "Temperature", "defaultUnit": "°C", "validUnits": ["°C", "°F"]}
+        ]
+    },
+    {
+        "name": "Heart Rate",
+        "components": [
+            {"name": "Heart Rate", "defaultUnit": "bpm", "validUnits": ["bpm"]}
+        ]
+    },
+    {
+        "name": "Blood Glucose",
+        "components": [
+            {"name": "Blood Glucose", "defaultUnit": "mmol/L", "validUnits": ["mmol/L", "mg/dL"]}
+        ]
+    },
+    {
+        "name": "SpO2",
+        "components": [
+            {"name": "SpO2", "defaultUnit": "%", "validUnits": ["%"]}
+        ]
+    },
+    {
+        "name": "Respiratory Rate",
+        "components": [
+            {"name": "Respiratory Rate", "defaultUnit": "breaths/min", "validUnits": ["breaths/min"]}
+        ]
+    }
+]

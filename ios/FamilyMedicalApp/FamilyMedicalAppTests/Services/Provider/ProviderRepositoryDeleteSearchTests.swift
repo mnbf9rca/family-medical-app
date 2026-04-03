@@ -10,26 +10,12 @@ struct ProviderRepositoryDeleteSearchTests {
 
     // MARK: - Factory Methods
 
-    func makeRepositoryWithMocks() -> ProviderRepositoryTests.TestFixtures {
-        let stack = MockCoreDataStack()
-        let encryption = MockEncryptionService()
-        let fmkService = MockFamilyMemberKeyService()
-        let repo = ProviderRepository(
-            coreDataStack: stack,
-            encryptionService: encryption,
-            fmkService: fmkService
-        )
-        return ProviderRepositoryTests.TestFixtures(
-            repository: repo,
-            coreDataStack: stack,
-            encryptionService: encryption,
-            fmkService: fmkService
-        )
+    func makeRepositoryWithMocks() -> ProviderTestFixtures {
+        makeProviderRepositoryWithMocks()
     }
 
     func preSeedFMK(fmkService: MockFamilyMemberKeyService, personId: UUID, primaryKey: SymmetricKey) {
-        let fmk = fmkService.generateFMK()
-        fmkService.storedFMKs[personId.uuidString] = fmk
+        preSeedProviderFMK(fmkService: fmkService, personId: personId, primaryKey: primaryKey)
     }
 
     // MARK: - Delete Tests
@@ -154,7 +140,7 @@ struct ProviderRepositoryDeleteSearchTests {
         preSeedFMK(fmkService: fixtures.fmkService, personId: testPersonId, primaryKey: testPrimaryKey)
 
         let provider1 = Provider(name: "Dr. Smith", organization: "Smith Medical")
-        let provider2 = Provider(name: "Dr. Jones", organization: "City Hospital")
+        let provider2 = Provider(name: "Dr. Jane Smith", organization: "City Hospital")
         try await fixtures.repository.save(provider1, personId: testPersonId, primaryKey: testPrimaryKey)
         try await fixtures.repository.save(provider2, personId: testPersonId, primaryKey: testPrimaryKey)
 
