@@ -2,7 +2,7 @@ import Foundation
 
 // MARK: - RecordType Enum
 
-enum RecordType: String, Codable, CaseIterable, Sendable {
+enum RecordType: String, Codable, CaseIterable {
     case immunization
     case medicationStatement
     case allergyIntolerance
@@ -33,7 +33,7 @@ protocol MedicalRecordContent: Codable, Sendable {
 // MARK: - FieldMetadata
 
 /// Describes a single field for the generic form renderer.
-struct FieldMetadata: Sendable {
+struct FieldMetadata {
     let keyPath: String
     let displayName: String
     let fieldType: FieldRenderType
@@ -66,7 +66,7 @@ struct FieldMetadata: Sendable {
 
 // MARK: - FieldRenderType
 
-enum FieldRenderType: Sendable {
+enum FieldRenderType {
     case text
     case multilineText
     case date
@@ -80,7 +80,7 @@ enum FieldRenderType: Sendable {
 
 // MARK: - AutocompleteSource
 
-enum AutocompleteSource: String, Sendable {
+enum AutocompleteSource: String {
     case cvxVaccines = "cvx-vaccines"
     case whoMedications = "who-medications"
     case observationTypes = "observation-types"
@@ -90,7 +90,7 @@ enum AutocompleteSource: String, Sendable {
 
 /// Wraps any MedicalRecordContent for encoding/decoding with type discrimination.
 /// Stored inside the encrypted payload of MedicalRecord.
-struct RecordContentEnvelope: Codable, Sendable {
+struct RecordContentEnvelope: Codable {
     let recordType: RecordType
     let schemaVersion: Int
     let content: Data // JSON-encoded MedicalRecordContent

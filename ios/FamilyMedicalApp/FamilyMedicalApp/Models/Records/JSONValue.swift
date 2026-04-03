@@ -3,7 +3,7 @@ import Foundation
 /// Dynamic JSON value type for preserving unknown fields during forward-compatible round-trips.
 /// When an older app version encounters fields it doesn't know about, they're stored as JSONValue
 /// and re-serialized on save without data loss.
-enum JSONValue: Codable, Sendable, Equatable {
+enum JSONValue: Codable, Equatable {
     case string(String)
     case int(Int)
     case double(Double)
