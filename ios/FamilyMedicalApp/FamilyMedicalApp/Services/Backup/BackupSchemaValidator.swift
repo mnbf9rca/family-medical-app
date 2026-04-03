@@ -102,9 +102,9 @@ final class BackupSchemaValidator: BackupSchemaValidatorProtocol, @unchecked Sen
         }
 
         // Convert to JSONValue for schema validation
-        let jsonValue: JSONValue
+        let jsonValue: JSONSchema.JSONValue
         do {
-            jsonValue = try JSONDecoder().decode(JSONValue.self, from: jsonData)
+            jsonValue = try JSONDecoder().decode(JSONSchema.JSONValue.self, from: jsonData)
         } catch {
             logger.error("Failed to decode JSON to JSONValue: \(error.localizedDescription)")
             return .invalid(["Failed to decode JSON: \(error.localizedDescription)"])

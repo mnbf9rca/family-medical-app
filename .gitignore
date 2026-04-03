@@ -40,12 +40,13 @@ secrets/
 .idea/
 
 # Backend (Phase 2)
-backend/.venv/
-backend/__pycache__/
-backend/*.pyc
-backend/.pytest_cache/
-backend/node_modules/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+node_modules/
 backend/dist/
+.wrangler/
 
 # Rust
 target/
@@ -75,3 +76,4 @@ ralph-loop.local.md
 workers-rs-secret-store-repro/
 
 docs/plans/
+docs/superpowers/
