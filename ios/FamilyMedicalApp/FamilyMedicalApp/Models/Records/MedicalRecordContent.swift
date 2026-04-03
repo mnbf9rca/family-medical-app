@@ -33,7 +33,7 @@ protocol MedicalRecordContent: Codable, Sendable {
 // MARK: - FieldMetadata
 
 /// Describes a single field for the generic form renderer.
-struct FieldMetadata {
+struct FieldMetadata: Equatable {
     let keyPath: String
     let displayName: String
     let fieldType: FieldRenderType
