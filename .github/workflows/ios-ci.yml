@@ -43,6 +43,14 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - run: brew install swiftformat
+      - name: Verify SwiftFormat version matches pre-commit
+        run: |
+          INSTALLED=$(swiftformat --version)
+          EXPECTED="0.60.1"
+          if [ "$INSTALLED" != "$EXPECTED" ]; then
+            echo "::error::SwiftFormat version mismatch: installed $INSTALLED, expected $EXPECTED (update .pre-commit-config.yaml and ios-ci.yml together)"
+            exit 1
+          fi
       - run: swiftformat --config .swiftformat --lint ios/FamilyMedicalApp/FamilyMedicalApp
 
   xcframework:
