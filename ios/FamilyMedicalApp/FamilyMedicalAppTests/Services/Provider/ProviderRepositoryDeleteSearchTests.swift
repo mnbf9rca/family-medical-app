@@ -14,8 +14,8 @@ struct ProviderRepositoryDeleteSearchTests {
         makeProviderRepositoryWithMocks()
     }
 
-    func preSeedFMK(fmkService: MockFamilyMemberKeyService, personId: UUID, primaryKey: SymmetricKey) {
-        preSeedProviderFMK(fmkService: fmkService, personId: personId, primaryKey: primaryKey)
+    func preSeedFMK(fmkService: MockFamilyMemberKeyService, personId: UUID) {
+        preSeedProviderFMK(fmkService: fmkService, personId: personId)
     }
 
     // MARK: - Delete Tests
@@ -23,7 +23,7 @@ struct ProviderRepositoryDeleteSearchTests {
     @Test("Delete existing provider removes it")
     func delete_existingProvider_removes() async throws {
         let fixtures = makeRepositoryWithMocks()
-        preSeedFMK(fmkService: fixtures.fmkService, personId: testPersonId, primaryKey: testPrimaryKey)
+        preSeedFMK(fmkService: fixtures.fmkService, personId: testPersonId)
 
         let provider = Provider(name: "Dr. Smith", organization: "City Hospital")
         try await fixtures.repository.save(provider, personId: testPersonId, primaryKey: testPrimaryKey)
@@ -52,7 +52,7 @@ struct ProviderRepositoryDeleteSearchTests {
     @Test("Search returns providers matching name")
     func search_matchesName() async throws {
         let fixtures = makeRepositoryWithMocks()
-        preSeedFMK(fmkService: fixtures.fmkService, personId: testPersonId, primaryKey: testPrimaryKey)
+        preSeedFMK(fmkService: fixtures.fmkService, personId: testPersonId)
 
         let drSmith = Provider(name: "Dr. Smith", organization: "Any Hospital")
         let drJones = Provider(name: "Dr. Jones", organization: "Other Clinic")
@@ -72,7 +72,7 @@ struct ProviderRepositoryDeleteSearchTests {
     @Test("Search returns providers matching organization")
     func search_matchesOrganization() async throws {
         let fixtures = makeRepositoryWithMocks()
-        preSeedFMK(fmkService: fixtures.fmkService, personId: testPersonId, primaryKey: testPrimaryKey)
+        preSeedFMK(fmkService: fixtures.fmkService, personId: testPersonId)
 
         let cityHospital = Provider(name: "Dr. Smith", organization: "City Hospital")
         let generalClinic = Provider(name: "Dr. Jones", organization: "General Clinic")
@@ -92,7 +92,7 @@ struct ProviderRepositoryDeleteSearchTests {
     @Test("Search is case-insensitive")
     func search_caseInsensitive() async throws {
         let fixtures = makeRepositoryWithMocks()
-        preSeedFMK(fmkService: fixtures.fmkService, personId: testPersonId, primaryKey: testPrimaryKey)
+        preSeedFMK(fmkService: fixtures.fmkService, personId: testPersonId)
 
         let provider = Provider(name: "Dr. Smith", organization: "City Hospital")
         try await fixtures.repository.save(provider, personId: testPersonId, primaryKey: testPrimaryKey)
@@ -121,7 +121,7 @@ struct ProviderRepositoryDeleteSearchTests {
     @Test("Search returns empty when no matches")
     func search_noMatches_returnsEmpty() async throws {
         let fixtures = makeRepositoryWithMocks()
-        preSeedFMK(fmkService: fixtures.fmkService, personId: testPersonId, primaryKey: testPrimaryKey)
+        preSeedFMK(fmkService: fixtures.fmkService, personId: testPersonId)
 
         let provider = Provider(name: "Dr. Smith", organization: "City Hospital")
         try await fixtures.repository.save(provider, personId: testPersonId, primaryKey: testPrimaryKey)
@@ -137,7 +137,7 @@ struct ProviderRepositoryDeleteSearchTests {
     @Test("Search returns multiple matches")
     func search_multipleMatches() async throws {
         let fixtures = makeRepositoryWithMocks()
-        preSeedFMK(fmkService: fixtures.fmkService, personId: testPersonId, primaryKey: testPrimaryKey)
+        preSeedFMK(fmkService: fixtures.fmkService, personId: testPersonId)
 
         let provider1 = Provider(name: "Dr. Smith", organization: "Smith Medical")
         let provider2 = Provider(name: "Dr. Jane Smith", organization: "City Hospital")
@@ -158,8 +158,8 @@ struct ProviderRepositoryDeleteSearchTests {
         let fixtures = makeRepositoryWithMocks()
         let otherPersonId = UUID()
 
-        preSeedFMK(fmkService: fixtures.fmkService, personId: testPersonId, primaryKey: testPrimaryKey)
-        preSeedFMK(fmkService: fixtures.fmkService, personId: otherPersonId, primaryKey: testPrimaryKey)
+        preSeedFMK(fmkService: fixtures.fmkService, personId: testPersonId)
+        preSeedFMK(fmkService: fixtures.fmkService, personId: otherPersonId)
 
         let providerForPerson = Provider(name: "Dr. Smith", organization: "City Hospital")
         let providerForOther = Provider(name: "Dr. Smith", organization: "Other Hospital")

@@ -36,7 +36,7 @@ func makeTestProvider(
     Provider(name: name, organization: organization)
 }
 
-func preSeedProviderFMK(fmkService: MockFamilyMemberKeyService, personId: UUID, primaryKey: SymmetricKey) {
+func preSeedProviderFMK(fmkService: MockFamilyMemberKeyService, personId: UUID) {
     let fmk = fmkService.generateFMK()
     fmkService.storedFMKs[personId.uuidString] = fmk
 }
@@ -51,7 +51,7 @@ struct ProviderRepositoryTests {
     @Test("Save new provider stores in Core Data")
     func save_newProvider_storesInCoreData() async throws {
         let fixtures = makeProviderRepositoryWithMocks()
-        preSeedProviderFMK(fmkService: fixtures.fmkService, personId: testPersonId, primaryKey: testPrimaryKey)
+        preSeedProviderFMK(fmkService: fixtures.fmkService, personId: testPersonId)
 
         let provider = makeTestProvider()
         try await fixtures.repository.save(provider, personId: testPersonId, primaryKey: testPrimaryKey)
@@ -67,7 +67,7 @@ struct ProviderRepositoryTests {
     @Test("Save new provider encrypts data")
     func save_newProvider_encryptsData() async throws {
         let fixtures = makeProviderRepositoryWithMocks()
-        preSeedProviderFMK(fmkService: fixtures.fmkService, personId: testPersonId, primaryKey: testPrimaryKey)
+        preSeedProviderFMK(fmkService: fixtures.fmkService, personId: testPersonId)
 
         let provider = makeTestProvider()
         try await fixtures.repository.save(provider, personId: testPersonId, primaryKey: testPrimaryKey)
@@ -75,10 +75,10 @@ struct ProviderRepositoryTests {
         #expect(fixtures.encryptionService.encryptCalls.count == 1)
     }
 
-    @Test("Save existing provider updates without re-encrypting with new key")
+    @Test("Save existing provider updates and re-encrypts")
     func save_existingProvider_updatesRecord() async throws {
         let fixtures = makeProviderRepositoryWithMocks()
-        preSeedProviderFMK(fmkService: fixtures.fmkService, personId: testPersonId, primaryKey: testPrimaryKey)
+        preSeedProviderFMK(fmkService: fixtures.fmkService, personId: testPersonId)
 
         var provider = makeTestProvider()
         try await fixtures.repository.save(provider, personId: testPersonId, primaryKey: testPrimaryKey)
@@ -92,6 +92,7 @@ struct ProviderRepositoryTests {
             primaryKey: testPrimaryKey
         )
         #expect(fetched?.specialty == "Updated Specialty")
+        #expect(fixtures.encryptionService.encryptCalls.count == 2)
     }
 
     @Test("Save fails when FMK not available")
@@ -107,7 +108,7 @@ struct ProviderRepositoryTests {
     @Test("Save fails when encryption fails")
     func save_encryptionFails_throwsError() async throws {
         let fixtures = makeProviderRepositoryWithMocks()
-        preSeedProviderFMK(fmkService: fixtures.fmkService, personId: testPersonId, primaryKey: testPrimaryKey)
+        preSeedProviderFMK(fmkService: fixtures.fmkService, personId: testPersonId)
         fixtures.encryptionService.shouldFailEncryption = true
 
         let provider = makeTestProvider()
@@ -119,7 +120,7 @@ struct ProviderRepositoryTests {
     @Test("Fetch existing provider returns decrypted provider")
     func fetch_existingProvider_returnsDecryptedProvider() async throws {
         let fixtures = makeProviderRepositoryWithMocks()
-        preSeedProviderFMK(fmkService: fixtures.fmkService, personId: testPersonId, primaryKey: testPrimaryKey)
+        preSeedProviderFMK(fmkService: fixtures.fmkService, personId: testPersonId)
 
         let provider = Provider(
             name: "Dr. Jones",
@@ -146,7 +147,7 @@ struct ProviderRepositoryTests {
     @Test("Fetch non-existent provider returns nil")
     func fetch_nonExistentProvider_returnsNil() async throws {
         let fixtures = makeProviderRepositoryWithMocks()
-        preSeedProviderFMK(fmkService: fixtures.fmkService, personId: testPersonId, primaryKey: testPrimaryKey)
+        preSeedProviderFMK(fmkService: fixtures.fmkService, personId: testPersonId)
 
         let result = try await fixtures.repository.fetch(
             byId: UUID(),
@@ -159,13 +160,13 @@ struct ProviderRepositoryTests {
     @Test("Fetch provider belonging to different person returns nil")
     func fetch_differentPersonId_returnsNil() async throws {
         let fixtures = makeProviderRepositoryWithMocks()
-        preSeedProviderFMK(fmkService: fixtures.fmkService, personId: testPersonId, primaryKey: testPrimaryKey)
+        preSeedProviderFMK(fmkService: fixtures.fmkService, personId: testPersonId)
 
         let provider = makeTestProvider()
         try await fixtures.repository.save(provider, personId: testPersonId, primaryKey: testPrimaryKey)
 
         let otherPersonId = UUID()
-        preSeedProviderFMK(fmkService: fixtures.fmkService, personId: otherPersonId, primaryKey: testPrimaryKey)
+        preSeedProviderFMK(fmkService: fixtures.fmkService, personId: otherPersonId)
 
         let result = try await fixtures.repository.fetch(
             byId: provider.id,
@@ -178,7 +179,7 @@ struct ProviderRepositoryTests {
     @Test("Fetch fails when decryption fails")
     func fetch_decryptionFails_throwsError() async throws {
         let fixtures = makeProviderRepositoryWithMocks()
-        preSeedProviderFMK(fmkService: fixtures.fmkService, personId: testPersonId, primaryKey: testPrimaryKey)
+        preSeedProviderFMK(fmkService: fixtures.fmkService, personId: testPersonId)
 
         let provider = makeTestProvider()
         try await fixtures.repository.save(provider, personId: testPersonId, primaryKey: testPrimaryKey)
@@ -196,7 +197,7 @@ struct ProviderRepositoryTests {
     @Test("Fetch fails when FMK not available")
     func fetch_fmkNotFound_throwsError() async throws {
         let fixtures = makeProviderRepositoryWithMocks()
-        preSeedProviderFMK(fmkService: fixtures.fmkService, personId: testPersonId, primaryKey: testPrimaryKey)
+        preSeedProviderFMK(fmkService: fixtures.fmkService, personId: testPersonId)
 
         let provider = makeTestProvider()
         try await fixtures.repository.save(provider, personId: testPersonId, primaryKey: testPrimaryKey)
