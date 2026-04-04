@@ -71,7 +71,12 @@ final class MedicalRecordListViewModel {
                 }
             }
 
-            // Sort newest first by creation date
+            // TODO(#127): temporary regression — sort by row creation timestamp instead of
+            // clinical event date (occurrenceDate, onsetDate, etc.). The old schema-overlay
+            // system pulled a "primary date field" per schema; replacing that needs per-type
+            // date extraction from envelope.decodeAny(), which is part of the protocol-driven
+            // rendering work in #127. Users may see oldest-entered records first instead of
+            // most-recent-event first.
             records = decryptedRecords.sorted { $0.record.createdAt > $1.record.createdAt }
         } catch {
             errorMessage = "Unable to load records. Please try again."

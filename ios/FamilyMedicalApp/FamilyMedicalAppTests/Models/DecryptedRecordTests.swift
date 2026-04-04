@@ -3,17 +3,39 @@ import Testing
 @testable import FamilyMedicalApp
 
 struct DecryptedRecordTests {
+    /// Build a valid envelope for the requested record type using real typed records,
+    /// so the JSON content matches what `envelope.decode(T.self)` would expect.
     private func makeEnvelope(recordType: RecordType = .immunization) throws -> RecordContentEnvelope {
-        let record = ImmunizationRecord(vaccineCode: "Test", occurrenceDate: Date())
-        if recordType == .immunization {
-            return try RecordContentEnvelope(record)
+        switch recordType {
+        case .immunization:
+            try RecordContentEnvelope(ImmunizationRecord(vaccineCode: "Test", occurrenceDate: Date()))
+        case .medicationStatement:
+            try RecordContentEnvelope(MedicationStatementRecord(medicationName: "Test"))
+        case .allergyIntolerance:
+            try RecordContentEnvelope(AllergyIntoleranceRecord(substance: "Test"))
+        case .condition:
+            try RecordContentEnvelope(ConditionRecord(conditionName: "Test"))
+        case .observation:
+            try RecordContentEnvelope(
+                ObservationRecord(
+                    observationType: "Test",
+                    components: [ObservationComponent(name: "Test", value: 1.0, unit: "unit")],
+                    effectiveDate: Date()
+                )
+            )
+        case .procedure:
+            try RecordContentEnvelope(ProcedureRecord(procedureName: "Test"))
+        case .documentReference:
+            try RecordContentEnvelope(
+                DocumentReferenceRecord(title: "Test", mimeType: "text/plain", fileSize: 0)
+            )
+        case .familyMemberHistory:
+            try RecordContentEnvelope(
+                FamilyMemberHistoryRecord(relationship: "Test", conditionName: "Test")
+            )
+        case .clinicalNote:
+            try RecordContentEnvelope(ClinicalNoteRecord(title: "Test"))
         }
-        // For other types, use direct init
-        return RecordContentEnvelope(
-            recordType: recordType,
-            schemaVersion: 1,
-            content: Data("{\"notes\":null,\"tags\":[]}".utf8)
-        )
     }
 
     @Test
