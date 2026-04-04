@@ -109,7 +109,7 @@ struct ObservationRecord: MedicalRecordContent {
     static let fieldMetadata: [FieldMetadata] = [
         FieldMetadata(
             keyPath: "observationType",
-            displayName: "Observation Type",
+            displayName: "Type",
             fieldType: .autocomplete,
             isRequired: true,
             autocompleteSource: .observationTypes,
@@ -117,7 +117,7 @@ struct ObservationRecord: MedicalRecordContent {
         ),
         FieldMetadata(
             keyPath: "components",
-            displayName: "Values",
+            displayName: "Measurements",
             fieldType: .components,
             isRequired: true,
             displayOrder: 2

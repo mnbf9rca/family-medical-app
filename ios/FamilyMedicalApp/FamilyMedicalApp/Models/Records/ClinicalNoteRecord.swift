@@ -88,7 +88,7 @@ struct ClinicalNoteRecord: MedicalRecordContent {
 
     static let fieldMetadata: [FieldMetadata] = [
         FieldMetadata(keyPath: "title", displayName: "Title", fieldType: .text, isRequired: true, displayOrder: 1),
-        FieldMetadata(keyPath: "body", displayName: "Body", fieldType: .multilineText, displayOrder: 2),
+        FieldMetadata(keyPath: "body", displayName: "Content", fieldType: .multilineText, displayOrder: 2),
         FieldMetadata(keyPath: "tags", displayName: "Tags", fieldType: .text, displayOrder: 100)
     ]
 }

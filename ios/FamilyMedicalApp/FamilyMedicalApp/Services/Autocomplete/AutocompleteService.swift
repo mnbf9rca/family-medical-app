@@ -62,7 +62,7 @@ final class AutocompleteService: AutocompleteServiceProtocol, Sendable {
 
     private static func loadStringArray(from resource: String, bundle: Bundle) -> [String] {
         guard
-            let url = bundle.url(forResource: resource, withExtension: "json", subdirectory: "Autocomplete"),
+            let url = findResource(resource, withExtension: "json", bundle: bundle),
             let data = try? Data(contentsOf: url),
             let array = try? JSONDecoder().decode([String].self, from: data)
         else {
@@ -73,12 +73,18 @@ final class AutocompleteService: AutocompleteServiceProtocol, Sendable {
 
     private static func loadJSON<T: Decodable>(from resource: String, bundle: Bundle) -> [T] {
         guard
-            let url = bundle.url(forResource: resource, withExtension: "json", subdirectory: "Autocomplete"),
+            let url = findResource(resource, withExtension: "json", bundle: bundle),
             let data = try? Data(contentsOf: url),
             let array = try? JSONDecoder().decode([T].self, from: data)
         else {
             return []
         }
         return array
+    }
+
+    private static func findResource(_ name: String, withExtension ext: String, bundle: Bundle) -> URL? {
+        // Try subdirectory first (folder references), then root (flattened resources)
+        bundle.url(forResource: name, withExtension: ext, subdirectory: "Autocomplete")
+            ?? bundle.url(forResource: name, withExtension: ext)
     }
 }

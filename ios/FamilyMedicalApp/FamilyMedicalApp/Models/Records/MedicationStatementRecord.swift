@@ -123,10 +123,17 @@ struct MedicationStatementRecord: MedicalRecordContent {
             displayName: "Medication Name",
             fieldType: .autocomplete,
             isRequired: true,
+            placeholder: "e.g., Amoxicillin",
             autocompleteSource: .whoMedications,
             displayOrder: 1
         ),
-        FieldMetadata(keyPath: "dosage", displayName: "Dosage", fieldType: .text, displayOrder: 2),
+        FieldMetadata(
+            keyPath: "dosage",
+            displayName: "Dosage",
+            fieldType: .text,
+            placeholder: "e.g., 500mg",
+            displayOrder: 2
+        ),
         FieldMetadata(
             keyPath: "frequency",
             displayName: "Frequency",

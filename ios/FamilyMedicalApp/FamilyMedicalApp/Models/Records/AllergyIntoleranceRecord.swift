@@ -107,9 +107,16 @@ struct AllergyIntoleranceRecord: MedicalRecordContent {
             displayName: "Substance",
             fieldType: .text,
             isRequired: true,
+            placeholder: "e.g., Penicillin",
             displayOrder: 1
         ),
-        FieldMetadata(keyPath: "reaction", displayName: "Reaction", fieldType: .text, displayOrder: 2),
+        FieldMetadata(
+            keyPath: "reaction",
+            displayName: "Reaction",
+            fieldType: .text,
+            placeholder: "e.g., Hives, swelling",
+            displayOrder: 2
+        ),
         FieldMetadata(
             keyPath: "severity",
             displayName: "Severity",
@@ -117,7 +124,7 @@ struct AllergyIntoleranceRecord: MedicalRecordContent {
             pickerOptions: ["Mild", "Moderate", "Severe"],
             displayOrder: 3
         ),
-        FieldMetadata(keyPath: "onsetDate", displayName: "Onset Date", fieldType: .date, displayOrder: 4),
+        FieldMetadata(keyPath: "onsetDate", displayName: "Date Diagnosed", fieldType: .date, displayOrder: 4),
         FieldMetadata(keyPath: "providerId", displayName: "Provider", fieldType: .autocomplete, displayOrder: 5),
         FieldMetadata(keyPath: "notes", displayName: "Notes", fieldType: .multilineText, displayOrder: 100),
         FieldMetadata(keyPath: "tags", displayName: "Tags", fieldType: .text, displayOrder: 101)
