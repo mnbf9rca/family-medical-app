@@ -14,7 +14,6 @@ struct ExportServiceTests {
         recordRepository: MockMedicalRecordRepository = MockMedicalRecordRepository(),
         recordContentService: MockRecordContentService = MockRecordContentService(),
         attachmentService: MockAttachmentService = MockAttachmentService(),
-        customSchemaRepository: MockCustomSchemaRepository = MockCustomSchemaRepository(),
         fmkService: MockFamilyMemberKeyService = MockFamilyMemberKeyService()
     ) -> ExportService {
         ExportService(
@@ -22,7 +21,6 @@ struct ExportServiceTests {
             recordRepository: recordRepository,
             recordContentService: recordContentService,
             attachmentService: attachmentService,
-            customSchemaRepository: customSchemaRepository,
             fmkService: fmkService
         )
     }
@@ -37,11 +35,9 @@ struct ExportServiceTests {
         )
     }
 
-    func makeTestRecordContent(schemaId: String = "vaccine") -> RecordContent {
-        RecordContent(
-            schemaId: schemaId,
-            fields: ["vaccine-name": .string("COVID-19")]
-        )
+    func makeTestEnvelope() throws -> RecordContentEnvelope {
+        let immunization = ImmunizationRecord(vaccineCode: "COVID-19", occurrenceDate: Date())
+        return try RecordContentEnvelope(immunization)
     }
 
     func makeTestAttachment() throws -> FamilyMedicalApp.Attachment {
@@ -53,15 +49,6 @@ struct ExportServiceTests {
             encryptedSize: 1_024,
             thumbnailData: nil,
             uploadedAt: Date()
-        )
-    }
-
-    func makeTestSchema() throws -> RecordSchema {
-        try RecordSchema(
-            id: "custom-test",
-            displayName: "Test Schema",
-            iconSystemName: "star",
-            fields: []
         )
     }
 
@@ -77,7 +64,6 @@ struct ExportServiceTests {
         #expect(payload.persons.isEmpty)
         #expect(payload.records.isEmpty)
         #expect(payload.attachments.isEmpty)
-        #expect(payload.schemas.isEmpty)
         #expect(payload.metadata.personCount == 0)
     }
 
@@ -142,8 +128,8 @@ struct ExportServiceTests {
         personRepository.addPerson(person)
         fmkService.setFMK(fmk, for: person.id.uuidString)
 
-        let content = makeTestRecordContent()
-        let encryptedContent = try recordContentService.encrypt(content, using: fmk)
+        let envelope = try makeTestEnvelope()
+        let encryptedContent = try recordContentService.encrypt(envelope, using: fmk)
         let record = MedicalRecord(
             id: UUID(),
             personId: person.id,
@@ -166,7 +152,7 @@ struct ExportServiceTests {
 
         #expect(payload.records.count == 1)
         #expect(payload.records[0].personId == person.id)
-        #expect(payload.records[0].schemaId == "vaccine")
+        #expect(payload.records[0].recordType == "immunization")
         #expect(payload.metadata.recordCount == 1)
     }
 
@@ -185,8 +171,8 @@ struct ExportServiceTests {
         personRepository.addPerson(person)
         fmkService.setFMK(fmk, for: person.id.uuidString)
 
-        let content = makeTestRecordContent()
-        let encryptedContent = try recordContentService.encrypt(content, using: fmk)
+        let envelope = try makeTestEnvelope()
+        let encryptedContent = try recordContentService.encrypt(envelope, using: fmk)
         let record = MedicalRecord(
             id: UUID(),
             personId: person.id,
@@ -216,35 +202,5 @@ struct ExportServiceTests {
         #expect(payload.attachments[0].fileName == "test.pdf")
         #expect(payload.attachments[0].contentData == attachmentContent)
         #expect(payload.metadata.attachmentCount == 1)
-    }
-
-    // MARK: - Schema Export Tests
-
-    @Test("Exports custom schemas for persons")
-    func exportsCustomSchemas() async throws {
-        let personRepository = MockPersonRepository()
-        let customSchemaRepository = MockCustomSchemaRepository()
-        let fmkService = MockFamilyMemberKeyService()
-
-        let person = try makeTestPerson()
-        let fmk = SymmetricKey(size: .bits256)
-        personRepository.addPerson(person)
-        fmkService.setFMK(fmk, for: person.id.uuidString)
-
-        let schema = try makeTestSchema()
-        customSchemaRepository.addSchema(schema, forPerson: person.id)
-
-        let service = makeService(
-            personRepository: personRepository,
-            customSchemaRepository: customSchemaRepository,
-            fmkService: fmkService
-        )
-
-        let payload = try await service.exportData(primaryKey: testPrimaryKey)
-
-        #expect(payload.schemas.count == 1)
-        #expect(payload.schemas[0].schema.id == "custom-test")
-        #expect(payload.schemas[0].personId == person.id)
-        #expect(payload.metadata.schemaCount == 1)
     }
 }

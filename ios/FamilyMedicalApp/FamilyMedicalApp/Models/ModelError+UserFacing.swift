@@ -73,15 +73,6 @@ extension ModelError {
             return "Failed to save attachment: \(reason)"
         case let .imageProcessingFailed(reason):
             return "Failed to process image: \(reason)"
-        // Schema errors
-        case let .schemaNotFound(schemaId):
-            return "Schema '\(schemaId)' not found."
-        case let .invalidSchemaId(id):
-            return "Invalid schema ID: \(id)"
-        case let .duplicateFieldId(fieldId):
-            return "Duplicate field: \(fieldId)"
-        case let .fieldNotFound(fieldId):
-            return "Field '\(fieldId)' not found."
         }
     }
 }

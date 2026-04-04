@@ -156,32 +156,6 @@ struct ModelErrorsTests {
         #expect(error.errorDescription == "File size must be non-negative")
     }
 
-    // MARK: - Schema Errors
-
-    @Test
-    func schemaNotFound_hasDescription() {
-        let error = ModelError.schemaNotFound(schemaId: "custom-type")
-        #expect(error.errorDescription == "Schema 'custom-type' not found")
-    }
-
-    @Test
-    func invalidSchemaId_hasDescription() {
-        let error = ModelError.invalidSchemaId("  ")
-        #expect(error.errorDescription == "Invalid schema ID: '  '")
-    }
-
-    @Test
-    func duplicateFieldId_hasDescription() {
-        let error = ModelError.duplicateFieldId(fieldId: "name")
-        #expect(error.errorDescription == "Duplicate field ID: 'name'")
-    }
-
-    @Test
-    func fieldNotFound_hasDescription() {
-        let error = ModelError.fieldNotFound(fieldId: "age")
-        #expect(error.errorDescription == "Field 'age' not found in schema")
-    }
-
     // MARK: - Equatable
 
     @Test

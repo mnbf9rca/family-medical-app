@@ -1,33 +1,21 @@
 import CryptoKit
 import Foundation
 
-/// Service for encrypting and decrypting RecordContent
+/// Service for encrypting and decrypting RecordContentEnvelope
 ///
-/// Handles the transformation between RecordContent model objects and encrypted Data blobs.
-/// This service is used by MedicalRecordRepository to encrypt RecordContent before storage
+/// Handles the transformation between RecordContentEnvelope and encrypted Data blobs.
+/// Used by MedicalRecordRepository callers to encrypt content before storage
 /// and decrypt it after retrieval.
 ///
 /// Flow:
-/// - Encrypt: RecordContent → JSON → Encrypted Data
-/// - Decrypt: Encrypted Data → JSON → RecordContent
+/// - Encrypt: RecordContentEnvelope → JSON → Encrypted Data
+/// - Decrypt: Encrypted Data → JSON → RecordContentEnvelope
 protocol RecordContentServiceProtocol: Sendable {
-    /// Encrypt RecordContent to Data
-    ///
-    /// - Parameters:
-    ///   - content: The RecordContent to encrypt
-    ///   - fmk: Family Member Key to encrypt with
-    /// - Returns: Encrypted data in combined format (nonce + ciphertext + tag)
-    /// - Throws: RepositoryError if encoding or encryption fails
-    func encrypt(_ content: RecordContent, using fmk: SymmetricKey) throws -> Data
+    /// Encrypt RecordContentEnvelope to Data
+    func encrypt(_ envelope: RecordContentEnvelope, using fmk: SymmetricKey) throws -> Data
 
-    /// Decrypt Data to RecordContent
-    ///
-    /// - Parameters:
-    ///   - encryptedData: The encrypted data in combined format
-    ///   - fmk: Family Member Key to decrypt with
-    /// - Returns: Decrypted RecordContent
-    /// - Throws: RepositoryError if decryption or decoding fails
-    func decrypt(_ encryptedData: Data, using fmk: SymmetricKey) throws -> RecordContent
+    /// Decrypt Data to RecordContentEnvelope
+    func decrypt(_ encryptedData: Data, using fmk: SymmetricKey) throws -> RecordContentEnvelope
 }
 
 final class RecordContentService: RecordContentServiceProtocol, @unchecked Sendable {
@@ -47,17 +35,12 @@ final class RecordContentService: RecordContentServiceProtocol, @unchecked Senda
 
     // MARK: - RecordContentServiceProtocol
 
-    func encrypt(_ content: RecordContent, using fmk: SymmetricKey) throws -> Data {
+    func encrypt(_ envelope: RecordContentEnvelope, using fmk: SymmetricKey) throws -> Data {
         let start = ContinuousClock.now
         logger.entry("encrypt")
         do {
-            // 1. Encode RecordContent to JSON
-            let jsonData = try JSONEncoder().encode(content)
-
-            // 2. Encrypt with FMK
+            let jsonData = try JSONEncoder().encode(envelope)
             let encryptedPayload = try encryptionService.encrypt(jsonData, using: fmk)
-
-            // 3. Return combined format (nonce + ciphertext + tag)
             logger.exit("encrypt", duration: ContinuousClock.now - start)
             return encryptedPayload.combined
         } catch let error as CryptoError {
@@ -67,20 +50,15 @@ final class RecordContentService: RecordContentServiceProtocol, @unchecked Senda
         }
     }
 
-    func decrypt(_ encryptedData: Data, using fmk: SymmetricKey) throws -> RecordContent {
+    func decrypt(_ encryptedData: Data, using fmk: SymmetricKey) throws -> RecordContentEnvelope {
         let start = ContinuousClock.now
         logger.entry("decrypt")
         do {
-            // 1. Parse combined format into EncryptedPayload
             let payload = try EncryptedPayload(combined: encryptedData)
-
-            // 2. Decrypt to get JSON data
             let jsonData = try encryptionService.decrypt(payload, using: fmk)
-
-            // 3. Decode JSON to RecordContent
-            let content = try JSONDecoder().decode(RecordContent.self, from: jsonData)
+            let envelope = try JSONDecoder().decode(RecordContentEnvelope.self, from: jsonData)
             logger.exit("decrypt", duration: ContinuousClock.now - start)
-            return content
+            return envelope
         } catch let error as CryptoError {
             throw RepositoryError.decryptionFailed(error.localizedDescription)
         } catch {

@@ -14,7 +14,6 @@ struct ExportServiceExtendedTests {
         recordRepository: MockMedicalRecordRepository = MockMedicalRecordRepository(),
         recordContentService: MockRecordContentService = MockRecordContentService(),
         attachmentService: MockAttachmentService = MockAttachmentService(),
-        customSchemaRepository: MockCustomSchemaRepository = MockCustomSchemaRepository(),
         fmkService: MockFamilyMemberKeyService = MockFamilyMemberKeyService()
     ) -> ExportService {
         ExportService(
@@ -22,7 +21,6 @@ struct ExportServiceExtendedTests {
             recordRepository: recordRepository,
             recordContentService: recordContentService,
             attachmentService: attachmentService,
-            customSchemaRepository: customSchemaRepository,
             fmkService: fmkService
         )
     }
@@ -37,11 +35,9 @@ struct ExportServiceExtendedTests {
         )
     }
 
-    func makeTestRecordContent(schemaId: String = "vaccine") -> RecordContent {
-        RecordContent(
-            schemaId: schemaId,
-            fields: ["vaccine-name": .string("COVID-19")]
-        )
+    func makeTestEnvelope() throws -> RecordContentEnvelope {
+        let immunization = ImmunizationRecord(vaccineCode: "COVID-19", occurrenceDate: Date())
+        return try RecordContentEnvelope(immunization)
     }
 
     func makeTestAttachment() throws -> FamilyMedicalApp.Attachment {
@@ -56,15 +52,6 @@ struct ExportServiceExtendedTests {
         )
     }
 
-    func makeTestSchema() throws -> RecordSchema {
-        try RecordSchema(
-            id: "custom-test",
-            displayName: "Test Schema",
-            iconSystemName: "star",
-            fields: []
-        )
-    }
-
     // MARK: - Full Export Tests
 
     @Test("Full export includes all data types")
@@ -73,7 +60,6 @@ struct ExportServiceExtendedTests {
         let recordRepository = MockMedicalRecordRepository()
         let recordContentService = MockRecordContentService()
         let attachmentService = MockAttachmentService()
-        let customSchemaRepository = MockCustomSchemaRepository()
         let fmkService = MockFamilyMemberKeyService()
 
         let person = try makeTestPerson(name: "Full Test")
@@ -81,8 +67,8 @@ struct ExportServiceExtendedTests {
         personRepository.addPerson(person)
         fmkService.setFMK(fmk, for: person.id.uuidString)
 
-        let content = makeTestRecordContent()
-        let encryptedContent = try recordContentService.encrypt(content, using: fmk)
+        let envelope = try makeTestEnvelope()
+        let encryptedContent = try recordContentService.encrypt(envelope, using: fmk)
         let record = MedicalRecord(
             id: UUID(),
             personId: person.id,
@@ -101,15 +87,11 @@ struct ExportServiceExtendedTests {
             linkedToRecord: record.id
         )
 
-        let schema = try makeTestSchema()
-        customSchemaRepository.addSchema(schema, forPerson: person.id)
-
         let service = makeService(
             personRepository: personRepository,
             recordRepository: recordRepository,
             recordContentService: recordContentService,
             attachmentService: attachmentService,
-            customSchemaRepository: customSchemaRepository,
             fmkService: fmkService
         )
 
@@ -118,7 +100,6 @@ struct ExportServiceExtendedTests {
         #expect(payload.persons.count == 1)
         #expect(payload.records.count == 1)
         #expect(payload.attachments.count == 1)
-        #expect(payload.schemas.count == 1)
         #expect(!payload.isEmpty)
     }
 
@@ -197,8 +178,8 @@ struct ExportServiceExtendedTests {
 
         // Add 2 records for person1
         for _ in 0 ..< 2 {
-            let content = makeTestRecordContent()
-            let encryptedContent = try recordContentService.encrypt(content, using: fmk1)
+            let envelope = try makeTestEnvelope()
+            let encryptedContent = try recordContentService.encrypt(envelope, using: fmk1)
             let record = MedicalRecord(
                 id: UUID(),
                 personId: person1.id,
@@ -212,8 +193,8 @@ struct ExportServiceExtendedTests {
         }
 
         // Add 1 record for person2
-        let content = makeTestRecordContent()
-        let encryptedContent = try recordContentService.encrypt(content, using: fmk2)
+        let envelope = try makeTestEnvelope()
+        let encryptedContent = try recordContentService.encrypt(envelope, using: fmk2)
         let record = MedicalRecord(
             id: UUID(),
             personId: person2.id,

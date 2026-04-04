@@ -4,30 +4,6 @@ import Testing
 @testable import FamilyMedicalApp
 
 struct RecordContentServiceTests {
-    // MARK: - Test Field IDs
-
-    /// Test UUIDs for field identification in encryption/decryption tests
-    private enum TestFieldIds {
-        static let name = UUID()
-        static let dosage = UUID()
-        static let age = UUID()
-        static let count = UUID()
-        static let temperature = UUID()
-        static let weight = UUID()
-        static let vaccinated = UUID()
-        static let allergies = UUID()
-        static let visitDate = UUID()
-        static let images = UUID()
-        static let tags = UUID()
-        static let diagnosis = UUID()
-        static let severity = UUID()
-        static let contagious = UUID()
-        static let onsetDate = UUID()
-        static let xrays = UUID()
-        static let symptoms = UUID()
-        static let field = UUID()
-    }
-
     // MARK: - Test Fixtures
 
     struct TestFixtures {
@@ -52,158 +28,93 @@ struct RecordContentServiceTests {
     // MARK: - Round-Trip Tests
 
     @Test
-    func encrypt_decrypt_emptyContent_roundTrips() throws {
+    func encrypt_decrypt_immunizationRecord_roundTrips() throws {
         let service = makeService()
-        let content = RecordContent()
+        let immunization = ImmunizationRecord(vaccineCode: "COVID-19", occurrenceDate: Date())
+        let envelope = try RecordContentEnvelope(immunization)
 
-        let encrypted = try service.encrypt(content, using: testFMK)
+        let encrypted = try service.encrypt(envelope, using: testFMK)
         let decrypted = try service.decrypt(encrypted, using: testFMK)
 
-        #expect(decrypted == content)
-        #expect(decrypted.schemaId == nil)
-        #expect(decrypted.allFields.isEmpty)
+        #expect(decrypted.recordType == .immunization)
+        #expect(decrypted.schemaVersion == 1)
+
+        let decoded = try decrypted.decode(ImmunizationRecord.self)
+        #expect(decoded.vaccineCode == "COVID-19")
     }
 
     @Test
-    func encrypt_decrypt_contentWithSchemaIdOnly_roundTrips() throws {
+    func encrypt_decrypt_conditionRecord_roundTrips() throws {
         let service = makeService()
-        let content = RecordContent(schemaId: "vaccine")
+        let condition = ConditionRecord(conditionName: "Asthma", onsetDate: Date())
+        let envelope = try RecordContentEnvelope(condition)
 
-        let encrypted = try service.encrypt(content, using: testFMK)
+        let encrypted = try service.encrypt(envelope, using: testFMK)
         let decrypted = try service.decrypt(encrypted, using: testFMK)
 
-        #expect(decrypted == content)
-        #expect(decrypted.schemaId == "vaccine")
-        #expect(decrypted.allFields.isEmpty)
+        #expect(decrypted.recordType == .condition)
+
+        let decoded = try decrypted.decode(ConditionRecord.self)
+        #expect(decoded.conditionName == "Asthma")
     }
 
     @Test
-    func encrypt_decrypt_contentWithStringField_roundTrips() throws {
+    func encrypt_decrypt_medicationRecord_roundTrips() throws {
         let service = makeService()
-        var content = RecordContent(schemaId: "medication")
-        content.setString(TestFieldIds.name, "Aspirin")
-        content.setString(TestFieldIds.dosage, "100mg")
+        let medication = MedicationStatementRecord(medicationName: "Aspirin")
+        let envelope = try RecordContentEnvelope(medication)
 
-        let encrypted = try service.encrypt(content, using: testFMK)
+        let encrypted = try service.encrypt(envelope, using: testFMK)
         let decrypted = try service.decrypt(encrypted, using: testFMK)
 
-        #expect(decrypted == content)
-        #expect(decrypted.getString(TestFieldIds.name) == "Aspirin")
-        #expect(decrypted.getString(TestFieldIds.dosage) == "100mg")
+        #expect(decrypted.recordType == .medicationStatement)
+
+        let decoded = try decrypted.decode(MedicationStatementRecord.self)
+        #expect(decoded.medicationName == "Aspirin")
     }
 
     @Test
-    func encrypt_decrypt_contentWithIntField_roundTrips() throws {
+    func encrypt_decrypt_preservesAllFieldTypes() throws {
         let service = makeService()
-        var content = RecordContent()
-        content.setInt(TestFieldIds.age, 42)
-        content.setInt(TestFieldIds.count, 7)
+        let immunization = ImmunizationRecord(
+            vaccineCode: "COVID-19",
+            occurrenceDate: Date(timeIntervalSince1970: 1_700_000_000),
+            lotNumber: "EL9262",
+            site: "Left arm",
+            doseNumber: 2,
+            dosesInSeries: 3,
+            notes: "Second dose",
+            tags: ["urgent", "follow-up"]
+        )
+        let envelope = try RecordContentEnvelope(immunization)
 
-        let encrypted = try service.encrypt(content, using: testFMK)
+        let encrypted = try service.encrypt(envelope, using: testFMK)
         let decrypted = try service.decrypt(encrypted, using: testFMK)
 
-        #expect(decrypted == content)
-        #expect(decrypted.getInt(TestFieldIds.age) == 42)
-        #expect(decrypted.getInt(TestFieldIds.count) == 7)
+        let decoded = try decrypted.decode(ImmunizationRecord.self)
+        #expect(decoded.vaccineCode == "COVID-19")
+        #expect(decoded.lotNumber == "EL9262")
+        #expect(decoded.site == "Left arm")
+        #expect(decoded.doseNumber == 2)
+        #expect(decoded.dosesInSeries == 3)
+        #expect(decoded.notes == "Second dose")
+        #expect(decoded.tags == ["urgent", "follow-up"])
     }
 
     @Test
-    func encrypt_decrypt_contentWithDoubleField_roundTrips() throws {
+    func encrypt_decrypt_directEnvelope_roundTrips() throws {
         let service = makeService()
-        var content = RecordContent()
-        content.setDouble(TestFieldIds.temperature, 98.6)
-        content.setDouble(TestFieldIds.weight, 150.5)
+        let envelope = RecordContentEnvelope(
+            recordType: .clinicalNote,
+            schemaVersion: 1,
+            content: Data("{\"title\":\"Test Note\",\"body\":\"Note body\",\"tags\":[]}".utf8)
+        )
 
-        let encrypted = try service.encrypt(content, using: testFMK)
+        let encrypted = try service.encrypt(envelope, using: testFMK)
         let decrypted = try service.decrypt(encrypted, using: testFMK)
 
-        #expect(decrypted == content)
-        #expect(decrypted.getDouble(TestFieldIds.temperature) == 98.6)
-        #expect(decrypted.getDouble(TestFieldIds.weight) == 150.5)
-    }
-
-    @Test
-    func encrypt_decrypt_contentWithBoolField_roundTrips() throws {
-        let service = makeService()
-        var content = RecordContent()
-        content.setBool(TestFieldIds.vaccinated, true)
-        content.setBool(TestFieldIds.allergies, false)
-
-        let encrypted = try service.encrypt(content, using: testFMK)
-        let decrypted = try service.decrypt(encrypted, using: testFMK)
-
-        #expect(decrypted == content)
-        #expect(decrypted.getBool(TestFieldIds.vaccinated) == true)
-        #expect(decrypted.getBool(TestFieldIds.allergies) == false)
-    }
-
-    @Test
-    func encrypt_decrypt_contentWithDateField_roundTrips() throws {
-        let service = makeService()
-        var content = RecordContent()
-        let testDate = Date(timeIntervalSince1970: 1_234_567_890)
-        content.setDate(TestFieldIds.visitDate, testDate)
-
-        let encrypted = try service.encrypt(content, using: testFMK)
-        let decrypted = try service.decrypt(encrypted, using: testFMK)
-
-        #expect(decrypted == content)
-        #expect(decrypted.getDate(TestFieldIds.visitDate) == testDate)
-    }
-
-    @Test
-    func encrypt_decrypt_contentWithAttachmentIds_roundTrips() throws {
-        let service = makeService()
-        var content = RecordContent()
-        let ids = [UUID(), UUID(), UUID()]
-        content.setAttachmentIds(TestFieldIds.images, ids)
-
-        let encrypted = try service.encrypt(content, using: testFMK)
-        let decrypted = try service.decrypt(encrypted, using: testFMK)
-
-        #expect(decrypted == content)
-        #expect(decrypted.getAttachmentIds(TestFieldIds.images) == ids)
-    }
-
-    @Test
-    func encrypt_decrypt_contentWithStringArray_roundTrips() throws {
-        let service = makeService()
-        var content = RecordContent()
-        let tags = ["urgent", "follow-up", "pediatric"]
-        content.setStringArray(TestFieldIds.tags, tags)
-
-        let encrypted = try service.encrypt(content, using: testFMK)
-        let decrypted = try service.decrypt(encrypted, using: testFMK)
-
-        #expect(decrypted == content)
-        #expect(decrypted.getStringArray(TestFieldIds.tags) == tags)
-    }
-
-    @Test
-    func encrypt_decrypt_contentWithAllFieldTypes_roundTrips() throws {
-        let service = makeService()
-        var content = RecordContent(schemaId: "comprehensive-test")
-
-        content.setString(TestFieldIds.diagnosis, "Common Cold")
-        content.setInt(TestFieldIds.severity, 3)
-        content.setDouble(TestFieldIds.temperature, 100.4)
-        content.setBool(TestFieldIds.contagious, true)
-        content.setDate(TestFieldIds.onsetDate, Date(timeIntervalSince1970: 1_700_000_000))
-        content.setAttachmentIds(TestFieldIds.xrays, [UUID(), UUID()])
-        content.setStringArray(TestFieldIds.symptoms, ["cough", "fever", "fatigue"])
-
-        let encrypted = try service.encrypt(content, using: testFMK)
-        let decrypted = try service.decrypt(encrypted, using: testFMK)
-
-        #expect(decrypted == content)
-        #expect(decrypted.schemaId == "comprehensive-test")
-        #expect(decrypted.getString(TestFieldIds.diagnosis) == "Common Cold")
-        #expect(decrypted.getInt(TestFieldIds.severity) == 3)
-        #expect(decrypted.getDouble(TestFieldIds.temperature) == 100.4)
-        #expect(decrypted.getBool(TestFieldIds.contagious) == true)
-        #expect(decrypted.getDate(TestFieldIds.onsetDate) == Date(timeIntervalSince1970: 1_700_000_000))
-        #expect(decrypted.getAttachmentIds(TestFieldIds.xrays)?.count == 2)
-        #expect(decrypted.getStringArray(TestFieldIds.symptoms) == ["cough", "fever", "fatigue"])
+        #expect(decrypted.recordType == .clinicalNote)
+        #expect(decrypted.schemaVersion == 1)
     }
 
     // MARK: - Encryption Error Tests
@@ -216,10 +127,11 @@ struct RecordContentServiceTests {
 
         encryption.shouldFailEncryption = true
 
-        let content = RecordContent(schemaId: "test")
+        let immunization = ImmunizationRecord(vaccineCode: "Test", occurrenceDate: Date())
+        let envelope = try RecordContentEnvelope(immunization)
 
         #expect(throws: RepositoryError.self) {
-            try service.encrypt(content, using: testFMK)
+            try service.encrypt(envelope, using: testFMK)
         }
     }
 
@@ -232,8 +144,9 @@ struct RecordContentServiceTests {
         let encryption = fixtures.encryption
 
         // First encrypt successfully
-        let content = RecordContent(schemaId: "test")
-        let encrypted = try service.encrypt(content, using: testFMK)
+        let immunization = ImmunizationRecord(vaccineCode: "Test", occurrenceDate: Date())
+        let envelope = try RecordContentEnvelope(immunization)
+        let encrypted = try service.encrypt(envelope, using: testFMK)
 
         // Now make decryption fail
         encryption.shouldFailDecryption = true
@@ -258,11 +171,11 @@ struct RecordContentServiceTests {
     @Test
     func decrypt_corruptedData_throwsRepositoryError() throws {
         let service = makeService()
-        var content = RecordContent(schemaId: "test")
-        content.setString(TestFieldIds.field, "value") // Add some data to make ciphertext larger
+        let immunization = ImmunizationRecord(vaccineCode: "Test", occurrenceDate: Date())
+        let envelope = try RecordContentEnvelope(immunization)
 
         // Encrypt normally
-        var encrypted = try service.encrypt(content, using: testFMK)
+        var encrypted = try service.encrypt(envelope, using: testFMK)
 
         // Corrupt the ciphertext portion (after nonce, before tag)
         // Combined format: nonce(12) + ciphertext + tag(16)
@@ -281,9 +194,10 @@ struct RecordContentServiceTests {
     @Test
     func encrypt_returnsCombinedFormat() throws {
         let service = makeService()
-        let content = RecordContent(schemaId: "test")
+        let immunization = ImmunizationRecord(vaccineCode: "Test", occurrenceDate: Date())
+        let envelope = try RecordContentEnvelope(immunization)
 
-        let encrypted = try service.encrypt(content, using: testFMK)
+        let encrypted = try service.encrypt(envelope, using: testFMK)
 
         // Combined format should be: nonce(12) + ciphertext + tag(16)
         // Minimum size is 12 + 0 + 16 = 28 bytes

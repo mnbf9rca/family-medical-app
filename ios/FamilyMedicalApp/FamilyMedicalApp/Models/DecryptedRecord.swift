@@ -1,17 +1,22 @@
 import Foundation
 
-/// Wrapper holding a decrypted medical record with its content
+/// Wrapper holding a decrypted medical record with its typed content envelope
 ///
-/// This type pairs the encrypted container (`MedicalRecord`) with its decrypted payload
-/// (`RecordContent`) for UI display. It avoids re-decrypting the same record multiple times.
+/// Pairs the encrypted container (`MedicalRecord`) with the decrypted
+/// `RecordContentEnvelope` for UI display. Avoids re-decrypting the same record.
 struct DecryptedRecord: Identifiable, Hashable {
     // MARK: - Properties
 
     /// The encrypted record container with metadata
     let record: MedicalRecord
 
-    /// The decrypted content with field values
-    let content: RecordContent
+    /// The decrypted content envelope containing the typed record data
+    let envelope: RecordContentEnvelope
+
+    /// Convenience: the record type from the envelope
+    var recordType: RecordType {
+        envelope.recordType
+    }
 
     // MARK: - Identifiable
 

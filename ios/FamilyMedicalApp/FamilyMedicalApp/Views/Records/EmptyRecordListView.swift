@@ -2,20 +2,16 @@ import SwiftUI
 
 /// Empty state view displayed when there are no records
 struct EmptyRecordListView: View {
-    // MARK: - Properties
-
-    let schemaType: BuiltInSchemaType
+    let recordType: RecordType
     let onAddTapped: () -> Void
-
-    // MARK: - Body
 
     var body: some View {
         ContentUnavailableView {
-            Label("No \(schemaType.displayName) Records", systemImage: schemaType.iconSystemName)
+            Label("No \(recordType.displayName) Records", systemImage: recordType.iconSystemName)
         } description: {
-            Text("Add your first \(schemaType.displayName.lowercased()) record to start tracking.")
+            Text("Add your first \(recordType.displayName.lowercased()) record to start tracking.")
         } actions: {
-            Button("Add \(schemaType.displayName)") {
+            Button("Add \(recordType.displayName)") {
                 onAddTapped()
             }
             .buttonStyle(.borderedProminent)
@@ -24,16 +20,6 @@ struct EmptyRecordListView: View {
     }
 }
 
-// MARK: - Preview
-
 #Preview {
-    EmptyRecordListView(schemaType: .vaccine) {}
-}
-
-#Preview("Medication") {
-    EmptyRecordListView(schemaType: .medication) {}
-}
-
-#Preview("Condition") {
-    EmptyRecordListView(schemaType: .condition) {}
+    EmptyRecordListView(recordType: .immunization) {}
 }
