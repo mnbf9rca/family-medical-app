@@ -33,13 +33,6 @@ enum ModelError: LocalizedError, Equatable {
     case attachmentStorageFailed(reason: String)
     case imageProcessingFailed(reason: String)
 
-    // MARK: - Schema Errors
-
-    case schemaNotFound(schemaId: String)
-    case invalidSchemaId(String)
-    case duplicateFieldId(fieldId: String)
-    case fieldNotFound(fieldId: String)
-
     // MARK: - LocalizedError Conformance
 
     var errorDescription: String? {
@@ -107,15 +100,6 @@ enum ModelError: LocalizedError, Equatable {
             "Failed to store attachment: \(reason)"
         case let .imageProcessingFailed(reason):
             "Failed to process image: \(reason)"
-        // Schema errors
-        case let .schemaNotFound(schemaId):
-            "Schema '\(schemaId)' not found"
-        case let .invalidSchemaId(id):
-            "Invalid schema ID: '\(id)'"
-        case let .duplicateFieldId(fieldId):
-            "Duplicate field ID: '\(fieldId)'"
-        case let .fieldNotFound(fieldId):
-            "Field '\(fieldId)' not found in schema"
         }
     }
 

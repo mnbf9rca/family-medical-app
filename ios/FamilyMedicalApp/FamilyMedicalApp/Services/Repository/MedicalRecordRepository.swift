@@ -5,13 +5,13 @@ import Foundation
 ///
 /// Handles CRUD operations for MedicalRecord entities. Unlike PersonRepository,
 /// this repository does NOT perform encryption - it expects the caller to provide
-/// pre-encrypted content via RecordContentService.
+/// pre-encrypted content via RecordContentEnvelopeService.
 ///
 /// Flow:
-/// 1. Caller encrypts RecordContent → encrypted Data (using RecordContentService)
+/// 1. Caller encrypts RecordContentEnvelope → encrypted Data (using RecordContentEnvelopeService)
 /// 2. Repository stores MedicalRecord with encrypted Data as-is
 /// 3. Repository retrieves MedicalRecord with encrypted Data
-/// 4. Caller decrypts encrypted Data → RecordContent (using RecordContentService)
+/// 4. Caller decrypts encrypted Data → RecordContentEnvelope (using RecordContentEnvelopeService)
 protocol MedicalRecordRepositoryProtocol: Sendable {
     /// Save a medical record (insert or update)
     ///

@@ -181,30 +181,4 @@ struct ModelErrorUserFacingMessageTests {
         let error = ModelError.invalidFileSize
         #expect(error.userFacingMessage == "File size is invalid.")
     }
-
-    // MARK: - Schema Error Messages
-
-    @Test
-    func modelErrorSchemaNotFoundMessage() {
-        let error = ModelError.schemaNotFound(schemaId: "custom_schema")
-        #expect(error.userFacingMessage == "Schema 'custom_schema' not found.")
-    }
-
-    @Test
-    func modelErrorInvalidSchemaIdMessage() {
-        let error = ModelError.invalidSchemaId("bad-id")
-        #expect(error.userFacingMessage == "Invalid schema ID: bad-id")
-    }
-
-    @Test
-    func modelErrorDuplicateFieldIdMessage() {
-        let error = ModelError.duplicateFieldId(fieldId: "name")
-        #expect(error.userFacingMessage == "Duplicate field: name")
-    }
-
-    @Test
-    func modelErrorFieldNotFoundMessage() {
-        let error = ModelError.fieldNotFound(fieldId: "missingField")
-        #expect(error.userFacingMessage == "Field 'missingField' not found.")
-    }
 }

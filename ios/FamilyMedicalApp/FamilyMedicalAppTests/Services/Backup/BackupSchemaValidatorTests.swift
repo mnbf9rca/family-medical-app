@@ -90,8 +90,6 @@ struct BackupSchemaValidatorTests {
         let validator = BackupSchemaValidator.forTesting()
         let result = validator.validate(jsonData: jsonData)
 
-        // NOTE: This may fail at runtime if the JSON schema still requires "schemas" field
-        // but the Swift model no longer encodes it. That drift is expected and tracked.
         #expect(result.isValid, "Serialized unencrypted BackupFile must validate against schema: \(result.errors)")
     }
 
