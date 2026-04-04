@@ -2,6 +2,10 @@
 # Block XCTest usage in unit test files — project convention is Swift Testing
 # (@Suite/@Test/#expect). UI tests under FamilyMedicalAppUITests/ may still use
 # XCTest because UI testing support in Swift Testing is limited.
+#
+# The UI-test exemption is enforced by the `files:` regex in
+# .pre-commit-config.yaml, NOT by this script. If you reuse this script
+# outside pre-commit, scope the file list yourself.
 set -euo pipefail
 
 violations=()
