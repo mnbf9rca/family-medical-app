@@ -8,6 +8,7 @@ struct MedicalRecordListView: View {
     @State private var viewModel: MedicalRecordListViewModel
     @State private var recordToDelete: DecryptedRecord?
     @State private var showingDeleteConfirmation = false
+    @State private var showingCreateForm = false
 
     init(person: Person, recordType: RecordType, viewModel: MedicalRecordListViewModel? = nil) {
         self.person = person
@@ -36,6 +37,23 @@ struct MedicalRecordListView: View {
         }
         .navigationTitle("\(person.name)'s \(recordType.displayName)")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    showingCreateForm = true
+                } label: {
+                    Image(systemName: "plus")
+                }
+                .accessibilityLabel("Add \(recordType.displayName)")
+            }
+        }
+        .sheet(isPresented: $showingCreateForm) {
+            GenericRecordFormView(
+                viewModel: GenericRecordFormViewModel(person: person, recordType: recordType)
+            ) {
+                Task { await viewModel.loadRecords() }
+            }
+        }
         .navigationDestination(for: DecryptedRecord.self) { decryptedRecord in
             MedicalRecordDetailView(
                 person: person,

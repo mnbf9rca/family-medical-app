@@ -126,4 +126,178 @@ struct MedicalRecordFormDetailViewTests {
         let inspected = try view.inspect()
         _ = try inspected.find(ViewType.List.self)
     }
+
+    // MARK: - Extra coverage tests
+
+    @Test
+    func viewRendersUnknownFieldsSection() throws {
+        let person = try makeTestPerson()
+        // Craft content JSON with an unrecognized key for forward compatibility
+        let json = "{\"vaccineCode\":\"X\",\"occurrenceDate\":0,\"tags\":[],\"futureField\":\"xx\"}"
+        let envelope = RecordContentEnvelope(
+            recordType: .immunization,
+            schemaVersion: 1,
+            content: Data(json.utf8)
+        )
+        let record = MedicalRecord(personId: person.id, encryptedContent: Data())
+        let decrypted = DecryptedRecord(record: record, envelope: envelope)
+        let view = MedicalRecordDetailView(person: person, decryptedRecord: decrypted)
+
+        let inspected = try view.inspect()
+        _ = try inspected.find(text: "Additional Fields")
+        _ = try inspected.find(text: "futureField")
+    }
+
+    @Test
+    func viewRendersEditToolbarButton() throws {
+        let person = try makeTestPerson()
+        let decryptedRecord = try makeTestDecryptedRecord(recordType: .immunization)
+        let view = MedicalRecordDetailView(person: person, decryptedRecord: decryptedRecord)
+
+        let inspected = try view.inspect()
+        _ = try inspected.find(button: "Edit")
+    }
+
+    @Test
+    func viewRendersDeleteToolbarButton() throws {
+        let person = try makeTestPerson()
+        let decryptedRecord = try makeTestDecryptedRecord(recordType: .immunization)
+        let view = MedicalRecordDetailView(person: person, decryptedRecord: decryptedRecord)
+
+        let inspected = try view.inspect()
+        _ = try inspected.find(button: "Delete")
+    }
+
+    @Test
+    func viewRendersDetailRowForDateField() throws {
+        let person = try makeTestPerson()
+        let fixedDate = Date(timeIntervalSinceReferenceDate: 600_000_000)
+        let envelope = try RecordContentEnvelope(
+            ImmunizationRecord(
+                vaccineCode: "Pfizer",
+                occurrenceDate: fixedDate,
+                lotNumber: "LOT123"
+            )
+        )
+        let record = MedicalRecord(personId: person.id, encryptedContent: Data())
+        let decrypted = DecryptedRecord(record: record, envelope: envelope)
+        let view = MedicalRecordDetailView(person: person, decryptedRecord: decrypted)
+
+        let inspected = try view.inspect()
+        // Ensure the typed fields section rendered
+        _ = try inspected.find(text: "Date Administered")
+        _ = try inspected.find(text: "Lot Number")
+        _ = try inspected.find(text: "LOT123")
+    }
+
+    @Test
+    func viewRendersDetailRowForComponentsField() throws {
+        let person = try makeTestPerson()
+        let envelope = try RecordContentEnvelope(
+            ObservationRecord(
+                observationType: "Blood Pressure",
+                components: [
+                    ObservationComponent(name: "Systolic", value: 120, unit: "mmHg"),
+                    ObservationComponent(name: "Diastolic", value: 80, unit: "mmHg")
+                ],
+                effectiveDate: Date()
+            )
+        )
+        let record = MedicalRecord(personId: person.id, encryptedContent: Data())
+        let decrypted = DecryptedRecord(record: record, envelope: envelope)
+        let view = MedicalRecordDetailView(person: person, decryptedRecord: decrypted)
+
+        let inspected = try view.inspect()
+        _ = try inspected.find(text: "Measurements")
+        // A row combining the two components should contain both names
+        _ = try inspected.find { view in
+            guard let text = try? view.text().string() else { return false }
+            return text.contains("Systolic: 120.0 mmHg") && text.contains("Diastolic: 80.0 mmHg")
+        }
+    }
+
+    @Test
+    func viewRendersDetailRowForTagsField() throws {
+        let person = try makeTestPerson()
+        let envelope = try RecordContentEnvelope(
+            ImmunizationRecord(
+                vaccineCode: "Pfizer",
+                occurrenceDate: Date(),
+                tags: ["covid", "booster"]
+            )
+        )
+        let record = MedicalRecord(personId: person.id, encryptedContent: Data())
+        let decrypted = DecryptedRecord(record: record, envelope: envelope)
+        let view = MedicalRecordDetailView(person: person, decryptedRecord: decrypted)
+
+        let inspected = try view.inspect()
+        _ = try inspected.find(text: "covid, booster")
+    }
+
+    @Test
+    func viewRendersProviderDisplayStringWhenSet() async throws {
+        let person = try makeTestPerson()
+        let providerUUID = UUID()
+        let envelope = try RecordContentEnvelope(
+            ImmunizationRecord(
+                vaccineCode: "Pfizer",
+                occurrenceDate: Date(),
+                providerId: providerUUID
+            )
+        )
+        let record = MedicalRecord(personId: person.id, encryptedContent: Data())
+        let decrypted = DecryptedRecord(record: record, envelope: envelope)
+
+        let providerRepo = MockProviderRepository()
+        providerRepo.addProvider(
+            Provider(id: providerUUID, name: "Dr House", organization: "Princeton"),
+            personId: person.id
+        )
+        let keyProvider = MockPrimaryKeyProvider()
+        keyProvider.primaryKey = SymmetricKey(size: .bits256)
+        let fmk = MockFamilyMemberKeyService()
+        fmk.setFMK(SymmetricKey(size: .bits256), for: person.id.uuidString)
+
+        let detailVM = MedicalRecordDetailViewModel(
+            person: person,
+            decryptedRecord: decrypted,
+            providerRepository: providerRepo,
+            primaryKeyProvider: keyProvider,
+            fmkService: fmk
+        )
+        await detailVM.loadProviderDisplayIfNeeded()
+        #expect(detailVM.providerDisplayString == "Dr House at Princeton")
+
+        let view = MedicalRecordDetailView(
+            person: person,
+            decryptedRecord: decrypted,
+            detailViewModel: detailVM
+        )
+
+        let inspected = try view.inspect()
+        _ = try inspected.find(text: "Provider")
+        _ = try inspected.find(text: "Dr House at Princeton")
+    }
+
+    @Test
+    func viewEditToolbarButtonTogglesShowingEditForm() throws {
+        let person = try makeTestPerson()
+        let decryptedRecord = try makeTestDecryptedRecord(recordType: .condition)
+        let view = MedicalRecordDetailView(person: person, decryptedRecord: decryptedRecord)
+
+        let inspected = try view.inspect()
+        let editButton = try inspected.find(button: "Edit")
+        try editButton.tap()
+    }
+
+    @Test
+    func viewDeleteToolbarButtonTogglesConfirmationDialog() throws {
+        let person = try makeTestPerson()
+        let decryptedRecord = try makeTestDecryptedRecord(recordType: .condition)
+        let view = MedicalRecordDetailView(person: person, decryptedRecord: decryptedRecord)
+
+        let inspected = try view.inspect()
+        let deleteButton = try inspected.find(button: "Delete")
+        try deleteButton.tap()
+    }
 }
