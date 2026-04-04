@@ -20,13 +20,13 @@ enum HostedInspection {
     /// Host the view, invoke the inspection closure, and expel. Returns the closure's result.
     /// - Parameters:
     ///   - view: The view to host and inspect.
-    ///   - inspect: Closure that receives the view and performs ViewInspector assertions.
+    ///   - perform: Closure that receives the view and performs ViewInspector assertions.
     static func inspect<V: View, T>(
         _ view: V,
-        _ inspect: (V) throws -> T
+        _ perform: (V) throws -> T
     ) rethrows -> T {
         ViewHosting.host(view: view)
         defer { ViewHosting.expel() }
-        return try inspect(view)
+        return try perform(view)
     }
 }

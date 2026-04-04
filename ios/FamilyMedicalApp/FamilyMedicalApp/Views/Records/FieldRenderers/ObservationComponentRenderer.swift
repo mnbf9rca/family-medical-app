@@ -115,18 +115,29 @@ private struct ComponentRowView: View {
             .accessibilityLabel("Remove \(component.name.isEmpty ? "component" : component.name)")
         }
         .onAppear {
-            nameText = component.name
-            valueText = Self.formatInitialValueText(component.value, hasNonZeroAncestor: !component.name.isEmpty)
-            unitText = component.unit
+            seedLocalState(from: component)
         }
+        // Re-seed when the parent's component value changes out from under us. This happens
+        // after a mid-list delete/reorder: SwiftUI's `ForEach(id: \.offset)` reuses the same
+        // view instance but feeds it a different `component`, so without this the visible
+        // text drifts from the source of truth.
+        .onChange(of: component) { _, newValue in
+            seedLocalState(from: newValue)
+        }
+    }
+
+    private func seedLocalState(from component: ObservationComponent) {
+        nameText = component.name
+        valueText = Self.formatInitialValueText(component.value, componentHasContent: !component.name.isEmpty)
+        unitText = component.unit
     }
 
     /// Initial text for a component's value field.
     /// A freshly-added component (name empty, value 0, unit empty) shows a blank field so
     /// the user isn't forced to delete a leading "0" before typing. An existing component
     /// with value 0 shows "0" (distinct from unset).
-    private static func formatInitialValueText(_ value: Double, hasNonZeroAncestor: Bool) -> String {
-        if value == 0, !hasNonZeroAncestor { return "" }
+    private static func formatInitialValueText(_ value: Double, componentHasContent: Bool) -> String {
+        if value == 0, !componentHasContent { return "" }
         // Avoid trailing ".0" on whole numbers for cleaner UX.
         if value == value.rounded() { return String(Int(value)) }
         return String(value)
