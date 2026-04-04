@@ -25,6 +25,8 @@ struct ObservationComponentDefinition: Codable {
 final class AutocompleteService: AutocompleteServiceProtocol, Sendable {
     // MARK: - Private State
 
+    private static let logger: CategoryLoggerProtocol = LoggingService.shared.logger(category: .storage)
+
     private let vaccineNames: [String]
     private let medicationNames: [String]
     private let observationTypeDefs: [ObservationTypeDefinition]
@@ -61,22 +63,30 @@ final class AutocompleteService: AutocompleteServiceProtocol, Sendable {
     // MARK: - Private Helpers
 
     private static func loadStringArray(from resource: String, bundle: Bundle) -> [String] {
+        guard let url = findResource(resource, withExtension: "json", bundle: bundle) else {
+            logger.error("Resource not found: \(resource).json")
+            return []
+        }
         guard
-            let url = findResource(resource, withExtension: "json", bundle: bundle),
             let data = try? Data(contentsOf: url),
             let array = try? JSONDecoder().decode([String].self, from: data)
         else {
+            logger.error("Failed to decode resource: \(resource).json")
             return []
         }
         return array
     }
 
     private static func loadJSON<T: Decodable>(from resource: String, bundle: Bundle) -> [T] {
+        guard let url = findResource(resource, withExtension: "json", bundle: bundle) else {
+            logger.error("Resource not found: \(resource).json")
+            return []
+        }
         guard
-            let url = findResource(resource, withExtension: "json", bundle: bundle),
             let data = try? Data(contentsOf: url),
             let array = try? JSONDecoder().decode([T].self, from: data)
         else {
+            logger.error("Failed to decode resource: \(resource).json")
             return []
         }
         return array
