@@ -142,10 +142,6 @@ private struct DefaultDependencies {
             encryptionService: encryptionService,
             fmkService: fmkService
         )
-        let customSchemaRepository = CustomSchemaRepository(
-            coreDataStack: coreDataStack,
-            encryptionService: encryptionService
-        )
         let recordContentService = RecordContentService(encryptionService: encryptionService)
         let attachmentService = Self.makeAttachmentService(
             attachmentRepository: attachmentRepository,
@@ -158,7 +154,6 @@ private struct DefaultDependencies {
             recordRepository: recordRepository,
             recordContentService: recordContentService,
             attachmentService: attachmentService,
-            customSchemaRepository: customSchemaRepository,
             fmkService: fmkService
         )
 
@@ -167,7 +162,6 @@ private struct DefaultDependencies {
             recordRepository: recordRepository,
             recordContentService: recordContentService,
             attachmentService: attachmentService,
-            customSchemaRepository: customSchemaRepository,
             fmkService: fmkService
         )
 

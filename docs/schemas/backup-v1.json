@@ -159,7 +159,7 @@
     "backupPayload": {
       "type": "object",
       "description": "Decrypted backup payload containing all user data",
-      "required": ["exportedAt", "appVersion", "metadata", "persons", "records", "attachments", "schemas"],
+      "required": ["exportedAt", "appVersion", "metadata", "persons", "records", "attachments"],
       "properties": {
         "exportedAt": {
           "type": "string",
@@ -187,23 +187,17 @@
           "type": "array",
           "items": { "$ref": "#/$defs/attachment" },
           "description": "All attachments with file content"
-        },
-        "schemas": {
-          "type": "array",
-          "items": { "$ref": "#/$defs/schemaBackup" },
-          "description": "All custom record schemas"
         }
       }
     },
     "metadata": {
       "type": "object",
       "description": "Summary counts (inside encrypted payload for privacy)",
-      "required": ["personCount", "recordCount", "attachmentCount", "schemaCount"],
+      "required": ["personCount", "recordCount", "attachmentCount"],
       "properties": {
         "personCount": { "type": "integer", "minimum": 0 },
         "recordCount": { "type": "integer", "minimum": 0 },
-        "attachmentCount": { "type": "integer", "minimum": 0 },
-        "schemaCount": { "type": "integer", "minimum": 0 }
+        "attachmentCount": { "type": "integer", "minimum": 0 }
       }
     },
     "person": {
@@ -254,8 +248,8 @@
     },
     "medicalRecord": {
       "type": "object",
-      "description": "Medical record with typed field values",
-      "required": ["id", "personId", "fields", "createdAt", "updatedAt", "version"],
+      "description": "Medical record with FHIR-typed content",
+      "required": ["id", "personId", "recordType", "schemaVersion", "contentJSON", "createdAt", "updatedAt", "version"],
       "properties": {
         "id": {
           "type": "string",
@@ -266,14 +260,19 @@
           "format": "uuid",
           "description": "ID of the person this record belongs to"
         },
-        "schemaId": {
-          "type": ["string", "null"],
-          "description": "ID of the record schema (e.g., 'vaccine', 'allergy', custom schema ID)"
+        "recordType": {
+          "type": "string",
+          "description": "FHIR record type (e.g., 'immunization', 'condition')"
         },
-        "fields": {
-          "type": "object",
-          "additionalProperties": { "$ref": "#/$defs/fieldValue" },
-          "description": "Map of field ID to typed value"
+        "schemaVersion": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Schema version for forward compatibility"
+        },
+        "contentJSON": {
+          "type": "string",
+          "contentEncoding": "base64",
+          "description": "Base64-encoded JSON of the typed record content"
         },
         "createdAt": {
           "type": "string",
@@ -294,51 +293,6 @@
           "description": "ID of previous version (for edit tracking)"
         }
       }
-    },
-    "fieldValue": {
-      "type": "object",
-      "description": "Field value with explicit type for unambiguous parsing",
-      "required": ["type", "value"],
-      "properties": {
-        "type": {
-          "type": "string",
-          "enum": ["string", "int", "double", "bool", "date", "attachmentIds", "stringArray"],
-          "description": "Value type"
-        },
-        "value": {
-          "description": "The actual value (type depends on 'type' field)"
-        }
-      },
-      "allOf": [
-        {
-          "if": { "properties": { "type": { "const": "string" } } },
-          "then": { "properties": { "value": { "type": "string" } } }
-        },
-        {
-          "if": { "properties": { "type": { "const": "int" } } },
-          "then": { "properties": { "value": { "type": "integer" } } }
-        },
-        {
-          "if": { "properties": { "type": { "const": "double" } } },
-          "then": { "properties": { "value": { "type": "number" } } }
-        },
-        {
-          "if": { "properties": { "type": { "const": "bool" } } },
-          "then": { "properties": { "value": { "type": "boolean" } } }
-        },
-        {
-          "if": { "properties": { "type": { "const": "date" } } },
-          "then": { "properties": { "value": { "type": "string", "format": "date" } } }
-        },
-        {
-          "if": { "properties": { "type": { "const": "attachmentIds" } } },
-          "then": { "properties": { "value": { "type": "array", "items": { "type": "string", "format": "uuid" } } } }
-        },
-        {
-          "if": { "properties": { "type": { "const": "stringArray" } } },
-          "then": { "properties": { "value": { "type": "array", "items": { "type": "string" } } } }
-        }
-      ]
     },
     "attachment": {
       "type": "object",
@@ -379,136 +333,6 @@
         "uploadedAt": {
           "type": "string",
           "format": "date-time"
-        }
-      }
-    },
-    "schemaBackup": {
-      "type": "object",
-      "description": "Custom record schema for a specific person",
-      "required": ["personId", "schema"],
-      "properties": {
-        "personId": {
-          "type": "string",
-          "format": "uuid",
-          "description": "Person this schema belongs to"
-        },
-        "schema": {
-          "$ref": "#/$defs/recordSchema"
-        }
-      }
-    },
-    "recordSchema": {
-      "type": "object",
-      "description": "Definition of a custom record type",
-      "required": ["id", "displayName", "iconSystemName", "fields"],
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique schema identifier"
-        },
-        "displayName": {
-          "type": "string",
-          "description": "Human-readable name"
-        },
-        "iconSystemName": {
-          "type": "string",
-          "description": "SF Symbol name for the icon"
-        },
-        "fields": {
-          "type": "array",
-          "items": { "$ref": "#/$defs/fieldDefinition" },
-          "description": "Field definitions for this record type"
-        }
-      }
-    },
-    "fieldDefinition": {
-      "type": "object",
-      "description": "Definition of a field in a record schema",
-      "required": ["id", "displayName", "fieldType", "isRequired", "displayOrder", "isMultiline", "capitalizationMode", "visibility", "createdBy", "createdAt", "updatedBy", "updatedAt"],
-      "properties": {
-        "id": {
-          "type": "string",
-          "format": "uuid",
-          "description": "Unique field identifier (UUID)"
-        },
-        "displayName": {
-          "type": "string",
-          "description": "Human-readable display name"
-        },
-        "fieldType": {
-          "type": "string",
-          "enum": ["string", "int", "double", "bool", "date", "attachmentIds", "stringArray"],
-          "description": "Type of value this field holds"
-        },
-        "isRequired": {
-          "type": "boolean",
-          "description": "Whether this field must have a value"
-        },
-        "displayOrder": {
-          "type": "integer",
-          "description": "Order in UI (lower numbers first)"
-        },
-        "placeholder": {
-          "type": ["string", "null"],
-          "description": "Placeholder text for input"
-        },
-        "helpText": {
-          "type": ["string", "null"],
-          "description": "Help text explaining the field"
-        },
-        "validationRules": {
-          "type": "array",
-          "items": { "$ref": "#/$defs/validationRule" },
-          "description": "Validation rules for this field"
-        },
-        "isMultiline": {
-          "type": "boolean",
-          "description": "Whether to use multiline text input"
-        },
-        "capitalizationMode": {
-          "type": "string",
-          "enum": ["none", "words", "sentences", "allCharacters"],
-          "description": "Text capitalization mode for string fields"
-        },
-        "visibility": {
-          "type": "string",
-          "enum": ["active", "hidden", "deprecated"],
-          "description": "Visibility state of this field"
-        },
-        "createdBy": {
-          "type": "string",
-          "format": "uuid",
-          "description": "Device ID that created this field"
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time",
-          "description": "When this field was created"
-        },
-        "updatedBy": {
-          "type": "string",
-          "format": "uuid",
-          "description": "Device ID that last updated this field"
-        },
-        "updatedAt": {
-          "type": "string",
-          "format": "date-time",
-          "description": "When this field was last updated"
-        }
-      }
-    },
-    "validationRule": {
-      "type": "object",
-      "description": "Validation rule for a field",
-      "required": ["type", "value"],
-      "properties": {
-        "type": {
-          "type": "string",
-          "enum": ["minLength", "maxLength", "minValue", "maxValue", "minDate", "maxDate", "pattern"],
-          "description": "Type of validation rule"
-        },
-        "value": {
-          "description": "Rule parameter (type depends on rule type)"
         }
       }
     }

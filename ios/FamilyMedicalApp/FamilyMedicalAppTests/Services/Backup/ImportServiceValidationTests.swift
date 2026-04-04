@@ -14,7 +14,6 @@ struct ImportServiceValidationTests {
         recordRepository: MockMedicalRecordRepository = MockMedicalRecordRepository(),
         recordContentService: MockRecordContentService = MockRecordContentService(),
         attachmentService: MockAttachmentService = MockAttachmentService(),
-        customSchemaRepository: MockCustomSchemaRepository = MockCustomSchemaRepository(),
         fmkService: MockFamilyMemberKeyService = MockFamilyMemberKeyService()
     ) -> ImportService {
         ImportService(
@@ -22,7 +21,6 @@ struct ImportServiceValidationTests {
             recordRepository: recordRepository,
             recordContentService: recordContentService,
             attachmentService: attachmentService,
-            customSchemaRepository: customSchemaRepository,
             fmkService: fmkService
         )
     }
@@ -30,8 +28,7 @@ struct ImportServiceValidationTests {
     func makeTestPayload(
         persons: [PersonBackup] = [],
         records: [MedicalRecordBackup] = [],
-        attachments: [AttachmentBackup] = [],
-        schemas: [SchemaBackup] = []
+        attachments: [AttachmentBackup] = []
     ) -> BackupPayload {
         BackupPayload(
             exportedAt: Date(),
@@ -39,13 +36,11 @@ struct ImportServiceValidationTests {
             metadata: BackupMetadata(
                 personCount: persons.count,
                 recordCount: records.count,
-                attachmentCount: attachments.count,
-                schemaCount: schemas.count
+                attachmentCount: attachments.count
             ),
             persons: persons,
             records: records,
-            attachments: attachments,
-            schemas: schemas
+            attachments: attachments
         )
     }
 
@@ -61,12 +56,15 @@ struct ImportServiceValidationTests {
         )
     }
 
-    func makeRecordBackup(personId: UUID, schemaId: String = "vaccine") -> MedicalRecordBackup {
-        MedicalRecordBackup(
+    func makeRecordBackup(personId: UUID) throws -> MedicalRecordBackup {
+        let immunization = ImmunizationRecord(vaccineCode: "COVID-19", occurrenceDate: Date())
+        let contentJSON = try JSONEncoder().encode(immunization)
+        return MedicalRecordBackup(
             id: UUID(),
             personId: personId,
-            schemaId: schemaId,
-            fields: ["vaccine-name": FieldValueBackup(type: "string", value: .string("COVID-19"))],
+            recordType: "immunization",
+            schemaVersion: 1,
+            contentJSON: contentJSON,
             createdAt: Date(),
             updatedAt: Date(),
             version: 1,
@@ -87,16 +85,6 @@ struct ImportServiceValidationTests {
         )
     }
 
-    func makeSchemaBackup(personId: UUID) throws -> SchemaBackup {
-        let schema = try RecordSchema(
-            id: "custom-test",
-            displayName: "Test Schema",
-            iconSystemName: "star",
-            fields: []
-        )
-        return SchemaBackup(personId: personId, schema: schema)
-    }
-
     // MARK: - Attachment ID Preservation Tests
 
     @Test("Preserves attachment ID during import")
@@ -114,7 +102,7 @@ struct ImportServiceValidationTests {
         )
 
         let personBackup = makePersonBackup()
-        let recordBackup = makeRecordBackup(personId: personBackup.id)
+        let recordBackup = try makeRecordBackup(personId: personBackup.id)
         let attachmentBackup = makeAttachmentBackup(personId: personBackup.id, recordId: recordBackup.id)
         let payload = makeTestPayload(
             persons: [personBackup],
@@ -164,10 +152,10 @@ struct ImportServiceValidationTests {
         }
     }
 
-    // MARK: - Record Field Validation Tests
+    // MARK: - Record Validation Tests
 
-    @Test("Throws corruptedFile when record has invalid field type")
-    func throwsForInvalidFieldType() async throws {
+    @Test("Throws corruptedFile when record has invalid record type")
+    func throwsForInvalidRecordType() async throws {
         let personRepository = MockPersonRepository()
         let recordRepository = MockMedicalRecordRepository()
         let recordContentService = MockRecordContentService()
@@ -181,45 +169,13 @@ struct ImportServiceValidationTests {
         )
 
         let personBackup = makePersonBackup()
-        // Create record with invalid field type
+        // Create record with invalid record type
         let recordBackup = MedicalRecordBackup(
             id: UUID(),
             personId: personBackup.id,
-            schemaId: "vaccine",
-            fields: ["badField": FieldValueBackup(type: "unknownType", value: .string("value"))],
-            createdAt: Date(),
-            updatedAt: Date(),
-            version: 1,
-            previousVersionId: nil
-        )
-        let payload = makeTestPayload(persons: [personBackup], records: [recordBackup])
-
-        await #expect(throws: BackupError.corruptedFile) {
-            try await service.importData(payload, primaryKey: testPrimaryKey)
-        }
-    }
-
-    @Test("Throws corruptedFile when record field has type mismatch")
-    func throwsForFieldTypeMismatch() async throws {
-        let personRepository = MockPersonRepository()
-        let recordRepository = MockMedicalRecordRepository()
-        let recordContentService = MockRecordContentService()
-        let fmkService = MockFamilyMemberKeyService()
-
-        let service = makeService(
-            personRepository: personRepository,
-            recordRepository: recordRepository,
-            recordContentService: recordContentService,
-            fmkService: fmkService
-        )
-
-        let personBackup = makePersonBackup()
-        // Create record with type mismatch (int type but string value)
-        let recordBackup = MedicalRecordBackup(
-            id: UUID(),
-            personId: personBackup.id,
-            schemaId: "vaccine",
-            fields: ["dose": FieldValueBackup(type: "int", value: .string("one"))],
+            recordType: "unknownType",
+            schemaVersion: 1,
+            contentJSON: Data("{}".utf8),
             createdAt: Date(),
             updatedAt: Date(),
             version: 1,

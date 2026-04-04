@@ -16,7 +16,6 @@ struct HomeViewModelTests {
         let viewModel: HomeViewModel
         let mockRepo: MockPersonRepository
         let mockFmkService: MockFamilyMemberKeyService
-        let mockSeeder: MockSchemaSeeder
     }
 
     func createTestPerson(name: String = "Test Person") throws -> Person {
@@ -26,22 +25,19 @@ struct HomeViewModelTests {
     func makeViewModel(
         personRepository: MockPersonRepository? = nil,
         primaryKeyProvider: MockPrimaryKeyProvider? = nil,
-        fmkService: MockFamilyMemberKeyService? = nil,
-        schemaSeeder: MockSchemaSeeder? = nil
+        fmkService: MockFamilyMemberKeyService? = nil
     ) -> TestContext {
         let repo = personRepository ?? MockPersonRepository()
         let keyProvider = primaryKeyProvider ?? MockPrimaryKeyProvider(primaryKey: testKey)
         let fmk = fmkService ?? MockFamilyMemberKeyService()
-        let seeder = schemaSeeder ?? MockSchemaSeeder()
 
         let viewModel = HomeViewModel(
             personRepository: repo,
             primaryKeyProvider: keyProvider,
-            fmkService: fmk,
-            schemaSeeder: seeder
+            fmkService: fmk
         )
 
-        return TestContext(viewModel: viewModel, mockRepo: repo, mockFmkService: fmk, mockSeeder: seeder)
+        return TestContext(viewModel: viewModel, mockRepo: repo, mockFmkService: fmk)
     }
 
     // MARK: - Load Persons Tests
@@ -138,25 +134,6 @@ struct HomeViewModelTests {
         #expect(ctx.viewModel.errorMessage == nil)
         #expect(ctx.mockRepo.saveCallCount == 1)
         #expect(ctx.mockRepo.fetchAllCallCount == 1) // Should reload after save
-        #expect(ctx.mockSeeder.seedCallCount == 1) // Should seed schemas
-        #expect(ctx.mockSeeder.lastSeededPersonId == newPerson.id)
-    }
-
-    @Test
-    func createPersonSeedsSchemas() async throws {
-        let mockFmk = MockFamilyMemberKeyService()
-        let ctx = makeViewModel(fmkService: mockFmk)
-
-        let newPerson = try createTestPerson(name: "Test Person")
-
-        // Pre-store FMK so retrieveFMK succeeds after person save
-        mockFmk.setFMK(testKey, for: newPerson.id.uuidString)
-
-        await ctx.viewModel.createPerson(newPerson)
-
-        // Verify schema seeding was called with correct Person ID
-        #expect(ctx.mockSeeder.seedCallCount == 1)
-        #expect(ctx.mockSeeder.lastSeededPersonId == newPerson.id)
     }
 
     @Test
@@ -169,29 +146,6 @@ struct HomeViewModelTests {
         let newPerson = try createTestPerson()
         await ctx.viewModel.createPerson(newPerson)
 
-        #expect(ctx.viewModel.errorMessage != nil)
-        #expect(ctx.viewModel.errorMessage?.contains("Unable to save") == true)
-        #expect(ctx.viewModel.isLoading == false)
-        #expect(ctx.mockSeeder.seedCallCount == 0) // Should not seed if save fails
-    }
-
-    @Test
-    func createPersonSetsErrorWhenSeedingFails() async throws {
-        let mockFmk = MockFamilyMemberKeyService()
-        let mockSeeder = MockSchemaSeeder()
-        mockSeeder.shouldFailSeed = true
-
-        let ctx = makeViewModel(fmkService: mockFmk, schemaSeeder: mockSeeder)
-
-        let newPerson = try createTestPerson()
-
-        // Pre-store FMK so retrieveFMK succeeds after person save
-        mockFmk.setFMK(testKey, for: newPerson.id.uuidString)
-
-        await ctx.viewModel.createPerson(newPerson)
-
-        // Save succeeds but seeding fails - should show error
-        #expect(ctx.mockRepo.saveCallCount == 1)
         #expect(ctx.viewModel.errorMessage != nil)
         #expect(ctx.viewModel.errorMessage?.contains("Unable to save") == true)
         #expect(ctx.viewModel.isLoading == false)
@@ -208,7 +162,6 @@ struct HomeViewModelTests {
         #expect(ctx.viewModel.errorMessage != nil)
         #expect(ctx.viewModel.isLoading == false)
         #expect(ctx.mockRepo.saveCallCount == 0) // Should not call save if key unavailable
-        #expect(ctx.mockSeeder.seedCallCount == 0) // Should not seed if key unavailable
     }
 
     // MARK: - Delete Person Tests

@@ -16,30 +16,30 @@ final class MockRecordContentService: RecordContentServiceProtocol, @unchecked S
 
     // MARK: - Storage for Testing
 
-    /// Store content for retrieval during decrypt (bypassing real encryption)
-    private var contentStore: [Data: RecordContent] = [:]
+    /// Store envelopes for retrieval during decrypt (bypassing real encryption)
+    private var envelopeStore: [Data: RecordContentEnvelope] = [:]
 
     // MARK: - RecordContentServiceProtocol
 
-    func encrypt(_ content: RecordContent, using fmk: SymmetricKey) throws -> Data {
+    func encrypt(_ envelope: RecordContentEnvelope, using _: SymmetricKey) throws -> Data {
         encryptCallCount += 1
 
         if shouldFailEncrypt {
             throw RepositoryError.encryptionFailed("Mock encrypt failure")
         }
 
-        // Create predictable encrypted data based on content
+        // Create predictable encrypted data based on envelope
         let encoder = JSONEncoder()
-        let jsonData = try encoder.encode(content)
+        let jsonData = try encoder.encode(envelope)
         let encryptedData = Data(jsonData.reversed()) // Simple transformation for testing
 
         // Store for later retrieval
-        contentStore[encryptedData] = content
+        envelopeStore[encryptedData] = envelope
 
         return encryptedData
     }
 
-    func decrypt(_ encryptedData: Data, using fmk: SymmetricKey) throws -> RecordContent {
+    func decrypt(_ encryptedData: Data, using _: SymmetricKey) throws -> RecordContentEnvelope {
         decryptCallCount += 1
 
         if shouldFailDecrypt {
@@ -47,14 +47,14 @@ final class MockRecordContentService: RecordContentServiceProtocol, @unchecked S
         }
 
         // Try to retrieve from store first
-        if let content = contentStore[encryptedData] {
-            return content
+        if let envelope = envelopeStore[encryptedData] {
+            return envelope
         }
 
         // Fallback: reverse the transformation
         let jsonData = Data(encryptedData.reversed())
         let decoder = JSONDecoder()
-        return try decoder.decode(RecordContent.self, from: jsonData)
+        return try decoder.decode(RecordContentEnvelope.self, from: jsonData)
     }
 
     // MARK: - Test Helpers
@@ -64,11 +64,11 @@ final class MockRecordContentService: RecordContentServiceProtocol, @unchecked S
         shouldFailDecrypt = false
         encryptCallCount = 0
         decryptCallCount = 0
-        contentStore.removeAll()
+        envelopeStore.removeAll()
     }
 
-    /// Manually set encrypted data to return specific content (for testing decrypt)
-    func setContent(_ content: RecordContent, for encryptedData: Data) {
-        contentStore[encryptedData] = content
+    /// Manually set encrypted data to return specific envelope (for testing decrypt)
+    func setEnvelope(_ envelope: RecordContentEnvelope, for encryptedData: Data) {
+        envelopeStore[encryptedData] = envelope
     }
 }

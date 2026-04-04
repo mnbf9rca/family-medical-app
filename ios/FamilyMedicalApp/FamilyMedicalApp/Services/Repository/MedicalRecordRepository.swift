@@ -8,10 +8,10 @@ import Foundation
 /// pre-encrypted content via RecordContentService.
 ///
 /// Flow:
-/// 1. Caller encrypts RecordContent → encrypted Data (using RecordContentService)
+/// 1. Caller encrypts RecordContentEnvelope → encrypted Data (using RecordContentService)
 /// 2. Repository stores MedicalRecord with encrypted Data as-is
 /// 3. Repository retrieves MedicalRecord with encrypted Data
-/// 4. Caller decrypts encrypted Data → RecordContent (using RecordContentService)
+/// 4. Caller decrypts encrypted Data → RecordContentEnvelope (using RecordContentService)
 protocol MedicalRecordRepositoryProtocol: Sendable {
     /// Save a medical record (insert or update)
     ///

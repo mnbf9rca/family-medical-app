@@ -80,10 +80,6 @@ final class DemoDataSeeder: DemoDataSeederProtocol, @unchecked Sendable {
                 encryptionService: encryptionService,
                 fmkService: fmkService
             ),
-            customSchemaRepository: CustomSchemaRepository(
-                coreDataStack: coreDataStack,
-                encryptionService: encryptionService
-            ),
             fmkService: fmkService
         )
     }

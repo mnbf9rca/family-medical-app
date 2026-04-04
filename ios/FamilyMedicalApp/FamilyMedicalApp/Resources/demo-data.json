@@ -16,8 +16,7 @@
     "metadata": {
       "personCount": 3,
       "recordCount": 0,
-      "attachmentCount": 0,
-      "schemaCount": 0
+      "attachmentCount": 0
     },
     "persons": [
       {
@@ -49,7 +48,6 @@
       }
     ],
     "records": [],
-    "attachments": [],
-    "schemas": []
+    "attachments": []
   }
 }

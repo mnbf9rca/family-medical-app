@@ -14,7 +14,6 @@ struct ImportServiceExtendedTests {
         recordRepository: MockMedicalRecordRepository = MockMedicalRecordRepository(),
         recordContentService: MockRecordContentService = MockRecordContentService(),
         attachmentService: MockAttachmentService = MockAttachmentService(),
-        customSchemaRepository: MockCustomSchemaRepository = MockCustomSchemaRepository(),
         fmkService: MockFamilyMemberKeyService = MockFamilyMemberKeyService()
     ) -> ImportService {
         ImportService(
@@ -22,7 +21,6 @@ struct ImportServiceExtendedTests {
             recordRepository: recordRepository,
             recordContentService: recordContentService,
             attachmentService: attachmentService,
-            customSchemaRepository: customSchemaRepository,
             fmkService: fmkService
         )
     }
@@ -30,8 +28,7 @@ struct ImportServiceExtendedTests {
     func makeTestPayload(
         persons: [PersonBackup] = [],
         records: [MedicalRecordBackup] = [],
-        attachments: [AttachmentBackup] = [],
-        schemas: [SchemaBackup] = []
+        attachments: [AttachmentBackup] = []
     ) -> BackupPayload {
         BackupPayload(
             exportedAt: Date(),
@@ -39,13 +36,11 @@ struct ImportServiceExtendedTests {
             metadata: BackupMetadata(
                 personCount: persons.count,
                 recordCount: records.count,
-                attachmentCount: attachments.count,
-                schemaCount: schemas.count
+                attachmentCount: attachments.count
             ),
             persons: persons,
             records: records,
-            attachments: attachments,
-            schemas: schemas
+            attachments: attachments
         )
     }
 
@@ -61,12 +56,15 @@ struct ImportServiceExtendedTests {
         )
     }
 
-    func makeRecordBackup(personId: UUID, schemaId: String = "vaccine") -> MedicalRecordBackup {
-        MedicalRecordBackup(
+    func makeRecordBackup(personId: UUID) throws -> MedicalRecordBackup {
+        let immunization = ImmunizationRecord(vaccineCode: "COVID-19", occurrenceDate: Date())
+        let contentJSON = try JSONEncoder().encode(immunization)
+        return MedicalRecordBackup(
             id: UUID(),
             personId: personId,
-            schemaId: schemaId,
-            fields: ["vaccine-name": FieldValueBackup(type: "string", value: .string("COVID-19"))],
+            recordType: "immunization",
+            schemaVersion: 1,
+            contentJSON: contentJSON,
             createdAt: Date(),
             updatedAt: Date(),
             version: 1,
@@ -85,16 +83,6 @@ struct ImportServiceExtendedTests {
             thumbnail: nil,
             uploadedAt: Date()
         )
-    }
-
-    func makeSchemaBackup(personId: UUID) throws -> SchemaBackup {
-        let schema = try RecordSchema(
-            id: "custom-test",
-            displayName: "Test Schema",
-            iconSystemName: "star",
-            fields: []
-        )
-        return SchemaBackup(personId: personId, schema: schema)
     }
 
     // MARK: - Attachment Import Tests
@@ -116,7 +104,7 @@ struct ImportServiceExtendedTests {
         )
 
         let personBackup = makePersonBackup()
-        let recordBackup = makeRecordBackup(personId: personBackup.id)
+        let recordBackup = try makeRecordBackup(personId: personBackup.id)
         let attachmentBackup = makeAttachmentBackup(personId: personBackup.id, recordId: recordBackup.id)
         let payload = makeTestPayload(
             persons: [personBackup],
@@ -138,7 +126,6 @@ struct ImportServiceExtendedTests {
         let recordRepository = MockMedicalRecordRepository()
         let recordContentService = MockRecordContentService()
         let attachmentService = MockAttachmentService()
-        let customSchemaRepository = MockCustomSchemaRepository()
         let fmkService = MockFamilyMemberKeyService()
 
         let service = makeService(
@@ -146,20 +133,17 @@ struct ImportServiceExtendedTests {
             recordRepository: recordRepository,
             recordContentService: recordContentService,
             attachmentService: attachmentService,
-            customSchemaRepository: customSchemaRepository,
             fmkService: fmkService
         )
 
         let personBackup = makePersonBackup(name: "Full Test")
-        let recordBackup = makeRecordBackup(personId: personBackup.id)
+        let recordBackup = try makeRecordBackup(personId: personBackup.id)
         let attachmentBackup = makeAttachmentBackup(personId: personBackup.id, recordId: recordBackup.id)
-        let schemaBackup = try makeSchemaBackup(personId: personBackup.id)
 
         let payload = makeTestPayload(
             persons: [personBackup],
             records: [recordBackup],
-            attachments: [attachmentBackup],
-            schemas: [schemaBackup]
+            attachments: [attachmentBackup]
         )
 
         try await service.importData(payload, primaryKey: testPrimaryKey)
@@ -167,7 +151,6 @@ struct ImportServiceExtendedTests {
         #expect(personRepository.saveCallCount == 1)
         #expect(recordRepository.saveCallCount == 1)
         #expect(attachmentService.addAttachmentCalls.count == 1)
-        #expect(customSchemaRepository.saveCallCount == 1)
     }
 
     // MARK: - Error Handling Tests
@@ -188,35 +171,13 @@ struct ImportServiceExtendedTests {
         )
 
         let personBackup = makePersonBackup()
-        let recordBackup = makeRecordBackup(personId: personBackup.id)
+        let recordBackup = try makeRecordBackup(personId: personBackup.id)
         let attachmentBackup = makeAttachmentBackup(personId: personBackup.id, recordId: recordBackup.id)
         let payload = makeTestPayload(
             persons: [personBackup],
             records: [recordBackup],
             attachments: [attachmentBackup]
         )
-
-        await #expect(throws: BackupError.self) {
-            try await service.importData(payload, primaryKey: testPrimaryKey)
-        }
-    }
-
-    @Test("Throws error when schema save fails")
-    func throwsOnSchemaSaveFailure() async throws {
-        let personRepository = MockPersonRepository()
-        let customSchemaRepository = MockCustomSchemaRepository()
-        let fmkService = MockFamilyMemberKeyService()
-        customSchemaRepository.shouldFailSave = true
-
-        let service = makeService(
-            personRepository: personRepository,
-            customSchemaRepository: customSchemaRepository,
-            fmkService: fmkService
-        )
-
-        let personBackup = makePersonBackup()
-        let schemaBackup = try makeSchemaBackup(personId: personBackup.id)
-        let payload = makeTestPayload(persons: [personBackup], schemas: [schemaBackup])
 
         await #expect(throws: BackupError.self) {
             try await service.importData(payload, primaryKey: testPrimaryKey)
@@ -237,7 +198,7 @@ struct ImportServiceExtendedTests {
 
         // Record references a person that isn't being imported
         let unrelatedPersonId = UUID()
-        let recordBackup = makeRecordBackup(personId: unrelatedPersonId)
+        let recordBackup = try makeRecordBackup(personId: unrelatedPersonId)
         let payload = makeTestPayload(records: [recordBackup])
 
         await #expect(throws: BackupError.self) {
@@ -268,28 +229,6 @@ struct ImportServiceExtendedTests {
         }
     }
 
-    @Test("Throws error when schema has no matching person FMK")
-    func throwsWhenSchemaHasNoPersonFMK() async throws {
-        let personRepository = MockPersonRepository()
-        let customSchemaRepository = MockCustomSchemaRepository()
-        let fmkService = MockFamilyMemberKeyService()
-
-        let service = makeService(
-            personRepository: personRepository,
-            customSchemaRepository: customSchemaRepository,
-            fmkService: fmkService
-        )
-
-        // Schema references a person that isn't being imported
-        let unrelatedPersonId = UUID()
-        let schemaBackup = try makeSchemaBackup(personId: unrelatedPersonId)
-        let payload = makeTestPayload(schemas: [schemaBackup])
-
-        await #expect(throws: BackupError.self) {
-            try await service.importData(payload, primaryKey: testPrimaryKey)
-        }
-    }
-
     @Test("Throws error when record content encryption fails")
     func throwsOnRecordEncryptionFailure() async throws {
         let personRepository = MockPersonRepository()
@@ -306,7 +245,7 @@ struct ImportServiceExtendedTests {
         )
 
         let personBackup = makePersonBackup()
-        let recordBackup = makeRecordBackup(personId: personBackup.id)
+        let recordBackup = try makeRecordBackup(personId: personBackup.id)
         let payload = makeTestPayload(persons: [personBackup], records: [recordBackup])
 
         await #expect(throws: BackupError.self) {

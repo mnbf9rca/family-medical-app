@@ -53,7 +53,7 @@ struct BackupSchemaValidatorTests {
         let payload = try BackupPayload(
             exportedAt: #require(ISO8601DateFormatter().date(from: "2026-02-01T12:00:00Z")),
             appVersion: "1.0.0",
-            metadata: BackupMetadata(personCount: 1, recordCount: 2, attachmentCount: 0, schemaCount: 0),
+            metadata: BackupMetadata(personCount: 1, recordCount: 0, attachmentCount: 0),
             persons: [
                 PersonBackup(
                     id: UUID(),
@@ -65,23 +65,8 @@ struct BackupSchemaValidatorTests {
                     updatedAt: Date()
                 )
             ],
-            records: [
-                MedicalRecordBackup(
-                    id: UUID(),
-                    personId: UUID(),
-                    schemaId: "vaccine",
-                    fields: [
-                        "name": FieldValueBackup(type: "string", value: .string("COVID-19")),
-                        "dose": FieldValueBackup(type: "int", value: .int(1))
-                    ],
-                    createdAt: Date(),
-                    updatedAt: Date(),
-                    version: 1,
-                    previousVersionId: nil
-                )
-            ],
-            attachments: [],
-            schemas: []
+            records: [],
+            attachments: []
         )
 
         let file = BackupFile(
@@ -105,7 +90,6 @@ struct BackupSchemaValidatorTests {
         let validator = BackupSchemaValidator.forTesting()
         let result = validator.validate(jsonData: jsonData)
 
-        // The serialized Swift model MUST validate against the schema
         #expect(result.isValid, "Serialized unencrypted BackupFile must validate against schema: \(result.errors)")
     }
 
