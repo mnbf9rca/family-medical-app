@@ -7,6 +7,8 @@ struct PersonBackup: Codable, Equatable {
     let dateOfBirth: Date?
     let labels: [String]
     let notes: String?
+    let gender: String?
+    let bloodType: String?
     let createdAt: Date
     let updatedAt: Date
 
@@ -17,6 +19,8 @@ struct PersonBackup: Codable, Equatable {
         self.dateOfBirth = person.dateOfBirth
         self.labels = person.labels
         self.notes = person.notes
+        self.gender = person.gender
+        self.bloodType = person.bloodType
         self.createdAt = person.createdAt
         self.updatedAt = person.updatedAt
     }
@@ -28,6 +32,8 @@ struct PersonBackup: Codable, Equatable {
         dateOfBirth: Date?,
         labels: [String],
         notes: String?,
+        gender: String? = nil,
+        bloodType: String? = nil,
         createdAt: Date,
         updatedAt: Date
     ) {
@@ -36,6 +42,8 @@ struct PersonBackup: Codable, Equatable {
         self.dateOfBirth = dateOfBirth
         self.labels = labels
         self.notes = notes
+        self.gender = gender
+        self.bloodType = bloodType
         self.createdAt = createdAt
         self.updatedAt = updatedAt
     }
@@ -48,6 +56,8 @@ struct PersonBackup: Codable, Equatable {
             dateOfBirth: dateOfBirth,
             labels: labels,
             notes: notes,
+            gender: gender,
+            bloodType: bloodType,
             createdAt: createdAt,
             updatedAt: updatedAt
         )

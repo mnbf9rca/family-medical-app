@@ -207,4 +207,64 @@ struct PersonTests {
         #expect(Person.commonLabels.contains("Child"))
         #expect(Person.commonLabels.contains("Parent"))
     }
+
+    // MARK: - Gender and Blood Type
+
+    @Test
+    func init_genderAndBloodType_defaultToNil() throws {
+        let person = try Person(name: "Alex")
+        #expect(person.gender == nil)
+        #expect(person.bloodType == nil)
+    }
+
+    @Test
+    func init_withGenderAndBloodType_setsValues() throws {
+        let person = try Person(name: "Alex", gender: "Non-binary", bloodType: "O+")
+        #expect(person.gender == "Non-binary")
+        #expect(person.bloodType == "O+")
+    }
+
+    // MARK: - PersonBackup Round-Trip
+
+    @Test
+    func personBackup_roundTrip_preservesGenderAndBloodType() throws {
+        let original = try Person(
+            id: UUID(),
+            name: "Alex",
+            dateOfBirth: Date(timeIntervalSince1970: 0),
+            labels: ["child"],
+            notes: "Some notes",
+            gender: "Non-binary",
+            bloodType: "A-",
+            createdAt: Date(timeIntervalSince1970: 0),
+            updatedAt: Date(timeIntervalSince1970: 0)
+        )
+
+        let backup = PersonBackup(from: original)
+        #expect(backup.gender == "Non-binary")
+        #expect(backup.bloodType == "A-")
+
+        let restored = try backup.toPerson()
+        #expect(restored.gender == original.gender)
+        #expect(restored.bloodType == original.bloodType)
+        #expect(restored == original)
+    }
+
+    @Test
+    func personBackup_nilGenderAndBloodType_roundTrip() throws {
+        let original = try Person(
+            id: UUID(),
+            name: "Sam",
+            createdAt: Date(timeIntervalSince1970: 0),
+            updatedAt: Date(timeIntervalSince1970: 0)
+        )
+
+        let backup = PersonBackup(from: original)
+        #expect(backup.gender == nil)
+        #expect(backup.bloodType == nil)
+
+        let restored = try backup.toPerson()
+        #expect(restored.gender == nil)
+        #expect(restored.bloodType == nil)
+    }
 }

@@ -179,7 +179,9 @@ final class PersonRepository: PersonRepositoryProtocol, @unchecked Sendable {
             name: person.name,
             dateOfBirth: person.dateOfBirth,
             labels: person.labels,
-            notes: person.notes
+            notes: person.notes,
+            gender: person.gender,
+            bloodType: person.bloodType
         )
 
         // Encode to JSON
@@ -223,7 +225,36 @@ final class PersonRepository: PersonRepositoryProtocol, @unchecked Sendable {
                 .keyNotAvailable("Failed to retrieve FMK for person \(id): \(error.localizedDescription)")
         }
 
-        // Decrypt encrypted data
+        let encryptedFields = try Self.decryptPersonFields(
+            encryptedData: encryptedData,
+            fmk: fmk,
+            encryptionService: encryptionService
+        )
+
+        // Reconstruct Person model
+        do {
+            return try Person(
+                id: id,
+                name: encryptedFields.name,
+                dateOfBirth: encryptedFields.dateOfBirth,
+                labels: encryptedFields.labels,
+                notes: encryptedFields.notes,
+                gender: encryptedFields.gender,
+                bloodType: encryptedFields.bloodType,
+                createdAt: createdAt,
+                updatedAt: updatedAt
+            )
+        } catch {
+            throw RepositoryError.validationFailed("Failed to reconstruct Person: \(error.localizedDescription)")
+        }
+    }
+
+    /// Decrypt and decode the encrypted person fields from raw data
+    private static func decryptPersonFields(
+        encryptedData: Data,
+        fmk: SymmetricKey,
+        encryptionService: EncryptionServiceProtocol
+    ) throws -> PersonEncryptedData {
         let encryptedPayload: EncryptedPayload
         do {
             encryptedPayload = try EncryptedPayload(combined: encryptedData)
@@ -239,30 +270,13 @@ final class PersonRepository: PersonRepositoryProtocol, @unchecked Sendable {
             throw RepositoryError.decryptionFailed("Failed to decrypt Person data: \(error.localizedDescription)")
         }
 
-        // Decode JSON
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
-        let encryptedFields: PersonEncryptedData
         do {
-            encryptedFields = try decoder.decode(PersonEncryptedData.self, from: decryptedJSON)
+            return try decoder.decode(PersonEncryptedData.self, from: decryptedJSON)
         } catch {
             throw RepositoryError
                 .deserializationFailed("Failed to decode Person encrypted fields: \(error.localizedDescription)")
-        }
-
-        // Reconstruct Person model
-        do {
-            return try Person(
-                id: id,
-                name: encryptedFields.name,
-                dateOfBirth: encryptedFields.dateOfBirth,
-                labels: encryptedFields.labels,
-                notes: encryptedFields.notes,
-                createdAt: createdAt,
-                updatedAt: updatedAt
-            )
-        } catch {
-            throw RepositoryError.validationFailed("Failed to reconstruct Person: \(error.localizedDescription)")
         }
     }
 }
@@ -275,4 +289,6 @@ private struct PersonEncryptedData: Codable {
     let dateOfBirth: Date?
     let labels: [String]
     let notes: String?
+    let gender: String?
+    let bloodType: String?
 }
