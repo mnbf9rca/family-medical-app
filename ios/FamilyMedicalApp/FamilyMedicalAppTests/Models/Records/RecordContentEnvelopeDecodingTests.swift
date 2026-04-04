@@ -33,6 +33,26 @@ struct RecordContentEnvelopeDecodingTests {
     // MARK: - decodedFieldValues
 
     @Test
+    func decodedFieldValues_knownAndUnknownKeysNeverCollide() throws {
+        // Invariant: a key lives in exactly one of known/unknown. This guards against a
+        // future refactor that renames a keyPath while keeping the old name as unknown and
+        // accidentally produces a dict where a key appears twice.
+        let content = ImmunizationRecord(
+            vaccineCode: "X",
+            occurrenceDate: Date(),
+            lotNumber: "L",
+            providerId: UUID()
+        )
+        let envelope = try RecordContentEnvelope(content)
+
+        let decoded = try envelope.decodedFieldValues()
+
+        let knownKeys = Set(decoded.known.keys)
+        let unknownKeys = Set(decoded.unknown.keys)
+        #expect(knownKeys.isDisjoint(with: unknownKeys))
+    }
+
+    @Test
     func decodedFieldValues_partitionsKnownAndUnknownFields() throws {
         let json = """
         {"vaccineCode":"A","occurrenceDate":700000000,"tags":[],"extraField":"future"}

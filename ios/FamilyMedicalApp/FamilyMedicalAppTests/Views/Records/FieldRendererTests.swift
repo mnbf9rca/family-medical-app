@@ -44,16 +44,20 @@ struct FieldRendererTests {
     func textFieldRendererRendersWithoutError() throws {
         let vm = try makeViewModel(recordType: .immunization)
         let view = try TextFieldRenderer(metadata: textMetadata(), viewModel: vm)
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.TextField.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.TextField.self)
+        }
     }
 
     @Test
     func textFieldRendererDisplaysFieldName() throws {
         let vm = try makeViewModel(recordType: .immunization)
         let view = try TextFieldRenderer(metadata: textMetadata(), viewModel: vm)
-        let inspected = try view.inspect()
-        _ = try inspected.find(text: "Lot Number")
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(text: "Lot Number")
+        }
     }
 
     @Test
@@ -61,8 +65,10 @@ struct FieldRendererTests {
         let vm = try makeViewModel(recordType: .immunization)
         let metadata = try textMetadata()
         let view = TextFieldRenderer(metadata: metadata, viewModel: vm)
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.TextField.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.TextField.self)
+        }
         #expect(metadata.placeholder == "e.g., EL9262")
     }
 
@@ -73,8 +79,10 @@ struct FieldRendererTests {
             ConditionRecord.fieldMetadata.first { $0.keyPath == "conditionName" }
         )
         let view = TextFieldRenderer(metadata: conditionNameMetadata, viewModel: vm)
-        let inspected = try view.inspect()
-        _ = try inspected.find(text: "*")
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(text: "*")
+        }
     }
 
     // MARK: - DateFieldRenderer
@@ -83,16 +91,20 @@ struct FieldRendererTests {
     func dateFieldRendererRendersWithoutError() throws {
         let vm = try makeViewModel(recordType: .immunization)
         let view = try DateFieldRenderer(metadata: dateMetadata(), viewModel: vm)
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.DatePicker.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.DatePicker.self)
+        }
     }
 
     @Test
     func dateFieldRendererDisplaysFieldName() throws {
         let vm = try makeViewModel(recordType: .immunization)
         let view = try DateFieldRenderer(metadata: dateMetadata(), viewModel: vm)
-        let inspected = try view.inspect()
-        _ = try inspected.find(text: "Date Administered")
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(text: "Date Administered")
+        }
     }
 
     @Test
@@ -100,8 +112,10 @@ struct FieldRendererTests {
         let vm = try makeViewModel(recordType: .immunization)
         vm.setValue(Date(timeIntervalSinceReferenceDate: 100_000), for: "occurrenceDate")
         let view = try DateFieldRenderer(metadata: dateMetadata(), viewModel: vm)
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.DatePicker.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.DatePicker.self)
+        }
     }
 
     @Test
@@ -112,8 +126,10 @@ struct FieldRendererTests {
         )
         vm.setValue(Date(), for: "expirationDate")
         let view = DateFieldRenderer(metadata: expirationMetadata, viewModel: vm)
-        let inspected = try view.inspect()
-        _ = try inspected.find(button: "Clear")
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(button: "Clear")
+        }
     }
 
     @Test
@@ -123,9 +139,11 @@ struct FieldRendererTests {
             ImmunizationRecord.fieldMetadata.first { $0.keyPath == "expirationDate" }
         )
         let view = DateFieldRenderer(metadata: expirationMetadata, viewModel: vm)
-        let inspected = try view.inspect()
-        #expect(throws: (any Error).self) {
-            _ = try inspected.find(button: "Clear")
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            #expect(throws: (any Error).self) {
+                _ = try inspected.find(button: "Clear")
+            }
         }
     }
 
@@ -138,9 +156,11 @@ struct FieldRendererTests {
         vm.setValue(Date(), for: "expirationDate")
         #expect(vm.value(for: "expirationDate") != nil)
         let view = DateFieldRenderer(metadata: expirationMetadata, viewModel: vm)
-        let inspected = try view.inspect()
-        let clearButton = try inspected.find(button: "Clear")
-        try clearButton.tap()
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            let clearButton = try inspected.find(button: "Clear")
+            try clearButton.tap()
+        }
         #expect(vm.value(for: "expirationDate") == nil)
     }
 
@@ -150,8 +170,10 @@ struct FieldRendererTests {
         let newDate = Date(timeIntervalSinceReferenceDate: 777_000)
         vm.setValue(newDate, for: "occurrenceDate")
         let view = try DateFieldRenderer(metadata: dateMetadata(), viewModel: vm)
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.DatePicker.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.DatePicker.self)
+        }
         let storedDate = vm.value(for: "occurrenceDate") as? Date
         #expect(storedDate == newDate)
     }
@@ -162,16 +184,20 @@ struct FieldRendererTests {
     func numberFieldRendererRendersWithoutError() throws {
         let vm = try makeViewModel(recordType: .immunization)
         let view = try NumberFieldRenderer(metadata: integerMetadata(), viewModel: vm)
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.TextField.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.TextField.self)
+        }
     }
 
     @Test
     func numberFieldRendererDisplaysFieldName() throws {
         let vm = try makeViewModel(recordType: .immunization)
         let view = try NumberFieldRenderer(metadata: integerMetadata(), viewModel: vm)
-        let inspected = try view.inspect()
-        _ = try inspected.find(text: "Dose Number")
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(text: "Dose Number")
+        }
     }
 
     @Test
@@ -179,8 +205,10 @@ struct FieldRendererTests {
         let vm = try makeViewModel(recordType: .immunization)
         vm.setValue(5, for: "doseNumber")
         let view = try NumberFieldRenderer(metadata: integerMetadata(), viewModel: vm)
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.TextField.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.TextField.self)
+        }
     }
 
     @Test
@@ -195,9 +223,11 @@ struct FieldRendererTests {
         )
         vm.setValue(Double(3.14), for: "customNumber")
         let view = NumberFieldRenderer(metadata: numberMetadata, viewModel: vm)
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.TextField.self)
-        _ = try inspected.find(text: "Custom Number")
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.TextField.self)
+            _ = try inspected.find(text: "Custom Number")
+        }
     }
 
     @Test
@@ -210,7 +240,9 @@ struct FieldRendererTests {
             displayOrder: 1
         )
         let view = NumberFieldRenderer(metadata: numberMetadata, viewModel: vm)
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.TextField.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.TextField.self)
+        }
     }
 }

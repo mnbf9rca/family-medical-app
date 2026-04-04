@@ -58,14 +58,10 @@ FILE_EXCEPTIONS = {
     "PersonDetailView.swift": 72.0,  # Sheet/onChange closures - delegates to PersonDetailViewModel (100%)
     "AddPersonView.swift": 70.0,  # Form with TextField/Toggle/DatePicker closures - delegates to HomeViewModel. CI variance after UI test skips in #123, restore in #127
     "HomeView.swift": 82.0,  # List/swipe/sheet closures - delegates to HomeViewModel (100%). CI variance after UI test skips in #123, restore in #127
-    # Field renderers (Task 7 / #127) - SwiftUI views driven by FieldMetadata
-    # Business logic (filter/denormalize/normalize) is extracted to FieldValueNormalizer,
-    # FieldValueDenormalizer and tested at 100%. Renderers are thin view plumbing
-    # with @State/@FocusState/@Binding closures that ViewInspector can't fully exercise.
-    # Logic is covered via GenericRecordFormViewModel tests (41 tests, 100% coverage).
-    "AutocompleteFieldRenderer.swift": 34.0,  # @FocusState-gated suggestionsList, onChange/onAppear closures
-    "NumberFieldRenderer.swift": 56.0,  # @State String-backed binding for Int↔String formatting, onChange closures
-    "PickerFieldRenderer.swift": 82.0,  # pickerBinding get/set closures, Picker selection + "Other…" text field reveal
+    # AutocompleteFieldRenderer - business logic lives in AutocompleteSuggestionResolver
+    # (100% covered). The remaining @FocusState-gated suggestionsList closures can only
+    # be exercised through an interactive UI test.
+    "AutocompleteFieldRenderer.swift": 51.0,
     # UIViewControllerRepresentables - makeUIViewController needs UIKit context
     "CameraRepresentable.swift": 64.0,  # UIImagePickerController wrapper - needs camera/UIKit
     "BackupShareSheet.swift": 60.0,  # UIActivityViewController wrapper - completion handler needs UIKit context

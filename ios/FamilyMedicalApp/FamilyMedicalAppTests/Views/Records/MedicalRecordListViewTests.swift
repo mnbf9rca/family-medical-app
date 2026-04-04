@@ -53,8 +53,10 @@ struct MedicalRecordListViewTests {
         let view = MedicalRecordListView(person: person, recordType: .immunization)
 
         // Use find() for deterministic coverage
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.Group.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.Group.self)
+        }
 
         #expect(person.name == "Test Person")
     }
@@ -70,8 +72,10 @@ struct MedicalRecordListViewTests {
             viewModel: viewModel
         )
 
-        let inspectedView = try view.inspect()
-        _ = try inspectedView.group()
+        try HostedInspection.inspect(view) { view in
+            let inspectedView = try view.inspect()
+            _ = try inspectedView.group()
+        }
     }
 
     @Test
@@ -85,9 +89,11 @@ struct MedicalRecordListViewTests {
             viewModel: viewModel
         )
 
-        let inspectedView = try view.inspect()
-        // When records is empty, should show EmptyRecordListView inside Group
-        _ = try inspectedView.group()
+        try HostedInspection.inspect(view) { view in
+            let inspectedView = try view.inspect()
+            // When records is empty, should show EmptyRecordListView inside Group
+            _ = try inspectedView.group()
+        }
     }
 
     @Test
@@ -102,8 +108,10 @@ struct MedicalRecordListViewTests {
             viewModel: viewModel
         )
 
-        let inspectedView = try view.inspect()
-        _ = try inspectedView.find(ViewType.ProgressView.self)
+        try HostedInspection.inspect(view) { view in
+            let inspectedView = try view.inspect()
+            _ = try inspectedView.find(ViewType.ProgressView.self)
+        }
     }
 
     @Test
@@ -121,10 +129,12 @@ struct MedicalRecordListViewTests {
             viewModel: viewModel
         )
 
-        let inspectedView = try view.inspect()
-        // When records exist, should show List
-        let list = try inspectedView.find(ViewType.List.self)
-        _ = try list.forEach(0)
+        try HostedInspection.inspect(view) { view in
+            let inspectedView = try view.inspect()
+            // When records exist, should show List
+            let list = try inspectedView.find(ViewType.List.self)
+            _ = try list.forEach(0)
+        }
     }
 
     @Test
@@ -145,10 +155,12 @@ struct MedicalRecordListViewTests {
             viewModel: viewModel
         )
 
-        let inspectedView = try view.inspect()
-        let list = try inspectedView.find(ViewType.List.self)
-        let forEach = try list.forEach(0)
-        #expect(forEach.count == 3)
+        try HostedInspection.inspect(view) { view in
+            let inspectedView = try view.inspect()
+            let list = try inspectedView.find(ViewType.List.self)
+            let forEach = try list.forEach(0)
+            #expect(forEach.count == 3)
+        }
     }
 
     @Test
@@ -164,8 +176,10 @@ struct MedicalRecordListViewTests {
         )
 
         // Error state still renders the Group structure
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.Group.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.Group.self)
+        }
         #expect(viewModel.errorMessage == "Test error message")
     }
 
@@ -175,7 +189,9 @@ struct MedicalRecordListViewTests {
         let view = MedicalRecordListView(person: person, recordType: recordType)
 
         // Use find() for deterministic coverage
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.Group.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.Group.self)
+        }
     }
 }

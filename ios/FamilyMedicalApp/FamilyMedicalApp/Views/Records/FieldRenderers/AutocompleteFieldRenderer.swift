@@ -7,6 +7,9 @@ import SwiftUI
 ///   data (vaccines, medications, observation types).
 /// - **Provider autocomplete** (keyPath is "providerId"): suggests Providers loaded via
 ///   `viewModel.providers`, storing the selected provider's UUID.
+///
+/// The business logic (filtering, display-text resolution) lives in
+/// `AutocompleteSuggestionResolver` so it can be unit-tested without a view hierarchy.
 struct AutocompleteFieldRenderer: View {
     let metadata: FieldMetadata
     @Bindable var viewModel: GenericRecordFormViewModel
@@ -14,18 +17,17 @@ struct AutocompleteFieldRenderer: View {
     @State private var showingSuggestions = false
     @FocusState private var isFocused: Bool
 
+    private var resolver: AutocompleteSuggestionResolver {
+        AutocompleteSuggestionResolver(
+            metadata: metadata,
+            providers: viewModel.providers,
+            autocompleteService: viewModel.autocompleteService
+        )
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            HStack {
-                Text(metadata.displayName)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                if metadata.isRequired {
-                    Text("*")
-                        .foregroundStyle(.red)
-                }
-                Spacer()
-            }
+            header
             TextField(metadata.placeholder ?? "", text: $queryText)
                 .textFieldStyle(.roundedBorder)
                 .focused($isFocused)
@@ -37,11 +39,19 @@ struct AutocompleteFieldRenderer: View {
                     showingSuggestions = focused
                 }
                 .onAppear {
-                    queryText = displayTextFromViewModel()
+                    queryText = resolver.displayText(storedValue: viewModel.value(for: metadata.keyPath))
+                }
+                // Providers may load after this view appears; refresh the display text
+                // when they arrive so edit mode shows the provider name, not a blank field.
+                .onChange(of: viewModel.providers) { _, _ in
+                    queryText = resolver.displayText(storedValue: viewModel.value(for: metadata.keyPath))
                 }
 
-            if showingSuggestions, !filteredSuggestions.isEmpty {
-                suggestionsList
+            if showingSuggestions {
+                let suggestions = resolver.suggestions(for: queryText)
+                if !suggestions.isEmpty {
+                    suggestionsList(suggestions)
+                }
             }
             if let error = viewModel.validationErrors[metadata.keyPath] {
                 Text(error)
@@ -51,9 +61,22 @@ struct AutocompleteFieldRenderer: View {
         }
     }
 
-    private var suggestionsList: some View {
+    private var header: some View {
+        HStack {
+            Text(metadata.displayName)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            if metadata.isRequired {
+                Text("*")
+                    .foregroundStyle(.red)
+            }
+            Spacer()
+        }
+    }
+
+    private func suggestionsList(_ suggestions: [AutocompleteSuggestion]) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            ForEach(filteredSuggestions.prefix(5), id: \.id) { suggestion in
+            ForEach(suggestions) { suggestion in
                 Button {
                     select(suggestion)
                 } label: {
@@ -71,38 +94,6 @@ struct AutocompleteFieldRenderer: View {
         .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.secondary.opacity(0.2)))
     }
 
-    // MARK: - Suggestions
-
-    /// Unified suggestion model: label for display, underlying identity (UUID for providers,
-    /// String for catalog entries).
-    private struct Suggestion: Identifiable {
-        let id: String
-        let label: String
-        let providerId: UUID?
-    }
-
-    private var filteredSuggestions: [Suggestion] {
-        if metadata.keyPath == "providerId" {
-            let matches: [Provider]
-            if queryText.isEmpty {
-                matches = viewModel.providers
-            } else {
-                let lowered = queryText.lowercased()
-                matches = viewModel.providers.filter {
-                    ($0.name?.lowercased().contains(lowered) ?? false) ||
-                        ($0.organization?.lowercased().contains(lowered) ?? false)
-                }
-            }
-            return matches.map { Suggestion(id: $0.id.uuidString, label: $0.displayString, providerId: $0.id) }
-        }
-        if let source = metadata.autocompleteSource {
-            return viewModel.autocompleteService
-                .suggestions(for: source, query: queryText)
-                .map { Suggestion(id: $0, label: $0, providerId: nil) }
-        }
-        return []
-    }
-
     private func handleQueryChange(_ newValue: String) {
         showingSuggestions = isFocused
         // For catalog fields, the query text IS the stored value.
@@ -116,7 +107,7 @@ struct AutocompleteFieldRenderer: View {
         viewModel.setValue(newValue.isEmpty ? nil : newValue, for: metadata.keyPath)
     }
 
-    private func select(_ suggestion: Suggestion) {
+    private func select(_ suggestion: AutocompleteSuggestion) {
         if let providerId = suggestion.providerId {
             viewModel.setValue(providerId, for: metadata.keyPath)
         } else {
@@ -125,15 +116,5 @@ struct AutocompleteFieldRenderer: View {
         queryText = suggestion.label
         showingSuggestions = false
         isFocused = false
-    }
-
-    private func displayTextFromViewModel() -> String {
-        if metadata.keyPath == "providerId" {
-            guard let uuid = viewModel.uuidValue(for: metadata.keyPath),
-                  let provider = viewModel.providers.first(where: { $0.id == uuid })
-            else { return "" }
-            return provider.displayString
-        }
-        return viewModel.stringValue(for: metadata.keyPath)
     }
 }

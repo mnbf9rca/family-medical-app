@@ -159,6 +159,18 @@ final class GenericRecordFormViewModel {
     @discardableResult
     func save() async -> Bool {
         errorMessage = nil
+
+        // Guard against schemaVersion downgrade: if the existing record was saved by a
+        // newer app version, saving here would re-envelope it with our older schemaVersion
+        // and silently discard any type-changes the newer version introduced. Refuse the
+        // save rather than corrupt data; the forwardCompatibilityWarning already tells the
+        // user what's happening.
+        if let existing = existingRecord,
+           existing.envelope.schemaVersion > recordType.currentSchemaVersion {
+            errorMessage = "This record was saved by a newer version of the app and cannot be edited here."
+            return false
+        }
+
         guard validate() else { return false }
 
         isSaving = true

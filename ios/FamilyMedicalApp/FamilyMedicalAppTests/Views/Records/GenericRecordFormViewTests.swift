@@ -33,8 +33,10 @@ struct GenericRecordFormViewTests {
         let vm = try makeViewModel()
         let view = GenericRecordFormView(viewModel: vm)
 
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.Form.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.Form.self)
+        }
     }
 
     @Test
@@ -42,8 +44,10 @@ struct GenericRecordFormViewTests {
         let vm = try makeViewModel()
         let view = GenericRecordFormView(viewModel: vm)
 
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.NavigationStack.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.NavigationStack.self)
+        }
     }
 
     @Test
@@ -57,8 +61,10 @@ struct GenericRecordFormViewTests {
         #expect(vm.displayName == "Immunization")
 
         // Ensure the view renders (navigation title is set as a modifier).
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.Form.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.Form.self)
+        }
     }
 
     @Test
@@ -67,8 +73,10 @@ struct GenericRecordFormViewTests {
         vm.forwardCompatibilityWarning = "Test warning"
         let view = GenericRecordFormView(viewModel: vm)
 
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.Label.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.Label.self)
+        }
     }
 
     @Test
@@ -77,8 +85,10 @@ struct GenericRecordFormViewTests {
         vm.errorMessage = "boom"
         let view = GenericRecordFormView(viewModel: vm)
 
-        let inspected = try view.inspect()
-        _ = try inspected.find(text: "boom")
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(text: "boom")
+        }
     }
 
     @Test
@@ -86,8 +96,10 @@ struct GenericRecordFormViewTests {
         let vm = try makeViewModel()
         let view = GenericRecordFormView(viewModel: vm)
 
-        let inspected = try view.inspect()
-        _ = try inspected.find(button: "Save")
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(button: "Save")
+        }
     }
 
     @Test
@@ -95,8 +107,10 @@ struct GenericRecordFormViewTests {
         let vm = try makeViewModel()
         let view = GenericRecordFormView(viewModel: vm)
 
-        let inspected = try view.inspect()
-        _ = try inspected.find(button: "Cancel")
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(button: "Cancel")
+        }
     }
 
     @Test(arguments: RecordType.allCases)
@@ -104,8 +118,10 @@ struct GenericRecordFormViewTests {
         let vm = try makeViewModel(recordType: recordType)
         let view = GenericRecordFormView(viewModel: vm)
 
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.Form.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.Form.self)
+        }
         // Validate the ViewModel has metadata entries for this record type.
         #expect(vm.fieldMetadata.count == recordType.fieldMetadata.count)
     }
@@ -116,7 +132,9 @@ struct GenericRecordFormViewTests {
         vm.isSaving = true
         let view = GenericRecordFormView(viewModel: vm)
 
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.ProgressView.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.ProgressView.self)
+        }
     }
 }

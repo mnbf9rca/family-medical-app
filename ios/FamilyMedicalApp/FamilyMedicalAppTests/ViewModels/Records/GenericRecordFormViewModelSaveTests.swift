@@ -298,6 +298,35 @@ struct GenericRecordFormViewModelSaveTests {
     }
 
     @Test
+    func save_refusesEditWhenEnvelopeSchemaVersionIsNewerThanKnown() async throws {
+        let person = try makeTestPerson()
+        let deps = FormViewModelDeps(personId: person.id)
+        // Envelope saved by a future app version (schemaVersion 99).
+        let futureJSON = """
+        {"vaccineCode":"Pfizer","occurrenceDate":0,"tags":[]}
+        """
+        let envelope = RecordContentEnvelope(
+            recordType: .immunization,
+            schemaVersion: 99,
+            content: Data(futureJSON.utf8)
+        )
+        let decrypted = DecryptedRecord(
+            record: MedicalRecord(personId: person.id, encryptedContent: Data()),
+            envelope: envelope
+        )
+        let vm = FormTestSupport.makeViewModel(
+            person: person, recordType: .immunization, existingRecord: decrypted, deps: deps
+        )
+        vm.setValue("Moderna", for: "vaccineCode")
+
+        let ok = await vm.save()
+
+        #expect(ok == false)
+        #expect(vm.errorMessage != nil)
+        #expect(deps.repo.saveCallCount == 0)
+    }
+
+    @Test
     func save_isSavingFlagResetAfterCompletion() async throws {
         let person = try makeTestPerson()
         let deps = FormViewModelDeps(personId: person.id)

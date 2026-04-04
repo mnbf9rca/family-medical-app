@@ -168,21 +168,39 @@ struct MedicalRecordDetailViewModelTests {
         #expect(vm.providerDisplayString == nil)
     }
 
-    // MARK: - Refresh
+    // MARK: - Decode Error
 
     @Test
-    func refresh_rebuildsFieldValuesFromNewRecord() throws {
+    func decodeErrorMessage_nilWhenEnvelopeIsValid() throws {
         let person = try makeTestPerson()
         let deps = Deps(personId: person.id)
-        let original = ImmunizationRecord(vaccineCode: "OldName", occurrenceDate: Date())
-        let decrypted = try makeDecryptedRecord(original, personId: person.id)
+        let content = ImmunizationRecord(vaccineCode: "Pfizer", occurrenceDate: Date())
+        let decrypted = try makeDecryptedRecord(content, personId: person.id)
+
         let vm = makeViewModel(person: person, decryptedRecord: decrypted, deps: deps)
-        #expect(vm.knownFieldValues["vaccineCode"] as? String == "OldName")
 
-        let updated = ImmunizationRecord(vaccineCode: "NewName", occurrenceDate: Date())
-        let newDecrypted = try makeDecryptedRecord(updated, personId: person.id)
-        vm.refresh(with: newDecrypted)
+        #expect(vm.decodeErrorMessage == nil)
+    }
 
-        #expect(vm.knownFieldValues["vaccineCode"] as? String == "NewName")
+    @Test
+    func decodeErrorMessage_setWhenEnvelopeContentIsNotJSONObject() throws {
+        let person = try makeTestPerson()
+        let deps = Deps(personId: person.id)
+        // Envelope with non-object JSON (bare array) triggers contentAsJSONDict to throw.
+        let envelope = RecordContentEnvelope(
+            recordType: .immunization,
+            schemaVersion: 1,
+            content: Data("[1, 2, 3]".utf8)
+        )
+        let decrypted = DecryptedRecord(
+            record: MedicalRecord(personId: person.id, encryptedContent: Data()),
+            envelope: envelope
+        )
+
+        let vm = makeViewModel(person: person, decryptedRecord: decrypted, deps: deps)
+
+        #expect(vm.decodeErrorMessage != nil)
+        #expect(vm.knownFieldValues.isEmpty)
+        #expect(vm.unknownFields.isEmpty)
     }
 }

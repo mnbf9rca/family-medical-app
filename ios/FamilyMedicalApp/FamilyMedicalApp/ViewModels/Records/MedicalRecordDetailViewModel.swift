@@ -12,10 +12,13 @@ final class MedicalRecordDetailViewModel {
     // MARK: - State
 
     let person: Person
-    private(set) var decryptedRecord: DecryptedRecord
+    let decryptedRecord: DecryptedRecord
     private(set) var knownFieldValues: [String: Any] = [:]
     private(set) var unknownFields: [String: Any] = [:]
     private(set) var providerDisplayString: String?
+    /// Non-nil when the record's encrypted content could not be decoded. Shown to the user
+    /// instead of the normal field list so they are not left staring at a blank screen.
+    private(set) var decodeErrorMessage: String?
 
     // MARK: - Dependencies
 
@@ -56,14 +59,6 @@ final class MedicalRecordDetailViewModel {
 
     // MARK: - Actions
 
-    /// Refresh after an edit (call from the edit form's onSaveComplete if the same view stays alive).
-    func refresh(with record: DecryptedRecord) {
-        decryptedRecord = record
-        providerDisplayString = nil
-        decodeContent()
-        Task { await loadProviderDisplayIfNeeded() }
-    }
-
     /// Resolve the provider reference to a display string. Safe to call even when no
     /// providerId is present (it just no-ops).
     func loadProviderDisplayIfNeeded() async {
@@ -92,10 +87,12 @@ final class MedicalRecordDetailViewModel {
             let decoded = try decryptedRecord.envelope.decodedFieldValues()
             knownFieldValues = decoded.known
             unknownFields = decoded.unknown
+            decodeErrorMessage = nil
         } catch {
             logger.logError(error, context: "MedicalRecordDetailViewModel.decodeContent")
             knownFieldValues = [:]
             unknownFields = [:]
+            decodeErrorMessage = "Unable to read this record. It may be corrupted or saved in an unsupported format."
         }
     }
 }

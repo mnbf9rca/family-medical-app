@@ -286,10 +286,6 @@ enum FieldValueNormalizer {
             if let date = value as? Date { return date.timeIntervalSinceReferenceDate }
         case .autocomplete:
             if let uuid = value as? UUID { return uuid.uuidString }
-            if let string = value as? String, metadata.keyPath.hasSuffix("Id"),
-               !metadata.isRequired, string.isEmpty {
-                return nil
-            }
         case .components:
             if let components = value as? [ObservationComponent] {
                 let data = try? JSONEncoder().encode(components)
@@ -305,6 +301,76 @@ enum FieldValueNormalizer {
             break
         }
         return value
+    }
+}
+
+// MARK: - AutocompleteSuggestionResolver
+
+/// Unified suggestion for the autocomplete renderer: a human-readable label plus, for
+/// provider picks, the Provider UUID to store on save.
+struct AutocompleteSuggestion: Identifiable, Equatable {
+    let id: String
+    let label: String
+    let providerId: UUID?
+}
+
+/// Pure resolver for autocomplete suggestions and display text.
+///
+/// Split out of `AutocompleteFieldRenderer` so the catalog/provider dispatch, filtering,
+/// and displayText logic can be unit-tested directly without instantiating a SwiftUI view
+/// (which would require ViewInspector/ViewHosting just to exercise a switch statement).
+struct AutocompleteSuggestionResolver {
+    let metadata: FieldMetadata
+    let providers: [Provider]
+    let autocompleteService: AutocompleteServiceProtocol
+
+    /// Filter suggestions for the current query. Empty query returns the full list.
+    /// Returns up to `limit` entries (default 5, matching the renderer's dropdown cap).
+    func suggestions(for query: String, limit: Int = 5) -> [AutocompleteSuggestion] {
+        Array(allSuggestions(for: query).prefix(limit))
+    }
+
+    /// Display text for a stored field value: resolves a provider UUID to its display
+    /// string, falls back to the raw string value for catalog autocompletes, returns "" if
+    /// the provider UUID doesn't match any loaded Provider.
+    func displayText(storedValue: Any?) -> String {
+        if metadata.keyPath == "providerId" {
+            guard let uuid = storedValue as? UUID,
+                  let provider = providers.first(where: { $0.id == uuid })
+            else { return "" }
+            return provider.displayString
+        }
+        return (storedValue as? String) ?? ""
+    }
+
+    // MARK: - Private
+
+    private func allSuggestions(for query: String) -> [AutocompleteSuggestion] {
+        if metadata.keyPath == "providerId" {
+            return providerSuggestions(for: query)
+        }
+        if let source = metadata.autocompleteSource {
+            return autocompleteService
+                .suggestions(for: source, query: query)
+                .map { AutocompleteSuggestion(id: $0, label: $0, providerId: nil) }
+        }
+        return []
+    }
+
+    private func providerSuggestions(for query: String) -> [AutocompleteSuggestion] {
+        let matches: [Provider]
+        if query.isEmpty {
+            matches = providers
+        } else {
+            let lowered = query.lowercased()
+            matches = providers.filter {
+                ($0.name?.lowercased().contains(lowered) ?? false) ||
+                    ($0.organization?.lowercased().contains(lowered) ?? false)
+            }
+        }
+        return matches.map {
+            AutocompleteSuggestion(id: $0.id.uuidString, label: $0.displayString, providerId: $0.id)
+        }
     }
 }
 

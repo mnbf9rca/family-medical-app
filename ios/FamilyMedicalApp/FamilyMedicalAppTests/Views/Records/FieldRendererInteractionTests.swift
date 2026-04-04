@@ -48,24 +48,30 @@ struct FieldRendererInteractionTests {
     func pickerFieldRendererRendersWithoutError() throws {
         let vm = try makeViewModel(recordType: .condition)
         let view = try PickerFieldRenderer(metadata: pickerMetadata(), viewModel: vm)
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.Picker.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.Picker.self)
+        }
     }
 
     @Test
     func pickerFieldRendererDisplaysFieldName() throws {
         let vm = try makeViewModel(recordType: .condition)
         let view = try PickerFieldRenderer(metadata: pickerMetadata(), viewModel: vm)
-        let inspected = try view.inspect()
-        _ = try inspected.find(text: "Severity")
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(text: "Severity")
+        }
     }
 
     @Test
     func pickerFieldRendererWithUnsetValue() throws {
         let vm = try makeViewModel(recordType: .condition)
         let view = try PickerFieldRenderer(metadata: pickerMetadata(), viewModel: vm)
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.Picker.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.Picker.self)
+        }
     }
 
     @Test
@@ -73,10 +79,12 @@ struct FieldRendererInteractionTests {
         let vm = try makeViewModel(recordType: .condition)
         vm.setValue("Moderate", for: "severity")
         let view = try PickerFieldRenderer(metadata: pickerMetadata(), viewModel: vm)
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.Picker.self)
-        #expect(throws: (any Error).self) {
-            _ = try inspected.find(ViewType.TextField.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.Picker.self)
+            #expect(throws: (any Error).self) {
+                _ = try inspected.find(ViewType.TextField.self)
+            }
         }
     }
 
@@ -85,9 +93,11 @@ struct FieldRendererInteractionTests {
         let vm = try makeViewModel(recordType: .condition)
         vm.setValue("Extreme", for: "severity")
         let view = try PickerFieldRenderer(metadata: pickerMetadata(), viewModel: vm)
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.Picker.self)
-        _ = try inspected.find(ViewType.TextField.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.Picker.self)
+            _ = try inspected.find(ViewType.TextField.self)
+        }
     }
 
     // MARK: - AutocompleteFieldRenderer
@@ -96,16 +106,20 @@ struct FieldRendererInteractionTests {
     func autocompleteFieldRendererRendersWithoutError() throws {
         let vm = try makeViewModel(recordType: .immunization)
         let view = try AutocompleteFieldRenderer(metadata: autocompleteMetadata(), viewModel: vm)
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.TextField.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.TextField.self)
+        }
     }
 
     @Test
     func autocompleteFieldRendererDisplaysFieldName() throws {
         let vm = try makeViewModel(recordType: .immunization)
         let view = try AutocompleteFieldRenderer(metadata: autocompleteMetadata(), viewModel: vm)
-        let inspected = try view.inspect()
-        _ = try inspected.find(text: "Vaccine Name")
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(text: "Vaccine Name")
+        }
     }
 
     @Test
@@ -129,8 +143,10 @@ struct FieldRendererInteractionTests {
         )
         vm.setValue("Pfizer-BioNTech COVID-19", for: "vaccineCode")
         let view = try AutocompleteFieldRenderer(metadata: autocompleteMetadata(), viewModel: vm)
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.TextField.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.TextField.self)
+        }
     }
 
     @Test
@@ -140,9 +156,11 @@ struct FieldRendererInteractionTests {
         vm.providers = [Provider(id: providerUUID, name: "Dr Who", organization: "Mercy")]
         vm.setValue(providerUUID, for: "providerId")
         let view = try AutocompleteFieldRenderer(metadata: providerMetadata(), viewModel: vm)
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.TextField.self)
-        _ = try inspected.find(text: "Provider")
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.TextField.self)
+            _ = try inspected.find(text: "Provider")
+        }
     }
 
     @Test
@@ -150,16 +168,20 @@ struct FieldRendererInteractionTests {
         let vm = try makeViewModel(recordType: .immunization)
         vm.setValue(UUID(), for: "providerId")
         let view = try AutocompleteFieldRenderer(metadata: providerMetadata(), viewModel: vm)
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.TextField.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.TextField.self)
+        }
     }
 
     @Test
     func autocompleteFieldRendererWithEmptyProviderList() throws {
         let vm = try makeViewModel(recordType: .immunization)
         let view = try AutocompleteFieldRenderer(metadata: providerMetadata(), viewModel: vm)
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.TextField.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.TextField.self)
+        }
     }
 
     // MARK: - ObservationComponentRenderer
@@ -168,24 +190,30 @@ struct FieldRendererInteractionTests {
     func observationComponentRendererRendersWithoutError() throws {
         let vm = try makeViewModel(recordType: .observation)
         let view = try ObservationComponentRenderer(metadata: componentsMetadata(), viewModel: vm)
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.VStack.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.VStack.self)
+        }
     }
 
     @Test
     func observationComponentRendererDisplaysFieldName() throws {
         let vm = try makeViewModel(recordType: .observation)
         let view = try ObservationComponentRenderer(metadata: componentsMetadata(), viewModel: vm)
-        let inspected = try view.inspect()
-        _ = try inspected.find(text: "Measurements")
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(text: "Measurements")
+        }
     }
 
     @Test
     func observationComponentRendererRendersEmptyStateMessage() throws {
         let vm = try makeViewModel(recordType: .observation)
         let view = try ObservationComponentRenderer(metadata: componentsMetadata(), viewModel: vm)
-        let inspected = try view.inspect()
-        _ = try inspected.find(text: "No measurements. Tap Add to enter a value.")
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(text: "No measurements. Tap Add to enter a value.")
+        }
     }
 
     @Test
@@ -193,17 +221,21 @@ struct FieldRendererInteractionTests {
         let vm = try makeViewModel(recordType: .observation)
         vm.setValue([ObservationComponent(name: "Weight", value: 70, unit: "kg")], for: "components")
         let view = try ObservationComponentRenderer(metadata: componentsMetadata(), viewModel: vm)
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.HStack.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.HStack.self)
+        }
     }
 
     @Test
     func observationComponentRendererAddsComponentOnButtonTap() throws {
         let vm = try makeViewModel(recordType: .observation)
         let view = try ObservationComponentRenderer(metadata: componentsMetadata(), viewModel: vm)
-        let inspected = try view.inspect()
-        let addButton = try inspected.find(ViewType.Button.self)
-        try addButton.tap()
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            let addButton = try inspected.find(ViewType.Button.self)
+            try addButton.tap()
+        }
         let stored = vm.componentsValue(for: "components")
         #expect(stored.count == 1)
     }
@@ -219,9 +251,11 @@ struct FieldRendererInteractionTests {
             for: "components"
         )
         let view = try ObservationComponentRenderer(metadata: componentsMetadata(), viewModel: vm)
-        let inspected = try view.inspect()
-        let removeButton = try inspected.find(viewWithAccessibilityLabel: "Remove Systolic").button()
-        try removeButton.tap()
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            let removeButton = try inspected.find(viewWithAccessibilityLabel: "Remove Systolic").button()
+            try removeButton.tap()
+        }
         let remaining = vm.componentsValue(for: "components")
         #expect(remaining.count == 1)
         #expect(remaining.first?.name == "Diastolic")
@@ -232,9 +266,11 @@ struct FieldRendererInteractionTests {
         let vm = try makeViewModel(recordType: .observation)
         vm.setValue([ObservationComponent(name: "Weight", value: 70, unit: "kg")], for: "components")
         let view = try ObservationComponentRenderer(metadata: componentsMetadata(), viewModel: vm)
-        let inspected = try view.inspect()
-        let removeButton = try inspected.find(viewWithAccessibilityLabel: "Remove Weight").button()
-        try removeButton.tap()
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            let removeButton = try inspected.find(viewWithAccessibilityLabel: "Remove Weight").button()
+            try removeButton.tap()
+        }
         #expect(vm.value(for: "components") == nil)
     }
 }

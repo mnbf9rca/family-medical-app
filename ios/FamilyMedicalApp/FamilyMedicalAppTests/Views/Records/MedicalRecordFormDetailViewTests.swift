@@ -65,8 +65,10 @@ struct MedicalRecordFormDetailViewTests {
             decryptedRecord: decryptedRecord
         )
         // Use find() for deterministic coverage
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.List.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.List.self)
+        }
     }
 
     @Test
@@ -79,8 +81,10 @@ struct MedicalRecordFormDetailViewTests {
             decryptedRecord: decryptedRecord
         )
 
-        let inspectedView = try view.inspect()
-        _ = try inspectedView.find(ViewType.List.self)
+        try HostedInspection.inspect(view) { view in
+            let inspectedView = try view.inspect()
+            _ = try inspectedView.find(ViewType.List.self)
+        }
     }
 
     @Test
@@ -103,8 +107,10 @@ struct MedicalRecordFormDetailViewTests {
         )
 
         // Use find() for deterministic coverage
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.List.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.List.self)
+        }
 
         // Callbacks are provided but not triggered during render
         #expect(deleteCallbackProvided == false)
@@ -123,8 +129,10 @@ struct MedicalRecordFormDetailViewTests {
         )
 
         // Use find() for deterministic coverage
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.List.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.List.self)
+        }
     }
 
     // MARK: - Extra coverage tests
@@ -143,9 +151,11 @@ struct MedicalRecordFormDetailViewTests {
         let decrypted = DecryptedRecord(record: record, envelope: envelope)
         let view = MedicalRecordDetailView(person: person, decryptedRecord: decrypted)
 
-        let inspected = try view.inspect()
-        _ = try inspected.find(text: "Additional Fields")
-        _ = try inspected.find(text: "futureField")
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(text: "Additional Fields")
+            _ = try inspected.find(text: "futureField")
+        }
     }
 
     @Test
@@ -154,8 +164,10 @@ struct MedicalRecordFormDetailViewTests {
         let decryptedRecord = try makeTestDecryptedRecord(recordType: .immunization)
         let view = MedicalRecordDetailView(person: person, decryptedRecord: decryptedRecord)
 
-        let inspected = try view.inspect()
-        _ = try inspected.find(button: "Edit")
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(button: "Edit")
+        }
     }
 
     @Test
@@ -164,8 +176,10 @@ struct MedicalRecordFormDetailViewTests {
         let decryptedRecord = try makeTestDecryptedRecord(recordType: .immunization)
         let view = MedicalRecordDetailView(person: person, decryptedRecord: decryptedRecord)
 
-        let inspected = try view.inspect()
-        _ = try inspected.find(button: "Delete")
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(button: "Delete")
+        }
     }
 
     @Test
@@ -183,11 +197,13 @@ struct MedicalRecordFormDetailViewTests {
         let decrypted = DecryptedRecord(record: record, envelope: envelope)
         let view = MedicalRecordDetailView(person: person, decryptedRecord: decrypted)
 
-        let inspected = try view.inspect()
-        // Ensure the typed fields section rendered
-        _ = try inspected.find(text: "Date Administered")
-        _ = try inspected.find(text: "Lot Number")
-        _ = try inspected.find(text: "LOT123")
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            // Ensure the typed fields section rendered
+            _ = try inspected.find(text: "Date Administered")
+            _ = try inspected.find(text: "Lot Number")
+            _ = try inspected.find(text: "LOT123")
+        }
     }
 
     @Test
@@ -207,12 +223,14 @@ struct MedicalRecordFormDetailViewTests {
         let decrypted = DecryptedRecord(record: record, envelope: envelope)
         let view = MedicalRecordDetailView(person: person, decryptedRecord: decrypted)
 
-        let inspected = try view.inspect()
-        _ = try inspected.find(text: "Measurements")
-        // A row combining the two components should contain both names
-        _ = try inspected.find { view in
-            guard let text = try? view.text().string() else { return false }
-            return text.contains("Systolic: 120.0 mmHg") && text.contains("Diastolic: 80.0 mmHg")
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(text: "Measurements")
+            // A row combining the two components should contain both names
+            _ = try inspected.find { view in
+                guard let text = try? view.text().string() else { return false }
+                return text.contains("Systolic: 120.0 mmHg") && text.contains("Diastolic: 80.0 mmHg")
+            }
         }
     }
 
@@ -230,8 +248,10 @@ struct MedicalRecordFormDetailViewTests {
         let decrypted = DecryptedRecord(record: record, envelope: envelope)
         let view = MedicalRecordDetailView(person: person, decryptedRecord: decrypted)
 
-        let inspected = try view.inspect()
-        _ = try inspected.find(text: "covid, booster")
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(text: "covid, booster")
+        }
     }
 
     @Test
@@ -274,9 +294,11 @@ struct MedicalRecordFormDetailViewTests {
             detailViewModel: detailVM
         )
 
-        let inspected = try view.inspect()
-        _ = try inspected.find(text: "Provider")
-        _ = try inspected.find(text: "Dr House at Princeton")
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(text: "Provider")
+            _ = try inspected.find(text: "Dr House at Princeton")
+        }
     }
 
     @Test
@@ -285,9 +307,11 @@ struct MedicalRecordFormDetailViewTests {
         let decryptedRecord = try makeTestDecryptedRecord(recordType: .condition)
         let view = MedicalRecordDetailView(person: person, decryptedRecord: decryptedRecord)
 
-        let inspected = try view.inspect()
-        let editButton = try inspected.find(button: "Edit")
-        try editButton.tap()
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            let editButton = try inspected.find(button: "Edit")
+            try editButton.tap()
+        }
     }
 
     @Test
@@ -296,8 +320,10 @@ struct MedicalRecordFormDetailViewTests {
         let decryptedRecord = try makeTestDecryptedRecord(recordType: .condition)
         let view = MedicalRecordDetailView(person: person, decryptedRecord: decryptedRecord)
 
-        let inspected = try view.inspect()
-        let deleteButton = try inspected.find(button: "Delete")
-        try deleteButton.tap()
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            let deleteButton = try inspected.find(button: "Delete")
+            try deleteButton.tap()
+        }
     }
 }

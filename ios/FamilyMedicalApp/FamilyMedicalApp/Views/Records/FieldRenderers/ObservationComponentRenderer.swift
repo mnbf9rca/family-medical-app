@@ -3,32 +3,22 @@ import SwiftUI
 /// Renders the repeating components group for Observation records.
 ///
 /// Each component is a name + value + unit triple (e.g., "Systolic: 120 mmHg").
-/// Users can add/remove rows. When an observation type is chosen upstream, the components
-/// may be pre-seeded with defaults from the bundled observation-types catalog.
+/// Users can add/remove rows. Rows delegate text-field state to `ComponentRowView` so
+/// partial input (e.g. "12." mid-decimal) isn't clobbered by Double round-tripping, and
+/// so a real `0` value is visually distinct from an unset one.
 struct ObservationComponentRenderer: View {
     let metadata: FieldMetadata
     @Bindable var viewModel: GenericRecordFormViewModel
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text(metadata.displayName)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                if metadata.isRequired {
-                    Text("*")
-                        .foregroundStyle(.red)
-                }
-                Spacer()
-                Button {
-                    addComponent()
-                } label: {
-                    Label("Add", systemImage: "plus.circle")
-                        .font(.caption)
-                }
-            }
+            header
             ForEach(Array(components.enumerated()), id: \.offset) { index, component in
-                componentRow(index: index, component: component)
+                ComponentRowView(
+                    component: component,
+                    onChange: { updated in updateComponent(at: index, with: updated) },
+                    onRemove: { removeComponent(at: index) }
+                )
             }
             if components.isEmpty {
                 Text("No measurements. Tap Add to enter a value.")
@@ -43,62 +33,36 @@ struct ObservationComponentRenderer: View {
         }
     }
 
-    private func componentRow(index: Int, component: ObservationComponent) -> some View {
-        HStack(spacing: 8) {
-            TextField("Name", text: binding(index: index, field: .name))
-                .textFieldStyle(.roundedBorder)
-            TextField("Value", text: binding(index: index, field: .value))
-                .keyboardType(.decimalPad)
-                .textFieldStyle(.roundedBorder)
-                .frame(maxWidth: 80)
-            TextField("Unit", text: binding(index: index, field: .unit))
-                .textFieldStyle(.roundedBorder)
-                .frame(maxWidth: 80)
-            Button {
-                removeComponent(at: index)
-            } label: {
-                Image(systemName: "minus.circle.fill")
+    private var header: some View {
+        HStack {
+            Text(metadata.displayName)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            if metadata.isRequired {
+                Text("*")
                     .foregroundStyle(.red)
             }
-            .accessibilityLabel("Remove \(component.name.isEmpty ? "component" : component.name)")
+            Spacer()
+            Button {
+                addComponent()
+            } label: {
+                Label("Add", systemImage: "plus.circle")
+                    .font(.caption)
+            }
         }
     }
 
     // MARK: - Component manipulation
 
-    private enum RowField { case name, value, unit }
-
     private var components: [ObservationComponent] {
         viewModel.componentsValue(for: metadata.keyPath)
     }
 
-    private func binding(index: Int, field: RowField) -> Binding<String> {
-        Binding(
-            get: {
-                guard index < components.count else { return "" }
-                let component = components[index]
-                switch field {
-                case .name: return component.name
-                case .value: return component.value == 0 ? "" : String(component.value)
-                case .unit: return component.unit
-                }
-            },
-            set: { newValue in
-                var list = components
-                guard index < list.count else { return }
-                let old = list[index]
-                let updated = switch field {
-                case .name:
-                    ObservationComponent(name: newValue, value: old.value, unit: old.unit)
-                case .value:
-                    ObservationComponent(name: old.name, value: Double(newValue) ?? 0, unit: old.unit)
-                case .unit:
-                    ObservationComponent(name: old.name, value: old.value, unit: newValue)
-                }
-                list[index] = updated
-                viewModel.setValue(list, for: metadata.keyPath)
-            }
-        )
+    private func updateComponent(at index: Int, with updated: ObservationComponent) {
+        var list = components
+        guard index < list.count else { return }
+        list[index] = updated
+        viewModel.setValue(list, for: metadata.keyPath)
     }
 
     private func addComponent() {
@@ -112,5 +76,67 @@ struct ObservationComponentRenderer: View {
         guard index < list.count else { return }
         list.remove(at: index)
         viewModel.setValue(list.isEmpty ? nil : list, for: metadata.keyPath)
+    }
+}
+
+// MARK: - ComponentRowView
+
+/// Single row inside `ObservationComponentRenderer`. Owns its own `@State` for the value
+/// text so partial input and explicit zero are preserved correctly while the user is typing.
+private struct ComponentRowView: View {
+    let component: ObservationComponent
+    let onChange: (ObservationComponent) -> Void
+    let onRemove: () -> Void
+
+    @State private var nameText: String = ""
+    @State private var valueText: String = ""
+    @State private var unitText: String = ""
+
+    var body: some View {
+        HStack(spacing: 8) {
+            TextField("Name", text: $nameText)
+                .textFieldStyle(.roundedBorder)
+                .onChange(of: nameText) { _, _ in syncToParent() }
+            TextField("Value", text: $valueText)
+                .keyboardType(.decimalPad)
+                .textFieldStyle(.roundedBorder)
+                .frame(maxWidth: 80)
+                .onChange(of: valueText) { _, _ in syncToParent() }
+            TextField("Unit", text: $unitText)
+                .textFieldStyle(.roundedBorder)
+                .frame(maxWidth: 80)
+                .onChange(of: unitText) { _, _ in syncToParent() }
+            Button {
+                onRemove()
+            } label: {
+                Image(systemName: "minus.circle.fill")
+                    .foregroundStyle(.red)
+            }
+            .accessibilityLabel("Remove \(component.name.isEmpty ? "component" : component.name)")
+        }
+        .onAppear {
+            nameText = component.name
+            valueText = Self.formatInitialValueText(component.value, hasNonZeroAncestor: !component.name.isEmpty)
+            unitText = component.unit
+        }
+    }
+
+    /// Initial text for a component's value field.
+    /// A freshly-added component (name empty, value 0, unit empty) shows a blank field so
+    /// the user isn't forced to delete a leading "0" before typing. An existing component
+    /// with value 0 shows "0" (distinct from unset).
+    private static func formatInitialValueText(_ value: Double, hasNonZeroAncestor: Bool) -> String {
+        if value == 0, !hasNonZeroAncestor { return "" }
+        // Avoid trailing ".0" on whole numbers for cleaner UX.
+        if value == value.rounded() { return String(Int(value)) }
+        return String(value)
+    }
+
+    private func syncToParent() {
+        // Accept the value even if the numeric parse fails (keep trailing "." mid-input).
+        // We commit 0 when the text is non-parseable or empty so the model remains valid;
+        // the partial text persists in our local @State and will re-render as the user edits.
+        let parsedValue = Double(valueText) ?? 0
+        onChange(ObservationComponent(name: nameText, value: parsedValue, unit: unitText))
     }
 }

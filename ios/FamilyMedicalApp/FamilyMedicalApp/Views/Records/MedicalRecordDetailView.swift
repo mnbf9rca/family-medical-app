@@ -10,7 +10,6 @@ struct MedicalRecordDetailView: View {
 
     var onDelete: (() async -> Void)?
     var onRecordUpdated: (() -> Void)?
-    var detailViewModel: MedicalRecordDetailViewModel?
 
     @State private var viewModel: MedicalRecordDetailViewModel
     @Environment(\.dismiss)
@@ -30,7 +29,6 @@ struct MedicalRecordDetailView: View {
         self.decryptedRecord = decryptedRecord
         self.onDelete = onDelete
         self.onRecordUpdated = onRecordUpdated
-        self.detailViewModel = detailViewModel
         self._viewModel = State(
             initialValue: detailViewModel ?? MedicalRecordDetailViewModel(
                 person: person,
@@ -42,6 +40,12 @@ struct MedicalRecordDetailView: View {
     var body: some View {
         List {
             metadataSection
+            if let errorMessage = viewModel.decodeErrorMessage {
+                Section {
+                    Label(errorMessage, systemImage: "exclamationmark.triangle")
+                        .foregroundStyle(.red)
+                }
+            }
             if !viewModel.knownFieldValues.isEmpty {
                 fieldsSection
             }
