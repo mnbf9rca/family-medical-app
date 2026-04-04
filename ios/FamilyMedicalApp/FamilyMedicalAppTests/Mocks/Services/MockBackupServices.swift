@@ -2,8 +2,6 @@ import CryptoKit
 import Foundation
 @testable import FamilyMedicalApp
 
-// swiftlint:disable unneeded_throws_rethrows
-
 // MARK: - Mock Export Service
 
 final class MockExportService: ExportServiceProtocol, @unchecked Sendable {
@@ -18,7 +16,7 @@ final class MockExportService: ExportServiceProtocol, @unchecked Sendable {
         return BackupPayload(
             exportedAt: Date(),
             appVersion: "1.0.0",
-            metadata: BackupMetadata(personCount: 1, recordCount: 2, attachmentCount: 0, schemaCount: 0),
+            metadata: BackupMetadata(personCount: 1, recordCount: 2, attachmentCount: 0),
             persons: [
                 PersonBackup(
                     id: UUID(),
@@ -31,8 +29,7 @@ final class MockExportService: ExportServiceProtocol, @unchecked Sendable {
                 )
             ],
             records: [],
-            attachments: [],
-            schemas: []
+            attachments: []
         )
     }
 }
@@ -65,7 +62,7 @@ final class MockBackupFileService: BackupFileServiceProtocol, @unchecked Sendabl
     var shouldFailChecksum = false
     var shouldFailDeserialize = false
 
-    func createEncryptedBackup(payload _: BackupPayload, password _: String) throws -> BackupFile {
+    func createEncryptedBackup(payload _: BackupPayload, password _: String) -> BackupFile {
         BackupFile(
             schema: nil,
             formatName: BackupFile.formatNameValue,
@@ -84,7 +81,7 @@ final class MockBackupFileService: BackupFileServiceProtocol, @unchecked Sendabl
         )
     }
 
-    func createUnencryptedBackup(payload: BackupPayload) throws -> BackupFile {
+    func createUnencryptedBackup(payload: BackupPayload) -> BackupFile {
         BackupFile(
             schema: nil,
             formatName: BackupFile.formatNameValue,
@@ -105,27 +102,25 @@ final class MockBackupFileService: BackupFileServiceProtocol, @unchecked Sendabl
         return mockDecryptedPayload ?? BackupPayload(
             exportedAt: Date(),
             appVersion: "1.0.0",
-            metadata: BackupMetadata(personCount: 0, recordCount: 0, attachmentCount: 0, schemaCount: 0),
+            metadata: BackupMetadata(personCount: 0, recordCount: 0, attachmentCount: 0),
             persons: [],
             records: [],
-            attachments: [],
-            schemas: []
+            attachments: []
         )
     }
 
-    func readUnencryptedBackup(file: BackupFile) throws -> BackupPayload {
+    func readUnencryptedBackup(file: BackupFile) -> BackupPayload {
         file.data ?? BackupPayload(
             exportedAt: Date(),
             appVersion: "1.0.0",
-            metadata: BackupMetadata(personCount: 0, recordCount: 0, attachmentCount: 0, schemaCount: 0),
+            metadata: BackupMetadata(personCount: 0, recordCount: 0, attachmentCount: 0),
             persons: [],
             records: [],
-            attachments: [],
-            schemas: []
+            attachments: []
         )
     }
 
-    func verifyChecksum(file _: BackupFile) throws -> Bool {
+    func verifyChecksum(file _: BackupFile) -> Bool {
         !shouldFailChecksum
     }
 
@@ -153,5 +148,3 @@ final class MockBackupFileService: BackupFileServiceProtocol, @unchecked Sendabl
         )
     }
 }
-
-// swiftlint:enable unneeded_throws_rethrows

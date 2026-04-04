@@ -115,15 +115,16 @@ struct PersonDetailViewTests {
         let mockContentService = MockRecordContentService()
 
         // Create a test record
-        let content = RecordContent(schemaId: "vaccine")
-        let encryptedData = try mockContentService.encrypt(content, using: testFMK)
+        let envelope = try RecordContentEnvelope(
+            ImmunizationRecord(vaccineCode: "COVID-19", occurrenceDate: Date())
+        )
+        let encryptedData = try mockContentService.encrypt(envelope, using: testFMK)
         let record = MedicalRecord(
             id: UUID(),
             personId: person.id,
             encryptedContent: encryptedData
         )
         mockRecordRepo.addRecord(record)
-        mockContentService.setContent(content, for: encryptedData)
 
         let mockKeyProvider = MockPrimaryKeyProvider(primaryKey: testPrimaryKey)
         let mockFMKService = MockFamilyMemberKeyService()
@@ -200,16 +201,20 @@ struct PersonDetailViewTests {
         let mockContentService = MockRecordContentService()
 
         // Create records for multiple types
-        for schemaId in ["vaccine", "allergy", "medication"] {
-            let content = RecordContent(schemaId: schemaId)
-            let encryptedData = try mockContentService.encrypt(content, using: testFMK)
+        let envelopes: [RecordContentEnvelope] = try [
+            RecordContentEnvelope(ImmunizationRecord(vaccineCode: "COVID-19", occurrenceDate: Date())),
+            RecordContentEnvelope(AllergyIntoleranceRecord(substance: "Peanuts", severity: "high")),
+            RecordContentEnvelope(MedicationStatementRecord(medicationName: "Aspirin"))
+        ]
+
+        for envelope in envelopes {
+            let encryptedData = try mockContentService.encrypt(envelope, using: testFMK)
             let record = MedicalRecord(
                 id: UUID(),
                 personId: person.id,
                 encryptedContent: encryptedData
             )
             mockRecordRepo.addRecord(record)
-            mockContentService.setContent(content, for: encryptedData)
         }
 
         let mockKeyProvider = MockPrimaryKeyProvider(primaryKey: testPrimaryKey)
@@ -232,34 +237,10 @@ struct PersonDetailViewTests {
         let list = try inspectedView.find(ViewType.List.self)
         let forEach = try list.forEach(0)
 
-        // Verify each schema type appears in the list
-        // There should be entries for all BuiltInSchemaType cases
-        for index in 0 ..< BuiltInSchemaType.allCases.count {
+        // Verify each record type appears in the list
+        // There should be entries for all RecordType cases
+        for index in 0 ..< RecordType.allCases.count {
             _ = try forEach.navigationLink(index)
         }
-    }
-
-    // MARK: - Schema Manager Tests
-
-    @Test
-    func viewHasManageRecordTypesButton() throws {
-        let person = try createTestPerson()
-        let viewModel = createViewModel(person: person)
-        let view = PersonDetailView(person: person, viewModel: viewModel)
-
-        let inspectedView = try view.inspect()
-        // The toolbar button should exist
-        _ = try inspectedView.find(ViewType.Button.self)
-    }
-
-    @Test
-    func viewRendersWithSchemaManagerSheet() throws {
-        let person = try createTestPerson()
-        let viewModel = createViewModel(person: person)
-        let view = PersonDetailView(person: person, viewModel: viewModel)
-
-        // View should render successfully even with sheet modifier
-        let inspectedView = try view.inspect()
-        _ = try inspectedView.group()
     }
 }

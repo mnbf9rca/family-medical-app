@@ -2,18 +2,17 @@ import CryptoKit
 import Foundation
 import Observation
 
-/// ViewModel for displaying a list of medical records of a specific schema type
+/// ViewModel for displaying a list of medical records of a specific type
 @MainActor
 @Observable
 final class MedicalRecordListViewModel {
     // MARK: - State
 
     let person: Person
-    let schemaType: BuiltInSchemaType
+    let recordType: RecordType
     var records: [DecryptedRecord] = []
     var isLoading = false
     var errorMessage: String?
-    var schema: RecordSchema?
 
     // MARK: - Dependencies
 
@@ -21,35 +20,20 @@ final class MedicalRecordListViewModel {
     private let recordContentService: RecordContentServiceProtocol
     private let primaryKeyProvider: PrimaryKeyProviderProtocol
     private let fmkService: FamilyMemberKeyServiceProtocol
-    private let schemaService: SchemaServiceProtocol
     private let logger = LoggingService.shared.logger(category: .storage)
 
     // MARK: - Initialization
 
-    /// Initialize with a person and schema type
-    ///
-    /// Uses optional parameter pattern per ADR-0008 for testability.
-    ///
-    /// - Parameters:
-    ///   - person: The person whose records to display
-    ///   - schemaType: The type of records to show (vaccine, condition, etc.)
-    ///   - medicalRecordRepository: Repository for medical records (defaults to production)
-    ///   - recordContentService: Service for encrypting/decrypting content (defaults to production)
-    ///   - primaryKeyProvider: Provider for user's primary key (defaults to production)
-    ///   - fmkService: Service for family member keys (defaults to production)
-    ///   - schemaService: Service for fetching user schemas (defaults to production)
     init(
         person: Person,
-        schemaType: BuiltInSchemaType,
+        recordType: RecordType,
         medicalRecordRepository: MedicalRecordRepositoryProtocol? = nil,
         recordContentService: RecordContentServiceProtocol? = nil,
         primaryKeyProvider: PrimaryKeyProviderProtocol? = nil,
-        fmkService: FamilyMemberKeyServiceProtocol? = nil,
-        schemaService: SchemaServiceProtocol? = nil
+        fmkService: FamilyMemberKeyServiceProtocol? = nil
     ) {
         self.person = person
-        self.schemaType = schemaType
-        // Use optional parameter pattern per ADR-0008
+        self.recordType = recordType
         self.medicalRecordRepository = medicalRecordRepository ?? MedicalRecordRepository(
             coreDataStack: CoreDataStack.shared
         )
@@ -58,58 +42,37 @@ final class MedicalRecordListViewModel {
         )
         self.primaryKeyProvider = primaryKeyProvider ?? PrimaryKeyProvider()
         self.fmkService = fmkService ?? FamilyMemberKeyService()
-        self.schemaService = schemaService ?? SchemaService(
-            schemaRepository: CustomSchemaRepository(
-                coreDataStack: CoreDataStack.shared,
-                encryptionService: EncryptionService()
-            )
-        )
     }
 
     // MARK: - Actions
 
-    /// Load medical records for the person and schema type
     func loadRecords() async {
         isLoading = true
         errorMessage = nil
 
         do {
-            // Get the primary key and FMK
             let primaryKey = try primaryKeyProvider.getPrimaryKey()
             let fmk = try fmkService.retrieveFMK(
                 familyMemberID: person.id.uuidString,
                 primaryKey: primaryKey
             )
 
-            // Fetch user's schema (replaces built-in default if stored)
-            if let userSchema = try await schemaService.schema(
-                forId: schemaType.rawValue,
-                personId: person.id,
-                familyMemberKey: fmk
-            ) {
-                schema = userSchema
-            }
-
-            // Fetch all medical records for this person
             let allRecords = try await medicalRecordRepository.fetchForPerson(personId: person.id)
 
-            // Decrypt and filter by schema type
             var decryptedRecords: [DecryptedRecord] = []
             for record in allRecords {
                 do {
-                    let content = try recordContentService.decrypt(record.encryptedContent, using: fmk)
-                    // Only include records that match our schema type
-                    if content.schemaId == schemaType.rawValue {
-                        decryptedRecords.append(DecryptedRecord(record: record, content: content))
+                    let envelope = try recordContentService.decrypt(record.encryptedContent, using: fmk)
+                    if envelope.recordType == recordType {
+                        decryptedRecords.append(DecryptedRecord(record: record, envelope: envelope))
                     }
                 } catch {
-                    // Log decryption error but continue with other records
                     logger.logError(error, context: "MedicalRecordListViewModel.loadRecords - decrypt")
                 }
             }
 
-            // Sort by date field (newest first)
-            records = sortRecordsByDate(decryptedRecords)
+            // Sort newest first by creation date
+            records = decryptedRecords.sorted { $0.record.createdAt > $1.record.createdAt }
         } catch {
             errorMessage = "Unable to load records. Please try again."
             logger.logError(error, context: "MedicalRecordListViewModel.loadRecords")
@@ -118,16 +81,12 @@ final class MedicalRecordListViewModel {
         isLoading = false
     }
 
-    /// Delete a medical record
-    ///
-    /// - Parameter id: The record ID to delete
     func deleteRecord(id: UUID) async {
         isLoading = true
         errorMessage = nil
 
         do {
             try await medicalRecordRepository.delete(id: id)
-            // Remove from local array
             records.removeAll { $0.id == id }
         } catch {
             errorMessage = "Unable to delete record. Please try again."
@@ -135,26 +94,5 @@ final class MedicalRecordListViewModel {
         }
 
         isLoading = false
-    }
-
-    // MARK: - Private Helpers
-
-    /// Sort records by the first date field found (newest first)
-    private func sortRecordsByDate(_ records: [DecryptedRecord]) -> [DecryptedRecord] {
-        guard let schema else {
-            return records
-        }
-
-        // Find the first date field in the schema
-        guard let dateField = schema.fields.first(where: { $0.fieldType == .date }) else {
-            // No date field, return unsorted
-            return records
-        }
-
-        return records.sorted { lhs, rhs in
-            let lhsDate = lhs.content.getDate(dateField.id) ?? Date.distantPast
-            let rhsDate = rhs.content.getDate(dateField.id) ?? Date.distantPast
-            return lhsDate > rhsDate // Newest first
-        }
     }
 }

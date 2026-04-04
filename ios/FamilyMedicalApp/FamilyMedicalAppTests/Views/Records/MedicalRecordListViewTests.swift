@@ -15,17 +15,17 @@ struct MedicalRecordListViewTests {
         try PersonTestHelper.makeTestPerson()
     }
 
-    func makeTestDecryptedRecord(personId: UUID? = nil) -> DecryptedRecord {
-        var content = RecordContent(schemaId: "vaccine")
-        content.setString(BuiltInFieldIds.Vaccine.name, "COVID-19")
-        content.setDate(BuiltInFieldIds.Vaccine.dateAdministered, Date())
+    func makeTestDecryptedRecord(personId: UUID? = nil) throws -> DecryptedRecord {
+        let envelope = try RecordContentEnvelope(
+            ImmunizationRecord(vaccineCode: "COVID-19", occurrenceDate: Date())
+        )
 
         let record = MedicalRecord(
             personId: personId ?? UUID(),
             encryptedContent: Data()
         )
 
-        return DecryptedRecord(record: record, content: content)
+        return DecryptedRecord(record: record, envelope: envelope)
     }
 
     func createListViewModel(person: Person) -> MedicalRecordListViewModel {
@@ -37,7 +37,7 @@ struct MedicalRecordListViewTests {
 
         return MedicalRecordListViewModel(
             person: person,
-            schemaType: .vaccine,
+            recordType: .immunization,
             medicalRecordRepository: mockRecordRepo,
             recordContentService: mockContentService,
             primaryKeyProvider: mockKeyProvider,
@@ -50,7 +50,7 @@ struct MedicalRecordListViewTests {
     @Test
     func medicalRecordListViewInitializesWithPerson() throws {
         let person = try makeTestPerson()
-        let view = MedicalRecordListView(person: person, schemaType: .vaccine)
+        let view = MedicalRecordListView(person: person, recordType: .immunization)
 
         // Use find() for deterministic coverage
         let inspected = try view.inspect()
@@ -66,7 +66,7 @@ struct MedicalRecordListViewTests {
 
         let view = MedicalRecordListView(
             person: person,
-            schemaType: .vaccine,
+            recordType: .immunization,
             viewModel: viewModel
         )
 
@@ -81,7 +81,7 @@ struct MedicalRecordListViewTests {
 
         let view = MedicalRecordListView(
             person: person,
-            schemaType: .vaccine,
+            recordType: .immunization,
             viewModel: viewModel
         )
 
@@ -98,7 +98,7 @@ struct MedicalRecordListViewTests {
 
         let view = MedicalRecordListView(
             person: person,
-            schemaType: .vaccine,
+            recordType: .immunization,
             viewModel: viewModel
         )
 
@@ -112,12 +112,12 @@ struct MedicalRecordListViewTests {
         let viewModel = createListViewModel(person: person)
 
         // Add a record to the viewModel
-        let decryptedRecord = makeTestDecryptedRecord(personId: person.id)
+        let decryptedRecord = try makeTestDecryptedRecord(personId: person.id)
         viewModel.records = [decryptedRecord]
 
         let view = MedicalRecordListView(
             person: person,
-            schemaType: .vaccine,
+            recordType: .immunization,
             viewModel: viewModel
         )
 
@@ -133,7 +133,7 @@ struct MedicalRecordListViewTests {
         let viewModel = createListViewModel(person: person)
 
         // Add multiple records
-        viewModel.records = [
+        viewModel.records = try [
             makeTestDecryptedRecord(personId: person.id),
             makeTestDecryptedRecord(personId: person.id),
             makeTestDecryptedRecord(personId: person.id)
@@ -141,7 +141,7 @@ struct MedicalRecordListViewTests {
 
         let view = MedicalRecordListView(
             person: person,
-            schemaType: .vaccine,
+            recordType: .immunization,
             viewModel: viewModel
         )
 
@@ -159,7 +159,7 @@ struct MedicalRecordListViewTests {
 
         let view = MedicalRecordListView(
             person: person,
-            schemaType: .vaccine,
+            recordType: .immunization,
             viewModel: viewModel
         )
 
@@ -169,10 +169,10 @@ struct MedicalRecordListViewTests {
         #expect(viewModel.errorMessage == "Test error message")
     }
 
-    @Test(arguments: BuiltInSchemaType.allCases)
-    func medicalRecordListViewRendersForSchemaType(_ schemaType: BuiltInSchemaType) throws {
+    @Test(arguments: RecordType.allCases)
+    func medicalRecordListViewRendersForRecordType(_ recordType: RecordType) throws {
         let person = try makeTestPerson()
-        let view = MedicalRecordListView(person: person, schemaType: schemaType)
+        let view = MedicalRecordListView(person: person, recordType: recordType)
 
         // Use find() for deterministic coverage
         let inspected = try view.inspect()
