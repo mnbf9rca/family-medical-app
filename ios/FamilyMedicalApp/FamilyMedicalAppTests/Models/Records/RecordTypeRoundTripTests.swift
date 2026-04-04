@@ -348,7 +348,7 @@ struct DocumentReferenceRecordTests {
 
     @Test("Missing optional fields decode as nil")
     func missingOptionalsDecodeAsNil() throws {
-        let json = Data("{\"title\":\"Scan\",\"mimeType\":\"image / jpeg\",\"fileSize\":512,\"tags\":[]}".utf8)
+        let json = Data("{\"title\":\"Scan\",\"mimeType\":\"image/jpeg\",\"fileSize\":512,\"tags\":[]}".utf8)
         let decoded = try iso8601Decoder.decode(DocumentReferenceRecord.self, from: json)
         #expect(decoded.documentType == nil)
         #expect(decoded.sourceRecordId == nil)
