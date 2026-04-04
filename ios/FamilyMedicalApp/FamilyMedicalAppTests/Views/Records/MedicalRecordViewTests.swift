@@ -70,19 +70,7 @@ struct MedicalRecordViewTests {
 
     @Test(arguments: RecordType.allCases)
     func emptyRecordListViewRendersForRecordType(_ recordType: RecordType) {
-        let view = EmptyRecordListView(recordType: recordType) {}
+        let view = EmptyRecordListView(recordType: recordType)
         _ = view.body
-    }
-
-    @Test
-    func emptyRecordListViewCallbackNotTriggeredOnRender() {
-        var wasCallbackCalled = false
-        let view = EmptyRecordListView(recordType: .immunization) {
-            wasCallbackCalled = true
-        }
-
-        _ = view.body
-
-        #expect(wasCallbackCalled == false)
     }
 }

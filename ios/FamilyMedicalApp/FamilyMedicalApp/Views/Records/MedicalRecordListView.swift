@@ -21,9 +21,7 @@ struct MedicalRecordListView: View {
     var body: some View {
         Group {
             if viewModel.records.isEmpty, !viewModel.isLoading {
-                EmptyRecordListView(recordType: recordType) {
-                    // TODO: Task 7 (#127) — open GenericRecordFormView
-                }
+                EmptyRecordListView(recordType: recordType)
             } else {
                 List {
                     ForEach(viewModel.records) { decryptedRecord in
