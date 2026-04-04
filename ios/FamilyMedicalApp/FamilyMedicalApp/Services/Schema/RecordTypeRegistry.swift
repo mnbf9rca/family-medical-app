@@ -11,30 +11,11 @@ protocol RecordTypeRegistryProtocol: Sendable {
 /// Simple registry that returns static metadata from record type structs.
 /// Replaces the old SchemaService which fetched per-person encrypted schemas.
 ///
-/// `displayName` and `iconSystemName` delegate to the `RecordType` extension
-/// (single source of truth). `fieldMetadata` dispatches through `typeMap`.
-/// The init verifies `typeMap` covers every `RecordType` case so missing
-/// entries fail at startup instead of silently returning empty metadata.
+/// All dispatch is compile-time — `displayName`/`iconSystemName` delegate to
+/// the `RecordType` extension, and `fieldMetadata` switches on `RecordType`
+/// directly. Adding a new `RecordType` case is a compile error until every
+/// switch is updated, so there are no silent-fallback or runtime-crash paths.
 final class RecordTypeRegistry: RecordTypeRegistryProtocol, Sendable {
-    private let typeMap: [RecordType: any MedicalRecordContent.Type] = [
-        .immunization: ImmunizationRecord.self,
-        .medicationStatement: MedicationStatementRecord.self,
-        .allergyIntolerance: AllergyIntoleranceRecord.self,
-        .condition: ConditionRecord.self,
-        .observation: ObservationRecord.self,
-        .procedure: ProcedureRecord.self,
-        .documentReference: DocumentReferenceRecord.self,
-        .familyMemberHistory: FamilyMemberHistoryRecord.self,
-        .clinicalNote: ClinicalNoteRecord.self
-    ]
-
-    init() {
-        precondition(
-            Set(typeMap.keys) == Set(RecordType.allCases),
-            "RecordTypeRegistry.typeMap must contain an entry for every RecordType case"
-        )
-    }
-
     var allRecordTypes: [RecordType] {
         RecordType.allCases
     }
@@ -48,9 +29,16 @@ final class RecordTypeRegistry: RecordTypeRegistryProtocol, Sendable {
     }
 
     func fieldMetadata(for recordType: RecordType) -> [FieldMetadata] {
-        guard let type = typeMap[recordType] else {
-            preconditionFailure("RecordTypeRegistry missing typeMap entry for \(recordType)")
+        switch recordType {
+        case .immunization: ImmunizationRecord.fieldMetadata
+        case .medicationStatement: MedicationStatementRecord.fieldMetadata
+        case .allergyIntolerance: AllergyIntoleranceRecord.fieldMetadata
+        case .condition: ConditionRecord.fieldMetadata
+        case .observation: ObservationRecord.fieldMetadata
+        case .procedure: ProcedureRecord.fieldMetadata
+        case .documentReference: DocumentReferenceRecord.fieldMetadata
+        case .familyMemberHistory: FamilyMemberHistoryRecord.fieldMetadata
+        case .clinicalNote: ClinicalNoteRecord.fieldMetadata
         }
-        return type.fieldMetadata
     }
 }

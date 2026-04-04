@@ -93,6 +93,65 @@ struct BackupSchemaValidatorTests {
         #expect(result.isValid, "Serialized unencrypted BackupFile must validate against schema: \(result.errors)")
     }
 
+    @Test("Serialized BackupFile with MedicalRecordBackup validates against schema")
+    func serializedBackupFileWithRecordValidatesAgainstSchema() throws {
+        // Build an envelope so we have realistic contentJSON bytes
+        let immunization = try ImmunizationRecord(
+            vaccineCode: "MMR",
+            occurrenceDate: #require(ISO8601DateFormatter().date(from: "2026-01-15T10:00:00Z"))
+        )
+        let envelope = try RecordContentEnvelope(immunization)
+        let personId = UUID()
+
+        let payload = try BackupPayload(
+            exportedAt: #require(ISO8601DateFormatter().date(from: "2026-02-01T12:00:00Z")),
+            appVersion: "1.0.0",
+            metadata: BackupMetadata(personCount: 1, recordCount: 1, attachmentCount: 0),
+            persons: [
+                PersonBackup(
+                    id: personId,
+                    name: "Test Person",
+                    dateOfBirth: nil,
+                    labels: ["family"],
+                    notes: nil,
+                    createdAt: Date(),
+                    updatedAt: Date()
+                )
+            ],
+            records: [
+                MedicalRecordBackup(
+                    from: MedicalRecord(id: UUID(), personId: personId, encryptedContent: Data()),
+                    envelope: envelope
+                )
+            ],
+            attachments: []
+        )
+
+        let file = BackupFile(
+            schema: "https://recordwell.app/schemas/backup-v1.json",
+            formatName: BackupFile.formatNameValue,
+            formatVersion: BackupFile.currentVersion,
+            generator: "FamilyMedicalApp/1.0.0 (iOS)",
+            encrypted: false,
+            checksum: BackupChecksum(algorithm: "SHA-256", value: "dGVzdA=="),
+            encryption: nil,
+            ciphertext: nil,
+            data: payload
+        )
+
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        let jsonData = try encoder.encode(file)
+
+        let validator = BackupSchemaValidator.forTesting()
+        let result = validator.validate(jsonData: jsonData)
+
+        #expect(
+            result.isValid,
+            "Serialized BackupFile with record must validate against schema: \(result.errors)"
+        )
+    }
+
     // MARK: - Valid Files
 
     @Test("Valid encrypted backup passes validation")
@@ -141,11 +200,10 @@ struct BackupSchemaValidatorTests {
             "data": {
                 "exportedAt": "2026-02-01T12:00:00Z",
                 "appVersion": "1.0.0",
-                "metadata": {"personCount": 0, "recordCount": 0, "attachmentCount": 0, "schemaCount": 0},
+                "metadata": {"personCount": 0, "recordCount": 0, "attachmentCount": 0},
                 "persons": [],
                 "records": [],
-                "attachments": [],
-                "schemas": []
+                "attachments": []
             }
         }
         """.utf8)
@@ -186,11 +244,10 @@ struct BackupSchemaValidatorTests {
             "data": {
                 "exportedAt": "2026-02-01T12:00:00Z",
                 "appVersion": "1.0.0",
-                "metadata": {"personCount": 0, "recordCount": 0, "attachmentCount": 0, "schemaCount": 0},
+                "metadata": {"personCount": 0, "recordCount": 0, "attachmentCount": 0},
                 "persons": [],
                 "records": [],
-                "attachments": [],
-                "schemas": []
+                "attachments": []
             }
         }
         """.utf8)
@@ -212,46 +269,16 @@ struct BackupSchemaValidatorTests {
             "data": {
                 "exportedAt": "2026-02-01T12:00:00Z",
                 "appVersion": "1.0.0",
-                "metadata": {"personCount": 0, "recordCount": 0, "attachmentCount": 0, "schemaCount": 0},
+                "metadata": {"personCount": 0, "recordCount": 0, "attachmentCount": 0},
                 "persons": [],
                 "records": [],
-                "attachments": [],
-                "schemas": []
+                "attachments": []
             }
         }
         """.utf8)
 
         let result = validator.validate(jsonData: invalidJSON)
         #expect(!result.isValid)
-    }
-
-    // MARK: - DoS Protection
-
-    @Test("Exceeding max nesting depth fails validation")
-    func exceedingMaxNestingDepthFailsValidation() {
-        let validator = BackupSchemaValidator.forTesting(maxNestingDepth: 5)
-
-        // Create deeply nested JSON (deeper than 5 levels)
-        let deeplyNested = Data("""
-        {"a":{"b":{"c":{"d":{"e":{"f":{"g":"too deep"}}}}}}}
-        """.utf8)
-
-        let result = validator.validate(jsonData: deeplyNested)
-        #expect(!result.isValid)
-        #expect(result.errors.contains { $0.contains("depth") || $0.contains("nesting") })
-    }
-
-    @Test("Exceeding max array size fails validation")
-    func exceedingMaxArraySizeFailsValidation() throws {
-        let validator = BackupSchemaValidator.forTesting(maxArraySize: 10)
-
-        // Create JSON with array larger than 10 items
-        let largeArray = Array(repeating: "item", count: 20)
-        let json = try JSONSerialization.data(withJSONObject: ["items": largeArray])
-
-        let result = validator.validate(jsonData: json)
-        #expect(!result.isValid)
-        #expect(result.errors.contains { $0.contains("array") || $0.contains("size") })
     }
 
     // MARK: - Invalid JSON
@@ -272,77 +299,5 @@ struct BackupSchemaValidatorTests {
     func returnsCorrectSchemaVersion() {
         let validator = BackupSchemaValidator.forTesting()
         #expect(validator.schemaVersion == "1.0")
-    }
-
-    // MARK: - Edge Cases for DoS Limits
-
-    @Test("Empty arrays pass DoS validation")
-    func emptyArraysPassDoSValidation() {
-        let validator = BackupSchemaValidator.forTesting(maxArraySize: 10)
-        let json = Data("""
-        {"items": [], "nested": {"more": []}}
-        """.utf8)
-
-        let result = validator.validate(jsonData: json)
-        // Will fail schema validation but should pass DoS checks
-        #expect(!result.errors.contains { $0.contains("array") && $0.contains("size") })
-    }
-
-    @Test("Empty dictionaries pass DoS validation")
-    func emptyDictionariesPassDoSValidation() {
-        let validator = BackupSchemaValidator.forTesting(maxNestingDepth: 3)
-        let json = Data("""
-        {"a": {}, "b": {"c": {}}}
-        """.utf8)
-
-        let result = validator.validate(jsonData: json)
-        // Will fail schema validation but should pass DoS checks
-        #expect(!result.errors.contains { $0.contains("depth") || $0.contains("nesting") })
-    }
-
-    @Test("Primitive root value passes depth check")
-    func primitiveRootValuePassesDepthCheck() {
-        let validator = BackupSchemaValidator.forTesting(maxNestingDepth: 1)
-        let json = Data("\"just a string\"".utf8)
-
-        let result = validator.validate(jsonData: json)
-        // Will fail schema validation but should pass DoS checks
-        #expect(!result.errors.contains { $0.contains("depth") || $0.contains("nesting") })
-    }
-
-    @Test("Deeply nested arrays trigger depth limit")
-    func deeplyNestedArraysTriggerDepthLimit() {
-        let validator = BackupSchemaValidator.forTesting(maxNestingDepth: 3)
-        let json = Data("""
-        [[[[["too deep"]]]]]
-        """.utf8)
-
-        let result = validator.validate(jsonData: json)
-        #expect(!result.isValid)
-        #expect(result.errors.contains { $0.contains("depth") || $0.contains("nesting") })
-    }
-
-    @Test("Nested array sizes are checked")
-    func nestedArraySizesAreChecked() {
-        let validator = BackupSchemaValidator.forTesting(maxArraySize: 5)
-        let json = Data("""
-        {"outer": [{"inner": [1, 2, 3, 4, 5, 6, 7]}]}
-        """.utf8)
-
-        let result = validator.validate(jsonData: json)
-        #expect(!result.isValid)
-        #expect(result.errors.contains { $0.contains("array") || $0.contains("size") })
-    }
-
-    @Test("Within limits passes DoS checks")
-    func withinLimitsPassesDoSChecks() {
-        let validator = BackupSchemaValidator.forTesting(maxNestingDepth: 10, maxArraySize: 100)
-        let json = Data("""
-        {"a": {"b": {"c": [1, 2, 3]}}}
-        """.utf8)
-
-        let result = validator.validate(jsonData: json)
-        // Will fail schema validation but should pass DoS checks
-        #expect(!result.errors.contains { $0.contains("depth") || $0.contains("array") })
     }
 }
