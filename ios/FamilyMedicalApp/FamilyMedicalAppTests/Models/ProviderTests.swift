@@ -80,12 +80,21 @@ struct ProviderTests {
         #expect(provider.previousVersionId == prevId)
     }
 
-    @Test("Init without name or organization triggers precondition")
-    func initWithoutNameOrOrganizationTriggersPrecondition() {
-        // precondition failures cannot be caught — tested via code review
-        // This test documents the contract: both nil is invalid.
-        // The precondition is enforced at runtime with a crash.
-        #expect(Bool(true)) // Contract documented above
+    @Test("Decoding with both name and org nil throws")
+    func decodingBothNilThrows() throws {
+        let json = Data("""
+        {
+            "id": "00000000-0000-0000-0000-000000000001",
+            "createdAt": "2026-01-01T00:00:00Z",
+            "updatedAt": "2026-01-01T00:00:00Z",
+            "version": 1
+        }
+        """.utf8)
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        #expect(throws: DecodingError.self) {
+            _ = try decoder.decode(Provider.self, from: json)
+        }
     }
 
     @Test("Init generates unique IDs by default")

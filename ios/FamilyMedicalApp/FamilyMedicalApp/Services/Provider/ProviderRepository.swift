@@ -77,11 +77,15 @@ final class ProviderRepository: ProviderRepositoryProtocol, @unchecked Sendable 
 
         do {
             try await coreDataStack.performBackgroundTask { context in
-                let fmk = try self.retrieveFMK(for: personId.uuidString, primaryKey: primaryKey)
+                let fmk = try self.ensureFMK(for: personId.uuidString, primaryKey: primaryKey)
                 let encryptedData = try self.encryptProviderData(provider, using: fmk)
 
                 let fetchRequest: NSFetchRequest<ProviderEntity> = ProviderEntity.fetchRequest()
-                fetchRequest.predicate = NSPredicate(format: "id == %@", provider.id as CVarArg)
+                fetchRequest.predicate = NSPredicate(
+                    format: "id == %@ AND personId == %@",
+                    provider.id as CVarArg,
+                    personId as CVarArg
+                )
                 fetchRequest.fetchLimit = 1
 
                 let entity: ProviderEntity
@@ -213,8 +217,8 @@ final class ProviderRepository: ProviderRepositoryProtocol, @unchecked Sendable 
 
     // MARK: - Private Helpers
 
-    /// Retrieve FMK for a person (must already exist — providers are always under an existing person)
-    private func retrieveFMK(for personID: String, primaryKey: SymmetricKey) throws -> SymmetricKey {
+    /// Ensure FMK exists for a person (must already exist — providers are always under an existing person)
+    private func ensureFMK(for personID: String, primaryKey: SymmetricKey) throws -> SymmetricKey {
         do {
             return try fmkService.retrieveFMK(familyMemberID: personID, primaryKey: primaryKey)
         } catch {
@@ -256,13 +260,7 @@ final class ProviderRepository: ProviderRepositoryProtocol, @unchecked Sendable 
             throw RepositoryError.deserializationFailed("ProviderEntity missing required fields")
         }
 
-        let fmk: SymmetricKey
-        do {
-            fmk = try fmkService.retrieveFMK(familyMemberID: personId.uuidString, primaryKey: primaryKey)
-        } catch {
-            throw RepositoryError
-                .keyNotAvailable("Failed to retrieve FMK for person \(personId): \(error.localizedDescription)")
-        }
+        let fmk = try ensureFMK(for: personId.uuidString, primaryKey: primaryKey)
 
         let encryptedPayload: EncryptedPayload
         do {
