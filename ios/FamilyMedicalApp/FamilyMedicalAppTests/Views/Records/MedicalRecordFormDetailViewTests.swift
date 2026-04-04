@@ -1,12 +1,12 @@
 import CryptoKit
-import Dependencies
 import SwiftUI
 import Testing
 import ViewInspector
 @testable import FamilyMedicalApp
 
-/// Tests for MedicalRecordDetailView and MedicalRecordFormView using generic schema
-/// (ExampleSchema.comprehensiveExample) to validate view behavior independent of specific record types.
+/// Tests for MedicalRecordDetailView
+/// MedicalRecordFormView and MedicalRecordFormViewModel tests have been removed
+/// as those types were deleted during FHIR migration.
 @MainActor
 struct MedicalRecordFormDetailViewTests {
     // MARK: - Test Data
@@ -14,99 +14,54 @@ struct MedicalRecordFormDetailViewTests {
     let testPrimaryKey = SymmetricKey(size: .bits256)
     let testFMK = SymmetricKey(size: .bits256)
 
-    /// Returns the comprehensive example schema that exercises all field types
-    var testSchema: RecordSchema {
-        ExampleSchema.comprehensiveExample
-    }
-
-    /// Schema ID for the comprehensive example schema
-    var testSchemaId: String {
-        "comprehensive_example"
-    }
-
-    /// Required string field UUID in the comprehensive schema
-    var requiredStringFieldId: UUID {
-        ExampleSchema.FieldIds.exampleName
-    }
-
-    /// Required string field ID as string key for fieldValues dictionary access
-    var requiredStringFieldKey: String {
-        ExampleSchema.FieldIds.exampleName.uuidString
-    }
-
-    /// Required date field UUID in the comprehensive schema
-    var requiredDateFieldId: UUID {
-        ExampleSchema.FieldIds.recordedDate
-    }
-
     func makeTestPerson() throws -> Person {
         try PersonTestHelper.makeTestPerson()
     }
 
-    func makeTestDecryptedRecord(personId: UUID? = nil) -> DecryptedRecord {
-        var content = RecordContent(schemaId: testSchemaId)
-        content.setString(requiredStringFieldId, "Test Record")
-        content.setDate(requiredDateFieldId, Date())
-
-        let record = MedicalRecord(
-            personId: personId ?? UUID(),
-            encryptedContent: Data()
-        )
-
-        return DecryptedRecord(record: record, content: content)
-    }
-
-    /// Fixed test date for deterministic testing
-    let testDate = Date(timeIntervalSinceReferenceDate: 1_234_567_890)
-
-    func createFormViewModel(
-        person: Person,
-        existingRecord: MedicalRecord? = nil,
-        existingContent: RecordContent? = nil
-    ) -> MedicalRecordFormViewModel {
-        let mockRecordRepo = MockMedicalRecordRepository()
-        let mockContentService = MockRecordContentService()
-        let mockKeyProvider = MockPrimaryKeyProvider(primaryKey: testPrimaryKey)
-        let mockFMKService = MockFamilyMemberKeyService()
-        mockFMKService.setFMK(testFMK, for: person.id.uuidString)
-
-        // Use withDependencies to provide test values for @Dependency properties
-        return withDependencies {
-            $0.date = .constant(testDate)
-        } operation: {
-            MedicalRecordFormViewModel(
-                person: person,
-                schema: testSchema,
-                existingRecord: existingRecord,
-                existingContent: existingContent,
-                medicalRecordRepository: mockRecordRepo,
-                recordContentService: mockContentService,
-                primaryKeyProvider: mockKeyProvider,
-                fmkService: mockFMKService
+    func makeTestDecryptedRecord(
+        personId: UUID? = nil,
+        recordType: RecordType = .immunization
+    ) throws -> DecryptedRecord {
+        let envelope: RecordContentEnvelope = switch recordType {
+        case .immunization:
+            try RecordContentEnvelope(
+                ImmunizationRecord(
+                    vaccineCode: "Test Vaccine",
+                    occurrenceDate: Date(),
+                    lotNumber: "EL9262",
+                    doseNumber: 2,
+                    notes: "Second dose"
+                )
+            )
+        case .condition:
+            try RecordContentEnvelope(
+                ConditionRecord(conditionName: "Asthma", onsetDate: Date())
+            )
+        case .medicationStatement:
+            try RecordContentEnvelope(
+                MedicationStatementRecord(medicationName: "Aspirin")
+            )
+        default:
+            RecordContentEnvelope(
+                recordType: recordType,
+                schemaVersion: 1,
+                content: Data("{\"notes\":null,\"tags\":[]}".utf8)
             )
         }
+
+        let record = MedicalRecord(personId: personId ?? UUID(), encryptedContent: Data())
+        return DecryptedRecord(record: record, envelope: envelope)
     }
 
-    // MARK: - MedicalRecordDetailView Integration Tests
-    // Note: MedicalRecordDetailView requires BuiltInSchemaType, so these are integration tests
-    // that verify all built-in schemas render correctly.
+    // MARK: - MedicalRecordDetailView Tests
 
-    @Test(arguments: BuiltInSchemaType.allCases)
-    func medicalRecordDetailViewRendersForSchemaType(_ schemaType: BuiltInSchemaType) throws {
+    @Test(arguments: RecordType.allCases)
+    func medicalRecordDetailViewRendersForRecordType(_ recordType: RecordType) throws {
         let person = try makeTestPerson()
-
-        var content = RecordContent(schemaId: schemaType.rawValue)
-        // Add date fields that various schemas might have
-        content.setDate(BuiltInFieldIds.Vaccine.dateAdministered, Date())
-        content.setDate(BuiltInFieldIds.Condition.diagnosedDate, Date())
-        content.setDate(BuiltInFieldIds.Medication.startDate, Date())
-
-        let record = MedicalRecord(personId: person.id, encryptedContent: Data())
-        let decryptedRecord = DecryptedRecord(record: record, content: content)
+        let decryptedRecord = try makeTestDecryptedRecord(recordType: recordType)
 
         let view = MedicalRecordDetailView(
             person: person,
-            schemaType: schemaType,
             decryptedRecord: decryptedRecord
         )
         // Use find() for deterministic coverage
@@ -117,19 +72,10 @@ struct MedicalRecordFormDetailViewTests {
     @Test
     func medicalRecordDetailViewRendersContent() throws {
         let person = try makeTestPerson()
-        // Use vaccine schema for this integration test
-        var content = RecordContent(schemaId: "vaccine")
-        content.setString(BuiltInFieldIds.Vaccine.name, "Test Vaccine")
-        content.setDate(BuiltInFieldIds.Vaccine.dateAdministered, Date())
-        content.setString(BuiltInFieldIds.Vaccine.provider, "Test Provider")
-        content.setInt(BuiltInFieldIds.Vaccine.doseNumber, 2)
-
-        let record = MedicalRecord(personId: person.id, encryptedContent: Data())
-        let decryptedRecord = DecryptedRecord(record: record, content: content)
+        let decryptedRecord = try makeTestDecryptedRecord(recordType: .immunization)
 
         let view = MedicalRecordDetailView(
             person: person,
-            schemaType: .vaccine,
             decryptedRecord: decryptedRecord
         )
 
@@ -138,42 +84,15 @@ struct MedicalRecordFormDetailViewTests {
     }
 
     @Test
-    func medicalRecordDetailViewHandlesMissingPrimaryField() throws {
-        let person = try makeTestPerson()
-        // Create content without the primary field
-        var content = RecordContent(schemaId: "vaccine")
-        content.setDate(BuiltInFieldIds.Vaccine.dateAdministered, Date())
-
-        let record = MedicalRecord(personId: person.id, encryptedContent: Data())
-        let decryptedRecord = DecryptedRecord(record: record, content: content)
-
-        let view = MedicalRecordDetailView(
-            person: person,
-            schemaType: .vaccine,
-            decryptedRecord: decryptedRecord
-        )
-
-        // Use find() for deterministic coverage
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.List.self)
-    }
-
-    @Test
     func medicalRecordDetailViewRendersWithCallbacks() throws {
         let person = try makeTestPerson()
-        var content = RecordContent(schemaId: "vaccine")
-        content.setString(BuiltInFieldIds.Vaccine.name, "Test Vaccine")
-        content.setDate(BuiltInFieldIds.Vaccine.dateAdministered, Date())
-
-        let record = MedicalRecord(personId: person.id, encryptedContent: Data())
-        let decryptedRecord = DecryptedRecord(record: record, content: content)
+        let decryptedRecord = try makeTestDecryptedRecord()
 
         var deleteCallbackProvided = false
         var updateCallbackProvided = false
 
         let view = MedicalRecordDetailView(
             person: person,
-            schemaType: .vaccine,
             decryptedRecord: decryptedRecord,
             onDelete: {
                 deleteCallbackProvided = true
@@ -195,178 +114,16 @@ struct MedicalRecordFormDetailViewTests {
     @Test
     func medicalRecordDetailViewRendersWithoutCallbacks() throws {
         let person = try makeTestPerson()
-        var content = RecordContent(schemaId: "vaccine")
-        content.setString(BuiltInFieldIds.Vaccine.name, "Test Vaccine")
-        content.setDate(BuiltInFieldIds.Vaccine.dateAdministered, Date())
-
-        let record = MedicalRecord(personId: person.id, encryptedContent: Data())
-        let decryptedRecord = DecryptedRecord(record: record, content: content)
+        let decryptedRecord = try makeTestDecryptedRecord()
 
         // View should render without callbacks (nil defaults)
         let view = MedicalRecordDetailView(
             person: person,
-            schemaType: .vaccine,
             decryptedRecord: decryptedRecord
         )
 
         // Use find() for deterministic coverage
         let inspected = try view.inspect()
         _ = try inspected.find(ViewType.List.self)
-    }
-
-    // MARK: - MedicalRecordFormView Tests (using generic schema)
-
-    @Test
-    func medicalRecordFormViewRendersForAdd() throws {
-        let person = try makeTestPerson()
-
-        let view = withDependencies {
-            $0.date = .constant(testDate)
-        } operation: {
-            MedicalRecordFormView(
-                person: person,
-                schema: testSchema
-            )
-        }
-
-        // Use find() for deterministic coverage
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.NavigationStack.self)
-
-        #expect(testSchema.id == testSchemaId)
-    }
-
-    @Test
-    func medicalRecordFormViewRendersForEdit() throws {
-        let person = try makeTestPerson()
-        let decryptedRecord = makeTestDecryptedRecord()
-
-        let view = withDependencies {
-            $0.date = .constant(testDate)
-        } operation: {
-            MedicalRecordFormView(
-                person: person,
-                schema: testSchema,
-                existingRecord: decryptedRecord.record,
-                existingContent: decryptedRecord.content
-            )
-        }
-
-        // Use find() for deterministic coverage
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.NavigationStack.self)
-
-        #expect(decryptedRecord.content.getString(requiredStringFieldId) == "Test Record")
-    }
-
-    @Test
-    func medicalRecordFormViewRendersWithInjectedViewModel() throws {
-        let person = try makeTestPerson()
-        let viewModel = createFormViewModel(person: person)
-
-        let view = MedicalRecordFormView(
-            person: person,
-            schema: testSchema,
-            viewModel: viewModel
-        )
-
-        let inspectedView = try view.inspect()
-        _ = try inspectedView.navigationStack()
-    }
-
-    @Test
-    func medicalRecordFormViewRendersFormFields() throws {
-        let person = try makeTestPerson()
-        let viewModel = createFormViewModel(person: person)
-
-        let view = MedicalRecordFormView(
-            person: person,
-            schema: testSchema,
-            viewModel: viewModel
-        )
-
-        let inspectedView = try view.inspect()
-        let navigationStack = try inspectedView.navigationStack()
-        _ = try navigationStack.find(ViewType.Form.self)
-    }
-
-    @Test
-    func medicalRecordFormViewRendersLoadingState() throws {
-        let person = try makeTestPerson()
-        let viewModel = createFormViewModel(person: person)
-        viewModel.isLoading = true
-
-        let view = MedicalRecordFormView(
-            person: person,
-            schema: testSchema,
-            viewModel: viewModel
-        )
-
-        let inspectedView = try view.inspect()
-        _ = try inspectedView.find(ViewType.ProgressView.self)
-    }
-
-    @Test
-    func medicalRecordFormViewHandlesErrorMessage() throws {
-        let person = try makeTestPerson()
-        let viewModel = createFormViewModel(person: person)
-        viewModel.errorMessage = "Validation failed"
-
-        let view = MedicalRecordFormView(
-            person: person,
-            schema: testSchema,
-            viewModel: viewModel
-        )
-
-        // Error state still renders the NavigationStack structure
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.NavigationStack.self)
-        #expect(viewModel.errorMessage == "Validation failed")
-    }
-
-    @Test(arguments: BuiltInSchemaType.allCases)
-    func medicalRecordFormViewRendersForSchemaType(_ schemaType: BuiltInSchemaType) throws {
-        let person = try makeTestPerson()
-
-        let schema = RecordSchema.builtIn(schemaType)
-        let view = withDependencies {
-            $0.date = .constant(testDate)
-        } operation: {
-            MedicalRecordFormView(person: person, schema: schema)
-        }
-        // Use find() for deterministic coverage
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.NavigationStack.self)
-    }
-
-    @Test
-    func medicalRecordFormViewPreservesExistingContent() throws {
-        let person = try makeTestPerson()
-
-        var existingContent = RecordContent(schemaId: testSchemaId)
-        existingContent.setString(requiredStringFieldId, "Existing Record")
-        existingContent.setDate(requiredDateFieldId, Date())
-
-        let existingRecord = MedicalRecord(personId: person.id, encryptedContent: Data())
-
-        let viewModel = createFormViewModel(
-            person: person,
-            existingRecord: existingRecord,
-            existingContent: existingContent
-        )
-
-        let view = MedicalRecordFormView(
-            person: person,
-            schema: testSchema,
-            existingRecord: existingRecord,
-            existingContent: existingContent,
-            viewModel: viewModel
-        )
-
-        // Use find() for deterministic coverage
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.NavigationStack.self)
-
-        #expect(viewModel.fieldValues[requiredStringFieldKey]?.stringValue == "Existing Record")
     }
 }

@@ -1,39 +1,21 @@
 import SwiftUI
 
-/// Empty state view displayed when there are no records
+/// Empty state view displayed when there are no records.
+/// The "Add" button is intentionally omitted until GenericRecordFormView
+/// lands in #127 — we don't ship buttons that do nothing.
 struct EmptyRecordListView: View {
-    // MARK: - Properties
-
-    let schemaType: BuiltInSchemaType
-    let onAddTapped: () -> Void
-
-    // MARK: - Body
+    let recordType: RecordType
 
     var body: some View {
-        ContentUnavailableView {
-            Label("No \(schemaType.displayName) Records", systemImage: schemaType.iconSystemName)
-        } description: {
-            Text("Add your first \(schemaType.displayName.lowercased()) record to start tracking.")
-        } actions: {
-            Button("Add \(schemaType.displayName)") {
-                onAddTapped()
-            }
-            .buttonStyle(.borderedProminent)
-        }
+        ContentUnavailableView(
+            "No \(recordType.displayName) Records",
+            systemImage: recordType.iconSystemName,
+            description: Text("Adding \(recordType.displayName.lowercased()) records is coming soon.")
+        )
         .accessibilityElement(children: .combine)
     }
 }
 
-// MARK: - Preview
-
 #Preview {
-    EmptyRecordListView(schemaType: .vaccine) {}
-}
-
-#Preview("Medication") {
-    EmptyRecordListView(schemaType: .medication) {}
-}
-
-#Preview("Condition") {
-    EmptyRecordListView(schemaType: .condition) {}
+    EmptyRecordListView(recordType: .immunization)
 }

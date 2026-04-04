@@ -81,6 +81,15 @@ repos:
         args: ['--fix', '--config', '.markdownlint.json']
         exclude: '^(docs/adr/adr-template\.md|CLAUDE\.md)$'
 
+  # Enforce Swift Testing (not XCTest) in unit test files
+  - repo: local
+    hooks:
+      - id: no-xctest-in-unit-tests
+        name: Block XCTest in unit tests (use Swift Testing instead)
+        entry: scripts/check-no-xctest-in-unit-tests.sh
+        language: script
+        files: '^ios/FamilyMedicalApp/FamilyMedicalAppTests/.*\.swift$'
+
   # Backup schema validation
   - repo: local
     hooks:

@@ -35,20 +35,6 @@ enum RepositoryError: LocalizedError, Equatable {
     /// Attempted to create entity with duplicate ID
     case duplicateEntity(UUID)
 
-    // MARK: - Schema Validation Errors
-
-    /// Schema ID conflicts with a built-in schema
-    case schemaIdConflictsWithBuiltIn(String)
-
-    /// Custom schema was not found
-    case customSchemaNotFound(String)
-
-    /// Attempted to change field type on schema update (breaking change)
-    case fieldTypeChangeNotAllowed(fieldId: String, from: FieldType, to: FieldType)
-
-    /// Schema version was not incremented on update
-    case schemaVersionNotIncremented(current: Int, expected: Int)
-
     // MARK: - Serialization Errors
 
     /// Failed to serialize data to JSON or binary format
@@ -56,20 +42,6 @@ enum RepositoryError: LocalizedError, Equatable {
 
     /// Failed to deserialize data from JSON or binary format
     case deserializationFailed(String)
-
-    // MARK: - Migration Errors
-
-    /// Migration failed with the given reason
-    case migrationFailed(String)
-
-    /// Failed to rollback a migration
-    case migrationRollbackFailed(String)
-
-    /// Migration checkpoint was not found
-    case checkpointNotFound(UUID)
-
-    /// A checkpoint already exists for this migration
-    case checkpointAlreadyExists(UUID)
 
     // MARK: - LocalizedError Conformance
 
@@ -96,29 +68,11 @@ enum RepositoryError: LocalizedError, Equatable {
             "Validation failed: \(details)"
         case let .duplicateEntity(id):
             "Entity with ID \(id) already exists"
-        // Schema validation errors
-        case let .schemaIdConflictsWithBuiltIn(schemaId):
-            "Schema ID '\(schemaId)' conflicts with a built-in schema"
-        case let .customSchemaNotFound(schemaId):
-            "Custom schema '\(schemaId)' not found"
-        case let .fieldTypeChangeNotAllowed(fieldId, from, to):
-            "Cannot change field type for '\(fieldId)' from \(from) to \(to)"
-        case let .schemaVersionNotIncremented(current, expected):
-            "Schema version must be incremented (current: \(current), expected: \(expected))"
         // Serialization errors
         case let .serializationFailed(details):
             "Serialization failed: \(details)"
         case let .deserializationFailed(details):
             "Deserialization failed: \(details)"
-        // Migration errors
-        case let .migrationFailed(details):
-            "Migration failed: \(details)"
-        case let .migrationRollbackFailed(details):
-            "Migration rollback failed: \(details)"
-        case let .checkpointNotFound(migrationId):
-            "Migration checkpoint not found: \(migrationId)"
-        case let .checkpointAlreadyExists(migrationId):
-            "Checkpoint already exists for migration: \(migrationId)"
         }
     }
 }

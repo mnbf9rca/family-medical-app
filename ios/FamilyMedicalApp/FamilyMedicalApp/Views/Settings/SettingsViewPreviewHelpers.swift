@@ -26,13 +26,11 @@ final class PreviewExportService: ExportServiceProtocol, @unchecked Sendable {
             metadata: BackupMetadata(
                 personCount: 2,
                 recordCount: 10,
-                attachmentCount: 3,
-                schemaCount: 1
+                attachmentCount: 3
             ),
             persons: [],
             records: [],
-            attachments: [],
-            schemas: []
+            attachments: []
         )
     }
 }
@@ -82,13 +80,11 @@ final class PreviewBackupFileService: BackupFileServiceProtocol, @unchecked Send
             metadata: BackupMetadata(
                 personCount: 0,
                 recordCount: 0,
-                attachmentCount: 0,
-                schemaCount: 0
+                attachmentCount: 0
             ),
             persons: [],
             records: [],
-            attachments: [],
-            schemas: []
+            attachments: []
         )
     }
 
@@ -99,13 +95,11 @@ final class PreviewBackupFileService: BackupFileServiceProtocol, @unchecked Send
             metadata: BackupMetadata(
                 personCount: 0,
                 recordCount: 0,
-                attachmentCount: 0,
-                schemaCount: 0
+                attachmentCount: 0
             ),
             persons: [],
             records: [],
-            attachments: [],
-            schemas: []
+            attachments: []
         )
     }
 

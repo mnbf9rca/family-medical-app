@@ -127,6 +127,7 @@ final class MedicalRecordFlowUITests: XCTestCase {
     // prefixes are unreliable. This single method tests all operations sequentially.
 
     func testMedicalRecordCRUDWorkflow() throws {
+        try XCTSkipIf(true, "Form views removed in #123, re-enable when GenericRecordFormView lands in #127")
         // Setup: Launch app and create account
         app = XCUIApplication()
         app.launchForUITesting(resetState: true)

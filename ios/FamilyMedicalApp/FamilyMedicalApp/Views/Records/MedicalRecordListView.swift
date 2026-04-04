@@ -2,50 +2,31 @@ import SwiftUI
 
 /// List view for displaying medical records of a specific type
 struct MedicalRecordListView: View {
-    // MARK: - Properties
-
     let person: Person
-    let schemaType: BuiltInSchemaType
+    let recordType: RecordType
 
     @State private var viewModel: MedicalRecordListViewModel
-    @State private var showingAddForm = false
     @State private var recordToDelete: DecryptedRecord?
     @State private var showingDeleteConfirmation = false
 
-    // MARK: - Initialization
-
-    init(person: Person, schemaType: BuiltInSchemaType, viewModel: MedicalRecordListViewModel? = nil) {
+    init(person: Person, recordType: RecordType, viewModel: MedicalRecordListViewModel? = nil) {
         self.person = person
-        self.schemaType = schemaType
+        self.recordType = recordType
         self._viewModel = State(initialValue: viewModel ?? MedicalRecordListViewModel(
             person: person,
-            schemaType: schemaType
+            recordType: recordType
         ))
     }
-
-    /// Schema from SchemaService, falling back to built-in for rendering.
-    /// The fallback only triggers before initial loadRecords() completes;
-    /// once loaded successfully, viewModel.schema is non-nil for built-in schema types.
-    private var displaySchema: RecordSchema {
-        viewModel.schema ?? RecordSchema.builtIn(schemaType)
-    }
-
-    // MARK: - Body
 
     var body: some View {
         Group {
             if viewModel.records.isEmpty, !viewModel.isLoading {
-                EmptyRecordListView(schemaType: schemaType) {
-                    showingAddForm = true
-                }
+                EmptyRecordListView(recordType: recordType)
             } else {
                 List {
                     ForEach(viewModel.records) { decryptedRecord in
                         NavigationLink(value: decryptedRecord) {
-                            MedicalRecordRowView(
-                                schema: displaySchema,
-                                content: decryptedRecord.content
-                            )
+                            MedicalRecordRowView(decryptedRecord: decryptedRecord)
                         }
                     }
                     .onDelete(perform: deleteRecords)
@@ -53,12 +34,11 @@ struct MedicalRecordListView: View {
                 .listStyle(.insetGrouped)
             }
         }
-        .navigationTitle("\(person.name)'s \(schemaType.displayName)")
+        .navigationTitle("\(person.name)'s \(recordType.displayName)")
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(for: DecryptedRecord.self) { decryptedRecord in
             MedicalRecordDetailView(
                 person: person,
-                schemaType: schemaType,
                 decryptedRecord: decryptedRecord,
                 onDelete: {
                     await viewModel.deleteRecord(id: decryptedRecord.id)
@@ -69,17 +49,6 @@ struct MedicalRecordListView: View {
                     }
                 }
             )
-        }
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Button(action: { showingAddForm = true }, label: {
-                    Image(systemName: "plus")
-                })
-                .accessibilityLabel("Add \(schemaType.displayName)")
-            }
-        }
-        .sheet(isPresented: $showingAddForm) {
-            MedicalRecordFormView(person: person, schema: displaySchema)
         }
         .overlay {
             if viewModel.isLoading {
@@ -115,42 +84,11 @@ struct MedicalRecordListView: View {
         .refreshable {
             await viewModel.loadRecords()
         }
-        .onChange(of: showingAddForm) { _, isShowing in
-            if !isShowing {
-                // Refresh list when form is dismissed
-                Task {
-                    await viewModel.loadRecords()
-                }
-            }
-        }
     }
 
-    // MARK: - Actions
-
-    /// Handle swipe-to-delete gesture
-    ///
-    /// SwiftUI's `.onDelete` modifier for swipe gestures always provides a single-element IndexSet.
-    /// Multi-row deletion would require Edit mode with selection, which is not currently implemented.
-    /// If multi-select is added later, update this to handle all indices.
     private func deleteRecords(at offsets: IndexSet) {
         guard let index = offsets.first else { return }
         recordToDelete = viewModel.records[index]
         showingDeleteConfirmation = true
-    }
-}
-
-// MARK: - Preview
-
-#Preview {
-    NavigationStack {
-        if let person = try? Person(
-            id: UUID(),
-            name: "Alice Smith",
-            dateOfBirth: Date(),
-            labels: ["Self"],
-            notes: nil
-        ) {
-            MedicalRecordListView(person: person, schemaType: .vaccine)
-        }
     }
 }

@@ -35,6 +35,7 @@ final class AttachmentFlowUITests: XCTestCase {
 
     /// Tests all attachment-related UI in a single app launch to minimize test time
     func testAttachmentFlowsConsolidated() throws {
+        try XCTSkipIf(true, "Form views removed in #123, re-enable when GenericRecordFormView lands in #127")
         // Setup - single app launch for all tests
         // Enable seedTestAttachments to auto-create test attachments for coverage
         app = XCUIApplication()

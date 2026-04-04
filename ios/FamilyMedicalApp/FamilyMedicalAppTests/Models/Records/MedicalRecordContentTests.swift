@@ -141,6 +141,127 @@ struct RecordContentEnvelopeTests {
     }
 }
 
+// MARK: - RecordType Display Property Tests
+
+@Suite("RecordType Display Properties")
+struct RecordTypeDisplayTests {
+    @Test("displayName returns expected string for every case")
+    func displayNames() {
+        #expect(RecordType.immunization.displayName == "Immunization")
+        #expect(RecordType.medicationStatement.displayName == "Medication")
+        #expect(RecordType.allergyIntolerance.displayName == "Allergy")
+        #expect(RecordType.condition.displayName == "Condition")
+        #expect(RecordType.observation.displayName == "Observation")
+        #expect(RecordType.procedure.displayName == "Procedure")
+        #expect(RecordType.documentReference.displayName == "Document")
+        #expect(RecordType.familyMemberHistory.displayName == "Family History")
+        #expect(RecordType.clinicalNote.displayName == "Note")
+    }
+
+    @Test("displayName is defined for all 9 cases")
+    func allCasesHaveDisplayName() {
+        for recordType in RecordType.allCases {
+            #expect(!recordType.displayName.isEmpty)
+        }
+    }
+
+    @Test("iconSystemName returns expected SF Symbol for every case")
+    func iconSystemNames() {
+        #expect(RecordType.immunization.iconSystemName == "syringe")
+        #expect(RecordType.medicationStatement.iconSystemName == "pills")
+        #expect(RecordType.allergyIntolerance.iconSystemName == "allergens")
+        #expect(RecordType.condition.iconSystemName == "heart.text.clipboard")
+        #expect(RecordType.observation.iconSystemName == "waveform.path.ecg")
+        #expect(RecordType.procedure.iconSystemName == "cross.case")
+        #expect(RecordType.documentReference.iconSystemName == "doc")
+        #expect(RecordType.familyMemberHistory.iconSystemName == "figure.2.and.child.holdinghands")
+        #expect(RecordType.clinicalNote.iconSystemName == "note.text")
+    }
+
+    @Test("iconSystemName is defined for all 9 cases")
+    func allCasesHaveIconSystemName() {
+        for recordType in RecordType.allCases {
+            #expect(!recordType.iconSystemName.isEmpty)
+        }
+    }
+}
+
+// MARK: - RecordContentEnvelope.decodeAny() Tests
+
+@Suite("RecordContentEnvelope.decodeAny()")
+struct RecordContentEnvelopeDecodeAnyTests {
+    @Test("decodeAny returns ImmunizationRecord for immunization envelope")
+    func decodeAnyImmunization() throws {
+        let record = ImmunizationRecord(vaccineCode: "MMR", occurrenceDate: Date())
+        let envelope = try RecordContentEnvelope(record)
+        let decoded = try envelope.decodeAny()
+        #expect(decoded is ImmunizationRecord)
+        let typed = decoded as? ImmunizationRecord
+        #expect(typed?.vaccineCode == "MMR")
+    }
+
+    @Test("decodeAny returns ConditionRecord for condition envelope")
+    func decodeAnyCondition() throws {
+        let record = ConditionRecord(conditionName: "Asthma", severity: "Mild")
+        let envelope = try RecordContentEnvelope(record)
+        let decoded = try envelope.decodeAny()
+        #expect(decoded is ConditionRecord)
+        let typed = decoded as? ConditionRecord
+        #expect(typed?.conditionName == "Asthma")
+        #expect(typed?.severity == "Mild")
+    }
+
+    @Test("decodeAny returns ClinicalNoteRecord for clinicalNote envelope")
+    func decodeAnyClinicalNote() throws {
+        let record = ClinicalNoteRecord(title: "Annual check-up", body: "All clear")
+        let envelope = try RecordContentEnvelope(record)
+        let decoded = try envelope.decodeAny()
+        #expect(decoded is ClinicalNoteRecord)
+        let typed = decoded as? ClinicalNoteRecord
+        #expect(typed?.title == "Annual check-up")
+        #expect(typed?.body == "All clear")
+    }
+
+    @Test("decodeAny preserves recordType from envelope")
+    func decodeAnyPreservesRecordType() throws {
+        let record = ConditionRecord(conditionName: "Diabetes")
+        let envelope = try RecordContentEnvelope(record)
+        let decoded = try envelope.decodeAny()
+        #expect(type(of: decoded).recordType == .condition)
+    }
+}
+
+// MARK: - RecordContentEnvelope memberwise init Tests
+
+@Suite("RecordContentEnvelope memberwise init")
+struct RecordContentEnvelopeMemberwiseInitTests {
+    @Test("Direct init stores all three properties")
+    func directInitStoresProperties() throws {
+        let data = try JSONEncoder().encode(ConditionRecord(conditionName: "Flu"))
+        let envelope = RecordContentEnvelope(
+            recordType: .condition,
+            schemaVersion: 3,
+            content: data
+        )
+        #expect(envelope.recordType == .condition)
+        #expect(envelope.schemaVersion == 3)
+        #expect(envelope.content == data)
+    }
+
+    @Test("Direct init can be decoded back to the correct type")
+    func directInitRoundTrip() throws {
+        let original = ImmunizationRecord(vaccineCode: "Flu Shot", occurrenceDate: Date())
+        let data = try JSONEncoder().encode(original)
+        let envelope = RecordContentEnvelope(
+            recordType: .immunization,
+            schemaVersion: 1,
+            content: data
+        )
+        let decoded = try envelope.decode(ImmunizationRecord.self)
+        #expect(decoded.vaccineCode == "Flu Shot")
+    }
+}
+
 // MARK: - FieldMetadata Tests
 
 @Suite("FieldMetadata Tests")
