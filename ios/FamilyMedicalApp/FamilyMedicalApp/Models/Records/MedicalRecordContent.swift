@@ -297,8 +297,16 @@ enum FieldValueDenormalizer {
             }
         case .components:
             if let array = value as? [[String: Any]] {
-                guard let data = try? JSONSerialization.data(withJSONObject: array) else { return [] }
-                return (try? JSONDecoder().decode([ObservationComponent].self, from: data)) ?? []
+                guard let data = try? JSONSerialization.data(withJSONObject: array),
+                      let decoded = try? JSONDecoder().decode([ObservationComponent].self, from: data)
+                else {
+                    // Preserve the raw JSON array so forward-compat data isn't silently
+                    // discarded when decode fails (e.g., newer schema with fields we don't
+                    // know). Callers downcast; they'll either handle the raw array or
+                    // gracefully ignore a wrong-typed value.
+                    return value
+                }
+                return decoded
             }
         default:
             break

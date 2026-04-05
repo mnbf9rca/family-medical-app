@@ -326,4 +326,25 @@ struct MedicalRecordFormDetailViewTests {
             try deleteButton.tap()
         }
     }
+
+    @Test
+    func viewRendersUUIDFallbackWhenProviderDisplayStringNil() throws {
+        let person = try makeTestPerson()
+        let providerId = UUID()
+        let content = ImmunizationRecord(
+            vaccineCode: "Pfizer",
+            occurrenceDate: Date(),
+            providerId: providerId
+        )
+        let envelope = try RecordContentEnvelope(content)
+        let record = MedicalRecord(personId: person.id, encryptedContent: Data())
+        let decrypted = DecryptedRecord(record: record, envelope: envelope)
+        let view = MedicalRecordDetailView(person: person, decryptedRecord: decrypted)
+
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            // Before loadProviderDisplayIfNeeded resolves, the view falls back to UUID.
+            _ = try inspected.find(text: providerId.uuidString)
+        }
+    }
 }

@@ -167,7 +167,16 @@ struct MedicalRecordDetailView: View {
     private func displayText(for metadata: FieldMetadata) -> String? {
         guard let raw = viewModel.knownFieldValues[metadata.keyPath] else { return nil }
         if metadata.isProviderReference {
-            return viewModel.providerDisplayString
+            if let display = viewModel.providerDisplayString {
+                return display
+            }
+            // Provider lookup hasn't resolved yet (or provider was deleted). Fall back to
+            // the UUID so the row still renders — blank rows mislead the user into thinking
+            // no provider was set when one was.
+            if let uuid = raw as? UUID {
+                return uuid.uuidString
+            }
+            return nil
         }
         switch metadata.fieldType {
         case .date:

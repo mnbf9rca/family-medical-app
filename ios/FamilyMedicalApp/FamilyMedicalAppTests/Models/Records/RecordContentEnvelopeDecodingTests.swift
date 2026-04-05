@@ -195,6 +195,24 @@ struct FieldValueDenormalizerTests {
         let result = FieldValueDenormalizer.denormalize("hello", for: metadata)
         #expect(result as? String == "hello")
     }
+
+    @Test
+    func denormalize_componentsWithMalformedEntryPreservesRawValue() {
+        let metadata = FieldMetadata(
+            keyPath: "components",
+            displayName: "Measurements",
+            fieldType: .components,
+            displayOrder: 1
+        )
+        // Missing 'unit' field — won't decode as ObservationComponent.
+        let malformed: [[String: Any]] = [["name": "Weight", "value": 70]]
+        let result = FieldValueDenormalizer.denormalize(malformed, for: metadata)
+        // Should NOT return an empty array — raw value is preserved so callers can
+        // see the payload and forward-compat data isn't silently dropped.
+        let arr = result as? [[String: Any]]
+        #expect(arr?.count == 1)
+        #expect(arr?.first?["name"] as? String == "Weight")
+    }
 }
 
 // MARK: - FieldValueNormalizer
