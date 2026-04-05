@@ -1,62 +1,50 @@
+import CryptoKit
 import PhotosUI
 import SwiftUI
 
-/// Main attachment picker component for medical record forms
+/// Main attachment picker component for medical record forms.
 ///
-/// Displays existing attachments as thumbnails with an "Add" button that opens
-/// a menu with camera, photo library, and document picker options.
+/// Displays drafts as thumbnails with an "Add" button that opens a menu with camera,
+/// photo library, and document picker options. The parent form reads
+/// `viewModel.allDocumentReferences` at save time to persist the drafts.
 struct AttachmentPickerView: View {
-    /// ViewModel managing attachment state
     @Bindable var viewModel: AttachmentPickerViewModel
 
-    /// Callback when attachments change
-    var onAttachmentsChanged: (([UUID]) -> Void)?
-
-    /// Columns for adaptive grid layout
     private let gridColumns = [
         GridItem(.adaptive(minimum: 70, maximum: 90), spacing: 8)
     ]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            // Thumbnails grid with add button
             LazyVGrid(columns: gridColumns, alignment: .leading, spacing: 8) {
-                // Existing attachments
-                ForEach(viewModel.attachments) { attachment in
+                ForEach(viewModel.drafts) { draft in
                     AttachmentThumbnailView(
-                        attachment: attachment,
+                        document: draft.content,
                         onTap: {
-                            // TODO: Navigate to full-screen viewer
+                            // Tapping is handled at the parent-form level later.
                         },
                         onRemove: {
-                            Task {
-                                await viewModel.removeAttachment(attachment)
-                                onAttachmentsChanged?(viewModel.attachmentIds)
-                            }
+                            viewModel.removeDraft(id: draft.id)
                         },
                         size: 70
                     )
                 }
 
-                // Add button
                 if viewModel.canAddMore {
                     addButton
                 }
             }
 
-            // Count summary
             Text(viewModel.countSummary)
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
-            // Error message
             if let errorMessage = viewModel.errorMessage {
                 Text(errorMessage)
                     .font(.caption)
                     .foregroundStyle(.red)
             }
         }
-        // Photo library picker
         .photosPicker(
             isPresented: $viewModel.showingPhotoLibrary,
             selection: Binding(
@@ -64,21 +52,18 @@ struct AttachmentPickerView: View {
                 set: { items in
                     Task {
                         await viewModel.addFromPhotoLibrary(items)
-                        onAttachmentsChanged?(viewModel.attachmentIds)
                     }
                 }
             ),
             maxSelectionCount: viewModel.remainingSlots,
             matching: .images
         )
-        // Document picker
         .sheet(isPresented: $viewModel.showingDocumentPicker) {
             DocumentPickerRepresentable(
                 onDocumentsPicked: { urls in
                     viewModel.showingDocumentPicker = false
                     Task {
                         await viewModel.addFromDocumentPicker(urls)
-                        onAttachmentsChanged?(viewModel.attachmentIds)
                     }
                 },
                 onCancel: {
@@ -86,14 +71,12 @@ struct AttachmentPickerView: View {
                 }
             )
         }
-        // Camera
         .fullScreenCover(isPresented: $viewModel.showingCamera) {
             CameraRepresentable(
                 onImageCaptured: { image in
                     viewModel.showingCamera = false
                     Task {
                         await viewModel.addFromCamera(image)
-                        onAttachmentsChanged?(viewModel.attachmentIds)
                     }
                 },
                 onCancel: {
@@ -102,7 +85,6 @@ struct AttachmentPickerView: View {
             )
             .ignoresSafeArea()
         }
-        // Loading overlay
         .overlay {
             if viewModel.isLoading {
                 ProgressView()
@@ -148,7 +130,6 @@ struct AttachmentPickerView: View {
                     .foregroundStyle(.secondary)
             }
             .frame(width: 70, height: 70)
-            // Accessibility on label content for XCTest discoverability
             .accessibilityElement(children: .ignore)
             .accessibilityAddTraits(.isButton)
             .accessibilityIdentifier("addAttachmentButton")
@@ -161,28 +142,22 @@ struct AttachmentPickerView: View {
 // MARK: - Preview Helpers
 
 private enum PickerPreviewHelpers {
-    static func makeAttachment(fileName: String, mimeType: String, hmacByte: UInt8) -> Attachment? {
-        try? Attachment(
-            id: UUID(),
-            fileName: fileName,
+    static func makeDocument(title: String, mimeType: String, hmacByte: UInt8) -> DocumentReferenceRecord {
+        DocumentReferenceRecord(
+            title: title,
             mimeType: mimeType,
-            contentHMAC: Data(repeating: hmacByte, count: 32),
-            encryptedSize: 1_024,
-            thumbnailData: nil,
-            uploadedAt: Date()
+            fileSize: 1_024,
+            contentHMAC: Data(repeating: hmacByte, count: 32)
         )
     }
 
-    static func makeSampleAttachments(count: Int) -> [Attachment] {
-        (0 ..< count).compactMap { index in
-            try? Attachment(
-                id: UUID(),
-                fileName: "file\(index).jpg",
+    static func makeSampleDocuments(count: Int) -> [DocumentReferenceRecord] {
+        (0 ..< count).map { index in
+            DocumentReferenceRecord(
+                title: "file\(index).jpg",
                 mimeType: "image/jpeg",
-                contentHMAC: Data(repeating: UInt8(index), count: 32),
-                encryptedSize: 1_024,
-                thumbnailData: nil,
-                uploadedAt: Date()
+                fileSize: 1_024,
+                contentHMAC: Data(repeating: UInt8(index), count: 32)
             )
         }
     }
@@ -194,7 +169,9 @@ private enum PickerPreviewHelpers {
             AttachmentPickerView(
                 viewModel: AttachmentPickerViewModel(
                     personId: UUID(),
-                    existingAttachments: []
+                    sourceRecordId: UUID(),
+                    primaryKey: SymmetricKey(size: .bits256),
+                    existing: []
                 )
             )
         }
@@ -202,17 +179,19 @@ private enum PickerPreviewHelpers {
 }
 
 #Preview("With Attachments") {
-    let attachments: [Attachment] = [
-        PickerPreviewHelpers.makeAttachment(fileName: "vaccine_card.jpg", mimeType: "image/jpeg", hmacByte: 1),
-        PickerPreviewHelpers.makeAttachment(fileName: "prescription.pdf", mimeType: "application/pdf", hmacByte: 2)
-    ].compactMap(\.self)
+    let documents: [DocumentReferenceRecord] = [
+        PickerPreviewHelpers.makeDocument(title: "vaccine_card.jpg", mimeType: "image/jpeg", hmacByte: 1),
+        PickerPreviewHelpers.makeDocument(title: "prescription.pdf", mimeType: "application/pdf", hmacByte: 2)
+    ]
 
     Form {
         Section("Attachments") {
             AttachmentPickerView(
                 viewModel: AttachmentPickerViewModel(
                     personId: UUID(),
-                    existingAttachments: attachments
+                    sourceRecordId: UUID(),
+                    primaryKey: SymmetricKey(size: .bits256),
+                    existing: documents
                 )
             )
         }
@@ -220,14 +199,16 @@ private enum PickerPreviewHelpers {
 }
 
 #Preview("At Limit") {
-    let attachments = PickerPreviewHelpers.makeSampleAttachments(count: 5)
+    let documents = PickerPreviewHelpers.makeSampleDocuments(count: 5)
 
     Form {
         Section("Attachments") {
             AttachmentPickerView(
                 viewModel: AttachmentPickerViewModel(
                     personId: UUID(),
-                    existingAttachments: attachments
+                    sourceRecordId: UUID(),
+                    primaryKey: SymmetricKey(size: .bits256),
+                    existing: documents
                 )
             )
         }

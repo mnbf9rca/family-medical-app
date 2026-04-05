@@ -33,6 +33,22 @@ enum ThumbnailDisplayMode: Equatable {
         }
     }
 
+    /// Determine the display mode for a DocumentReferenceRecord.
+    ///
+    /// - Parameter document: The document to display
+    /// - Returns: The appropriate display mode based on mimeType and thumbnail availability
+    static func from(document: DocumentReferenceRecord) -> ThumbnailDisplayMode {
+        if let thumbnailData = document.thumbnailData, !thumbnailData.isEmpty {
+            .thumbnail(thumbnailData)
+        } else if document.mimeType == "application/pdf" {
+            .pdfIcon
+        } else if document.mimeType.hasPrefix("image/") {
+            .imageIcon
+        } else {
+            .genericFileIcon
+        }
+    }
+
     /// System image name for the icon
     var systemImageName: String {
         switch self {

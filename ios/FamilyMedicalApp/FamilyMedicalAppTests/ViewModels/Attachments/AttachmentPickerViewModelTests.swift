@@ -1,5 +1,4 @@
 import CryptoKit
-import Dependencies
 import Foundation
 import Testing
 import UIKit
@@ -11,77 +10,95 @@ struct AttachmentPickerViewModelTests {
 
     struct TestFixtures {
         let viewModel: AttachmentPickerViewModel
-        let attachmentService: MockAttachmentService
-        let primaryKeyProvider: MockPrimaryKeyProvider
+        let blobService: MockAttachmentBlobService
         let personId: UUID
-        let recordId: UUID
+        let sourceRecordId: UUID?
         let primaryKey: SymmetricKey
     }
 
-    /// Fixed test date for deterministic testing
-    let testDate = Date(timeIntervalSinceReferenceDate: 1_234_567_890)
-
-    func makeFixtures(recordId: UUID? = nil, existingAttachments: [FamilyMedicalApp.Attachment] = []) -> TestFixtures {
-        let attachmentService = MockAttachmentService()
+    func makeFixtures(
+        sourceRecordId: UUID? = UUID(),
+        existing: [DocumentReferenceRecord] = []
+    ) -> TestFixtures {
+        let blobService = MockAttachmentBlobService()
         let primaryKey = SymmetricKey(size: .bits256)
-        let primaryKeyProvider = MockPrimaryKeyProvider(primaryKey: primaryKey)
         let personId = UUID()
-        let recordIdToUse = recordId ?? UUID()
 
-        // Use withDependencies to provide test values for @Dependency properties
-        let viewModel = withDependencies {
-            $0.date = .constant(testDate)
-            $0.uuid = .incrementing
-        } operation: {
-            AttachmentPickerViewModel(
-                personId: personId,
-                recordId: recordIdToUse,
-                existingAttachments: existingAttachments,
-                attachmentService: attachmentService,
-                primaryKeyProvider: primaryKeyProvider
-            )
-        }
+        let viewModel = AttachmentPickerViewModel(
+            personId: personId,
+            sourceRecordId: sourceRecordId,
+            primaryKey: primaryKey,
+            existing: existing,
+            blobService: blobService
+        )
 
         return TestFixtures(
             viewModel: viewModel,
-            attachmentService: attachmentService,
-            primaryKeyProvider: primaryKeyProvider,
+            blobService: blobService,
             personId: personId,
-            recordId: recordIdToUse,
+            sourceRecordId: sourceRecordId,
             primaryKey: primaryKey
         )
     }
 
     func makeTestImage(size: CGSize = CGSize(width: 100, height: 100)) -> UIImage {
-        AttachmentTestHelper.makeTestImage(size: size)
+        let renderer = UIGraphicsImageRenderer(size: size)
+        return renderer.image { ctx in
+            UIColor.blue.setFill()
+            ctx.fill(CGRect(origin: .zero, size: size))
+        }
     }
 
-    func makeTestAttachment(
-        fileName: String = "test.jpg",
-        mimeType: String = "image/jpeg"
-    ) throws -> FamilyMedicalApp.Attachment {
-        try AttachmentTestHelper.makeTestAttachment(fileName: fileName, mimeType: mimeType)
+    func makeDocumentReference(
+        title: String = "existing.jpg",
+        mimeType: String = "image/jpeg",
+        hmacByte: UInt8 = 0x01
+    ) -> DocumentReferenceRecord {
+        DocumentReferenceRecord(
+            title: title,
+            mimeType: mimeType,
+            fileSize: 1_024,
+            contentHMAC: Data(repeating: hmacByte, count: 32)
+        )
     }
 
     // MARK: - Initialization Tests
 
     @Test
-    func init_noExistingAttachments_startsEmpty() {
+    func init_noExisting_startsEmpty() {
         let fixtures = makeFixtures()
 
-        #expect(fixtures.viewModel.attachments.isEmpty)
+        #expect(fixtures.viewModel.drafts.isEmpty)
         #expect(!fixtures.viewModel.isLoading)
         #expect(fixtures.viewModel.errorMessage == nil)
     }
 
     @Test
-    func init_withExistingAttachments_loadsAttachments() throws {
-        let attachment1 = try makeTestAttachment(fileName: "file1.jpg")
-        let attachment2 = try makeTestAttachment(fileName: "file2.jpg")
+    func init_withExisting_loadsDrafts() {
+        let doc1 = makeDocumentReference(title: "doc1.jpg", hmacByte: 0x01)
+        let doc2 = makeDocumentReference(title: "doc2.jpg", hmacByte: 0x02)
 
-        let fixtures = makeFixtures(existingAttachments: [attachment1, attachment2])
+        let fixtures = makeFixtures(existing: [doc1, doc2])
 
-        #expect(fixtures.viewModel.attachments.count == 2)
+        #expect(fixtures.viewModel.drafts.count == 2)
+        #expect(fixtures.viewModel.drafts[0].content.title == "doc1.jpg")
+        #expect(fixtures.viewModel.drafts[1].content.title == "doc2.jpg")
+    }
+
+    @Test
+    func init_storesContextFields() {
+        let sourceId = UUID()
+        let fixtures = makeFixtures(sourceRecordId: sourceId)
+
+        #expect(fixtures.viewModel.sourceRecordId == sourceId)
+        #expect(fixtures.viewModel.personId == fixtures.personId)
+    }
+
+    @Test
+    func init_nilSourceRecordId_isAllowed() {
+        let fixtures = makeFixtures(sourceRecordId: nil)
+
+        #expect(fixtures.viewModel.sourceRecordId == nil)
     }
 
     // MARK: - Computed Properties Tests
@@ -89,18 +106,16 @@ struct AttachmentPickerViewModelTests {
     @Test
     func canAddMore_belowLimit_returnsTrue() {
         let fixtures = makeFixtures()
-
         #expect(fixtures.viewModel.canAddMore)
     }
 
     @Test
-    func canAddMore_atLimit_returnsFalse() throws {
-        var attachments: [FamilyMedicalApp.Attachment] = []
-        for index in 0 ..< AttachmentPickerViewModel.maxAttachments {
-            try attachments.append(makeTestAttachment(fileName: "file\(index).jpg"))
+    func canAddMore_atLimit_returnsFalse() {
+        var existing: [DocumentReferenceRecord] = []
+        for index in 0 ..< AttachmentPickerViewModel.maxPerRecord {
+            existing.append(makeDocumentReference(title: "f\(index).jpg", hmacByte: UInt8(index)))
         }
-
-        let fixtures = makeFixtures(existingAttachments: attachments)
+        let fixtures = makeFixtures(existing: existing)
 
         #expect(!fixtures.viewModel.canAddMore)
     }
@@ -108,176 +123,188 @@ struct AttachmentPickerViewModelTests {
     @Test
     func remainingSlots_empty_returnsMax() {
         let fixtures = makeFixtures()
-
-        #expect(fixtures.viewModel.remainingSlots == AttachmentPickerViewModel.maxAttachments)
+        #expect(fixtures.viewModel.remainingSlots == AttachmentPickerViewModel.maxPerRecord)
     }
 
     @Test
-    func remainingSlots_partiallyFilled_returnsCorrect() throws {
-        let attachments = try [
-            makeTestAttachment(fileName: "file1.jpg"),
-            makeTestAttachment(fileName: "file2.jpg")
+    func remainingSlots_partial_returnsDiff() {
+        let existing = [
+            makeDocumentReference(title: "a.jpg", hmacByte: 0x01),
+            makeDocumentReference(title: "b.jpg", hmacByte: 0x02)
         ]
+        let fixtures = makeFixtures(existing: existing)
 
-        let fixtures = makeFixtures(existingAttachments: attachments)
-
-        #expect(fixtures.viewModel.remainingSlots == AttachmentPickerViewModel.maxAttachments - 2)
+        #expect(fixtures.viewModel.remainingSlots == AttachmentPickerViewModel.maxPerRecord - 2)
     }
 
     @Test
-    func countSummary_formatsCorrectly() throws {
-        let attachments = try [
-            makeTestAttachment(fileName: "file1.jpg"),
-            makeTestAttachment(fileName: "file2.jpg")
+    func countSummary_formatsCorrectly() {
+        let existing = [
+            makeDocumentReference(title: "a.jpg", hmacByte: 0x01),
+            makeDocumentReference(title: "b.jpg", hmacByte: 0x02)
         ]
+        let fixtures = makeFixtures(existing: existing)
 
-        let fixtures = makeFixtures(existingAttachments: attachments)
-
-        #expect(fixtures.viewModel.countSummary == "2 of \(AttachmentPickerViewModel.maxAttachments) attachments")
+        #expect(fixtures.viewModel.countSummary == "2 of \(AttachmentPickerViewModel.maxPerRecord) attachments")
     }
 
     @Test
-    func attachmentIds_returnsAllIds() throws {
-        let attachment1 = try makeTestAttachment(fileName: "file1.jpg")
-        let attachment2 = try makeTestAttachment(fileName: "file2.jpg")
+    func allDocumentReferences_returnsDraftContent() {
+        let doc1 = makeDocumentReference(title: "x.jpg", hmacByte: 0x11)
+        let doc2 = makeDocumentReference(title: "y.jpg", hmacByte: 0x22)
+        let fixtures = makeFixtures(existing: [doc1, doc2])
 
-        let fixtures = makeFixtures(existingAttachments: [attachment1, attachment2])
-
-        let ids = fixtures.viewModel.attachmentIds
-        #expect(ids.contains(attachment1.id))
-        #expect(ids.contains(attachment2.id))
+        let refs = fixtures.viewModel.allDocumentReferences
+        #expect(refs.count == 2)
+        #expect(refs[0].title == "x.jpg")
+        #expect(refs[1].title == "y.jpg")
     }
 
     // MARK: - Add from Camera Tests
 
     @Test
-    func addFromCamera_validImage_addsAttachment() async {
+    func addFromCamera_validImage_addsDraft() async {
         let fixtures = makeFixtures()
         let image = makeTestImage()
 
         await fixtures.viewModel.addFromCamera(image)
 
-        #expect(fixtures.viewModel.attachments.count == 1)
+        #expect(fixtures.viewModel.drafts.count == 1)
         #expect(fixtures.viewModel.errorMessage == nil)
         #expect(!fixtures.viewModel.isLoading)
     }
 
     @Test
-    func addFromCamera_callsService() async {
+    func addFromCamera_callsStoreWithJPEG() async {
         let fixtures = makeFixtures()
         let image = makeTestImage()
 
         await fixtures.viewModel.addFromCamera(image)
 
-        #expect(fixtures.attachmentService.addAttachmentCalls.count == 1)
-        let call = fixtures.attachmentService.addAttachmentCalls[0]
+        #expect(fixtures.blobService.storeCalls.count == 1)
+        let call = fixtures.blobService.storeCalls[0]
         #expect(call.mimeType == "image/jpeg")
-        #expect(call.fileName.hasPrefix("Photo_"))
-        #expect(call.fileName.hasSuffix(".jpg"))
+        #expect(call.personId == fixtures.personId)
     }
 
     @Test
-    func addFromCamera_serviceFailure_setsError() async {
-        let fixtures = makeFixtures()
-        fixtures.attachmentService.shouldFailAddAttachment = true
-        let image = makeTestImage()
-
-        await fixtures.viewModel.addFromCamera(image)
-
-        #expect(fixtures.viewModel.attachments.isEmpty)
-        #expect(fixtures.viewModel.errorMessage != nil)
-    }
-
-    @Test
-    func addFromCamera_atLimit_setsError() async throws {
-        var attachments: [FamilyMedicalApp.Attachment] = []
-        for index in 0 ..< AttachmentPickerViewModel.maxAttachments {
-            try attachments.append(makeTestAttachment(fileName: "file\(index).jpg"))
-        }
-
-        let fixtures = makeFixtures(existingAttachments: attachments)
-        let image = makeTestImage()
-
-        await fixtures.viewModel.addFromCamera(image)
-
-        #expect(fixtures.viewModel.errorMessage != nil)
-        #expect(fixtures.attachmentService.addAttachmentCalls.isEmpty)
-    }
-
-    @Test
-    func addFromCamera_setsLoadingState() async {
+    func addFromCamera_titleLooksLikePhotoTimestamp() async throws {
         let fixtures = makeFixtures()
         let image = makeTestImage()
 
-        // Cannot directly test loading state during async, but verify it's false after
         await fixtures.viewModel.addFromCamera(image)
 
+        let draft = try #require(fixtures.viewModel.drafts.first)
+        #expect(draft.content.title.hasPrefix("Photo_"))
+        #expect(draft.content.title.hasSuffix(".jpg"))
+    }
+
+    @Test
+    func addFromCamera_storeFailure_setsError() async {
+        let fixtures = makeFixtures()
+        fixtures.blobService.storeError = ModelError.unsupportedMimeType(mimeType: "image/jpeg")
+        let image = makeTestImage()
+
+        await fixtures.viewModel.addFromCamera(image)
+
+        #expect(fixtures.viewModel.drafts.isEmpty)
+        #expect(fixtures.viewModel.errorMessage != nil)
         #expect(!fixtures.viewModel.isLoading)
     }
 
-    // MARK: - Remove Attachment Tests
-
     @Test
-    func removeAttachment_existingAttachment_removesFromList() async throws {
-        let attachment = try makeTestAttachment()
-        let fixtures = makeFixtures(existingAttachments: [attachment])
+    func addFromCamera_atLimit_setsError() async {
+        var existing: [DocumentReferenceRecord] = []
+        for index in 0 ..< AttachmentPickerViewModel.maxPerRecord {
+            existing.append(makeDocumentReference(title: "f\(index).jpg", hmacByte: UInt8(index)))
+        }
+        let fixtures = makeFixtures(existing: existing)
+        let image = makeTestImage()
 
-        await fixtures.viewModel.removeAttachment(attachment)
-
-        #expect(fixtures.viewModel.attachments.isEmpty)
-        #expect(fixtures.viewModel.errorMessage == nil)
-    }
-
-    @Test
-    func removeAttachment_withRecordId_callsDeleteService() async throws {
-        let attachment = try makeTestAttachment()
-        let recordId = UUID()
-        let fixtures = makeFixtures(recordId: recordId, existingAttachments: [attachment])
-
-        await fixtures.viewModel.removeAttachment(attachment)
-
-        #expect(fixtures.attachmentService.deleteAttachmentCalls.count == 1)
-        #expect(fixtures.attachmentService.deleteAttachmentCalls[0].attachmentId == attachment.id)
-        #expect(fixtures.attachmentService.deleteAttachmentCalls[0].recordId == recordId)
-    }
-
-    @Test
-    func removeAttachment_serviceFailure_setsError() async throws {
-        let attachment = try makeTestAttachment()
-        let fixtures = makeFixtures(recordId: UUID(), existingAttachments: [attachment])
-        fixtures.attachmentService.shouldFailDeleteAttachment = true
-
-        await fixtures.viewModel.removeAttachment(attachment)
+        await fixtures.viewModel.addFromCamera(image)
 
         #expect(fixtures.viewModel.errorMessage != nil)
-        // Attachment stays in list on failure
-        #expect(fixtures.viewModel.attachments.count == 1)
+        #expect(fixtures.blobService.storeCalls.isEmpty)
     }
 
     @Test
-    func removeAttachment_noRecordId_stillRemovesFromList() async throws {
-        // For new records without recordId
-        let attachment = try makeTestAttachment()
-        let attachmentService = MockAttachmentService()
-        let primaryKeyProvider = MockPrimaryKeyProvider(primaryKey: SymmetricKey(size: .bits256))
+    func addFromCamera_stampsSourceRecordIdOnDraft() async throws {
+        let sourceId = UUID()
+        let fixtures = makeFixtures(sourceRecordId: sourceId)
+        let image = makeTestImage()
 
-        let viewModel = withDependencies {
-            $0.date = .constant(testDate)
-            $0.uuid = .incrementing
-        } operation: {
-            AttachmentPickerViewModel(
-                personId: UUID(),
-                recordId: nil, // No record ID
-                existingAttachments: [attachment],
-                attachmentService: attachmentService,
-                primaryKeyProvider: primaryKeyProvider
-            )
-        }
+        await fixtures.viewModel.addFromCamera(image)
 
-        await viewModel.removeAttachment(attachment)
+        let draft = try #require(fixtures.viewModel.drafts.first)
+        #expect(draft.content.sourceRecordId == sourceId)
+    }
 
-        // Should remove locally without calling service delete
-        #expect(viewModel.attachments.isEmpty)
+    @Test
+    func addFromCamera_populatesDocumentMetadata() async throws {
+        let fixtures = makeFixtures()
+        let image = makeTestImage()
+
+        await fixtures.viewModel.addFromCamera(image)
+
+        let draft = try #require(fixtures.viewModel.drafts.first)
+        #expect(draft.content.mimeType == "image/jpeg")
+        #expect(draft.content.fileSize > 0)
+        #expect(draft.content.contentHMAC.count == 32)
+        #expect(draft.content.thumbnailData != nil)
+        #expect(draft.content.documentType == nil)
+        #expect(draft.content.notes == nil)
+        #expect(draft.content.tags.isEmpty == true)
+    }
+
+    // MARK: - Remove Draft Tests
+
+    @Test
+    func removeDraft_existingId_removesFromList() async throws {
+        let fixtures = makeFixtures()
+        let image = makeTestImage()
+        await fixtures.viewModel.addFromCamera(image)
+
+        let draftId = try #require(fixtures.viewModel.drafts.first?.id)
+        fixtures.viewModel.removeDraft(id: draftId)
+
+        #expect(fixtures.viewModel.drafts.isEmpty)
+    }
+
+    @Test
+    func removeDraft_unknownId_doesNothing() async {
+        let fixtures = makeFixtures()
+        let image = makeTestImage()
+        await fixtures.viewModel.addFromCamera(image)
+
+        fixtures.viewModel.removeDraft(id: UUID())
+
+        #expect(fixtures.viewModel.drafts.count == 1)
+    }
+
+    // MARK: - Set Title Tests
+
+    @Test
+    func setTitle_updatesDraftContent() async throws {
+        let fixtures = makeFixtures()
+        let image = makeTestImage()
+        await fixtures.viewModel.addFromCamera(image)
+
+        let draftId = try #require(fixtures.viewModel.drafts.first?.id)
+        fixtures.viewModel.setTitle("Renamed.jpg", for: draftId)
+
+        #expect(fixtures.viewModel.drafts.first?.content.title == "Renamed.jpg")
+    }
+
+    @Test
+    func setTitle_unknownId_doesNothing() async {
+        let fixtures = makeFixtures()
+        let image = makeTestImage()
+        await fixtures.viewModel.addFromCamera(image)
+
+        let original = fixtures.viewModel.drafts.first?.content.title
+        fixtures.viewModel.setTitle("NewName.jpg", for: UUID())
+
+        #expect(fixtures.viewModel.drafts.first?.content.title == original)
     }
 
     // MARK: - Sheet State Tests
@@ -285,94 +312,18 @@ struct AttachmentPickerViewModelTests {
     @Test
     func showingCamera_initiallyFalse() {
         let fixtures = makeFixtures()
-
         #expect(!fixtures.viewModel.showingCamera)
     }
 
     @Test
     func showingPhotoLibrary_initiallyFalse() {
         let fixtures = makeFixtures()
-
         #expect(!fixtures.viewModel.showingPhotoLibrary)
     }
 
     @Test
     func showingDocumentPicker_initiallyFalse() {
         let fixtures = makeFixtures()
-
         #expect(!fixtures.viewModel.showingDocumentPicker)
-    }
-
-    // MARK: - Error Handling Tests
-
-    @Test
-    func addFromCamera_primaryKeyFailure_setsError() async {
-        let attachmentService = MockAttachmentService()
-        let primaryKeyProvider = MockPrimaryKeyProvider(shouldFail: true)
-
-        let viewModel = withDependencies {
-            $0.date = .constant(testDate)
-            $0.uuid = .incrementing
-        } operation: {
-            AttachmentPickerViewModel(
-                personId: UUID(),
-                recordId: UUID(),
-                attachmentService: attachmentService,
-                primaryKeyProvider: primaryKeyProvider
-            )
-        }
-
-        let image = makeTestImage()
-        await viewModel.addFromCamera(image)
-
-        #expect(viewModel.errorMessage != nil)
-        #expect(viewModel.attachments.isEmpty)
-    }
-
-    // MARK: - Multiple Additions Tests
-
-    @Test
-    func addFromCamera_multiple_addsAll() async {
-        let fixtures = makeFixtures()
-
-        await fixtures.viewModel.addFromCamera(makeTestImage())
-        await fixtures.viewModel.addFromCamera(makeTestImage())
-        await fixtures.viewModel.addFromCamera(makeTestImage())
-
-        #expect(fixtures.viewModel.attachments.count == 3)
-    }
-
-    @Test
-    func addFromCamera_stopAtLimit() async throws {
-        // Start with some attachments
-        var attachments: [FamilyMedicalApp.Attachment] = []
-        for index in 0 ..< (AttachmentPickerViewModel.maxAttachments - 1) {
-            try attachments.append(makeTestAttachment(fileName: "file\(index).jpg"))
-        }
-
-        let fixtures = makeFixtures(existingAttachments: attachments)
-
-        // Add one more (should work)
-        await fixtures.viewModel.addFromCamera(makeTestImage())
-        #expect(fixtures.viewModel.attachments.count == AttachmentPickerViewModel.maxAttachments)
-
-        // Try to add another (should fail)
-        await fixtures.viewModel.addFromCamera(makeTestImage())
-        #expect(fixtures.viewModel.attachments.count == AttachmentPickerViewModel.maxAttachments)
-        #expect(fixtures.viewModel.errorMessage != nil)
-    }
-
-    // MARK: - MIME Type Detection Tests
-
-    @Test
-    func addFromCamera_generatesJPEGFileName() async {
-        let fixtures = makeFixtures()
-        let image = makeTestImage()
-
-        await fixtures.viewModel.addFromCamera(image)
-
-        let call = fixtures.attachmentService.addAttachmentCalls[0]
-        #expect(call.mimeType == "image/jpeg")
-        #expect(call.fileName.hasSuffix(".jpg"))
     }
 }

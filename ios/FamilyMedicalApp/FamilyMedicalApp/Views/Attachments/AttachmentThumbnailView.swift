@@ -1,14 +1,12 @@
 import SwiftUI
 
-/// Displays a thumbnail for an attachment
+/// Displays a thumbnail for a DocumentReferenceRecord attachment.
 ///
-/// Shows the encrypted thumbnail image if available, or a file type icon
-/// for PDFs and files without thumbnails.
-///
-/// Uses `ThumbnailDisplayMode` for display logic, enabling unit testing.
+/// Shows the inline thumbnail image if available, or a file-type icon for PDFs and files
+/// without thumbnails. Uses `ThumbnailDisplayMode` so the display logic remains testable.
 struct AttachmentThumbnailView: View {
-    /// The attachment to display
-    let attachment: Attachment
+    /// The document to display
+    let document: DocumentReferenceRecord
 
     /// Called when thumbnail is tapped
     let onTap: () -> Void
@@ -19,20 +17,23 @@ struct AttachmentThumbnailView: View {
     /// Size of the thumbnail
     var size: CGFloat = 80
 
-    /// Computed display mode for the attachment
     private var displayMode: ThumbnailDisplayMode {
-        ThumbnailDisplayMode.from(attachment)
+        ThumbnailDisplayMode.from(document: document)
+    }
+
+    private var displayExtension: String {
+        guard let dotIndex = document.title.lastIndex(of: ".") else { return "" }
+        let extensionStartIndex = document.title.index(after: dotIndex)
+        return String(document.title[extensionStartIndex...])
     }
 
     var body: some View {
         Button(action: onTap) {
             ZStack(alignment: .topTrailing) {
-                // Thumbnail content
                 thumbnailContent
                     .frame(width: size, height: size)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
 
-                // Remove button
                 if let onRemove {
                     Button(action: onRemove) {
                         Image(systemName: "xmark.circle.fill")
@@ -45,12 +46,12 @@ struct AttachmentThumbnailView: View {
                             )
                     }
                     .offset(x: 8, y: -8)
-                    .accessibilityLabel("Remove \(attachment.fileName)")
+                    .accessibilityLabel("Remove \(document.title)")
                 }
             }
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(attachment.fileName)
+        .accessibilityLabel(document.title)
         .accessibilityHint("Tap to view full size")
     }
 
@@ -62,7 +63,6 @@ struct AttachmentThumbnailView: View {
                     .resizable()
                     .aspectRatio(contentMode: .fill)
             } else {
-                // Fallback if data can't be converted to image
                 fileIconView(systemName: "photo.fill", color: .blue)
             }
 
@@ -87,7 +87,7 @@ struct AttachmentThumbnailView: View {
                     .font(.system(size: size * 0.35))
                     .foregroundStyle(color)
 
-                Text((attachment.fileExtension ?? "").uppercased())
+                Text(displayExtension.uppercased())
                     .font(.caption2)
                     .fontWeight(.medium)
                     .foregroundStyle(color)
@@ -99,20 +99,18 @@ struct AttachmentThumbnailView: View {
 // MARK: - Preview Helpers
 
 private enum PreviewHelpers {
-    static func makeAttachment(
-        fileName: String,
+    static func makeDocument(
+        title: String,
         mimeType: String,
         thumbnailData: Data? = nil,
         hmacByte: UInt8 = 0
-    ) -> Attachment? {
-        try? Attachment(
-            id: UUID(),
-            fileName: fileName,
+    ) -> DocumentReferenceRecord {
+        DocumentReferenceRecord(
+            title: title,
             mimeType: mimeType,
+            fileSize: 1_024,
             contentHMAC: Data(repeating: hmacByte, count: 32),
-            encryptedSize: 1_024,
-            thumbnailData: thumbnailData,
-            uploadedAt: Date()
+            thumbnailData: thumbnailData
         )
     }
 }
@@ -121,45 +119,41 @@ private enum PreviewHelpers {
     let sampleImage = UIImage(systemName: "photo")
     let thumbnailData = sampleImage?.jpegData(compressionQuality: 0.7)
 
-    if let attachment = PreviewHelpers.makeAttachment(
-        fileName: "vaccine_card.jpg",
-        mimeType: "image/jpeg",
-        thumbnailData: thumbnailData
-    ) {
-        AttachmentThumbnailView(
-            attachment: attachment,
-            onTap: {},
-            onRemove: {}
-        )
-        .padding()
-    }
+    AttachmentThumbnailView(
+        document: PreviewHelpers.makeDocument(
+            title: "vaccine_card.jpg",
+            mimeType: "image/jpeg",
+            thumbnailData: thumbnailData
+        ),
+        onTap: {},
+        onRemove: {}
+    )
+    .padding()
 }
 
 #Preview("PDF") {
-    if let attachment = PreviewHelpers.makeAttachment(
-        fileName: "prescription.pdf",
-        mimeType: "application/pdf"
-    ) {
-        AttachmentThumbnailView(
-            attachment: attachment,
-            onTap: {},
-            onRemove: nil
-        )
-        .padding()
-    }
+    AttachmentThumbnailView(
+        document: PreviewHelpers.makeDocument(
+            title: "prescription.pdf",
+            mimeType: "application/pdf"
+        ),
+        onTap: {},
+        onRemove: nil
+    )
+    .padding()
 }
 
 #Preview("Grid") {
-    let attachments: [Attachment] = [
-        PreviewHelpers.makeAttachment(fileName: "photo1.jpg", mimeType: "image/jpeg", hmacByte: 1),
-        PreviewHelpers.makeAttachment(fileName: "document.pdf", mimeType: "application/pdf", hmacByte: 2),
-        PreviewHelpers.makeAttachment(fileName: "scan.png", mimeType: "image/png", hmacByte: 3)
-    ].compactMap(\.self)
+    let documents: [DocumentReferenceRecord] = [
+        PreviewHelpers.makeDocument(title: "photo1.jpg", mimeType: "image/jpeg", hmacByte: 1),
+        PreviewHelpers.makeDocument(title: "document.pdf", mimeType: "application/pdf", hmacByte: 2),
+        PreviewHelpers.makeDocument(title: "scan.png", mimeType: "image/png", hmacByte: 3)
+    ]
 
     LazyVGrid(columns: [GridItem(.adaptive(minimum: 80))], spacing: 12) {
-        ForEach(attachments) { attachment in
+        ForEach(Array(documents.enumerated()), id: \.offset) { _, doc in
             AttachmentThumbnailView(
-                attachment: attachment,
+                document: doc,
                 onTap: {},
                 onRemove: {}
             )

@@ -1,108 +1,78 @@
 import CryptoKit
-import Dependencies
 import Foundation
 import Testing
 import UIKit
 @testable import FamilyMedicalApp
 
-/// Extended tests for AttachmentPickerViewModel - Document Picker and MIME type tests
+/// Extended tests for AttachmentPickerViewModel - Document picker flow and multi-draft scenarios.
 @MainActor
 struct AttachmentPickerViewModelExtendedTests {
     // MARK: - Test Fixtures
 
-    /// Fixed test date for deterministic testing
-    let testDate = Date(timeIntervalSinceReferenceDate: 1_234_567_890)
-
     struct TestFixtures {
         let viewModel: AttachmentPickerViewModel
-        let attachmentService: MockAttachmentService
-        let primaryKeyProvider: MockPrimaryKeyProvider
+        let blobService: MockAttachmentBlobService
         let personId: UUID
-        let recordId: UUID
-        let primaryKey: SymmetricKey
+        let sourceRecordId: UUID?
     }
 
-    func makeFixtures(recordId: UUID? = nil, existingAttachments: [FamilyMedicalApp.Attachment] = []) -> TestFixtures {
-        let attachmentService = MockAttachmentService()
+    func makeFixtures(
+        sourceRecordId: UUID? = UUID(),
+        existing: [DocumentReferenceRecord] = []
+    ) -> TestFixtures {
+        let blobService = MockAttachmentBlobService()
         let primaryKey = SymmetricKey(size: .bits256)
-        let primaryKeyProvider = MockPrimaryKeyProvider(primaryKey: primaryKey)
         let personId = UUID()
-        let recordIdToUse = recordId ?? UUID()
 
-        let viewModel = withDependencies {
-            $0.date = .constant(testDate)
-            $0.uuid = .incrementing
-        } operation: {
-            AttachmentPickerViewModel(
-                personId: personId,
-                recordId: recordIdToUse,
-                existingAttachments: existingAttachments,
-                attachmentService: attachmentService,
-                primaryKeyProvider: primaryKeyProvider
-            )
-        }
-
+        let viewModel = AttachmentPickerViewModel(
+            personId: personId,
+            sourceRecordId: sourceRecordId,
+            primaryKey: primaryKey,
+            existing: existing,
+            blobService: blobService
+        )
         return TestFixtures(
             viewModel: viewModel,
-            attachmentService: attachmentService,
-            primaryKeyProvider: primaryKeyProvider,
+            blobService: blobService,
             personId: personId,
-            recordId: recordIdToUse,
-            primaryKey: primaryKey
+            sourceRecordId: sourceRecordId
         )
     }
 
-    func makeTestAttachment(
-        fileName: String = "test.jpg",
-        mimeType: String = "image/jpeg"
-    ) throws -> FamilyMedicalApp.Attachment {
-        try AttachmentTestHelper.makeTestAttachment(fileName: fileName, mimeType: mimeType)
+    func makeDocumentReference(
+        title: String = "doc.jpg",
+        hmacByte: UInt8 = 0x01
+    ) -> DocumentReferenceRecord {
+        DocumentReferenceRecord(
+            title: title,
+            mimeType: "image/jpeg",
+            fileSize: 1_024,
+            contentHMAC: Data(repeating: hmacByte, count: 32)
+        )
+    }
+
+    func writeTempFile(name: String, contents: Data) throws -> URL {
+        let tempDir = FileManager.default.temporaryDirectory
+        let url = tempDir.appendingPathComponent(name)
+        try contents.write(to: url)
+        return url
     }
 
     // MARK: - Document Picker Tests
 
     @Test
-    func addFromDocumentPicker_validPDFURL_addsAttachment() async throws {
+    func addFromDocumentPicker_validPDF_addsDraft() async throws {
         let fixtures = makeFixtures()
+        let pdfData = Data("%PDF-1.4 test".utf8)
+        let url = try writeTempFile(name: "docpick_\(UUID().uuidString).pdf", contents: pdfData)
+        defer { try? FileManager.default.removeItem(at: url) }
 
-        // Create a temporary PDF file
-        let tempDir = FileManager.default.temporaryDirectory
-        let pdfURL = tempDir.appendingPathComponent("test_document_\(UUID().uuidString).pdf")
+        await fixtures.viewModel.addFromDocumentPicker([url])
 
-        // Write minimal PDF data
-        let pdfData = Data("%PDF-1.4 minimal".utf8)
-        try pdfData.write(to: pdfURL)
-        defer { try? FileManager.default.removeItem(at: pdfURL) }
-
-        // Test the URL processing path - security-scoped access may succeed or fail in simulator
-        await fixtures.viewModel.addFromDocumentPicker([pdfURL])
-
-        // Either processing succeeds (attachment added) or fails (error set), but loading completes
+        // Security-scoped access may succeed or fail in simulator, but loading completes.
         #expect(!fixtures.viewModel.isLoading)
-        let processedSomehow = !fixtures.viewModel.attachments.isEmpty || fixtures.viewModel.errorMessage != nil
-        #expect(processedSomehow)
-    }
-
-    @Test
-    func addFromDocumentPicker_atLimit_setsError() async throws {
-        var attachments: [FamilyMedicalApp.Attachment] = []
-        for index in 0 ..< AttachmentPickerViewModel.maxAttachments {
-            try attachments.append(makeTestAttachment(fileName: "file\(index).jpg"))
-        }
-
-        let fixtures = makeFixtures(existingAttachments: attachments)
-
-        let tempDir = FileManager.default.temporaryDirectory
-        let pdfURL = tempDir.appendingPathComponent("test_limit_\(UUID().uuidString).pdf")
-        let pdfData = Data("%PDF-1.4 minimal".utf8)
-        try pdfData.write(to: pdfURL)
-        defer { try? FileManager.default.removeItem(at: pdfURL) }
-
-        await fixtures.viewModel.addFromDocumentPicker([pdfURL])
-
-        // Expect error because already at limit
-        #expect(fixtures.viewModel.errorMessage != nil)
-        #expect(fixtures.viewModel.attachments.count == AttachmentPickerViewModel.maxAttachments)
+        let didProcess = !fixtures.viewModel.drafts.isEmpty || fixtures.viewModel.errorMessage != nil
+        #expect(didProcess)
     }
 
     @Test
@@ -111,28 +81,108 @@ struct AttachmentPickerViewModelExtendedTests {
 
         await fixtures.viewModel.addFromDocumentPicker([])
 
-        #expect(fixtures.viewModel.attachments.isEmpty)
+        #expect(fixtures.viewModel.drafts.isEmpty)
         #expect(fixtures.viewModel.errorMessage == nil)
         #expect(!fixtures.viewModel.isLoading)
     }
 
     @Test
-    func addFromDocumentPicker_multipleURLs_stopsAtLimit() async throws {
-        // Start near the limit
-        var attachments: [FamilyMedicalApp.Attachment] = []
-        for index in 0 ..< (AttachmentPickerViewModel.maxAttachments - 1) {
-            try attachments.append(makeTestAttachment(fileName: "file\(index).jpg"))
+    func addFromDocumentPicker_atLimit_setsError() async throws {
+        var existing: [DocumentReferenceRecord] = []
+        for index in 0 ..< AttachmentPickerViewModel.maxPerRecord {
+            existing.append(makeDocumentReference(title: "f\(index).jpg", hmacByte: UInt8(index)))
         }
+        let fixtures = makeFixtures(existing: existing)
 
-        let fixtures = makeFixtures(existingAttachments: attachments)
+        let pdfData = Data("%PDF-1.4".utf8)
+        let url = try writeTempFile(name: "atlimit_\(UUID().uuidString).pdf", contents: pdfData)
+        defer { try? FileManager.default.removeItem(at: url) }
 
-        // Try to add multiple files
-        let tempDir = FileManager.default.temporaryDirectory
+        await fixtures.viewModel.addFromDocumentPicker([url])
+
+        #expect(fixtures.viewModel.errorMessage != nil)
+        #expect(fixtures.viewModel.drafts.count == AttachmentPickerViewModel.maxPerRecord)
+    }
+
+    @Test
+    func addFromDocumentPicker_preservesFileName() async throws {
+        let fixtures = makeFixtures()
+        let pdfData = Data("%PDF-1.4 test".utf8)
+        let url = try writeTempFile(name: "my_medical_record.pdf", contents: pdfData)
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        await fixtures.viewModel.addFromDocumentPicker([url])
+
+        // If processing succeeded, the draft title is the URL file name.
+        if let draft = fixtures.viewModel.drafts.first {
+            #expect(draft.content.title == "my_medical_record.pdf")
+        }
+    }
+
+    @Test
+    func addFromDocumentPicker_mimeTypeFromPDFExtension() async throws {
+        let fixtures = makeFixtures()
+        let pdfData = Data("%PDF-1.4".utf8)
+        let url = try writeTempFile(name: "mime_pdf_\(UUID().uuidString).pdf", contents: pdfData)
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        await fixtures.viewModel.addFromDocumentPicker([url])
+
+        if let call = fixtures.blobService.storeCalls.first {
+            #expect(call.mimeType == "application/pdf")
+        }
+    }
+
+    @Test
+    func addFromDocumentPicker_mimeTypeFromJPGExtension() async throws {
+        let fixtures = makeFixtures()
+        let jpegData = Data([0xFF, 0xD8, 0xFF, 0xE0]) + Data("jpeg body".utf8)
+        let url = try writeTempFile(name: "mime_jpeg_\(UUID().uuidString).jpg", contents: jpegData)
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        await fixtures.viewModel.addFromDocumentPicker([url])
+
+        if let call = fixtures.blobService.storeCalls.first {
+            #expect(call.mimeType == "image/jpeg")
+        }
+    }
+
+    @Test
+    func addFromDocumentPicker_mimeTypeFromPNGExtension() async throws {
+        let fixtures = makeFixtures()
+        let pngData = Data([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A])
+        let url = try writeTempFile(name: "mime_png_\(UUID().uuidString).png", contents: pngData)
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        await fixtures.viewModel.addFromDocumentPicker([url])
+
+        if let call = fixtures.blobService.storeCalls.first {
+            #expect(call.mimeType == "image/png")
+        }
+    }
+
+    @Test
+    func addFromDocumentPicker_unknownExtension_fallsToOctetStream() async throws {
+        let fixtures = makeFixtures()
+        let data = Data("unknown body".utf8)
+        let url = try writeTempFile(name: "mime_unknown_\(UUID().uuidString).xyz", contents: data)
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        await fixtures.viewModel.addFromDocumentPicker([url])
+
+        if let call = fixtures.blobService.storeCalls.first {
+            #expect(call.mimeType == "application/octet-stream")
+        }
+    }
+
+    @Test
+    func addFromDocumentPicker_multipleFiles_addsSeveralDrafts() async throws {
+        let fixtures = makeFixtures()
         let testId = UUID().uuidString
         var urls: [URL] = []
         for index in 0 ..< 3 {
-            let url = tempDir.appendingPathComponent("doc_multi_\(testId)_\(index).pdf")
-            try Data("%PDF-1.4 test".utf8).write(to: url)
+            let data = Data("%PDF-1.4 \(index)".utf8)
+            let url = try writeTempFile(name: "multi_\(testId)_\(index).pdf", contents: data)
             urls.append(url)
         }
         defer {
@@ -143,10 +193,49 @@ struct AttachmentPickerViewModelExtendedTests {
 
         await fixtures.viewModel.addFromDocumentPicker(urls)
 
-        // May add one file before hitting limit, or security access may fail
-        // Either way, should not exceed max attachments
-        #expect(fixtures.viewModel.attachments.count <= AttachmentPickerViewModel.maxAttachments)
+        #expect(fixtures.viewModel.drafts.count <= AttachmentPickerViewModel.maxPerRecord)
         #expect(!fixtures.viewModel.isLoading)
+    }
+
+    @Test
+    func addFromDocumentPicker_serviceFailure_setsError() async throws {
+        let fixtures = makeFixtures()
+        fixtures.blobService.storeError = ModelError.attachmentStorageFailed(reason: "boom")
+        let data = Data("%PDF-1.4".utf8)
+        let url = try writeTempFile(name: "fail_\(UUID().uuidString).pdf", contents: data)
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        await fixtures.viewModel.addFromDocumentPicker([url])
+
+        #expect(!fixtures.viewModel.isLoading)
+        #expect(fixtures.viewModel.drafts.isEmpty)
+    }
+
+    @Test
+    func addFromDocumentPicker_nonExistentFile_setsError() async {
+        let fixtures = makeFixtures()
+        let missing = FileManager.default.temporaryDirectory
+            .appendingPathComponent("does_not_exist_\(UUID()).pdf")
+
+        await fixtures.viewModel.addFromDocumentPicker([missing])
+
+        #expect(fixtures.viewModel.errorMessage != nil)
+        #expect(fixtures.viewModel.drafts.isEmpty)
+    }
+
+    @Test
+    func addFromDocumentPicker_stampsSourceRecordId() async throws {
+        let sourceId = UUID()
+        let fixtures = makeFixtures(sourceRecordId: sourceId)
+        let data = Data("%PDF-1.4".utf8)
+        let url = try writeTempFile(name: "stamp_\(UUID().uuidString).pdf", contents: data)
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        await fixtures.viewModel.addFromDocumentPicker([url])
+
+        if let draft = fixtures.viewModel.drafts.first {
+            #expect(draft.content.sourceRecordId == sourceId)
+        }
     }
 
     // MARK: - Photo Library Tests
@@ -157,124 +246,19 @@ struct AttachmentPickerViewModelExtendedTests {
 
         await fixtures.viewModel.addFromPhotoLibrary([])
 
-        #expect(fixtures.viewModel.attachments.isEmpty)
+        #expect(fixtures.viewModel.drafts.isEmpty)
         #expect(fixtures.viewModel.errorMessage == nil)
         #expect(!fixtures.viewModel.isLoading)
     }
 
     @Test
-    func addFromPhotoLibrary_atLimit_setsError() throws {
-        var attachments: [FamilyMedicalApp.Attachment] = []
-        for index in 0 ..< AttachmentPickerViewModel.maxAttachments {
-            try attachments.append(makeTestAttachment(fileName: "file\(index).jpg"))
+    func addFromPhotoLibrary_atLimit_guardFires() {
+        var existing: [DocumentReferenceRecord] = []
+        for index in 0 ..< AttachmentPickerViewModel.maxPerRecord {
+            existing.append(makeDocumentReference(title: "f\(index).jpg", hmacByte: UInt8(index)))
         }
+        let fixtures = makeFixtures(existing: existing)
 
-        let fixtures = makeFixtures(existingAttachments: attachments)
-
-        // Verify the limit check would fire
         #expect(!fixtures.viewModel.canAddMore)
-    }
-
-    // MARK: - MIME Type from URL Tests
-
-    @Test
-    func mimeTypeDetection_forJPEGExtension() async throws {
-        let fixtures = makeFixtures()
-
-        // Create temp JPEG file with unique name
-        let tempDir = FileManager.default.temporaryDirectory
-        let jpegURL = tempDir.appendingPathComponent("photo_\(UUID().uuidString).jpeg")
-        let jpegData = Data([0xFF, 0xD8, 0xFF, 0xE0]) // JPEG magic bytes
-        try jpegData.write(to: jpegURL)
-        defer { try? FileManager.default.removeItem(at: jpegURL) }
-
-        // URL extension is .jpeg - tests mimeType(for:) private method
-        await fixtures.viewModel.addFromDocumentPicker([jpegURL])
-
-        // Code path exercised - may succeed (attachment added) or fail (error set)
-        #expect(!fixtures.viewModel.isLoading)
-    }
-
-    @Test
-    func mimeTypeDetection_forPNGExtension() async throws {
-        let fixtures = makeFixtures()
-
-        let tempDir = FileManager.default.temporaryDirectory
-        let pngURL = tempDir.appendingPathComponent("image_\(UUID().uuidString).png")
-        // PNG magic bytes
-        let pngData = Data([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A])
-        try pngData.write(to: pngURL)
-        defer { try? FileManager.default.removeItem(at: pngURL) }
-
-        await fixtures.viewModel.addFromDocumentPicker([pngURL])
-
-        // Code path exercised - may succeed (attachment added) or fail (error set)
-        #expect(!fixtures.viewModel.isLoading)
-    }
-
-    @Test
-    func mimeTypeDetection_forUnknownExtension() async throws {
-        let fixtures = makeFixtures()
-
-        let tempDir = FileManager.default.temporaryDirectory
-        let unknownURL = tempDir.appendingPathComponent("file_\(UUID().uuidString).xyz")
-        try Data("unknown format".utf8).write(to: unknownURL)
-        defer { try? FileManager.default.removeItem(at: unknownURL) }
-
-        await fixtures.viewModel.addFromDocumentPicker([unknownURL])
-
-        // Code path exercised - unknown extension should result in error (unsupported MIME type)
-        // or security access failure
-        #expect(!fixtures.viewModel.isLoading)
-    }
-
-    // MARK: - Service Failure Tests
-
-    @Test
-    func addFromDocumentPicker_serviceFailure_setsError() async throws {
-        let fixtures = makeFixtures()
-        fixtures.attachmentService.shouldFailAddAttachment = true
-
-        let tempDir = FileManager.default.temporaryDirectory
-        let pdfURL = tempDir.appendingPathComponent("test_service_fail_\(UUID().uuidString).pdf")
-        try Data("%PDF-1.4".utf8).write(to: pdfURL)
-        defer { try? FileManager.default.removeItem(at: pdfURL) }
-
-        await fixtures.viewModel.addFromDocumentPicker([pdfURL])
-
-        // Service is set to fail, so if security access succeeds, service failure sets error
-        // Either way, attachments remain empty and loading completes
-        #expect(!fixtures.viewModel.isLoading)
-        #expect(fixtures.viewModel.attachments.isEmpty)
-    }
-
-    @Test
-    func addFromDocumentPicker_primaryKeyFailure_setsError() async throws {
-        let attachmentService = MockAttachmentService()
-        let primaryKeyProvider = MockPrimaryKeyProvider(shouldFail: true)
-
-        let viewModel = withDependencies {
-            $0.date = .constant(testDate)
-            $0.uuid = .incrementing
-        } operation: {
-            AttachmentPickerViewModel(
-                personId: UUID(),
-                recordId: UUID(),
-                attachmentService: attachmentService,
-                primaryKeyProvider: primaryKeyProvider
-            )
-        }
-
-        let tempDir = FileManager.default.temporaryDirectory
-        let pdfURL = tempDir.appendingPathComponent("test_pk_fail_\(UUID().uuidString).pdf")
-        try Data("%PDF-1.4".utf8).write(to: pdfURL)
-        defer { try? FileManager.default.removeItem(at: pdfURL) }
-
-        await viewModel.addFromDocumentPicker([pdfURL])
-
-        // Primary key provider is set to fail, so if security access succeeds, key failure sets error
-        // Either way, attachments remain empty and loading completes
-        #expect(!viewModel.isLoading)
-        #expect(viewModel.attachments.isEmpty)
     }
 }
