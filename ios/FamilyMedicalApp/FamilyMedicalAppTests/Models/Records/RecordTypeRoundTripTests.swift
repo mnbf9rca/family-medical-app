@@ -310,11 +310,15 @@ struct DocumentReferenceRecordTests {
     @Test("Round-trips all fields")
     func roundTrip() throws {
         let sourceId = UUID()
+        let hmac = Data([0x01, 0x02, 0x03, 0x04])
+        let thumb = Data([0xFF, 0xFE, 0xFD])
         let record = DocumentReferenceRecord(
             title: "Chest X-Ray Report",
             documentType: "PDF",
             mimeType: "application/pdf",
             fileSize: 204_800,
+            contentHMAC: hmac,
+            thumbnailData: thumb,
             sourceRecordId: sourceId,
             notes: "Reviewed by radiologist",
             tags: ["imaging", "xray"]
@@ -324,6 +328,8 @@ struct DocumentReferenceRecordTests {
         #expect(decoded.title == "Chest X-Ray Report")
         #expect(decoded.mimeType == "application/pdf")
         #expect(decoded.fileSize == 204_800)
+        #expect(decoded.contentHMAC == hmac)
+        #expect(decoded.thumbnailData == thumb)
         #expect(decoded.sourceRecordId == sourceId)
         #expect(decoded.tags == ["imaging", "xray"])
     }
@@ -333,7 +339,7 @@ struct DocumentReferenceRecordTests {
         let json = Data("""
         {
             "title":"Lab Results","mimeType":"application/pdf","fileSize":1024,
-            "tags":[],"futureField":"extra","futureVersion":2
+            "contentHMAC":"AQID","tags":[],"futureField":"extra","futureVersion":2
         }
         """.utf8)
         let decoded = try iso8601Decoder.decode(DocumentReferenceRecord.self, from: json)
@@ -348,11 +354,42 @@ struct DocumentReferenceRecordTests {
 
     @Test("Missing optional fields decode as nil")
     func missingOptionalsDecodeAsNil() throws {
-        let json = Data("{\"title\":\"Scan\",\"mimeType\":\"image/jpeg\",\"fileSize\":512,\"tags\":[]}".utf8)
+        let json = Data(
+            "{\"title\":\"Scan\",\"mimeType\":\"image/jpeg\",\"fileSize\":512,\"contentHMAC\":\"AQID\",\"tags\":[]}"
+                .utf8
+        )
         let decoded = try iso8601Decoder.decode(DocumentReferenceRecord.self, from: json)
         #expect(decoded.documentType == nil)
+        #expect(decoded.thumbnailData == nil)
         #expect(decoded.sourceRecordId == nil)
         #expect(decoded.unknownFields.isEmpty)
+    }
+
+    @Test("contentHMAC is base64-encoded in JSON")
+    func contentHmacBase64Encoded() throws {
+        let record = DocumentReferenceRecord(
+            title: "Doc",
+            mimeType: "application/pdf",
+            fileSize: 1,
+            contentHMAC: Data([0x01, 0x02, 0x03])
+        )
+        let data = try iso8601Encoder.encode(record)
+        let json = String(bytes: data, encoding: .utf8) ?? ""
+        #expect(json.contains("\"contentHMAC\":\"AQID\""))
+    }
+
+    @Test("Field metadata exposes only user-editable fields")
+    func fieldMetadataExcludesInternalFields() {
+        let keyPaths = Set(DocumentReferenceRecord.fieldMetadata.map(\.keyPath))
+        #expect(keyPaths.contains("title"))
+        #expect(keyPaths.contains("documentType"))
+        #expect(keyPaths.contains("notes"))
+        #expect(keyPaths.contains("tags"))
+        #expect(!keyPaths.contains("contentHMAC"))
+        #expect(!keyPaths.contains("thumbnailData"))
+        #expect(!keyPaths.contains("fileSize"))
+        #expect(!keyPaths.contains("mimeType"))
+        #expect(!keyPaths.contains("sourceRecordId"))
     }
 
     @Test("Static metadata is correct")
