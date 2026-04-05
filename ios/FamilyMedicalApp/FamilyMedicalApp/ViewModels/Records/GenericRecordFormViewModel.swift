@@ -277,6 +277,11 @@ final class GenericRecordFormViewModel {
 
     private func buildMedicalRecord(encryptedContent: Data) -> MedicalRecord {
         if let existing = existingRecord?.record {
+            // MedicalRecord uses in-place-update semantics: MedicalRecordRepository.save
+            // upserts by id (one row per record, no history rows). Setting
+            // previousVersionId to existing.id here would make the row self-referential,
+            // which is meaningless. Leave it nil until a row-per-version history
+            // infrastructure exists to traverse.
             return MedicalRecord(
                 id: existing.id,
                 personId: existing.personId,
@@ -284,7 +289,7 @@ final class GenericRecordFormViewModel {
                 createdAt: existing.createdAt,
                 updatedAt: Date(),
                 version: existing.version + 1,
-                previousVersionId: existing.id
+                previousVersionId: nil
             )
         }
         return MedicalRecord(personId: person.id, encryptedContent: encryptedContent)

@@ -255,9 +255,9 @@ struct RecordContentEnvelope: Codable {
     /// Decode the envelope's content into native Swift values partitioned into known fields
     /// (keyed by `FieldMetadata.keyPath`) and unknown forward-compat fields.
     ///
-    /// Known fields are denormalized based on their declared `FieldRenderType`:
+    /// Known fields are denormalized based on their declared `FieldRenderType` and semantic:
     /// - `.date` → `Date`
-    /// - `.autocomplete` fields ending in "Id" → `UUID`
+    /// - `.autocomplete` with `semantic: .entityReference(...)` → `UUID`
     /// - `.components` → `[ObservationComponent]`
     /// - everything else stays as its JSON-primitive representation
     ///

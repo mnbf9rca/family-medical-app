@@ -153,12 +153,17 @@ struct MedicationStatementRecord: MedicalRecordContent {
         FieldMetadata(keyPath: "startDate", displayName: "Start Date", fieldType: .date, displayOrder: 4),
         FieldMetadata(keyPath: "endDate", displayName: "End Date", fieldType: .date, displayOrder: 5),
         FieldMetadata(keyPath: "reasonForUse", displayName: "Reason for Use", fieldType: .text, displayOrder: 6),
+        // NOTE: pharmacyId has no `.entityReference(.pharmacy)` semantic because no
+        // Pharmacy model/repository/resolver exists yet. With the semantic set the
+        // field was unusable (no suggestions, cleared stored UUID on any typing).
+        // Leaving it as a plain autocomplete means it behaves as free-text with no
+        // suggestions until Pharmacy infrastructure lands. The `.pharmacy` enum case
+        // is retained in EntityKind as a breadcrumb for the follow-up.
         FieldMetadata(
             keyPath: "pharmacyId",
             displayName: "Pharmacy",
             fieldType: .autocomplete,
-            displayOrder: 7,
-            semantic: .entityReference(.pharmacy)
+            displayOrder: 7
         ),
         FieldMetadata(
             keyPath: "providerId",

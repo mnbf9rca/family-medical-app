@@ -231,7 +231,34 @@ struct GenericRecordFormViewModelSaveTests {
         #expect(saved.id == originalRecord.id)
         #expect(saved.createdAt == created)
         #expect(saved.version == 4)
-        #expect(saved.previousVersionId == originalRecord.id)
+        #expect(saved.previousVersionId == nil)
+    }
+
+    @Test
+    func save_editMode_doesNotSetPreviousVersionIdToSelf() async throws {
+        // Regression guard: previousVersionId must not point at the record's own id.
+        // The repository upserts by id (in-place update), so a self-referential
+        // previousVersionId is bogus data for a history traversal that doesn't exist.
+        let person = try makeTestPerson()
+        let deps = FormViewModelDeps(personId: person.id)
+        let originalContent = ImmunizationRecord(vaccineCode: "X", occurrenceDate: Date())
+        let envelope = try RecordContentEnvelope(originalContent)
+        let originalRecord = MedicalRecord(
+            personId: person.id,
+            encryptedContent: Data()
+        )
+        let decrypted = DecryptedRecord(record: originalRecord, envelope: envelope)
+        let vm = FormTestSupport.makeViewModel(
+            person: person, recordType: .immunization, existingRecord: decrypted, deps: deps
+        )
+        vm.setValue("Y", for: "vaccineCode")
+
+        _ = await vm.save()
+
+        let saved = try #require(deps.repo.getAllRecords().first)
+        #expect(saved.id == originalRecord.id)
+        #expect(saved.previousVersionId != saved.id) // not self-referential
+        #expect(saved.previousVersionId == nil) // nil is the chosen representation
     }
 
     @Test

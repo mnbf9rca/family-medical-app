@@ -2,11 +2,12 @@ import SwiftUI
 
 /// Renders a TextField with a dropdown of suggestions filtered by the user's input.
 ///
-/// Supports two modes:
+/// Dispatch is driven by `FieldMetadata.semantic` (not keyPath string matching):
 /// - **Catalog autocomplete** (`autocompleteSource` is set): suggests values from bundled
 ///   data (vaccines, medications, observation types).
-/// - **Provider autocomplete** (keyPath is "providerId"): suggests Providers loaded via
-///   `viewModel.providers`, storing the selected provider's UUID.
+/// - **Entity reference** (`metadata.isEntityReference`, e.g. `.entityReference(.provider)`):
+///   suggests Providers loaded via `viewModel.providers`, storing the selected entity's UUID.
+///   Typing that doesn't match a resolved entity clears the stored UUID.
 ///
 /// The business logic (filtering, display-text resolution) lives in
 /// `AutocompleteSuggestionResolver` so it can be unit-tested without a view hierarchy.
