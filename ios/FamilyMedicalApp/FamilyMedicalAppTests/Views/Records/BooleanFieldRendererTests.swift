@@ -77,6 +77,50 @@ struct BooleanFieldRendererTests {
     }
 
     @Test
+    func bindingSetterWritesToViewModel() throws {
+        // Drives the binding's `set` closure to verify the renderer writes back to the VM.
+        let vm = try makeViewModel()
+        let view = try BooleanFieldRenderer(metadata: deceasedMetadata(), viewModel: vm)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            let toggle = try inspected.find(ViewType.Toggle.self)
+            try toggle.tap()
+        }
+        #expect(vm.boolValue(for: "deceased") == true)
+    }
+
+    @Test
+    func displaysRequiredIndicator() throws {
+        // Builds a required boolean metadata to exercise the isRequired true path
+        // (FamilyMemberHistoryRecord.deceased is optional, so the production metadata
+        // doesn't hit the required indicator branch).
+        let requiredBool = FieldMetadata(
+            keyPath: "mandatoryFlag",
+            displayName: "Mandatory Flag",
+            fieldType: .boolean,
+            isRequired: true,
+            displayOrder: 1
+        )
+        let vm = try makeViewModel()
+        let view = BooleanFieldRenderer(metadata: requiredBool, viewModel: vm)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(text: "*")
+        }
+    }
+
+    @Test
+    func displaysValidationError() throws {
+        let vm = try makeViewModel()
+        vm.validationErrors["deceased"] = "Required"
+        let view = try BooleanFieldRenderer(metadata: deceasedMetadata(), viewModel: vm)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(text: "Required")
+        }
+    }
+
+    @Test
     func saveRoundTripsBooleanThroughFamilyMemberHistoryRecord() async throws {
         // Guard against the bug: .boolean previously dispatched to TextFieldRenderer,
         // causing JSONDecoder to fail decoding a String as Bool?.
