@@ -13,11 +13,11 @@ struct ObservationComponentRenderer: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             header
-            ForEach(Array(components.enumerated()), id: \.offset) { index, component in
+            ForEach(components) { component in
                 ComponentRowView(
                     component: component,
-                    onChange: { updated in updateComponent(at: index, with: updated) },
-                    onRemove: { removeComponent(at: index) }
+                    onChange: { updated in updateComponent(id: component.id, with: updated) },
+                    onRemove: { removeComponent(id: component.id) }
                 )
             }
             if components.isEmpty {
@@ -58,10 +58,18 @@ struct ObservationComponentRenderer: View {
         viewModel.componentsValue(for: metadata.keyPath)
     }
 
-    private func updateComponent(at index: Int, with updated: ObservationComponent) {
+    private func updateComponent(id: UUID, with updated: ObservationComponent) {
         var list = components
-        guard index < list.count else { return }
-        list[index] = updated
+        guard let index = list.firstIndex(where: { $0.id == id }) else { return }
+        // Preserve the original id on updates. ComponentRowView constructs a new
+        // ObservationComponent on every sync (which generates a fresh UUID via the
+        // default init argument), so we rebuild with the stable id here.
+        list[index] = ObservationComponent(
+            id: id,
+            name: updated.name,
+            value: updated.value,
+            unit: updated.unit
+        )
         viewModel.setValue(list, for: metadata.keyPath)
     }
 
@@ -71,10 +79,9 @@ struct ObservationComponentRenderer: View {
         viewModel.setValue(list, for: metadata.keyPath)
     }
 
-    private func removeComponent(at index: Int) {
+    private func removeComponent(id: UUID) {
         var list = components
-        guard index < list.count else { return }
-        list.remove(at: index)
+        list.removeAll { $0.id == id }
         viewModel.setValue(list.isEmpty ? nil : list, for: metadata.keyPath)
     }
 }
@@ -116,13 +123,6 @@ private struct ComponentRowView: View {
         }
         .onAppear {
             seedLocalState(from: component)
-        }
-        // Re-seed when the parent's component value changes out from under us. This happens
-        // after a mid-list delete/reorder: SwiftUI's `ForEach(id: \.offset)` reuses the same
-        // view instance but feeds it a different `component`, so without this the visible
-        // text drifts from the source of truth.
-        .onChange(of: component) { _, newValue in
-            seedLocalState(from: newValue)
         }
     }
 
