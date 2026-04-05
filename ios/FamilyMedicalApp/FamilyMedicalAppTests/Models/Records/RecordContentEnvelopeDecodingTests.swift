@@ -122,6 +122,43 @@ struct RecordContentEnvelopeDecodingTests {
         #expect(denormalized?[0].name == "Systolic")
         #expect(denormalized?[1].value == 80)
     }
+
+    @Test(arguments: RecordType.allCases)
+    func decodeAny_succeedsForEachRecordType(_ recordType: RecordType) throws {
+        // Guards against forgetting a case in decodeAny(). This uses wrap() to produce
+        // an envelope with a valid minimal JSON for each record type, then round-trips
+        // through decodeAny() to confirm the switch covers every case.
+        let jsonData = minimalJSON(for: recordType)
+        let envelope = try RecordContentEnvelope.wrap(jsonData: jsonData, as: recordType)
+        let content = try envelope.decodeAny()
+        #expect(type(of: content).recordType == recordType)
+    }
+
+    /// Minimal valid JSON for each record type. Duplicated from RecordContentEnvelopeWrapTests
+    /// for test isolation — keep in sync if record type required fields change.
+    private func minimalJSON(for recordType: RecordType) -> Data {
+        let json = switch recordType {
+        case .immunization:
+            "{\"vaccineCode\":\"X\",\"occurrenceDate\":0,\"tags\":[]}"
+        case .medicationStatement:
+            "{\"medicationName\":\"X\",\"tags\":[]}"
+        case .allergyIntolerance:
+            "{\"substance\":\"X\",\"tags\":[]}"
+        case .condition:
+            "{\"conditionName\":\"X\",\"tags\":[]}"
+        case .observation:
+            "{\"observationType\":\"X\",\"components\":[],\"effectiveDate\":0,\"tags\":[]}"
+        case .procedure:
+            "{\"procedureName\":\"X\",\"tags\":[]}"
+        case .documentReference:
+            "{\"title\":\"X\",\"mimeType\":\"application/octet-stream\",\"fileSize\":0,\"tags\":[]}"
+        case .familyMemberHistory:
+            "{\"relationship\":\"X\",\"conditionName\":\"Y\",\"tags\":[]}"
+        case .clinicalNote:
+            "{\"title\":\"X\",\"body\":\"\",\"tags\":[]}"
+        }
+        return Data(json.utf8)
+    }
 }
 
 // MARK: - FieldValueDenormalizer
