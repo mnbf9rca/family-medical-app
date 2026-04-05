@@ -43,7 +43,10 @@ struct AutocompleteFieldRenderer: View {
                 }
                 // Providers may load after this view appears; refresh the display text
                 // when they arrive so edit mode shows the provider name, not a blank field.
+                // Guard: only refresh when there's a stored entity reference. Without this,
+                // the providers list arriving mid-typing would wipe the user's in-progress query.
                 .onChange(of: viewModel.providers) { _, _ in
+                    guard viewModel.value(for: metadata.keyPath) != nil else { return }
                     queryText = resolver.displayText(storedValue: viewModel.value(for: metadata.keyPath))
                 }
 
@@ -96,10 +99,12 @@ struct AutocompleteFieldRenderer: View {
 
     private func handleQueryChange(_ newValue: String) {
         showingSuggestions = isFocused
-        // For catalog fields, the query text IS the stored value.
-        // For providerId, only select() stores the UUID — typing alone clears any selection.
         if metadata.isEntityReference {
-            if newValue.isEmpty {
+            // For entity-reference fields, typing alone does not store an entity UUID.
+            // Clear any stored reference whenever the typed text no longer matches the
+            // currently-resolved display string. Only select() commits a real reference.
+            let resolvedDisplay = resolver.displayText(storedValue: viewModel.value(for: metadata.keyPath))
+            if newValue != resolvedDisplay {
                 viewModel.setValue(nil, for: metadata.keyPath)
             }
             return

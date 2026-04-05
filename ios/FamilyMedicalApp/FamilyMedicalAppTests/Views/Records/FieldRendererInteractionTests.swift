@@ -184,6 +184,33 @@ struct FieldRendererInteractionTests {
         }
     }
 
+    @Test
+    func autocompleteFieldRenderer_typingAfterSelectionClearsStoredProviderId() throws {
+        // Bug: user selected Provider A (UUID stored). User then types "Dr. B" searching
+        // for a different provider. The stored UUID should be cleared because the typed
+        // text no longer matches the selected provider's display string. Only select()
+        // commits a real entity reference.
+        let vm = try makeViewModel(recordType: .immunization)
+        let providerA = Provider(name: "Dr. A", organization: "Clinic")
+        vm.providers = [providerA]
+        vm.setValue(providerA.id, for: "providerId")
+        #expect(vm.uuidValue(for: "providerId") == providerA.id)
+
+        // Simulate user typing different text by firing the TextField's
+        // .onChange(of: queryText) handler directly. Setting @State via setInput()
+        // doesn't fire the .onChange closure in hosted inspection, so we invoke
+        // callOnChange with the new value "Dr. B" (≠ "Dr. A at Clinic").
+        let view = try AutocompleteFieldRenderer(metadata: providerMetadata(), viewModel: vm)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            let field = try inspected.find(ViewType.TextField.self)
+            try field.callOnChange(oldValue: "", newValue: "Dr. B")
+        }
+
+        // The stored UUID should be cleared because typed text != resolved display.
+        #expect(vm.uuidValue(for: "providerId") == nil)
+    }
+
     // MARK: - ObservationComponentRenderer
 
     @Test
