@@ -76,7 +76,7 @@ struct GenericRecordFormView: View {
         case .components:
             ObservationComponentRenderer(metadata: metadata, viewModel: viewModel)
         case .boolean:
-            TextFieldRenderer(metadata: metadata, viewModel: viewModel)
+            BooleanFieldRenderer(metadata: metadata, viewModel: viewModel)
         }
     }
 

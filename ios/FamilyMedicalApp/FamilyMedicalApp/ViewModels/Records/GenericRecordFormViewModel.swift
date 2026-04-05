@@ -130,6 +130,11 @@ final class GenericRecordFormViewModel {
         fieldValues[keyPath] as? Int
     }
 
+    /// Typed accessor for Bool fields. Returns nil if unset.
+    func boolValue(for keyPath: String) -> Bool? {
+        fieldValues[keyPath] as? Bool
+    }
+
     /// Typed accessor for UUID fields. Returns nil if unset.
     func uuidValue(for keyPath: String) -> UUID? {
         fieldValues[keyPath] as? UUID
