@@ -144,10 +144,22 @@ private struct ComponentRowView: View {
     }
 
     private func syncToParent() {
-        // Accept the value even if the numeric parse fails (keep trailing "." mid-input).
-        // We commit 0 when the text is non-parseable or empty so the model remains valid;
-        // the partial text persists in our local @State and will re-render as the user edits.
-        let parsedValue = Double(valueText) ?? 0
+        // Determine what value to commit to the parent:
+        // - Empty text  → commit 0 (user cleared the field)
+        // - Parseable   → commit the parsed value
+        // - Unparseable → preserve the prior value; still sync name/unit edits.
+        //
+        // This is medical data: we must never silently overwrite a valid measurement
+        // with 0 because the user mistyped ("7ab"). The invalid text persists locally
+        // in @State so the user can see and correct it; the stored value holds until
+        // they enter something parseable.
+        let parsedValue: Double = if valueText.isEmpty {
+            0
+        } else if let parsed = Double(valueText) {
+            parsed
+        } else {
+            component.value
+        }
         onChange(ObservationComponent(name: nameText, value: parsedValue, unit: unitText))
     }
 }

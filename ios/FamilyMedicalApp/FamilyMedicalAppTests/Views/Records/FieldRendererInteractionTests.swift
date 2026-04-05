@@ -262,6 +262,29 @@ struct FieldRendererInteractionTests {
     }
 
     @Test
+    func observationComponentRenderer_prePopulatedValuePersistsOnRender() throws {
+        // Guards `syncToParent`'s new parse-guard: rendering a component with a valid
+        // prior value must not clobber that value. Before the fix, seeding the renderer
+        // with a prepopulated component would sync a parsed 0 back to the parent on
+        // certain @State lifecycle events.
+        let vm = try makeViewModel(recordType: .observation)
+        let original = ObservationComponent(name: "Weight", value: 70, unit: "kg")
+        vm.setValue([original], for: "components")
+        let view = try ObservationComponentRenderer(metadata: componentsMetadata(), viewModel: vm)
+
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.HStack.self)
+        }
+
+        let components = vm.componentsValue(for: "components")
+        #expect(components.count == 1)
+        #expect(components.first?.value == 70)
+        // id is preserved through the render cycle.
+        #expect(components.first?.id == original.id)
+    }
+
+    @Test
     func observationComponentRendererRemovesLastComponentStoresNil() throws {
         let vm = try makeViewModel(recordType: .observation)
         vm.setValue([ObservationComponent(name: "Weight", value: 70, unit: "kg")], for: "components")
