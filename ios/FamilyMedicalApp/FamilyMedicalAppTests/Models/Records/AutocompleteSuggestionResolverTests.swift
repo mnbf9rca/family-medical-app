@@ -18,7 +18,8 @@ struct AutocompleteSuggestionResolverTests {
         keyPath: "providerId",
         displayName: "Provider",
         fieldType: .autocomplete,
-        displayOrder: 1
+        displayOrder: 1,
+        semantic: .entityReference(.provider)
     )
 
     private let plainAutocompleteNoSource = FieldMetadata(

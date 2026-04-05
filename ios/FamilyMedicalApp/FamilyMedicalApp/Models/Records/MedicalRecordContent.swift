@@ -297,7 +297,7 @@ enum FieldValueDenormalizer {
         case .date:
             if let double = value as? Double { return Date(timeIntervalSinceReferenceDate: double) }
         case .autocomplete:
-            if metadata.keyPath.hasSuffix("Id"), let string = value as? String {
+            if metadata.isEntityReference, let string = value as? String {
                 return UUID(uuidString: string) ?? string
             }
         case .components:
@@ -336,7 +336,7 @@ enum FieldValueNormalizer {
                 return data.flatMap { try? JSONSerialization.jsonObject(with: $0) }
             }
         case .multilineText, .text:
-            if metadata.keyPath == "tags", let string = value as? String {
+            if metadata.isTagList, let string = value as? String {
                 return string.split(separator: ",")
                     .map { $0.trimmingCharacters(in: .whitespaces) }
                     .filter { !$0.isEmpty }
@@ -378,7 +378,7 @@ struct AutocompleteSuggestionResolver {
     /// string, falls back to the raw string value for catalog autocompletes, returns "" if
     /// the provider UUID doesn't match any loaded Provider.
     func displayText(storedValue: Any?) -> String {
-        if metadata.keyPath == "providerId" {
+        if metadata.isProviderReference {
             guard let uuid = storedValue as? UUID,
                   let provider = providers.first(where: { $0.id == uuid })
             else { return "" }
@@ -390,7 +390,7 @@ struct AutocompleteSuggestionResolver {
     // MARK: - Private
 
     private func allSuggestions(for query: String) -> [AutocompleteSuggestion] {
-        if metadata.keyPath == "providerId" {
+        if metadata.isProviderReference {
             return providerSuggestions(for: query)
         }
         if let source = metadata.autocompleteSource {

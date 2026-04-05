@@ -150,7 +150,11 @@ struct FieldValueDenormalizerTests {
     func denormalize_autocompleteIdBecomesUUID() {
         let uuid = UUID()
         let metadata = FieldMetadata(
-            keyPath: "providerId", displayName: "Provider", fieldType: .autocomplete, displayOrder: 1
+            keyPath: "providerId",
+            displayName: "Provider",
+            fieldType: .autocomplete,
+            displayOrder: 1,
+            semantic: .entityReference(.provider)
         )
         let result = FieldValueDenormalizer.denormalize(uuid.uuidString, for: metadata)
         #expect(result as? UUID == uuid)
@@ -238,7 +242,11 @@ struct FieldValueNormalizerTests {
     @Test
     func normalize_tagsStringBecomesArray() {
         let metadata = FieldMetadata(
-            keyPath: "tags", displayName: "Tags", fieldType: .text, displayOrder: 1
+            keyPath: "tags",
+            displayName: "Tags",
+            fieldType: .text,
+            displayOrder: 1,
+            semantic: .tagList
         )
         let result = FieldValueNormalizer.normalize("a, b, c", for: metadata)
         #expect(result as? [String] == ["a", "b", "c"])

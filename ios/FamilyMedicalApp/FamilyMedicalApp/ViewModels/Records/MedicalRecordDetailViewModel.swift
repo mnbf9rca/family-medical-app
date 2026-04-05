@@ -62,7 +62,9 @@ final class MedicalRecordDetailViewModel {
     /// Resolve the provider reference to a display string. Safe to call even when no
     /// providerId is present (it just no-ops).
     func loadProviderDisplayIfNeeded() async {
-        guard let providerId = knownFieldValues["providerId"] as? UUID else {
+        guard let providerKey = recordType.fieldMetadata.first(where: { $0.isProviderReference })?.keyPath,
+              let providerId = knownFieldValues[providerKey] as? UUID
+        else {
             providerDisplayString = nil
             return
         }

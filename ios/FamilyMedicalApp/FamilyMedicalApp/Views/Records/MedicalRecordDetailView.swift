@@ -166,7 +166,7 @@ struct MedicalRecordDetailView: View {
 
     private func displayText(for metadata: FieldMetadata) -> String? {
         guard let raw = viewModel.knownFieldValues[metadata.keyPath] else { return nil }
-        if metadata.keyPath == "providerId" {
+        if metadata.isProviderReference {
             return viewModel.providerDisplayString
         }
         switch metadata.fieldType {
@@ -181,7 +181,7 @@ struct MedicalRecordDetailView: View {
                     .joined(separator: "\n")
             }
         case .multilineText, .text:
-            if metadata.keyPath == "tags", let array = raw as? [String] {
+            if metadata.isTagList, let array = raw as? [String] {
                 return array.isEmpty ? nil : array.joined(separator: ", ")
             }
         default:

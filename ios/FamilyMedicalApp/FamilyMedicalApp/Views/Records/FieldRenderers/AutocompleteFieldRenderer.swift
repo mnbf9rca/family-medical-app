@@ -98,7 +98,7 @@ struct AutocompleteFieldRenderer: View {
         showingSuggestions = isFocused
         // For catalog fields, the query text IS the stored value.
         // For providerId, only select() stores the UUID — typing alone clears any selection.
-        if metadata.keyPath == "providerId" {
+        if metadata.isEntityReference {
             if newValue.isEmpty {
                 viewModel.setValue(nil, for: metadata.keyPath)
             }

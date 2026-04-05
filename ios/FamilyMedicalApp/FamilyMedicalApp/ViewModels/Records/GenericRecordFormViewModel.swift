@@ -230,7 +230,7 @@ final class GenericRecordFormViewModel {
             // For editing we need tag lists to show as a comma-separated string.
             let metadataByKeyPath = Dictionary(uniqueKeysWithValues: fieldMetadata.map { ($0.keyPath, $0) })
             for (key, value) in decoded.known {
-                if let metadata = metadataByKeyPath[key], metadata.keyPath == "tags",
+                if let metadata = metadataByKeyPath[key], metadata.isTagList,
                    let tags = value as? [String] {
                     fieldValues[key] = tags.joined(separator: ", ")
                 } else {
