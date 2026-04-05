@@ -163,8 +163,14 @@ struct ImmunizationRecord: MedicalRecordContent {
             displayOrder: 6
         ),
         FieldMetadata(keyPath: "expirationDate", displayName: "Vaccine Expiration", fieldType: .date, displayOrder: 7),
-        FieldMetadata(keyPath: "providerId", displayName: "Provider", fieldType: .autocomplete, displayOrder: 8),
+        FieldMetadata(
+            keyPath: "providerId",
+            displayName: "Provider",
+            fieldType: .autocomplete,
+            displayOrder: 8,
+            semantic: .entityReference(.provider)
+        ),
         FieldMetadata(keyPath: "notes", displayName: "Notes", fieldType: .multilineText, displayOrder: 100),
-        FieldMetadata(keyPath: "tags", displayName: "Tags", fieldType: .text, displayOrder: 101)
+        FieldMetadata(keyPath: "tags", displayName: "Tags", fieldType: .text, displayOrder: 101, semantic: .tagList)
     ]
 }

@@ -118,8 +118,14 @@ struct ProcedureRecord: MedicalRecordContent {
         FieldMetadata(keyPath: "reason", displayName: "Reason", fieldType: .text, displayOrder: 3),
         FieldMetadata(keyPath: "outcome", displayName: "Outcome", fieldType: .text, displayOrder: 4),
         FieldMetadata(keyPath: "bodySite", displayName: "Body Site", fieldType: .text, displayOrder: 5),
-        FieldMetadata(keyPath: "providerId", displayName: "Provider", fieldType: .autocomplete, displayOrder: 6),
+        FieldMetadata(
+            keyPath: "providerId",
+            displayName: "Provider",
+            fieldType: .autocomplete,
+            displayOrder: 6,
+            semantic: .entityReference(.provider)
+        ),
         FieldMetadata(keyPath: "notes", displayName: "Notes", fieldType: .multilineText, displayOrder: 100),
-        FieldMetadata(keyPath: "tags", displayName: "Tags", fieldType: .text, displayOrder: 101)
+        FieldMetadata(keyPath: "tags", displayName: "Tags", fieldType: .text, displayOrder: 101, semantic: .tagList)
     ]
 }

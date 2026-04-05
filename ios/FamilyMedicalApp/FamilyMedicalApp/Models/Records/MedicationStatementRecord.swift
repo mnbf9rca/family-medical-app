@@ -153,9 +153,21 @@ struct MedicationStatementRecord: MedicalRecordContent {
         FieldMetadata(keyPath: "startDate", displayName: "Start Date", fieldType: .date, displayOrder: 4),
         FieldMetadata(keyPath: "endDate", displayName: "End Date", fieldType: .date, displayOrder: 5),
         FieldMetadata(keyPath: "reasonForUse", displayName: "Reason for Use", fieldType: .text, displayOrder: 6),
-        FieldMetadata(keyPath: "pharmacyId", displayName: "Pharmacy", fieldType: .autocomplete, displayOrder: 7),
-        FieldMetadata(keyPath: "providerId", displayName: "Provider", fieldType: .autocomplete, displayOrder: 8),
+        FieldMetadata(
+            keyPath: "pharmacyId",
+            displayName: "Pharmacy",
+            fieldType: .autocomplete,
+            displayOrder: 7,
+            semantic: .entityReference(.pharmacy)
+        ),
+        FieldMetadata(
+            keyPath: "providerId",
+            displayName: "Provider",
+            fieldType: .autocomplete,
+            displayOrder: 8,
+            semantic: .entityReference(.provider)
+        ),
         FieldMetadata(keyPath: "notes", displayName: "Notes", fieldType: .multilineText, displayOrder: 100),
-        FieldMetadata(keyPath: "tags", displayName: "Tags", fieldType: .text, displayOrder: 101)
+        FieldMetadata(keyPath: "tags", displayName: "Tags", fieldType: .text, displayOrder: 101, semantic: .tagList)
     ]
 }

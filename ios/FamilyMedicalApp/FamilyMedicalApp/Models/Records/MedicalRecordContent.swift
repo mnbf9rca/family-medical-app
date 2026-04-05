@@ -104,6 +104,7 @@ struct FieldMetadata: Equatable {
     let autocompleteSource: AutocompleteSource?
     let pickerOptions: [String]?
     let displayOrder: Int
+    let semantic: FieldSemantic?
 
     init(
         keyPath: String,
@@ -113,7 +114,8 @@ struct FieldMetadata: Equatable {
         placeholder: String? = nil,
         autocompleteSource: AutocompleteSource? = nil,
         pickerOptions: [String]? = nil,
-        displayOrder: Int
+        displayOrder: Int,
+        semantic: FieldSemantic? = nil
     ) {
         self.keyPath = keyPath
         self.displayName = displayName
@@ -123,6 +125,24 @@ struct FieldMetadata: Equatable {
         self.autocompleteSource = autocompleteSource
         self.pickerOptions = pickerOptions
         self.displayOrder = displayOrder
+        self.semantic = semantic
+    }
+}
+
+extension FieldMetadata {
+    /// True if this field stores a UUID referencing any entity type.
+    var isEntityReference: Bool {
+        if case .entityReference = semantic { true } else { false }
+    }
+
+    /// True if this field specifically references a Provider.
+    var isProviderReference: Bool {
+        semantic == .entityReference(.provider)
+    }
+
+    /// True if this field stores a tag list (comma-separated in UI, [String] in storage).
+    var isTagList: Bool {
+        semantic == .tagList
     }
 }
 
@@ -138,6 +158,30 @@ enum FieldRenderType {
     case autocomplete
     case components
     case boolean
+}
+
+// MARK: - FieldSemantic
+
+/// Declares a field's semantic purpose beyond its render type.
+///
+/// `FieldRenderType` describes HOW to render a field (text field, date picker, etc).
+/// `FieldSemantic` describes WHAT the field represents — a reference to another entity,
+/// a tag list, etc. — so the form machinery can dispatch on semantics rather than
+/// stringly-typed keyPath matches like `keyPath == "providerId"`.
+enum FieldSemantic: Equatable {
+    /// This field stores a UUID that references another entity (e.g., Provider).
+    /// Used to drive entity-specific autocomplete resolvers and UUID denormalization.
+    case entityReference(EntityKind)
+
+    /// This field stores a comma-separated list of tags. In storage: `[String]`.
+    /// In the form UI: a comma-separated `String`. Normalize/denormalize convert between them.
+    case tagList
+}
+
+/// Entity types that FieldSemantic.entityReference can refer to.
+enum EntityKind: Equatable {
+    case provider
+    case pharmacy
 }
 
 // MARK: - AutocompleteSource
