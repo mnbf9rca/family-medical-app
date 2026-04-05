@@ -2,7 +2,7 @@ import Foundation
 
 /// A healthcare provider (person) or facility (organization).
 /// At least one of name or organization must be non-nil.
-struct Provider: Codable, Identifiable {
+struct Provider: Codable, Identifiable, Equatable {
     let id: UUID
     var name: String?
     var organization: String?

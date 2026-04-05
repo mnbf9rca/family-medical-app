@@ -139,6 +139,6 @@ struct FamilyMemberHistoryRecord: MedicalRecordContent {
         FieldMetadata(keyPath: "deceased", displayName: "Deceased", fieldType: .boolean, displayOrder: 4),
         FieldMetadata(keyPath: "deceasedAge", displayName: "Age at Death", fieldType: .integer, displayOrder: 5),
         FieldMetadata(keyPath: "notes", displayName: "Notes", fieldType: .multilineText, displayOrder: 100),
-        FieldMetadata(keyPath: "tags", displayName: "Tags", fieldType: .text, displayOrder: 101)
+        FieldMetadata(keyPath: "tags", displayName: "Tags", fieldType: .text, displayOrder: 101, semantic: .tagList)
     ]
 }

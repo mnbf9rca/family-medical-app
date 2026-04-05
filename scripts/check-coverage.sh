@@ -58,6 +58,10 @@ FILE_EXCEPTIONS = {
     "PersonDetailView.swift": 72.0,  # Sheet/onChange closures - delegates to PersonDetailViewModel (100%)
     "AddPersonView.swift": 70.0,  # Form with TextField/Toggle/DatePicker closures - delegates to HomeViewModel. CI variance after UI test skips in #123, restore in #127
     "HomeView.swift": 82.0,  # List/swipe/sheet closures - delegates to HomeViewModel (100%). CI variance after UI test skips in #123, restore in #127
+    # AutocompleteFieldRenderer - business logic lives in AutocompleteSuggestionResolver
+    # (100% covered). The remaining @FocusState-gated suggestionsList closures can only
+    # be exercised through an interactive UI test.
+    "AutocompleteFieldRenderer.swift": 51.0,
     # UIViewControllerRepresentables - makeUIViewController needs UIKit context
     "CameraRepresentable.swift": 64.0,  # UIImagePickerController wrapper - needs camera/UIKit
     "BackupShareSheet.swift": 60.0,  # UIActivityViewController wrapper - completion handler needs UIKit context
