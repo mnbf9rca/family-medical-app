@@ -3,52 +3,48 @@ import Foundation
 import Testing
 @testable import FamilyMedicalApp
 
-/// Tests for AttachmentViewerViewModel initialization, computed properties, and content loading
+/// Tests for AttachmentViewerViewModel initialization, computed properties, and content loading.
 @MainActor
 struct AttachmentViewerViewModelTests {
     // MARK: - Test Fixtures
 
     struct TestFixtures {
         let viewModel: AttachmentViewerViewModel
-        let attachmentService: MockAttachmentService
-        let primaryKeyProvider: MockPrimaryKeyProvider
-        let attachment: FamilyMedicalApp.Attachment
+        let blobService: MockAttachmentBlobService
+        let document: DocumentReferenceRecord
         let personId: UUID
         let primaryKey: SymmetricKey
     }
 
     func makeFixtures(
-        fileName: String = "test.jpg",
-        mimeType: String = "image/jpeg"
-    ) throws -> TestFixtures {
-        let attachmentService = MockAttachmentService()
+        title: String = "test.jpg",
+        mimeType: String = "image/jpeg",
+        fileSize: Int = 1_024,
+        retrieveResult: Data = Data("test content".utf8)
+    ) -> TestFixtures {
+        let blobService = MockAttachmentBlobService()
+        blobService.retrieveResult = retrieveResult
         let primaryKey = SymmetricKey(size: .bits256)
-        let primaryKeyProvider = MockPrimaryKeyProvider(primaryKey: primaryKey)
         let personId = UUID()
 
-        let attachment = try AttachmentTestHelper.makeTestAttachmentDeterministic(
-            fileName: fileName,
-            mimeType: mimeType
-        )
-
-        attachmentService.addTestAttachment(
-            attachment,
-            content: Data("test content".utf8),
-            linkedToRecord: UUID()
+        let document = DocumentReferenceRecord(
+            title: title,
+            mimeType: mimeType,
+            fileSize: fileSize,
+            contentHMAC: Data(repeating: 0xAB, count: 32)
         )
 
         let viewModel = AttachmentViewerViewModel(
-            attachment: attachment,
+            document: document,
             personId: personId,
-            attachmentService: attachmentService,
-            primaryKeyProvider: primaryKeyProvider
+            primaryKey: primaryKey,
+            blobService: blobService
         )
 
         return TestFixtures(
             viewModel: viewModel,
-            attachmentService: attachmentService,
-            primaryKeyProvider: primaryKeyProvider,
-            attachment: attachment,
+            blobService: blobService,
+            document: document,
             personId: personId,
             primaryKey: primaryKey
         )
@@ -57,32 +53,33 @@ struct AttachmentViewerViewModelTests {
     // MARK: - Initialization Tests
 
     @Test
-    func init_setsAttachmentAndPersonId() throws {
-        let fixtures = try makeFixtures()
+    func init_setsDocumentAndPersonId() {
+        let fixtures = makeFixtures()
 
-        #expect(fixtures.viewModel.attachment.id == fixtures.attachment.id)
+        #expect(fixtures.viewModel.document.title == fixtures.document.title)
+        #expect(fixtures.viewModel.document.contentHMAC == fixtures.document.contentHMAC)
         #expect(fixtures.viewModel.personId == fixtures.personId)
     }
 
     @Test
-    func init_startsWithNilDecryptedData() throws {
-        let fixtures = try makeFixtures()
+    func init_startsWithNilDecryptedData() {
+        let fixtures = makeFixtures()
 
         #expect(fixtures.viewModel.decryptedData == nil)
         #expect(!fixtures.viewModel.hasContent)
     }
 
     @Test
-    func init_notLoading() throws {
-        let fixtures = try makeFixtures()
+    func init_notLoading() {
+        let fixtures = makeFixtures()
 
         #expect(!fixtures.viewModel.isLoading)
         #expect(fixtures.viewModel.errorMessage == nil)
     }
 
     @Test
-    func init_sheetsNotShowing() throws {
-        let fixtures = try makeFixtures()
+    func init_sheetsNotShowing() {
+        let fixtures = makeFixtures()
 
         #expect(!fixtures.viewModel.showingExportWarning)
         #expect(!fixtures.viewModel.showingShareSheet)
@@ -91,46 +88,46 @@ struct AttachmentViewerViewModelTests {
     // MARK: - Computed Properties Tests
 
     @Test
-    func isImage_jpegAttachment_returnsTrue() throws {
-        let fixtures = try makeFixtures(mimeType: "image/jpeg")
+    func isImage_jpegDocument_returnsTrue() {
+        let fixtures = makeFixtures(mimeType: "image/jpeg")
 
         #expect(fixtures.viewModel.isImage)
         #expect(!fixtures.viewModel.isPDF)
     }
 
     @Test
-    func isImage_pngAttachment_returnsTrue() throws {
-        let fixtures = try makeFixtures(fileName: "test.png", mimeType: "image/png")
+    func isImage_pngDocument_returnsTrue() {
+        let fixtures = makeFixtures(title: "test.png", mimeType: "image/png")
 
         #expect(fixtures.viewModel.isImage)
         #expect(!fixtures.viewModel.isPDF)
     }
 
     @Test
-    func isPDF_pdfAttachment_returnsTrue() throws {
-        let fixtures = try makeFixtures(fileName: "test.pdf", mimeType: "application/pdf")
+    func isPDF_pdfDocument_returnsTrue() {
+        let fixtures = makeFixtures(title: "test.pdf", mimeType: "application/pdf")
 
         #expect(fixtures.viewModel.isPDF)
         #expect(!fixtures.viewModel.isImage)
     }
 
     @Test
-    func displayFileName_returnsAttachmentFileName() throws {
-        let fixtures = try makeFixtures(fileName: "my_document.pdf")
+    func displayFileName_returnsDocumentTitle() {
+        let fixtures = makeFixtures(title: "my_document.pdf")
 
         #expect(fixtures.viewModel.displayFileName == "my_document.pdf")
     }
 
     @Test
-    func displayFileSize_returnsFormattedSize() throws {
-        let fixtures = try makeFixtures()
+    func displayFileSize_returnsFormattedSize() {
+        let fixtures = makeFixtures(fileSize: 2_048)
 
         #expect(!fixtures.viewModel.displayFileSize.isEmpty)
     }
 
     @Test
-    func hasContent_afterLoad_returnsTrue() async throws {
-        let fixtures = try makeFixtures()
+    func hasContent_afterLoad_returnsTrue() async {
+        let fixtures = makeFixtures()
 
         await fixtures.viewModel.loadContent()
 
@@ -140,8 +137,8 @@ struct AttachmentViewerViewModelTests {
     // MARK: - Load Content Tests
 
     @Test
-    func loadContent_success_setsDecryptedData() async throws {
-        let fixtures = try makeFixtures()
+    func loadContent_success_setsDecryptedData() async {
+        let fixtures = makeFixtures()
 
         await fixtures.viewModel.loadContent()
 
@@ -151,30 +148,29 @@ struct AttachmentViewerViewModelTests {
     }
 
     @Test
-    func loadContent_callsService() async throws {
-        let fixtures = try makeFixtures()
+    func loadContent_callsBlobService() async {
+        let fixtures = makeFixtures()
 
         await fixtures.viewModel.loadContent()
 
-        #expect(fixtures.attachmentService.getContentCalls.count == 1)
-        #expect(fixtures.attachmentService.getContentCalls[0].attachment.id == fixtures.attachment.id)
-        #expect(fixtures.attachmentService.getContentCalls[0].personId == fixtures.personId)
+        #expect(fixtures.blobService.retrieveCalls.count == 1)
+        #expect(fixtures.blobService.retrieveCalls[0] == fixtures.document.contentHMAC)
     }
 
     @Test
-    func loadContent_alreadyLoaded_doesNotReload() async throws {
-        let fixtures = try makeFixtures()
+    func loadContent_alreadyLoaded_doesNotReload() async {
+        let fixtures = makeFixtures()
 
         await fixtures.viewModel.loadContent()
         await fixtures.viewModel.loadContent()
 
-        #expect(fixtures.attachmentService.getContentCalls.count == 1)
+        #expect(fixtures.blobService.retrieveCalls.count == 1)
     }
 
     @Test
-    func loadContent_failure_setsError() async throws {
-        let fixtures = try makeFixtures()
-        fixtures.attachmentService.shouldFailGetContent = true
+    func loadContent_failure_setsError() async {
+        let fixtures = makeFixtures()
+        fixtures.blobService.retrieveError = ModelError.attachmentContentCorrupted
 
         await fixtures.viewModel.loadContent()
 
@@ -183,37 +179,21 @@ struct AttachmentViewerViewModelTests {
     }
 
     @Test
-    func loadContent_primaryKeyFailure_setsError() async throws {
-        let attachmentService = MockAttachmentService()
-        let primaryKeyProvider = MockPrimaryKeyProvider(shouldFail: true)
-        let attachment = try FamilyMedicalApp.Attachment(
-            id: UUID(),
-            fileName: "test.jpg",
-            mimeType: "image/jpeg",
-            contentHMAC: Data(repeating: 0, count: 32),
-            encryptedSize: 1_024,
-            thumbnailData: nil,
-            uploadedAt: Date()
-        )
+    func loadContent_genericError_setsDefaultMessage() async {
+        let fixtures = makeFixtures()
+        fixtures.blobService.retrieveError = NSError(domain: "Test", code: 1)
 
-        let viewModel = AttachmentViewerViewModel(
-            attachment: attachment,
-            personId: UUID(),
-            attachmentService: attachmentService,
-            primaryKeyProvider: primaryKeyProvider
-        )
+        await fixtures.viewModel.loadContent()
 
-        await viewModel.loadContent()
-
-        #expect(viewModel.errorMessage != nil)
-        #expect(viewModel.decryptedData == nil)
+        #expect(fixtures.viewModel.errorMessage != nil)
+        #expect(fixtures.viewModel.decryptedData == nil)
     }
 
     // MARK: - Clear Decrypted Data Tests
 
     @Test
-    func clearDecryptedData_removesData() async throws {
-        let fixtures = try makeFixtures()
+    func clearDecryptedData_removesData() async {
+        let fixtures = makeFixtures()
 
         await fixtures.viewModel.loadContent()
         #expect(fixtures.viewModel.decryptedData != nil)
@@ -225,8 +205,8 @@ struct AttachmentViewerViewModelTests {
     }
 
     @Test
-    func clearDecryptedData_whenNil_doesNothing() throws {
-        let fixtures = try makeFixtures()
+    func clearDecryptedData_whenNil_doesNothing() {
+        let fixtures = makeFixtures()
 
         fixtures.viewModel.clearDecryptedData()
 
@@ -236,8 +216,8 @@ struct AttachmentViewerViewModelTests {
     // MARK: - Loading State Tests
 
     @Test
-    func loadContent_setsLoadingFalseAfter() async throws {
-        let fixtures = try makeFixtures()
+    func loadContent_setsLoadingFalseAfter() async {
+        let fixtures = makeFixtures()
 
         await fixtures.viewModel.loadContent()
 
@@ -245,33 +225,20 @@ struct AttachmentViewerViewModelTests {
     }
 
     @Test
-    func loadContent_failure_setsLoadingFalse() async throws {
-        let fixtures = try makeFixtures()
-        fixtures.attachmentService.shouldFailGetContent = true
+    func loadContent_failure_setsLoadingFalse() async {
+        let fixtures = makeFixtures()
+        fixtures.blobService.retrieveError = ModelError.attachmentContentCorrupted
 
         await fixtures.viewModel.loadContent()
 
         #expect(!fixtures.viewModel.isLoading)
-    }
-
-    // MARK: - Error Message Tests
-
-    @Test
-    func loadContent_serviceError_showsUserFacingMessage() async throws {
-        let fixtures = try makeFixtures()
-        fixtures.attachmentService.shouldFailGetContent = true
-
-        await fixtures.viewModel.loadContent()
-
-        #expect(fixtures.viewModel.errorMessage != nil)
-        #expect(fixtures.viewModel.errorMessage?.isEmpty == false)
     }
 
     // MARK: - Export Flow Tests
 
     @Test
-    func requestExport_showsWarning() throws {
-        let fixtures = try makeFixtures()
+    func requestExport_showsWarning() {
+        let fixtures = makeFixtures()
 
         fixtures.viewModel.requestExport()
 
@@ -280,8 +247,8 @@ struct AttachmentViewerViewModelTests {
     }
 
     @Test
-    func confirmExport_hidesWarningShowsShareSheet() throws {
-        let fixtures = try makeFixtures()
+    func confirmExport_hidesWarningShowsShareSheet() {
+        let fixtures = makeFixtures()
         fixtures.viewModel.showingExportWarning = true
 
         fixtures.viewModel.confirmExport()
@@ -291,8 +258,8 @@ struct AttachmentViewerViewModelTests {
     }
 
     @Test
-    func cancelExport_hidesWarning() throws {
-        let fixtures = try makeFixtures()
+    func cancelExport_hidesWarning() {
+        let fixtures = makeFixtures()
         fixtures.viewModel.showingExportWarning = true
 
         fixtures.viewModel.cancelExport()
@@ -304,8 +271,8 @@ struct AttachmentViewerViewModelTests {
     // MARK: - Temporary File URL Tests
 
     @Test
-    func getTemporaryFileURL_noData_returnsNil() throws {
-        let fixtures = try makeFixtures()
+    func getTemporaryFileURL_noData_returnsNil() {
+        let fixtures = makeFixtures()
 
         let url = fixtures.viewModel.getTemporaryFileURL()
 
@@ -314,33 +281,31 @@ struct AttachmentViewerViewModelTests {
 
     @Test
     func getTemporaryFileURL_withData_createsFile() async throws {
-        let fixtures = try makeFixtures()
+        let fixtures = makeFixtures()
 
         await fixtures.viewModel.loadContent()
         let url = try #require(fixtures.viewModel.getTemporaryFileURL())
 
         #expect(FileManager.default.fileExists(atPath: url.path))
 
-        // Clean up
         try? FileManager.default.removeItem(at: url)
     }
 
     @Test
     func getTemporaryFileURL_usesCorrectFileName() async throws {
-        let fixtures = try makeFixtures(fileName: "my_medical_document.pdf")
+        let fixtures = makeFixtures(title: "my_medical_document.pdf")
 
         await fixtures.viewModel.loadContent()
         let url = try #require(fixtures.viewModel.getTemporaryFileURL())
 
         #expect(url.lastPathComponent == "my_medical_document.pdf")
 
-        // Clean up
         try? FileManager.default.removeItem(at: url)
     }
 
     @Test
     func cleanupTemporaryFile_removesFile() async throws {
-        let fixtures = try makeFixtures()
+        let fixtures = makeFixtures()
 
         await fixtures.viewModel.loadContent()
         let url = try #require(fixtures.viewModel.getTemporaryFileURL())
@@ -352,10 +317,9 @@ struct AttachmentViewerViewModelTests {
     }
 
     @Test
-    func cleanupTemporaryFile_noFile_doesNotThrow() throws {
-        let fixtures = try makeFixtures()
+    func cleanupTemporaryFile_noFile_doesNotThrow() {
+        let fixtures = makeFixtures()
 
-        // Should not throw even if file doesn't exist
         fixtures.viewModel.cleanupTemporaryFile()
     }
 }

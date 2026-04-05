@@ -1,3 +1,4 @@
+import CryptoKit
 import PDFKit
 import SwiftUI
 
@@ -223,41 +224,36 @@ private struct ShareSheet: UIViewControllerRepresentable {
 // MARK: - Preview Helpers
 
 private enum ViewerPreviewHelpers {
-    static func makeAttachment(fileName: String, mimeType: String) -> Attachment? {
-        try? Attachment(
-            id: UUID(),
-            fileName: fileName,
+    static func makeDocument(title: String, mimeType: String) -> DocumentReferenceRecord {
+        DocumentReferenceRecord(
+            title: title,
             mimeType: mimeType,
-            contentHMAC: Data(repeating: 0, count: 32),
-            encryptedSize: 1_024,
-            thumbnailData: nil,
-            uploadedAt: Date()
+            fileSize: 1_024,
+            contentHMAC: Data(repeating: 0, count: 32)
         )
     }
 }
 
 #Preview("Image") {
-    if let attachment = ViewerPreviewHelpers.makeAttachment(
-        fileName: "test_image.jpg",
-        mimeType: "image/jpeg"
-    ) {
-        let viewModel = AttachmentViewerViewModel(
-            attachment: attachment,
-            personId: UUID()
-        )
-        AttachmentViewerView(viewModel: viewModel)
-    }
+    let viewModel = AttachmentViewerViewModel(
+        document: ViewerPreviewHelpers.makeDocument(
+            title: "test_image.jpg",
+            mimeType: "image/jpeg"
+        ),
+        personId: UUID(),
+        primaryKey: SymmetricKey(size: .bits256)
+    )
+    AttachmentViewerView(viewModel: viewModel)
 }
 
 #Preview("PDF") {
-    if let attachment = ViewerPreviewHelpers.makeAttachment(
-        fileName: "document.pdf",
-        mimeType: "application/pdf"
-    ) {
-        let viewModel = AttachmentViewerViewModel(
-            attachment: attachment,
-            personId: UUID()
-        )
-        AttachmentViewerView(viewModel: viewModel)
-    }
+    let viewModel = AttachmentViewerViewModel(
+        document: ViewerPreviewHelpers.makeDocument(
+            title: "document.pdf",
+            mimeType: "application/pdf"
+        ),
+        personId: UUID(),
+        primaryKey: SymmetricKey(size: .bits256)
+    )
+    AttachmentViewerView(viewModel: viewModel)
 }

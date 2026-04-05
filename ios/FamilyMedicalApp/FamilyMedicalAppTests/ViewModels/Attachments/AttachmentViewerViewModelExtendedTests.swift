@@ -3,109 +3,85 @@ import Foundation
 import Testing
 @testable import FamilyMedicalApp
 
-/// Extended tests for AttachmentViewerViewModel - Temporary files, security, and error handling
+/// Extended tests for AttachmentViewerViewModel - temp files, security, and error handling.
 @MainActor
 struct AttachmentViewerViewModelExtendedTests {
     // MARK: - Test Fixtures
 
     struct TestFixtures {
         let viewModel: AttachmentViewerViewModel
-        let attachmentService: MockAttachmentService
-        let primaryKeyProvider: MockPrimaryKeyProvider
-        let attachment: FamilyMedicalApp.Attachment
+        let blobService: MockAttachmentBlobService
+        let document: DocumentReferenceRecord
         let personId: UUID
-        let primaryKey: SymmetricKey
     }
 
     func makeFixtures(
-        fileName: String = "test.jpg",
+        title: String = "test.jpg",
         mimeType: String = "image/jpeg"
-    ) throws -> TestFixtures {
-        let attachmentService = MockAttachmentService()
+    ) -> TestFixtures {
+        let blobService = MockAttachmentBlobService()
+        blobService.retrieveResult = Data("test content".utf8)
         let primaryKey = SymmetricKey(size: .bits256)
-        let primaryKeyProvider = MockPrimaryKeyProvider(primaryKey: primaryKey)
         let personId = UUID()
 
-        let attachment = try AttachmentTestHelper.makeTestAttachmentDeterministic(
-            fileName: fileName,
-            mimeType: mimeType
-        )
-
-        attachmentService.addTestAttachment(
-            attachment,
-            content: Data("test content".utf8),
-            linkedToRecord: UUID()
+        let document = DocumentReferenceRecord(
+            title: title,
+            mimeType: mimeType,
+            fileSize: 1_024,
+            contentHMAC: Data(repeating: 0xAB, count: 32)
         )
 
         let viewModel = AttachmentViewerViewModel(
-            attachment: attachment,
+            document: document,
             personId: personId,
-            attachmentService: attachmentService,
-            primaryKeyProvider: primaryKeyProvider
+            primaryKey: primaryKey,
+            blobService: blobService
         )
-
-        return TestFixtures(
-            viewModel: viewModel,
-            attachmentService: attachmentService,
-            primaryKeyProvider: primaryKeyProvider,
-            attachment: attachment,
-            personId: personId,
-            primaryKey: primaryKey
-        )
+        return TestFixtures(viewModel: viewModel, blobService: blobService, document: document, personId: personId)
     }
 
-    // MARK: - Temporary File Error Tests
+    // MARK: - Temporary File Tests
 
     @Test
-    func getTemporaryFileURL_writeFailure_returnsNil() async throws {
-        let fixtures = try makeFixtures()
+    func getTemporaryFileURL_returnsURL_whenDataPresent() async {
+        let fixtures = makeFixtures()
 
-        // Load content first
         await fixtures.viewModel.loadContent()
-        #expect(fixtures.viewModel.decryptedData != nil)
+        let url = fixtures.viewModel.getTemporaryFileURL()
 
-        // Get a successful URL first
-        let successURL = fixtures.viewModel.getTemporaryFileURL()
-        #expect(successURL != nil)
-
-        // Clean up to allow retest
+        #expect(url != nil)
         fixtures.viewModel.cleanupTemporaryFile()
     }
 
     @Test
-    func getTemporaryFileURL_afterClear_returnsNil() async throws {
-        let fixtures = try makeFixtures()
+    func getTemporaryFileURL_afterClear_returnsNil() async {
+        let fixtures = makeFixtures()
 
         await fixtures.viewModel.loadContent()
         #expect(fixtures.viewModel.hasContent)
 
-        // Clear data
         fixtures.viewModel.clearDecryptedData()
 
-        // Now should return nil
         let url = fixtures.viewModel.getTemporaryFileURL()
         #expect(url == nil)
     }
 
     @Test
     func getTemporaryFileURL_multipleCalls_sameFile() async throws {
-        let fixtures = try makeFixtures()
+        let fixtures = makeFixtures()
 
         await fixtures.viewModel.loadContent()
 
         let url1 = try #require(fixtures.viewModel.getTemporaryFileURL())
         let url2 = try #require(fixtures.viewModel.getTemporaryFileURL())
 
-        // Same file location
         #expect(url1.lastPathComponent == url2.lastPathComponent)
-
-        // Clean up
         fixtures.viewModel.cleanupTemporaryFile()
     }
 
     @Test
     func getTemporaryFileURL_contentMatches() async throws {
-        let fixtures = try makeFixtures()
+        let fixtures = makeFixtures()
 
         await fixtures.viewModel.loadContent()
         let originalData = try #require(fixtures.viewModel.decryptedData)
@@ -114,34 +90,29 @@ struct AttachmentViewerViewModelExtendedTests {
         let writtenData = try Data(contentsOf: url)
 
         #expect(writtenData == originalData)
-
-        // Clean up
         fixtures.viewModel.cleanupTemporaryFile()
     }
 
     // MARK: - Clear Data Security Tests
 
     @Test
-    func clearDecryptedData_zeroBytesBeforeRelease() async throws {
-        let fixtures = try makeFixtures()
+    func clearDecryptedData_zeroBytesBeforeRelease() async {
+        let fixtures = makeFixtures()
 
         await fixtures.viewModel.loadContent()
         #expect(fixtures.viewModel.decryptedData != nil)
 
-        // Call clear
         fixtures.viewModel.clearDecryptedData()
 
-        // Should be nil now
         #expect(fixtures.viewModel.decryptedData == nil)
     }
 
     @Test
-    func clearDecryptedData_multipleCalls_safe() async throws {
-        let fixtures = try makeFixtures()
+    func clearDecryptedData_multipleCalls_safe() async {
+        let fixtures = makeFixtures()
 
         await fixtures.viewModel.loadContent()
 
-        // Multiple clears should be safe
         fixtures.viewModel.clearDecryptedData()
         fixtures.viewModel.clearDecryptedData()
         fixtures.viewModel.clearDecryptedData()
@@ -149,153 +120,57 @@ struct AttachmentViewerViewModelExtendedTests {
         #expect(fixtures.viewModel.decryptedData == nil)
     }
 
-    // MARK: - HEIC/HEIF Image Type Tests
+    // MARK: - Image Type Tests
 
     @Test
-    func isImage_heicAttachment_returnsTrue() throws {
-        let attachmentService = MockAttachmentService()
-        let primaryKey = SymmetricKey(size: .bits256)
-        let primaryKeyProvider = MockPrimaryKeyProvider(primaryKey: primaryKey)
+    func isImage_heicDocument_returnsTrue() {
+        let fixtures = makeFixtures(title: "photo.heic", mimeType: "image/heic")
 
-        let attachment = try FamilyMedicalApp.Attachment(
-            id: UUID(),
-            fileName: "photo.heic",
-            mimeType: "image/heic",
-            contentHMAC: Data(repeating: 0, count: 32),
-            encryptedSize: 1_024,
-            thumbnailData: nil,
-            uploadedAt: Date()
-        )
-
-        let viewModel = AttachmentViewerViewModel(
-            attachment: attachment,
-            personId: UUID(),
-            attachmentService: attachmentService,
-            primaryKeyProvider: primaryKeyProvider
-        )
-
-        #expect(viewModel.isImage)
-        #expect(!viewModel.isPDF)
+        #expect(fixtures.viewModel.isImage)
+        #expect(!fixtures.viewModel.isPDF)
     }
 
     @Test
-    func isPDF_returnsCorrectly() throws {
-        let attachmentService = MockAttachmentService()
-        let primaryKey = SymmetricKey(size: .bits256)
-        let primaryKeyProvider = MockPrimaryKeyProvider(primaryKey: primaryKey)
+    func isPDF_applicationPDF_returnsTrue() {
+        let fixtures = makeFixtures(title: "doc.pdf", mimeType: "application/pdf")
 
-        let attachment = try FamilyMedicalApp.Attachment(
-            id: UUID(),
-            fileName: "document.pdf",
-            mimeType: "application/pdf",
-            contentHMAC: Data(repeating: 0, count: 32),
-            encryptedSize: 2_048,
-            thumbnailData: nil,
-            uploadedAt: Date()
-        )
-
-        let viewModel = AttachmentViewerViewModel(
-            attachment: attachment,
-            personId: UUID(),
-            attachmentService: attachmentService,
-            primaryKeyProvider: primaryKeyProvider
-        )
-
-        #expect(viewModel.isPDF)
-        #expect(!viewModel.isImage)
+        #expect(fixtures.viewModel.isPDF)
+        #expect(!fixtures.viewModel.isImage)
     }
 
     // MARK: - Display Property Tests
 
     @Test
-    func displayFileSize_formatsCorrectly() throws {
-        let attachmentService = MockAttachmentService()
+    func displayFileSize_formatsCorrectly() {
+        let blobService = MockAttachmentBlobService()
         let primaryKey = SymmetricKey(size: .bits256)
-        let primaryKeyProvider = MockPrimaryKeyProvider(primaryKey: primaryKey)
-
-        let attachment = try FamilyMedicalApp.Attachment(
-            id: UUID(),
-            fileName: "large.jpg",
+        let document = DocumentReferenceRecord(
+            title: "large.jpg",
             mimeType: "image/jpeg",
-            contentHMAC: Data(repeating: 0, count: 32),
-            encryptedSize: 1_048_576, // 1 MB
-            thumbnailData: nil,
-            uploadedAt: Date()
+            fileSize: 1_048_576,
+            contentHMAC: Data(repeating: 0, count: 32)
         )
 
         let viewModel = AttachmentViewerViewModel(
-            attachment: attachment,
+            document: document,
             personId: UUID(),
-            attachmentService: attachmentService,
-            primaryKeyProvider: primaryKeyProvider
+            primaryKey: primaryKey,
+            blobService: blobService
         )
 
-        // Should be formatted (exact format depends on Attachment.fileSizeFormatted)
         #expect(!viewModel.displayFileSize.isEmpty)
     }
 
-    // MARK: - Error Message Format Tests
+    // MARK: - Error Message Tests
 
     @Test
-    func loadContent_modelError_showsUserFacingMessage() async throws {
-        let attachmentService = MockAttachmentService()
-        attachmentService.shouldFailGetContent = true
-        attachmentService.getContentError = ModelError.attachmentNotFound(attachmentId: UUID())
+    func loadContent_modelError_setsUserFacingMessage() async {
+        let fixtures = makeFixtures()
+        fixtures.blobService.retrieveError = ModelError.attachmentNotFound(attachmentId: UUID())
 
-        let primaryKey = SymmetricKey(size: .bits256)
-        let primaryKeyProvider = MockPrimaryKeyProvider(primaryKey: primaryKey)
+        await fixtures.viewModel.loadContent()
 
-        let attachment = try FamilyMedicalApp.Attachment(
-            id: UUID(),
-            fileName: "missing.jpg",
-            mimeType: "image/jpeg",
-            contentHMAC: Data(repeating: 0, count: 32),
-            encryptedSize: 1_024,
-            thumbnailData: nil,
-            uploadedAt: Date()
-        )
-
-        let viewModel = AttachmentViewerViewModel(
-            attachment: attachment,
-            personId: UUID(),
-            attachmentService: attachmentService,
-            primaryKeyProvider: primaryKeyProvider
-        )
-
-        await viewModel.loadContent()
-
-        #expect(viewModel.errorMessage != nil)
-        #expect(viewModel.decryptedData == nil)
-    }
-
-    @Test
-    func loadContent_genericError_showsDefaultMessage() async throws {
-        let attachmentService = MockAttachmentService()
-        attachmentService.shouldFailGetContent = true
-        // Default error is NSError, not ModelError
-
-        let primaryKey = SymmetricKey(size: .bits256)
-        let primaryKeyProvider = MockPrimaryKeyProvider(primaryKey: primaryKey)
-
-        let attachment = try FamilyMedicalApp.Attachment(
-            id: UUID(),
-            fileName: "error.jpg",
-            mimeType: "image/jpeg",
-            contentHMAC: Data(repeating: 0, count: 32),
-            encryptedSize: 1_024,
-            thumbnailData: nil,
-            uploadedAt: Date()
-        )
-
-        let viewModel = AttachmentViewerViewModel(
-            attachment: attachment,
-            personId: UUID(),
-            attachmentService: attachmentService,
-            primaryKeyProvider: primaryKeyProvider
-        )
-
-        await viewModel.loadContent()
-
-        #expect(viewModel.errorMessage != nil)
+        #expect(fixtures.viewModel.errorMessage != nil)
+        #expect(fixtures.viewModel.decryptedData == nil)
     }
 }

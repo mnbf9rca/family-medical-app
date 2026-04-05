@@ -2,110 +2,100 @@ import CryptoKit
 import Foundation
 import Observation
 
-/// ViewModel for viewing attachment content in full-screen
+/// ViewModel for viewing a DocumentReferenceRecord's decrypted content in full-screen.
 ///
-/// Handles loading, decrypting, and displaying attachment content with security
-/// features like export warnings and memory clearing.
+/// Handles loading, decrypting, and displaying attachment content with security features
+/// like export warnings and memory clearing. Content is fetched via AttachmentBlobService
+/// keyed by the document's contentHMAC.
 @MainActor
 @Observable
 final class AttachmentViewerViewModel {
     // MARK: - State
 
-    /// The attachment being viewed
-    let attachment: Attachment
+    /// The DocumentReferenceRecord being viewed.
+    let document: DocumentReferenceRecord
 
-    /// Decrypted content data (cleared on dismiss for security)
+    /// Decrypted content data (cleared on dismiss for security).
     var decryptedData: Data?
 
-    /// Loading state
+    /// Loading state.
     var isLoading = false
 
-    /// Error message for display
+    /// Error message for display.
     var errorMessage: String?
 
-    /// Whether to show export warning dialog
+    /// Whether to show export warning dialog.
     var showingExportWarning = false
 
-    /// Whether to show share sheet
+    /// Whether to show share sheet.
     var showingShareSheet = false
 
     // MARK: - Context
 
-    /// The person this attachment belongs to
+    /// The person this document belongs to.
     let personId: UUID
+
+    /// Primary key used by the blob service to derive the FMK.
+    @ObservationIgnored private let primaryKey: SymmetricKey
 
     // MARK: - Dependencies
 
-    private let attachmentService: AttachmentServiceProtocol
-    private let primaryKeyProvider: PrimaryKeyProviderProtocol
-    private let logger = LoggingService.shared.logger(category: .storage)
+    @ObservationIgnored private let blobService: AttachmentBlobServiceProtocol
+    @ObservationIgnored private let logger: TracingCategoryLogger
 
     // MARK: - Computed Properties
 
-    /// Whether content is an image
     var isImage: Bool {
-        attachment.isImage
+        document.mimeType.hasPrefix("image/")
     }
 
-    /// Whether content is a PDF
     var isPDF: Bool {
-        attachment.isPDF
+        document.mimeType == "application/pdf"
     }
 
-    /// File name for display
     var displayFileName: String {
-        attachment.fileName
+        document.title
     }
 
-    /// File size for display
     var displayFileSize: String {
-        attachment.fileSizeFormatted
+        ByteCountFormatter.string(fromByteCount: Int64(document.fileSize), countStyle: .file)
     }
 
-    /// Whether content has been loaded
     var hasContent: Bool {
         decryptedData != nil
     }
 
     // MARK: - Initialization
 
-    /// Initialize the viewer ViewModel
-    ///
-    /// - Parameters:
-    ///   - attachment: The attachment to view
-    ///   - personId: The person this attachment belongs to
-    ///   - attachmentService: Service for content retrieval
-    ///   - primaryKeyProvider: Provider for encryption key
     init(
-        attachment: Attachment,
+        document: DocumentReferenceRecord,
         personId: UUID,
-        attachmentService: AttachmentServiceProtocol? = nil,
-        primaryKeyProvider: PrimaryKeyProviderProtocol? = nil
+        primaryKey: SymmetricKey,
+        blobService: AttachmentBlobServiceProtocol? = nil,
+        logger: CategoryLoggerProtocol? = nil
     ) {
-        self.attachment = attachment
+        self.document = document
         self.personId = personId
-
-        // Use default implementations if not provided (for testing)
-        self.attachmentService = attachmentService ?? Self.createDefaultAttachmentService()
-        self.primaryKeyProvider = primaryKeyProvider ?? PrimaryKeyProvider()
+        self.primaryKey = primaryKey
+        self.blobService = blobService ?? Self.createDefaultBlobService()
+        self.logger = TracingCategoryLogger(
+            wrapping: logger ?? LoggingService.shared.logger(category: .storage)
+        )
     }
 
     // MARK: - Actions
 
-    /// Load and decrypt attachment content
+    /// Load and decrypt the document content.
     func loadContent() async {
         guard decryptedData == nil else {
-            return // Already loaded
+            return
         }
-
         isLoading = true
         errorMessage = nil
 
         do {
-            let primaryKey = try primaryKeyProvider.getPrimaryKey()
-
-            decryptedData = try await attachmentService.getContent(
-                attachment: attachment,
+            decryptedData = try await blobService.retrieve(
+                contentHMAC: document.contentHMAC,
                 personId: personId,
                 primaryKey: primaryKey
             )
@@ -116,53 +106,41 @@ final class AttachmentViewerViewModel {
             errorMessage = "Unable to load attachment. Please try again."
             logger.logError(error, context: "AttachmentViewerViewModel.loadContent")
         }
-
         isLoading = false
     }
 
-    /// Request to export/share the attachment
-    ///
-    /// Shows warning dialog before proceeding.
+    /// Request to export/share the document (shows warning dialog).
     func requestExport() {
         showingExportWarning = true
     }
 
-    /// Confirm export after warning acknowledgment
+    /// Confirm export after warning acknowledgment.
     func confirmExport() {
         showingExportWarning = false
         showingShareSheet = true
     }
 
-    /// Cancel export
+    /// Cancel export.
     func cancelExport() {
         showingExportWarning = false
     }
 
-    /// Clear decrypted data from memory
+    /// Clear decrypted data from memory.
     ///
-    /// SECURITY: Call this when dismissing the viewer to prevent
-    /// decrypted content from remaining in memory.
+    /// SECURITY: call this when dismissing the viewer so decrypted content does not linger.
     func clearDecryptedData() {
-        // Zero out the data before releasing
         if var data = decryptedData {
             data.resetBytes(in: 0 ..< data.count)
         }
         decryptedData = nil
     }
 
-    /// Get temporary URL for sharing
-    ///
-    /// Creates a temporary file for the share sheet. File is deleted after share completes.
+    /// Temporary URL for sharing. Writes the decrypted data to a file in the temp directory.
     func getTemporaryFileURL() -> URL? {
-        guard let data = decryptedData else {
-            return nil
-        }
-
+        guard let data = decryptedData else { return nil }
         let tempDir = FileManager.default.temporaryDirectory
-        let fileURL = tempDir.appendingPathComponent(attachment.fileName)
-
+        let fileURL = tempDir.appendingPathComponent(document.title)
         do {
-            // Write to temp file (will be cleaned up by system)
             try data.write(to: fileURL)
             return fileURL
         } catch {
@@ -171,29 +149,16 @@ final class AttachmentViewerViewModel {
         }
     }
 
-    /// Clean up temporary export file
+    /// Clean up the temporary export file.
     func cleanupTemporaryFile() {
         let tempDir = FileManager.default.temporaryDirectory
-        let fileURL = tempDir.appendingPathComponent(attachment.fileName)
-
+        let fileURL = tempDir.appendingPathComponent(document.title)
         try? FileManager.default.removeItem(at: fileURL)
     }
 
-    // MARK: - Private Helpers
+    // MARK: - Private
 
-    /// Create default attachment service with all dependencies
-    private static func createDefaultAttachmentService() -> AttachmentServiceProtocol {
-        let coreDataStack = CoreDataStack.shared
-        let encryptionService = EncryptionService()
-        let fmkService = FamilyMemberKeyService()
-
-        let attachmentRepository = AttachmentRepository(
-            coreDataStack: coreDataStack,
-            encryptionService: encryptionService,
-            fmkService: fmkService
-        )
-
-        // Create file storage
+    private static func createDefaultBlobService() -> AttachmentBlobServiceProtocol {
         let fileStorage: AttachmentFileStorageServiceProtocol
         do {
             fileStorage = try AttachmentFileStorageService()
@@ -202,15 +167,11 @@ final class AttachmentViewerViewModel {
             try? FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
             fileStorage = AttachmentFileStorageService(attachmentsDirectory: tempDir)
         }
-
-        let imageProcessor = ImageProcessingService()
-
-        return AttachmentService(
-            attachmentRepository: attachmentRepository,
+        return AttachmentBlobService(
             fileStorage: fileStorage,
-            imageProcessor: imageProcessor,
-            encryptionService: encryptionService,
-            fmkService: fmkService
+            imageProcessor: ImageProcessingService(),
+            encryptionService: EncryptionService(),
+            fmkService: FamilyMemberKeyService()
         )
     }
 }

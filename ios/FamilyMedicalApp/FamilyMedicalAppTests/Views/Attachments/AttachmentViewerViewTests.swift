@@ -9,94 +9,61 @@ import ViewInspector
 struct AttachmentViewerViewTests {
     // MARK: - Test Fixtures
 
-    func makeTestAttachment(
-        fileName: String = "test.jpg",
+    func makeDocument(
+        title: String = "test.jpg",
         mimeType: String = "image/jpeg"
-    ) throws -> FamilyMedicalApp.Attachment {
-        try FamilyMedicalApp.Attachment(
-            id: UUID(),
-            fileName: fileName,
+    ) -> DocumentReferenceRecord {
+        DocumentReferenceRecord(
+            title: title,
             mimeType: mimeType,
-            contentHMAC: Data(repeating: 0xAB, count: 32),
-            encryptedSize: 1_024,
-            thumbnailData: nil,
-            uploadedAt: Date()
+            fileSize: 1_024,
+            contentHMAC: Data(repeating: 0xAB, count: 32)
         )
     }
 
     func makeViewModel(
-        fileName: String = "test.jpg",
+        title: String = "test.jpg",
         mimeType: String = "image/jpeg"
-    ) throws -> AttachmentViewerViewModel {
-        let attachmentService = MockAttachmentService()
+    ) -> AttachmentViewerViewModel {
+        let blobService = MockAttachmentBlobService()
+        blobService.retrieveResult = Data("test content".utf8)
         let primaryKey = SymmetricKey(size: .bits256)
-        let primaryKeyProvider = MockPrimaryKeyProvider(primaryKey: primaryKey)
-        let personId = UUID()
-
-        let attachment = try FamilyMedicalApp.Attachment(
-            id: UUID(),
-            fileName: fileName,
-            mimeType: mimeType,
-            contentHMAC: Data(repeating: 0xAB, count: 32),
-            encryptedSize: 1_024,
-            thumbnailData: nil,
-            uploadedAt: Date()
-        )
-
-        attachmentService.addTestAttachment(
-            attachment,
-            content: Data("test content".utf8),
-            linkedToRecord: UUID()
-        )
+        let document = makeDocument(title: title, mimeType: mimeType)
 
         return AttachmentViewerViewModel(
-            attachment: attachment,
-            personId: personId,
-            attachmentService: attachmentService,
-            primaryKeyProvider: primaryKeyProvider
+            document: document,
+            personId: UUID(),
+            primaryKey: primaryKey,
+            blobService: blobService
         )
-    }
-
-    func makeTestImageData() -> Data {
-        let size = CGSize(width: 100, height: 100)
-        let renderer = UIGraphicsImageRenderer(size: size)
-        let image = renderer.image { ctx in
-            UIColor.red.setFill()
-            ctx.fill(CGRect(origin: .zero, size: size))
-        }
-        // swiftlint:disable:next force_unwrapping
-        return image.jpegData(compressionQuality: 0.8)!
     }
 
     // MARK: - Basic Rendering Tests
 
     @Test
     func viewRendersSuccessfully() throws {
-        let viewModel = try makeViewModel()
+        let viewModel = makeViewModel()
         let view = AttachmentViewerView(viewModel: viewModel)
 
-        // Use find() for deterministic coverage
         let inspected = try view.inspect()
         _ = try inspected.find(ViewType.NavigationStack.self)
     }
 
     @Test
-    func viewRendersWithImageAttachment() throws {
-        let viewModel = try makeViewModel(mimeType: "image/jpeg")
+    func viewRendersWithImageDocument() throws {
+        let viewModel = makeViewModel(mimeType: "image/jpeg")
         let view = AttachmentViewerView(viewModel: viewModel)
 
-        // Use find() for deterministic coverage
         let inspected = try view.inspect()
         _ = try inspected.find(ViewType.NavigationStack.self)
         #expect(viewModel.isImage)
     }
 
     @Test
-    func viewRendersWithPDFAttachment() throws {
-        let viewModel = try makeViewModel(fileName: "document.pdf", mimeType: "application/pdf")
+    func viewRendersWithPDFDocument() throws {
+        let viewModel = makeViewModel(title: "document.pdf", mimeType: "application/pdf")
         let view = AttachmentViewerView(viewModel: viewModel)
 
-        // Use find() for deterministic coverage
         let inspected = try view.inspect()
         _ = try inspected.find(ViewType.NavigationStack.self)
         #expect(viewModel.isPDF)
@@ -106,24 +73,20 @@ struct AttachmentViewerViewTests {
 
     @Test
     func viewShowsLoadingState() throws {
-        let viewModel = try makeViewModel()
+        let viewModel = makeViewModel()
         viewModel.isLoading = true
 
         let view = AttachmentViewerView(viewModel: viewModel)
-
-        // Find ProgressView to exercise loading branch
         let inspected = try view.inspect()
         _ = try inspected.find(ViewType.ProgressView.self)
     }
 
     @Test
     func viewShowsErrorState() throws {
-        let viewModel = try makeViewModel()
+        let viewModel = makeViewModel()
         viewModel.errorMessage = "Failed to load content"
 
         let view = AttachmentViewerView(viewModel: viewModel)
-
-        // Find error message text to exercise error branch
         let inspected = try view.inspect()
         _ = try inspected.find(text: "Failed to load content")
     }
@@ -132,23 +95,20 @@ struct AttachmentViewerViewTests {
 
     @Test
     func viewWithLoadedContent_showsContent() async throws {
-        let viewModel = try makeViewModel()
-
+        let viewModel = makeViewModel()
         await viewModel.loadContent()
 
         let view = AttachmentViewerView(viewModel: viewModel)
         let inspected = try view.inspect()
         _ = try inspected.find(ViewType.NavigationStack.self)
-
         #expect(viewModel.hasContent)
     }
 
     @Test
     func viewDisplaysFileName() throws {
-        let viewModel = try makeViewModel(fileName: "medical_report.jpg")
+        let viewModel = makeViewModel(title: "medical_report.jpg")
         let view = AttachmentViewerView(viewModel: viewModel)
 
-        // Use find() for deterministic coverage - verify view structure renders
         let inspected = try view.inspect()
         _ = try inspected.find(ViewType.NavigationStack.self)
         #expect(viewModel.displayFileName == "medical_report.jpg")
@@ -156,10 +116,9 @@ struct AttachmentViewerViewTests {
 
     @Test
     func viewDisplaysFileSize() throws {
-        let viewModel = try makeViewModel()
+        let viewModel = makeViewModel()
         let view = AttachmentViewerView(viewModel: viewModel)
 
-        // Use find() for deterministic coverage - verify view structure renders
         let inspected = try view.inspect()
         _ = try inspected.find(ViewType.NavigationStack.self)
         #expect(!viewModel.displayFileSize.isEmpty)
@@ -169,10 +128,9 @@ struct AttachmentViewerViewTests {
 
     @Test
     func imageViewer_supportsZoom() throws {
-        let viewModel = try makeViewModel(mimeType: "image/jpeg")
+        let viewModel = makeViewModel(mimeType: "image/jpeg")
         let view = AttachmentViewerView(viewModel: viewModel)
 
-        // Use find() for deterministic coverage
         let inspected = try view.inspect()
         _ = try inspected.find(ViewType.NavigationStack.self)
         #expect(viewModel.isImage)
@@ -182,10 +140,9 @@ struct AttachmentViewerViewTests {
 
     @Test
     func pdfViewer_renders() throws {
-        let viewModel = try makeViewModel(fileName: "doc.pdf", mimeType: "application/pdf")
+        let viewModel = makeViewModel(title: "doc.pdf", mimeType: "application/pdf")
         let view = AttachmentViewerView(viewModel: viewModel)
 
-        // Use find() for deterministic coverage
         let inspected = try view.inspect()
         _ = try inspected.find(ViewType.NavigationStack.self)
         #expect(viewModel.isPDF)
@@ -195,13 +152,11 @@ struct AttachmentViewerViewTests {
     // MARK: - Export Warning Tests
 
     @Test
-    func viewWithExportWarning_showsDialog() throws {
-        let viewModel = try makeViewModel()
+    func viewWithExportWarning_rendersSuccessfully() throws {
+        let viewModel = makeViewModel()
         viewModel.showingExportWarning = true
 
         let view = AttachmentViewerView(viewModel: viewModel)
-
-        // Use find() for deterministic coverage
         let inspected = try view.inspect()
         _ = try inspected.find(ViewType.NavigationStack.self)
     }
@@ -210,12 +165,10 @@ struct AttachmentViewerViewTests {
 
     @Test
     func viewWithShareSheet_rendersSuccessfully() throws {
-        let viewModel = try makeViewModel()
+        let viewModel = makeViewModel()
         viewModel.showingShareSheet = true
 
         let view = AttachmentViewerView(viewModel: viewModel)
-
-        // Use find() for deterministic coverage
         let inspected = try view.inspect()
         _ = try inspected.find(ViewType.NavigationStack.self)
     }
