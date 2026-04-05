@@ -22,4 +22,20 @@ struct ObservationComponentTests {
         let decoded = try JSONDecoder().decode([ObservationComponent].self, from: data)
         #expect(decoded == components)
     }
+
+    @Test("id survives JSON round-trip")
+    func idRoundTrips() throws {
+        let original = ObservationComponent(name: "Weight", value: 70.0, unit: "kg")
+        let data = try JSONEncoder().encode(original)
+        let decoded = try JSONDecoder().decode(ObservationComponent.self, from: data)
+        #expect(decoded.id == original.id)
+    }
+
+    @Test("Distinct instances with same content have different ids")
+    func distinctInstancesHaveDistinctIds() {
+        let first = ObservationComponent(name: "Weight", value: 70, unit: "kg")
+        let second = ObservationComponent(name: "Weight", value: 70, unit: "kg")
+        #expect(first.id != second.id)
+        #expect(first != second)
+    }
 }
