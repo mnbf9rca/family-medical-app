@@ -80,6 +80,7 @@ struct GenericRecordFormView: View {
         }
     }
 
+    @MainActor
     private func attemptSave() async {
         let ok = await viewModel.save()
         if ok {

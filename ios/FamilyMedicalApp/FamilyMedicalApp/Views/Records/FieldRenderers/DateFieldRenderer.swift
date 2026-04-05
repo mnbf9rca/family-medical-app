@@ -2,8 +2,10 @@ import SwiftUI
 
 /// Renders a DatePicker for `.date` fields.
 ///
-/// Required date fields default to `Date()` (now) when unset; optional date fields default
-/// to `Date()` as the display value but may be cleared via the clear-to-nil button.
+/// Required date fields are seeded with `Date()` on first appear so validation doesn't
+/// fail silently while the picker is already displaying a value. Optional date fields
+/// are NOT seeded — their display falls back to `Date()` in the binding only, and the
+/// Clear button resets to unset.
 struct DateFieldRenderer: View {
     let metadata: FieldMetadata
     @Bindable var viewModel: GenericRecordFormViewModel
@@ -33,6 +35,15 @@ struct DateFieldRenderer: View {
             )
             .labelsHidden()
             .accessibilityLabel(metadata.displayName)
+            .onAppear {
+                // For required date fields, seed today's date into the ViewModel if unset.
+                // Without this, the renderer shows Date() via the binding's default but the
+                // VM holds nil → validation fails with "Required" even though the user sees
+                // today's date in the picker.
+                if metadata.isRequired, viewModel.value(for: metadata.keyPath) == nil {
+                    viewModel.setValue(Date(), for: metadata.keyPath)
+                }
+            }
             if let error = viewModel.validationErrors[metadata.keyPath] {
                 Text(error)
                     .font(.caption)

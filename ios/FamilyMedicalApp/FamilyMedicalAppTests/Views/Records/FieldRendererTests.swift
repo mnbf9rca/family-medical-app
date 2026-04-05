@@ -178,6 +178,36 @@ struct FieldRendererTests {
         #expect(storedDate == newDate)
     }
 
+    @Test
+    func dateFieldRendererSeedsRequiredDateOnAppear() throws {
+        let vm = try makeViewModel(recordType: .immunization)
+        // occurrenceDate is required and initially unset.
+        #expect(vm.value(for: "occurrenceDate") == nil)
+        let view = try DateFieldRenderer(metadata: dateMetadata(), viewModel: vm)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.DatePicker.self)
+        }
+        // After onAppear fires, the VM holds a Date value.
+        #expect(vm.dateValue(for: "occurrenceDate", default: .distantPast) != .distantPast)
+    }
+
+    @Test
+    func dateFieldRendererDoesNotSeedOptionalDate() throws {
+        let vm = try makeViewModel(recordType: .immunization)
+        let optionalMetadata = try #require(
+            ImmunizationRecord.fieldMetadata.first { $0.keyPath == "expirationDate" }
+        )
+        #expect(vm.value(for: "expirationDate") == nil)
+        let view = DateFieldRenderer(metadata: optionalMetadata, viewModel: vm)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.DatePicker.self)
+        }
+        // Optional date field stays nil after onAppear.
+        #expect(vm.value(for: "expirationDate") == nil)
+    }
+
     // MARK: - NumberFieldRenderer
 
     @Test
