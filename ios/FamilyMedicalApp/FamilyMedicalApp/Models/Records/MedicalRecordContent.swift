@@ -45,34 +45,29 @@ extension RecordType {
         }
     }
 
-    /// Field metadata for form rendering, dispatched to the concrete record type.
-    var fieldMetadata: [FieldMetadata] {
+    /// The concrete `MedicalRecordContent` type corresponding to this `RecordType`.
+    /// Use this to delegate static property lookups to the concrete type instead of
+    /// maintaining parallel switches that drift when types are added.
+    var contentType: any MedicalRecordContent.Type {
         switch self {
-        case .immunization: ImmunizationRecord.fieldMetadata
-        case .medicationStatement: MedicationStatementRecord.fieldMetadata
-        case .allergyIntolerance: AllergyIntoleranceRecord.fieldMetadata
-        case .condition: ConditionRecord.fieldMetadata
-        case .observation: ObservationRecord.fieldMetadata
-        case .procedure: ProcedureRecord.fieldMetadata
-        case .documentReference: DocumentReferenceRecord.fieldMetadata
-        case .familyMemberHistory: FamilyMemberHistoryRecord.fieldMetadata
-        case .clinicalNote: ClinicalNoteRecord.fieldMetadata
+        case .immunization: ImmunizationRecord.self
+        case .medicationStatement: MedicationStatementRecord.self
+        case .allergyIntolerance: AllergyIntoleranceRecord.self
+        case .condition: ConditionRecord.self
+        case .observation: ObservationRecord.self
+        case .procedure: ProcedureRecord.self
+        case .documentReference: DocumentReferenceRecord.self
+        case .familyMemberHistory: FamilyMemberHistoryRecord.self
+        case .clinicalNote: ClinicalNoteRecord.self
         }
     }
 
-    /// Current schema version for this record type (from the concrete struct).
+    var fieldMetadata: [FieldMetadata] {
+        contentType.fieldMetadata
+    }
+
     var currentSchemaVersion: Int {
-        switch self {
-        case .immunization: ImmunizationRecord.schemaVersion
-        case .medicationStatement: MedicationStatementRecord.schemaVersion
-        case .allergyIntolerance: AllergyIntoleranceRecord.schemaVersion
-        case .condition: ConditionRecord.schemaVersion
-        case .observation: ObservationRecord.schemaVersion
-        case .procedure: ProcedureRecord.schemaVersion
-        case .documentReference: DocumentReferenceRecord.schemaVersion
-        case .familyMemberHistory: FamilyMemberHistoryRecord.schemaVersion
-        case .clinicalNote: ClinicalNoteRecord.schemaVersion
-        }
+        contentType.schemaVersion
     }
 }
 
