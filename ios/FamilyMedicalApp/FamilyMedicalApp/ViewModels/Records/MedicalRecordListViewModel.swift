@@ -228,7 +228,7 @@ final class MedicalRecordListViewModel {
                         createdAt: existing.createdAt,
                         updatedAt: Date(),
                         version: existing.version + 1,
-                        previousVersionId: existing.id
+                        previousVersionId: existing.previousVersionId
                     )
                     try await medicalRecordRepository.save(updatedRecord)
                 } catch {

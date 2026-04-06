@@ -223,10 +223,11 @@ final class DocumentPickerViewModel {
             personId: personId,
             primaryKey: primaryKey
         )
+        let actualMime = stored.detectedMimeType
         let doc = DocumentReferenceRecord(
             title: fileName,
             documentType: nil,
-            mimeType: mimeType,
+            mimeType: actualMime,
             fileSize: plaintext.count,
             contentHMAC: stored.contentHMAC,
             thumbnailData: stored.thumbnailData,

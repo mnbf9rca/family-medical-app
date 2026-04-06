@@ -1,5 +1,6 @@
 import CryptoKit
 import Foundation
+import ImageIO
 import PDFKit
 
 /// Storage of encrypted document blobs on disk, keyed by HMAC-SHA256 of plaintext (keyed with FMK).
@@ -40,6 +41,7 @@ final class DocumentBlobService: DocumentBlobServiceProtocol, @unchecked Sendabl
         let contentHMAC: Data
         let encryptedSize: Int
         let thumbnailData: Data?
+        let detectedMimeType: String
     }
 
     /// Result of `process()`: the data to store, optional thumbnail, and detected MIME.
@@ -99,7 +101,12 @@ final class DocumentBlobService: DocumentBlobServiceProtocol, @unchecked Sendabl
                 encryptedSize = encrypted.count
             }
             logger.exit("store", duration: ContinuousClock.now - start)
-            return StoredBlob(contentHMAC: hmac, encryptedSize: encryptedSize, thumbnailData: processed.thumbnailData)
+            return StoredBlob(
+                contentHMAC: hmac,
+                encryptedSize: encryptedSize,
+                thumbnailData: processed.thumbnailData,
+                detectedMimeType: processed.detectedMimeType
+            )
         } catch {
             logger.exitWithError("store", error: error, duration: ContinuousClock.now - start)
             throw error
@@ -164,17 +171,9 @@ final class DocumentBlobService: DocumentBlobServiceProtocol, @unchecked Sendabl
     /// - PDFs: validated via PDFDocument, stored as-is.
     /// - Other: rejected.
     private func process(plaintext: Data, mimeType: String) throws -> ProcessedBlob {
-        if mimeType.lowercased().hasPrefix("image/") || isImageData(plaintext) {
-            let detectedMime = try imageProcessor.validateImage(plaintext)
-            guard plaintext.count <= Self.maxFileSizeBytes else {
-                throw ModelError.documentTooLarge(maxSizeMB: Self.maxFileSizeBytes / (1_024 * 1_024))
-            }
-            let thumbnail = try imageProcessor.generateThumbnail(
-                plaintext,
-                maxDimension: Self.thumbnailDimension
-            )
-            return ProcessedBlob(data: plaintext, thumbnailData: thumbnail, detectedMimeType: detectedMime)
-        } else if mimeType.lowercased() == "application/pdf" {
+        // Check PDF first — CGImageSource accepts PDF data, so the image probe
+        // must not run when the caller already declared application/pdf.
+        if mimeType.lowercased() == "application/pdf" {
             guard plaintext.count <= Self.maxFileSizeBytes else {
                 throw ModelError.documentTooLarge(maxSizeMB: Self.maxFileSizeBytes / (1_024 * 1_024))
             }
@@ -182,28 +181,28 @@ final class DocumentBlobService: DocumentBlobServiceProtocol, @unchecked Sendabl
                 throw ModelError.imageProcessingFailed(reason: "File content is not a valid PDF")
             }
             return ProcessedBlob(data: plaintext, thumbnailData: nil, detectedMimeType: "application/pdf")
+        } else if mimeType.lowercased().hasPrefix("image/") || isImageContent(plaintext) {
+            guard plaintext.count <= Self.maxFileSizeBytes else {
+                throw ModelError.documentTooLarge(maxSizeMB: Self.maxFileSizeBytes / (1_024 * 1_024))
+            }
+            let detectedMime = try imageProcessor.validateImage(plaintext)
+            let thumbnail = try imageProcessor.generateThumbnail(
+                plaintext,
+                maxDimension: Self.thumbnailDimension
+            )
+            return ProcessedBlob(data: plaintext, thumbnailData: thumbnail, detectedMimeType: detectedMime)
         } else {
             throw ModelError.unsupportedMimeType(mimeType: mimeType)
         }
     }
 
-    /// Quick header check to detect image data regardless of the declared MIME type.
-    private func isImageData(_ data: Data) -> Bool {
-        guard data.count >= 4 else { return false }
-        let bytes = [UInt8](data.prefix(4))
-        // JPEG
-        if bytes[0] == 0xFF, bytes[1] == 0xD8 { return true }
-        // PNG
-        if bytes[0] == 0x89, bytes[1] == 0x50, bytes[2] == 0x4E, bytes[3] == 0x47 { return true }
-        // GIF
-        if bytes[0] == 0x47, bytes[1] == 0x49, bytes[2] == 0x46 { return true }
-        // TIFF (little-endian and big-endian)
-        if bytes[0] == 0x49, bytes[1] == 0x49 { return true }
-        if bytes[0] == 0x4D, bytes[1] == 0x4D { return true }
-        // BMP
-        if bytes[0] == 0x42, bytes[1] == 0x4D { return true }
-        // WebP (RIFF header)
-        if bytes[0] == 0x52, bytes[1] == 0x49, bytes[2] == 0x46, bytes[3] == 0x46 { return true }
-        return false
+    /// Uses Apple's CGImageSource to detect whether `data` is a valid image,
+    /// regardless of the declared MIME type. Replaces hand-rolled magic-byte checks.
+    /// Checks that CGImageSource can identify the data type, not just create a lazy source.
+    private func isImageContent(_ data: Data) -> Bool {
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil) else {
+            return false
+        }
+        return CGImageSourceGetType(source) != nil
     }
 }

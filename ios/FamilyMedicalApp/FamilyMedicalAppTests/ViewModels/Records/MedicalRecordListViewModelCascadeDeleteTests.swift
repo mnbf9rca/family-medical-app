@@ -216,13 +216,14 @@ struct MedicalRecordListViewModelCascadeDeleteTests {
             sourceRecordId: parentRecord.id
         )
 
-        // Seed existing record with version 5
+        // Seed existing record with version 5 and a known previousVersionId
+        let priorVersionId = UUID()
         let existingAttachmentRecord = MedicalRecord(
             id: attachment.recordId,
             personId: person.id,
             encryptedContent: Data(),
             version: 5,
-            previousVersionId: UUID()
+            previousVersionId: priorVersionId
         )
         deps.repo.addRecord(existingAttachmentRecord)
 
@@ -240,7 +241,7 @@ struct MedicalRecordListViewModelCascadeDeleteTests {
         #expect(savedRecords.count == 1)
         let saved = savedRecords[0]
         #expect(saved.version == 6)
-        #expect(saved.previousVersionId == attachment.recordId)
+        #expect(saved.previousVersionId == priorVersionId)
     }
 
     @Test

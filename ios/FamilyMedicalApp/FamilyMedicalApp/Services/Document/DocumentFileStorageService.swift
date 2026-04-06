@@ -87,7 +87,7 @@ final class DocumentFileStorageService: DocumentFileStorageServiceProtocol, @unc
 
         guard fileManager.fileExists(atPath: fileURL.path) else {
             logger.error("Document file not found")
-            throw ModelError.documentNotFound(documentId: UUID()) // Generic UUID since we only have HMAC
+            throw ModelError.documentContentCorrupted
         }
 
         do {
@@ -149,7 +149,7 @@ final class DocumentFileStorageService: DocumentFileStorageServiceProtocol, @unc
                 try fileManager.createDirectory(
                     at: attachmentsURL,
                     withIntermediateDirectories: true,
-                    attributes: [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication]
+                    attributes: [.protectionKey: FileProtectionType.complete]
                 )
             } catch {
                 throw ModelError.documentStorageFailed(reason: error.localizedDescription)

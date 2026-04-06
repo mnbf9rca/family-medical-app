@@ -109,7 +109,9 @@ struct DocumentViewerViewModelExportTests {
         let url = fixtures.viewModel.getTemporaryFileURL()
 
         #expect(url != nil)
-        #expect(url?.lastPathComponent == fixtures.document.title)
+        // Filename is HMAC hex prefix + MIME extension, not the user-provided title
+        let hmacHex = fixtures.document.contentHMAC.prefix(8).map { String(format: "%02x", $0) }.joined()
+        #expect(url?.lastPathComponent == "\(hmacHex).jpeg")
 
         if let url {
             try? FileManager.default.removeItem(at: url)
@@ -147,13 +149,15 @@ struct DocumentViewerViewModelExportTests {
     }
 
     @Test
-    func getTemporaryFileURL_createsFileWithCorrectName() async {
+    func getTemporaryFileURL_createsFileWithHMACName() async {
         let fixtures = makeFixtures(title: "my_file.jpg")
 
         await fixtures.viewModel.loadContent()
         let url = fixtures.viewModel.getTemporaryFileURL()
 
-        #expect(url?.lastPathComponent == "my_file.jpg")
+        // Filename is HMAC hex prefix + MIME extension, not the user-provided title
+        let hmacHex = fixtures.document.contentHMAC.prefix(8).map { String(format: "%02x", $0) }.joined()
+        #expect(url?.lastPathComponent == "\(hmacHex).jpeg")
 
         fixtures.viewModel.cleanupTemporaryFile()
     }

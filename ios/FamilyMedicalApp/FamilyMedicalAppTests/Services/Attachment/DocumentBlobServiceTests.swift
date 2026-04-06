@@ -209,11 +209,11 @@ struct DocumentBlobServiceTests {
         #expect(ctx.imageProcessor.validateCalls.count == 1)
     }
 
-    @Test("store routes image data with wrong MIME to image path via header detection")
+    @Test("store routes image data with wrong MIME to image path via CGImageSource probe")
     func storeDetectsImageDataEvenWithWrongMime() async throws {
         let ctx = Self.makeFixture()
         // JPEG bytes but mimeType says "application/octet-stream"
-        // isImageData() will detect the JPEG header and route to image path
+        // isImageContent() will detect valid image data via CGImageSource and route to image path
         _ = try await ctx.service.store(
             plaintext: Self.makeJPEG(),
             mimeType: "application/octet-stream",

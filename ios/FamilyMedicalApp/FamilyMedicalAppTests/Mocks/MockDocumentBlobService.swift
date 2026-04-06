@@ -42,7 +42,8 @@ final class MockDocumentBlobService: DocumentBlobServiceProtocol, @unchecked Sen
         return DocumentBlobService.StoredBlob(
             contentHMAC: hmac,
             encryptedSize: plaintext.count,
-            thumbnailData: thumbnail
+            thumbnailData: thumbnail,
+            detectedMimeType: mimeType
         )
     }
 

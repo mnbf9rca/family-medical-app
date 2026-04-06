@@ -1,6 +1,7 @@
 import CryptoKit
 import Foundation
 import Observation
+import UniformTypeIdentifiers
 
 /// ViewModel for viewing a DocumentReferenceRecord's decrypted content in full-screen.
 ///
@@ -156,12 +157,11 @@ final class DocumentViewerViewModel {
         try? FileManager.default.removeItem(at: fileURL)
     }
 
-    /// Strips path-unsafe characters from the document title to prevent path traversal.
+    /// Derives a safe filename from the content HMAC hex and MIME-based extension.
+    /// Zero user input in the filesystem path — prevents path traversal by construction.
     private var sanitizedFileName: String {
-        let unsafe = CharacterSet(charactersIn: "/:\\")
-        let sanitized = document.title
-            .components(separatedBy: unsafe)
-            .joined(separator: "_")
-        return sanitized.isEmpty ? "document" : sanitized
+        let hexPrefix = document.contentHMAC.prefix(8).map { String(format: "%02x", $0) }.joined()
+        let ext = UTType(mimeType: document.mimeType)?.preferredFilenameExtension ?? "bin"
+        return "\(hexPrefix).\(ext)"
     }
 }

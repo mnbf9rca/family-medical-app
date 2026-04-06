@@ -292,13 +292,15 @@ struct DocumentViewerViewModelTests {
     }
 
     @Test
-    func getTemporaryFileURL_usesCorrectFileName() async throws {
-        let fixtures = makeFixtures(title: "my_medical_document.pdf")
+    func getTemporaryFileURL_usesHMACBasedFileName() async throws {
+        let fixtures = makeFixtures(title: "my_medical_document.pdf", mimeType: "application/pdf")
 
         await fixtures.viewModel.loadContent()
         let url = try #require(fixtures.viewModel.getTemporaryFileURL())
 
-        #expect(url.lastPathComponent == "my_medical_document.pdf")
+        // Filename is HMAC hex prefix + MIME extension, not the user-provided title
+        let hmacHex = fixtures.document.contentHMAC.prefix(8).map { String(format: "%02x", $0) }.joined()
+        #expect(url.lastPathComponent == "\(hmacHex).pdf")
 
         try? FileManager.default.removeItem(at: url)
     }
