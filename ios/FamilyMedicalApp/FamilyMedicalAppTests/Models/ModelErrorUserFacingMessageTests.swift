@@ -157,28 +157,4 @@ struct ModelErrorUserFacingMessageTests {
     }
 
     // MARK: - Attachment Error Messages
-
-    @Test
-    func modelErrorFileNameEmptyMessage() {
-        let error = ModelError.fileNameEmpty
-        #expect(error.userFacingMessage == "File name cannot be empty.")
-    }
-
-    @Test
-    func modelErrorFileNameTooLongMessage() {
-        let error = ModelError.fileNameTooLong(maxLength: 255)
-        #expect(error.userFacingMessage == "File name must be no more than 255 characters.")
-    }
-
-    @Test
-    func modelErrorMimeTypeTooLongMessage() {
-        let error = ModelError.mimeTypeTooLong(maxLength: 100)
-        #expect(error.userFacingMessage == "MIME type must be no more than 100 characters.")
-    }
-
-    @Test
-    func modelErrorInvalidFileSizeMessage() {
-        let error = ModelError.invalidFileSize
-        #expect(error.userFacingMessage == "File size is invalid.")
-    }
 }

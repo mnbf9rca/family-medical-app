@@ -132,30 +132,6 @@ struct ModelErrorsTests {
 
     // MARK: - Attachment Errors
 
-    @Test
-    func fileNameEmpty_hasDescription() {
-        let error = ModelError.fileNameEmpty
-        #expect(error.errorDescription == "File name cannot be empty")
-    }
-
-    @Test
-    func fileNameTooLong_hasDescription() {
-        let error = ModelError.fileNameTooLong(maxLength: 255)
-        #expect(error.errorDescription == "File name cannot exceed 255 characters")
-    }
-
-    @Test
-    func mimeTypeTooLong_hasDescription() {
-        let error = ModelError.mimeTypeTooLong(maxLength: 100)
-        #expect(error.errorDescription == "MIME type cannot exceed 100 characters")
-    }
-
-    @Test
-    func invalidFileSize_hasDescription() {
-        let error = ModelError.invalidFileSize
-        #expect(error.errorDescription == "File size must be non-negative")
-    }
-
     // MARK: - Equatable
 
     @Test
@@ -168,7 +144,7 @@ struct ModelErrorsTests {
     @Test
     func equatable_differentError_notEqual() {
         let error1 = ModelError.nameEmpty
-        let error2 = ModelError.fileNameEmpty
+        let error2 = ModelError.labelEmpty
         #expect(error1 != error2)
     }
 

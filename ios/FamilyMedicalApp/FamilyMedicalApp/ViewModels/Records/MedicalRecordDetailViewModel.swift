@@ -29,7 +29,7 @@ final class MedicalRecordDetailViewModel {
 
     private let providerRepository: ProviderRepositoryProtocol
     private let primaryKeyProvider: PrimaryKeyProviderProtocol
-    private let documentReferenceQueryService: DocumentReferenceQueryServiceProtocol?
+    private let documentReferenceQueryService: DocumentReferenceQueryServiceProtocol
     private let logger = LoggingService.shared.logger(category: .storage)
 
     // MARK: - Derived
@@ -61,7 +61,11 @@ final class MedicalRecordDetailViewModel {
             fmkService: resolvedFmkService
         )
         self.primaryKeyProvider = primaryKeyProvider ?? PrimaryKeyProvider()
-        self.documentReferenceQueryService = documentReferenceQueryService
+        self.documentReferenceQueryService = documentReferenceQueryService ?? DocumentReferenceQueryService(
+            recordRepository: MedicalRecordRepository(coreDataStack: CoreDataStack.shared),
+            recordContentService: RecordContentService(encryptionService: EncryptionService()),
+            fmkService: resolvedFmkService
+        )
         decodeContent()
     }
 
@@ -94,12 +98,11 @@ final class MedicalRecordDetailViewModel {
     /// No-op for `.documentReference` records (they are documents themselves).
     func loadAttachments() async {
         guard recordType != .documentReference else { return }
-        guard let queryService = documentReferenceQueryService else { return }
 
         isLoadingAttachments = true
         do {
             let primaryKey = try primaryKeyProvider.getPrimaryKey()
-            attachments = try await queryService.attachmentsFor(
+            attachments = try await documentReferenceQueryService.attachmentsFor(
                 sourceRecordId: decryptedRecord.record.id,
                 personId: person.id,
                 primaryKey: primaryKey

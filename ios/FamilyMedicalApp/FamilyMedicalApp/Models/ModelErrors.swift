@@ -21,10 +21,6 @@ enum ModelError: LocalizedError, Equatable {
 
     // MARK: - Attachment Errors
 
-    case fileNameEmpty
-    case fileNameTooLong(maxLength: Int)
-    case mimeTypeTooLong(maxLength: Int)
-    case invalidFileSize
     case attachmentTooLarge(maxSizeMB: Int)
     case unsupportedMimeType(mimeType: String)
     case attachmentLimitExceeded(max: Int)
@@ -78,14 +74,6 @@ enum ModelError: LocalizedError, Equatable {
                 "Field '\(fieldName)' date is out of range"
             }
         // Attachment errors
-        case .fileNameEmpty:
-            "File name cannot be empty"
-        case let .fileNameTooLong(maxLength):
-            "File name cannot exceed \(maxLength) characters"
-        case let .mimeTypeTooLong(maxLength):
-            "MIME type cannot exceed \(maxLength) characters"
-        case .invalidFileSize:
-            "File size must be non-negative"
         case let .attachmentTooLarge(maxSizeMB):
             "File exceeds maximum size of \(maxSizeMB) MB"
         case let .unsupportedMimeType(mimeType):

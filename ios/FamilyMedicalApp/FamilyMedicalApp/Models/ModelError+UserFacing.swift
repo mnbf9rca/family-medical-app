@@ -51,14 +51,6 @@ extension ModelError {
         case let .validationFailed(fieldName, reason):
             return "\(fieldName): \(reason)"
         // Attachment errors
-        case .fileNameEmpty:
-            return "File name cannot be empty."
-        case let .fileNameTooLong(maxLength):
-            return "File name must be no more than \(maxLength) character\(maxLength == 1 ? "" : "s")."
-        case let .mimeTypeTooLong(maxLength):
-            return "MIME type must be no more than \(maxLength) character\(maxLength == 1 ? "" : "s")."
-        case .invalidFileSize:
-            return "File size is invalid."
         case let .attachmentTooLarge(maxSizeMB):
             return "File is too large. Maximum size is \(maxSizeMB) MB."
         case let .unsupportedMimeType(mimeType):

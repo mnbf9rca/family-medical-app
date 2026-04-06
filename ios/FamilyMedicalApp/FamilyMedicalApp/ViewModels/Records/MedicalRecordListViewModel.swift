@@ -32,8 +32,8 @@ final class MedicalRecordListViewModel {
     private let recordContentService: RecordContentServiceProtocol
     private let primaryKeyProvider: PrimaryKeyProviderProtocol
     private let fmkService: FamilyMemberKeyServiceProtocol
-    private let documentReferenceQueryService: DocumentReferenceQueryServiceProtocol?
-    private let blobService: AttachmentBlobServiceProtocol?
+    private let documentReferenceQueryService: DocumentReferenceQueryServiceProtocol
+    private let blobService: AttachmentBlobServiceProtocol
     private let logger = LoggingService.shared.logger(category: .storage)
 
     // MARK: - Initialization
@@ -58,8 +58,15 @@ final class MedicalRecordListViewModel {
         )
         self.primaryKeyProvider = primaryKeyProvider ?? PrimaryKeyProvider()
         self.fmkService = fmkService ?? FamilyMemberKeyService()
-        self.documentReferenceQueryService = documentReferenceQueryService
-        self.blobService = blobService
+        let resolvedRecordRepo = self.medicalRecordRepository
+        let resolvedContentService = self.recordContentService
+        let resolvedFmkService = self.fmkService
+        self.documentReferenceQueryService = documentReferenceQueryService ?? DocumentReferenceQueryService(
+            recordRepository: resolvedRecordRepo,
+            recordContentService: resolvedContentService,
+            fmkService: resolvedFmkService
+        )
+        self.blobService = blobService ?? Self.createDefaultBlobService()
     }
 
     // MARK: - Actions
@@ -89,12 +96,9 @@ final class MedicalRecordListViewModel {
                 }
             }
 
-            // TODO(#127): temporary regression — sort by row creation timestamp instead of
-            // clinical event date (occurrenceDate, onsetDate, etc.). The old schema-overlay
-            // system pulled a "primary date field" per schema; replacing that needs per-type
-            // date extraction from envelope.decodeAny(), which is part of the protocol-driven
-            // rendering work in #127. Users may see oldest-entered records first instead of
-            // most-recent-event first.
+            // TODO(#127): sort by clinical event date (occurrenceDate, onsetDate, etc.)
+            // instead of creation timestamp. Needs per-type date extraction from
+            // envelope.decodeAny(). Users may see oldest-entered records first.
             records = decryptedRecords.sorted { $0.record.createdAt > $1.record.createdAt }
         } catch {
             errorMessage = "Unable to load records. Please try again."
@@ -106,10 +110,9 @@ final class MedicalRecordListViewModel {
 
     /// Fetch attachments for a record before deletion, so the view can offer a cascade dialog.
     func prepareDelete(recordId: UUID) async -> [PersistedDocumentReference] {
-        guard let queryService = documentReferenceQueryService else { return [] }
         do {
             let primaryKey = try primaryKeyProvider.getPrimaryKey()
-            return try await queryService.attachmentsFor(
+            return try await documentReferenceQueryService.attachmentsFor(
                 sourceRecordId: recordId,
                 personId: person.id,
                 primaryKey: primaryKey
@@ -158,10 +161,10 @@ final class MedicalRecordListViewModel {
         let allDocs: [PersistedDocumentReference]
         do {
             let primaryKey = try primaryKeyProvider.getPrimaryKey()
-            allDocs = try await documentReferenceQueryService?.allDocuments(
+            allDocs = try await documentReferenceQueryService.allDocuments(
                 personId: person.id,
                 primaryKey: primaryKey
-            ) ?? []
+            )
         } catch {
             logger.logError(error, context: "MedicalRecordListViewModel.cascadeDeleteAttachments.prefetch")
             allDocs = []
@@ -176,7 +179,7 @@ final class MedicalRecordListViewModel {
                         !deletingIds.contains($0.recordId) &&
                         $0.content.contentHMAC == attachment.content.contentHMAC
                 }
-                try await blobService?.deleteIfUnreferenced(
+                try await blobService.deleteIfUnreferenced(
                     contentHMAC: attachment.content.contentHMAC,
                     isReferencedElsewhere: isReferencedElsewhere
                 )
@@ -184,6 +187,21 @@ final class MedicalRecordListViewModel {
                 logger.logError(error, context: "MedicalRecordListViewModel.cascadeDeleteAttachments")
             }
         }
+    }
+
+    private static func createDefaultBlobService() -> AttachmentBlobServiceProtocol {
+        let fileStorage: AttachmentFileStorageServiceProtocol
+        do {
+            fileStorage = try AttachmentFileStorageService()
+        } catch {
+            fatalError("Failed to create AttachmentFileStorageService: \(error)")
+        }
+        return AttachmentBlobService(
+            fileStorage: fileStorage,
+            imageProcessor: ImageProcessingService(),
+            encryptionService: EncryptionService(),
+            fmkService: FamilyMemberKeyService()
+        )
     }
 
     private func detachAttachments(_ attachments: [PersistedDocumentReference]) async {
