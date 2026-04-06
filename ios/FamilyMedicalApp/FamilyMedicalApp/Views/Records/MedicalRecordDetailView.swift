@@ -1,4 +1,3 @@
-import CryptoKit
 import SwiftUI
 
 /// Detail view displaying a medical record with typed fields from its envelope.

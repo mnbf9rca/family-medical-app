@@ -103,7 +103,7 @@ final class DocumentViewerViewModel {
             errorMessage = error.userFacingMessage
             logger.logError(error, context: "DocumentViewerViewModel.loadContent")
         } catch {
-            errorMessage = "Unable to load attachment. Please try again."
+            errorMessage = "Unable to load document. Please try again."
             logger.logError(error, context: "DocumentViewerViewModel.loadContent")
         }
         isLoading = false
