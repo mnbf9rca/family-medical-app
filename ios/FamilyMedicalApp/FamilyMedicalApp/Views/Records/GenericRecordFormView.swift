@@ -28,6 +28,11 @@ struct GenericRecordFormView: View {
                             .padding(.vertical, 4)
                     }
                 }
+                if let pickerVM = viewModel.attachmentPickerViewModel {
+                    Section("Attachments") {
+                        AttachmentPickerView(viewModel: pickerVM)
+                    }
+                }
                 if let errorMessage = viewModel.errorMessage {
                     Section {
                         Text(errorMessage)
@@ -56,6 +61,7 @@ struct GenericRecordFormView: View {
             }
             .task {
                 await viewModel.loadProviders()
+                viewModel.createAttachmentPickerIfNeeded()
             }
         }
     }

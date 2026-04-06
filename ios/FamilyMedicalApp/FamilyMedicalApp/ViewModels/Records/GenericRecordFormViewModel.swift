@@ -32,6 +32,10 @@ final class GenericRecordFormViewModel {
     /// Set if the existing record's `schemaVersion` exceeds the version this build knows.
     var forwardCompatibilityWarning: String?
 
+    /// Attachment picker for adding DocumentReferenceRecords to this record.
+    /// Nil for `.documentReference` record type (they ARE documents, not containers).
+    var attachmentPickerViewModel: AttachmentPickerViewModel?
+
     // MARK: - Dependencies (exposed to views)
 
     let providerRepository: ProviderRepositoryProtocol
@@ -43,6 +47,7 @@ final class GenericRecordFormViewModel {
     private let recordContentService: RecordContentServiceProtocol
     private let primaryKeyProvider: PrimaryKeyProviderProtocol
     private let fmkService: FamilyMemberKeyServiceProtocol
+    private let blobService: AttachmentBlobServiceProtocol?
     private let logger = LoggingService.shared.logger(category: .storage)
 
     /// Snapshot of unknown fields from the existing record (preserved on save).
@@ -73,7 +78,8 @@ final class GenericRecordFormViewModel {
         primaryKeyProvider: PrimaryKeyProviderProtocol? = nil,
         fmkService: FamilyMemberKeyServiceProtocol? = nil,
         providerRepository: ProviderRepositoryProtocol? = nil,
-        autocompleteService: AutocompleteServiceProtocol? = nil
+        autocompleteService: AutocompleteServiceProtocol? = nil,
+        blobService: AttachmentBlobServiceProtocol? = nil
     ) {
         self.person = person
         self.recordType = recordType
@@ -87,6 +93,7 @@ final class GenericRecordFormViewModel {
         self.primaryKeyProvider = primaryKeyProvider ?? PrimaryKeyProvider()
         let resolvedFmkService = fmkService ?? FamilyMemberKeyService()
         self.fmkService = resolvedFmkService
+        self.blobService = blobService
         self.providerRepository = providerRepository ?? ProviderRepository(
             coreDataStack: CoreDataStack.shared,
             encryptionService: EncryptionService(),
@@ -145,6 +152,26 @@ final class GenericRecordFormViewModel {
         (fieldValues[keyPath] as? [ObservationComponent]) ?? []
     }
 
+    // MARK: - Attachment Picker
+
+    /// Creates the attachment picker ViewModel if the record type supports attachments.
+    /// No-op for `.documentReference` (those are documents themselves, not containers).
+    func createAttachmentPickerIfNeeded() {
+        guard recordType != .documentReference else { return }
+        guard attachmentPickerViewModel == nil else { return }
+        do {
+            let primaryKey = try primaryKeyProvider.getPrimaryKey()
+            attachmentPickerViewModel = AttachmentPickerViewModel(
+                personId: person.id,
+                sourceRecordId: existingRecord?.record.id,
+                primaryKey: primaryKey,
+                blobService: blobService
+            )
+        } catch {
+            logger.logError(error, context: "GenericRecordFormViewModel.createAttachmentPickerIfNeeded")
+        }
+    }
+
     // MARK: - Providers
 
     /// Load this person's providers for the autocomplete dropdown.
@@ -194,6 +221,10 @@ final class GenericRecordFormViewModel {
 
             let record = buildMedicalRecord(encryptedContent: encryptedContent)
             try await medicalRecordRepository.save(record)
+
+            // Persist pending attachment drafts as separate DocumentReferenceRecords
+            await saveAttachmentDrafts(parentRecordId: record.id, fmk: fmk)
+
             return true
         } catch {
             errorMessage = "Unable to save. Please try again."
@@ -273,6 +304,25 @@ final class GenericRecordFormViewModel {
 
     private func buildEnvelope(jsonData: Data) throws -> RecordContentEnvelope {
         try RecordContentEnvelope.wrap(jsonData: jsonData, as: recordType)
+    }
+
+    private func saveAttachmentDrafts(parentRecordId: UUID, fmk: SymmetricKey) async {
+        guard let pickerVM = attachmentPickerViewModel else { return }
+        let drafts = pickerVM.allDocumentReferences
+        guard !drafts.isEmpty else { return }
+
+        for var docRef in drafts {
+            docRef.sourceRecordId = parentRecordId
+            do {
+                let attachEnvelope = try RecordContentEnvelope(docRef)
+                let encrypted = try recordContentService.encrypt(attachEnvelope, using: fmk)
+                let attachRecord = MedicalRecord(personId: person.id, encryptedContent: encrypted)
+                try await medicalRecordRepository.save(attachRecord)
+            } catch {
+                errorMessage = "Record saved, but some attachments could not be saved."
+                logger.logError(error, context: "GenericRecordFormViewModel.saveAttachmentDrafts")
+            }
+        }
     }
 
     private func buildMedicalRecord(encryptedContent: Data) -> MedicalRecord {

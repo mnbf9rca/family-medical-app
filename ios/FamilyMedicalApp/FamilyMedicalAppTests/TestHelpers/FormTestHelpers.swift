@@ -43,7 +43,8 @@ enum FormTestSupport {
         person: Person,
         recordType: RecordType,
         existingRecord: DecryptedRecord? = nil,
-        deps: FormViewModelDeps
+        deps: FormViewModelDeps,
+        blobService: AttachmentBlobServiceProtocol? = nil
     ) -> GenericRecordFormViewModel {
         GenericRecordFormViewModel(
             person: person,
@@ -54,7 +55,8 @@ enum FormTestSupport {
             primaryKeyProvider: deps.keyProvider,
             fmkService: deps.fmk,
             providerRepository: deps.providers,
-            autocompleteService: deps.autocomplete
+            autocompleteService: deps.autocomplete,
+            blobService: blobService
         )
     }
 }
