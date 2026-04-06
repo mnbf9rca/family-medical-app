@@ -130,8 +130,9 @@ final class DocumentViewerViewModel {
     ///
     /// SECURITY: call this when dismissing the viewer so decrypted content does not linger.
     func clearDecryptedData() {
-        if var data = decryptedData {
-            data.resetBytes(in: 0 ..< data.count)
+        decryptedData?.withUnsafeMutableBytes { buffer in
+            guard let baseAddress = buffer.baseAddress else { return }
+            memset(baseAddress, 0, buffer.count)
         }
         decryptedData = nil
     }
@@ -142,7 +143,7 @@ final class DocumentViewerViewModel {
         let tempDir = FileManager.default.temporaryDirectory
         let fileURL = tempDir.appendingPathComponent(sanitizedFileName)
         do {
-            try data.write(to: fileURL)
+            try data.write(to: fileURL, options: [.atomic, .completeFileProtection])
             return fileURL
         } catch {
             logger.logError(error, context: "DocumentViewerViewModel.getTemporaryFileURL")

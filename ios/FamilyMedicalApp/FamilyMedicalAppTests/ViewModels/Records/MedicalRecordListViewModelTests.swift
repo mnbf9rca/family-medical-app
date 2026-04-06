@@ -242,4 +242,132 @@ struct MedicalRecordListViewModelTests {
         #expect(viewModel.errorMessage != nil)
         #expect(viewModel.records.count == 1) // Should not remove on failure
     }
+
+    // MARK: - Cascade Delete Tests
+
+    @Test
+    func cascadeDeleteSkipsBlobDeletionWhenPrefetchFails() async throws {
+        let person = try makeTestPerson()
+        let mockRepo = MockMedicalRecordRepository()
+        let mockContentService = MockRecordContentService()
+        let mockPrimaryKeyProvider = MockPrimaryKeyProvider()
+        let mockFMKService = MockFamilyMemberKeyService()
+        let mockDocRefService = MockDocumentReferenceQueryService()
+        let mockBlobService = MockDocumentBlobService()
+
+        let primaryKey = SymmetricKey(size: .bits256)
+        mockPrimaryKeyProvider.primaryKey = primaryKey
+        let fmk = SymmetricKey(size: .bits256)
+        mockFMKService.setFMK(fmk, for: person.id.uuidString)
+
+        // Make allDocuments() throw to simulate prefetch failure
+        mockDocRefService.allDocumentsError = ModelError.documentContentCorrupted
+
+        // Create a parent record
+        let parentEnvelope = try makeTestEnvelope(recordType: .immunization)
+        let parentEncrypted = try mockContentService.encrypt(parentEnvelope, using: fmk)
+        let parentRecord = MedicalRecord(personId: person.id, encryptedContent: parentEncrypted)
+        mockRepo.addRecord(parentRecord)
+
+        // Create an attachment to pass to cascadeDelete
+        let attachment = PersistedDocumentReference(
+            recordId: UUID(),
+            content: DocumentReferenceRecord(
+                title: "scan.jpg",
+                mimeType: "image/jpeg",
+                fileSize: 1_024,
+                contentHMAC: Data(repeating: 0xAB, count: 32)
+            ),
+            createdAt: Date(),
+            updatedAt: Date()
+        )
+
+        let viewModel = MedicalRecordListViewModel(
+            person: person,
+            recordType: .immunization,
+            medicalRecordRepository: mockRepo,
+            recordContentService: mockContentService,
+            primaryKeyProvider: mockPrimaryKeyProvider,
+            fmkService: mockFMKService,
+            documentReferenceQueryService: mockDocRefService,
+            blobService: mockBlobService
+        )
+
+        let envelope = try makeTestEnvelope()
+        viewModel.records = [DecryptedRecord(record: parentRecord, envelope: envelope)]
+
+        await viewModel.deleteRecord(
+            id: parentRecord.id,
+            strategy: .cascadeDelete,
+            attachments: [attachment]
+        )
+
+        // Parent record deleted
+        #expect(viewModel.records.isEmpty)
+        // Attachment record also deleted (via medicalRecordRepository.delete)
+        #expect(mockRepo.deleteCallCount == 2)
+        // Blob deletion skipped because prefetch failed
+        #expect(mockBlobService.deleteCalls.isEmpty)
+    }
+
+    @Test
+    func cascadeDeleteDeletesBlobsWhenPrefetchSucceeds() async throws {
+        let person = try makeTestPerson()
+        let mockRepo = MockMedicalRecordRepository()
+        let mockContentService = MockRecordContentService()
+        let mockPrimaryKeyProvider = MockPrimaryKeyProvider()
+        let mockFMKService = MockFamilyMemberKeyService()
+        let mockDocRefService = MockDocumentReferenceQueryService()
+        let mockBlobService = MockDocumentBlobService()
+
+        let primaryKey = SymmetricKey(size: .bits256)
+        mockPrimaryKeyProvider.primaryKey = primaryKey
+        let fmk = SymmetricKey(size: .bits256)
+        mockFMKService.setFMK(fmk, for: person.id.uuidString)
+
+        // Prefetch succeeds with empty list (no other refs)
+        mockDocRefService.allDocumentsResult = []
+
+        let parentEnvelope = try makeTestEnvelope(recordType: .immunization)
+        let parentEncrypted = try mockContentService.encrypt(parentEnvelope, using: fmk)
+        let parentRecord = MedicalRecord(personId: person.id, encryptedContent: parentEncrypted)
+        mockRepo.addRecord(parentRecord)
+
+        let hmac = Data(repeating: 0xAB, count: 32)
+        let attachment = PersistedDocumentReference(
+            recordId: UUID(),
+            content: DocumentReferenceRecord(
+                title: "scan.jpg",
+                mimeType: "image/jpeg",
+                fileSize: 1_024,
+                contentHMAC: hmac
+            ),
+            createdAt: Date(),
+            updatedAt: Date()
+        )
+
+        let viewModel = MedicalRecordListViewModel(
+            person: person,
+            recordType: .immunization,
+            medicalRecordRepository: mockRepo,
+            recordContentService: mockContentService,
+            primaryKeyProvider: mockPrimaryKeyProvider,
+            fmkService: mockFMKService,
+            documentReferenceQueryService: mockDocRefService,
+            blobService: mockBlobService
+        )
+
+        let envelope = try makeTestEnvelope()
+        viewModel.records = [DecryptedRecord(record: parentRecord, envelope: envelope)]
+
+        await viewModel.deleteRecord(
+            id: parentRecord.id,
+            strategy: .cascadeDelete,
+            attachments: [attachment]
+        )
+
+        // Blob deletion proceeds when prefetch succeeds
+        #expect(mockBlobService.deleteCalls.count == 1)
+        #expect(mockBlobService.deleteCalls[0] == hmac)
+    }
 }

@@ -172,7 +172,7 @@ final class MedicalRecordListViewModel {
     private func cascadeDeleteAttachments(_ attachments: [PersistedDocumentReference]) async {
         // Fetch all DocumentReferences once up-front so HMAC dedup checks are O(1) per
         // attachment instead of O(N) per attachment (avoids N*M decrypt-and-scan).
-        let allDocs: [PersistedDocumentReference]
+        let allDocs: [PersistedDocumentReference]?
         do {
             let primaryKey = try primaryKeyProvider.getPrimaryKey()
             allDocs = try await documentReferenceQueryService.allDocuments(
@@ -181,22 +181,27 @@ final class MedicalRecordListViewModel {
             )
         } catch {
             logger.logError(error, context: "MedicalRecordListViewModel.cascadeDeleteAttachments.prefetch")
-            allDocs = []
+            allDocs = nil // signal: couldn't verify, skip blob deletion
         }
         let deletingIds = Set(attachments.map(\.recordId))
 
         for attachment in attachments {
             do {
                 try await medicalRecordRepository.delete(id: attachment.recordId)
-                let isReferencedElsewhere = allDocs.contains {
-                    $0.recordId != attachment.recordId &&
-                        !deletingIds.contains($0.recordId) &&
-                        $0.content.contentHMAC == attachment.content.contentHMAC
+                if let allDocs {
+                    let isReferencedElsewhere = allDocs.contains {
+                        $0.recordId != attachment.recordId &&
+                            !deletingIds.contains($0.recordId) &&
+                            $0.content.contentHMAC == attachment.content.contentHMAC
+                    }
+                    try await blobService.deleteIfUnreferenced(
+                        contentHMAC: attachment.content.contentHMAC,
+                        isReferencedElsewhere: isReferencedElsewhere
+                    )
+                } else {
+                    // Prefetch failed — don't delete blobs, orphan cleanup (#151) will handle them later
+                    logger.debug("Skipping blob deletion: unable to verify HMAC references")
                 }
-                try await blobService.deleteIfUnreferenced(
-                    contentHMAC: attachment.content.contentHMAC,
-                    isReferencedElsewhere: isReferencedElsewhere
-                )
             } catch {
                 logger.logError(error, context: "MedicalRecordListViewModel.cascadeDeleteAttachments")
             }
