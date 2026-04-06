@@ -63,6 +63,8 @@ final class AttachmentPickerViewModel {
 
     @ObservationIgnored private let blobService: AttachmentBlobServiceProtocol
     @ObservationIgnored private let logger: TracingCategoryLogger
+    @ObservationIgnored private let dateProvider: @Sendable () -> Date
+    @ObservationIgnored private let uuidProvider: @Sendable () -> UUID
 
     // MARK: - Computed Properties
 
@@ -91,7 +93,9 @@ final class AttachmentPickerViewModel {
         primaryKey: SymmetricKey,
         existing: [DocumentReferenceRecord] = [],
         blobService: AttachmentBlobServiceProtocol? = nil,
-        logger: CategoryLoggerProtocol? = nil
+        logger: CategoryLoggerProtocol? = nil,
+        dateProvider: (@Sendable () -> Date)? = nil,
+        uuidProvider: (@Sendable () -> UUID)? = nil
     ) {
         self.personId = personId
         self.sourceRecordId = sourceRecordId
@@ -100,7 +104,9 @@ final class AttachmentPickerViewModel {
         self.logger = TracingCategoryLogger(
             wrapping: logger ?? LoggingService.shared.logger(category: .storage)
         )
-        self.drafts = existing.map { Draft(id: UUID(), content: $0) }
+        self.dateProvider = dateProvider ?? { Date() }
+        self.uuidProvider = uuidProvider ?? { UUID() }
+        self.drafts = existing.map { Draft(id: self.uuidProvider(), content: $0) }
     }
 
     // MARK: - Actions
@@ -117,7 +123,7 @@ final class AttachmentPickerViewModel {
             guard let imageData = image.jpegData(compressionQuality: 0.9) else {
                 throw ModelError.imageProcessingFailed(reason: "Could not convert image to JPEG")
             }
-            let fileName = "Photo_\(Self.formatTimestamp(Date())).jpg"
+            let fileName = "Photo_\(Self.formatTimestamp(dateProvider())).jpg"
             try await storeAndAppend(plaintext: imageData, fileName: fileName, mimeType: "image/jpeg")
         } catch let error as ModelError {
             errorMessage = error.userFacingMessage
@@ -177,7 +183,7 @@ final class AttachmentPickerViewModel {
                 return
             }
             let mimeType = Self.detectMimeType(from: data)
-            let fileName = "Photo_\(Self.formatTimestamp(Date())).\(Self.fileExtension(for: mimeType))"
+            let fileName = "Photo_\(Self.formatTimestamp(dateProvider())).\(Self.fileExtension(for: mimeType))"
             try await storeAndAppend(plaintext: data, fileName: fileName, mimeType: mimeType)
         } catch let error as ModelError {
             errorMessage = error.userFacingMessage
@@ -226,7 +232,7 @@ final class AttachmentPickerViewModel {
             notes: nil,
             tags: []
         )
-        drafts.append(Draft(id: UUID(), content: doc))
+        drafts.append(Draft(id: uuidProvider(), content: doc))
     }
 
     // MARK: - Static Helpers

@@ -139,7 +139,7 @@ final class AttachmentViewerViewModel {
     func getTemporaryFileURL() -> URL? {
         guard let data = decryptedData else { return nil }
         let tempDir = FileManager.default.temporaryDirectory
-        let fileURL = tempDir.appendingPathComponent(document.title)
+        let fileURL = tempDir.appendingPathComponent(sanitizedFileName)
         do {
             try data.write(to: fileURL)
             return fileURL
@@ -152,8 +152,17 @@ final class AttachmentViewerViewModel {
     /// Clean up the temporary export file.
     func cleanupTemporaryFile() {
         let tempDir = FileManager.default.temporaryDirectory
-        let fileURL = tempDir.appendingPathComponent(document.title)
+        let fileURL = tempDir.appendingPathComponent(sanitizedFileName)
         try? FileManager.default.removeItem(at: fileURL)
+    }
+
+    /// Strips path-unsafe characters from the document title to prevent path traversal.
+    private var sanitizedFileName: String {
+        let unsafe = CharacterSet(charactersIn: "/:\\")
+        let sanitized = document.title
+            .components(separatedBy: unsafe)
+            .joined(separator: "_")
+        return sanitized.isEmpty ? "document" : sanitized
     }
 
     // MARK: - Private
