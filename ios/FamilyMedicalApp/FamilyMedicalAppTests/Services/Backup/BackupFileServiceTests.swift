@@ -402,7 +402,7 @@ private enum BackupFileServiceTestHelpers {
         BackupPayload(
             exportedAt: Date(),
             appVersion: "1.0.0",
-            metadata: BackupMetadata(personCount: 1, recordCount: 0, attachmentCount: 0),
+            metadata: BackupMetadata(personCount: 1, recordCount: 0),
             persons: [
                 PersonBackup(
                     id: UUID(),
@@ -414,8 +414,7 @@ private enum BackupFileServiceTestHelpers {
                     updatedAt: Date()
                 )
             ],
-            records: [],
-            attachments: []
+            records: []
         )
     }
 }

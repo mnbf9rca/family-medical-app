@@ -13,14 +13,12 @@ struct ExportServiceTests {
         personRepository: MockPersonRepository = MockPersonRepository(),
         recordRepository: MockMedicalRecordRepository = MockMedicalRecordRepository(),
         recordContentService: MockRecordContentService = MockRecordContentService(),
-        attachmentService: MockAttachmentService = MockAttachmentService(),
         fmkService: MockFamilyMemberKeyService = MockFamilyMemberKeyService()
     ) -> ExportService {
         ExportService(
             personRepository: personRepository,
             recordRepository: recordRepository,
             recordContentService: recordContentService,
-            attachmentService: attachmentService,
             fmkService: fmkService
         )
     }
@@ -40,18 +38,6 @@ struct ExportServiceTests {
         return try RecordContentEnvelope(immunization)
     }
 
-    func makeTestAttachment() throws -> FamilyMedicalApp.Attachment {
-        try FamilyMedicalApp.Attachment(
-            id: UUID(),
-            fileName: "test.pdf",
-            mimeType: "application/pdf",
-            contentHMAC: Data(repeating: 0x01, count: 32),
-            encryptedSize: 1_024,
-            thumbnailData: nil,
-            uploadedAt: Date()
-        )
-    }
-
     // MARK: - Empty Export Tests
 
     @Test("Exports empty payload when no data exists")
@@ -63,7 +49,6 @@ struct ExportServiceTests {
         #expect(payload.isEmpty)
         #expect(payload.persons.isEmpty)
         #expect(payload.records.isEmpty)
-        #expect(payload.attachments.isEmpty)
         #expect(payload.metadata.personCount == 0)
     }
 
@@ -154,53 +139,5 @@ struct ExportServiceTests {
         #expect(payload.records[0].personId == person.id)
         #expect(payload.records[0].recordType == "immunization")
         #expect(payload.metadata.recordCount == 1)
-    }
-
-    // MARK: - Attachment Export Tests
-
-    @Test("Exports attachments for records")
-    func exportsAttachments() async throws {
-        let personRepository = MockPersonRepository()
-        let recordRepository = MockMedicalRecordRepository()
-        let recordContentService = MockRecordContentService()
-        let attachmentService = MockAttachmentService()
-        let fmkService = MockFamilyMemberKeyService()
-
-        let person = try makeTestPerson()
-        let fmk = SymmetricKey(size: .bits256)
-        personRepository.addPerson(person)
-        fmkService.setFMK(fmk, for: person.id.uuidString)
-
-        let envelope = try makeTestEnvelope()
-        let encryptedContent = try recordContentService.encrypt(envelope, using: fmk)
-        let record = MedicalRecord(
-            id: UUID(),
-            personId: person.id,
-            encryptedContent: encryptedContent,
-            createdAt: Date(),
-            updatedAt: Date(),
-            version: 1,
-            previousVersionId: nil
-        )
-        recordRepository.addRecord(record)
-
-        let attachment = try makeTestAttachment()
-        let attachmentContent = Data("PDF content".utf8)
-        attachmentService.addTestAttachment(attachment, content: attachmentContent, linkedToRecord: record.id)
-
-        let service = makeService(
-            personRepository: personRepository,
-            recordRepository: recordRepository,
-            recordContentService: recordContentService,
-            attachmentService: attachmentService,
-            fmkService: fmkService
-        )
-
-        let payload = try await service.exportData(primaryKey: testPrimaryKey)
-
-        #expect(payload.attachments.count == 1)
-        #expect(payload.attachments[0].fileName == "test.pdf")
-        #expect(payload.attachments[0].contentData == attachmentContent)
-        #expect(payload.metadata.attachmentCount == 1)
     }
 }

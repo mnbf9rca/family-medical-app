@@ -159,7 +159,7 @@
     "backupPayload": {
       "type": "object",
       "description": "Decrypted backup payload containing all user data",
-      "required": ["exportedAt", "appVersion", "metadata", "persons", "records", "attachments"],
+      "required": ["exportedAt", "appVersion", "metadata", "persons", "records"],
       "properties": {
         "exportedAt": {
           "type": "string",
@@ -182,22 +182,16 @@
           "type": "array",
           "items": { "$ref": "#/$defs/medicalRecord" },
           "description": "All medical records"
-        },
-        "attachments": {
-          "type": "array",
-          "items": { "$ref": "#/$defs/attachment" },
-          "description": "All attachments with file content"
         }
       }
     },
     "metadata": {
       "type": "object",
       "description": "Summary counts (inside encrypted payload for privacy)",
-      "required": ["personCount", "recordCount", "attachmentCount"],
+      "required": ["personCount", "recordCount"],
       "properties": {
         "personCount": { "type": "integer", "minimum": 0 },
-        "recordCount": { "type": "integer", "minimum": 0 },
-        "attachmentCount": { "type": "integer", "minimum": 0 }
+        "recordCount": { "type": "integer", "minimum": 0 }
       }
     },
     "person": {
@@ -291,48 +285,6 @@
           "type": ["string", "null"],
           "format": "uuid",
           "description": "ID of previous version (for edit tracking)"
-        }
-      }
-    },
-    "attachment": {
-      "type": "object",
-      "description": "File attachment with embedded content",
-      "required": ["id", "personId", "linkedRecordIds", "fileName", "mimeType", "content", "uploadedAt"],
-      "properties": {
-        "id": {
-          "type": "string",
-          "format": "uuid"
-        },
-        "personId": {
-          "type": "string",
-          "format": "uuid"
-        },
-        "linkedRecordIds": {
-          "type": "array",
-          "items": { "type": "string", "format": "uuid" },
-          "description": "Records this attachment is linked to"
-        },
-        "fileName": {
-          "type": "string",
-          "description": "Original filename (e.g., 'vaccine-card.jpg')"
-        },
-        "mimeType": {
-          "type": "string",
-          "description": "MIME type (e.g., 'image/jpeg', 'application/pdf')"
-        },
-        "content": {
-          "type": "string",
-          "contentEncoding": "base64",
-          "description": "Base64-encoded file bytes"
-        },
-        "thumbnail": {
-          "type": ["string", "null"],
-          "contentEncoding": "base64",
-          "description": "Base64-encoded thumbnail (for images)"
-        },
-        "uploadedAt": {
-          "type": "string",
-          "format": "date-time"
         }
       }
     }

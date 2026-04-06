@@ -13,34 +13,29 @@ struct ImportServiceTests {
         personRepository: MockPersonRepository = MockPersonRepository(),
         recordRepository: MockMedicalRecordRepository = MockMedicalRecordRepository(),
         recordContentService: MockRecordContentService = MockRecordContentService(),
-        attachmentService: MockAttachmentService = MockAttachmentService(),
         fmkService: MockFamilyMemberKeyService = MockFamilyMemberKeyService()
     ) -> ImportService {
         ImportService(
             personRepository: personRepository,
             recordRepository: recordRepository,
             recordContentService: recordContentService,
-            attachmentService: attachmentService,
             fmkService: fmkService
         )
     }
 
     func makeTestPayload(
         persons: [PersonBackup] = [],
-        records: [MedicalRecordBackup] = [],
-        attachments: [AttachmentBackup] = []
+        records: [MedicalRecordBackup] = []
     ) -> BackupPayload {
         BackupPayload(
             exportedAt: Date(),
             appVersion: "1.0.0",
             metadata: BackupMetadata(
                 personCount: persons.count,
-                recordCount: records.count,
-                attachmentCount: attachments.count
+                recordCount: records.count
             ),
             persons: persons,
-            records: records,
-            attachments: attachments
+            records: records
         )
     }
 
@@ -69,19 +64,6 @@ struct ImportServiceTests {
             updatedAt: Date(),
             version: 1,
             previousVersionId: nil
-        )
-    }
-
-    func makeAttachmentBackup(personId: UUID, recordId: UUID) -> AttachmentBackup {
-        AttachmentBackup(
-            id: UUID(),
-            personId: personId,
-            linkedRecordIds: [recordId],
-            fileName: "test.pdf",
-            mimeType: "application/pdf",
-            content: Data("PDF content".utf8),
-            thumbnail: nil,
-            uploadedAt: Date()
         )
     }
 

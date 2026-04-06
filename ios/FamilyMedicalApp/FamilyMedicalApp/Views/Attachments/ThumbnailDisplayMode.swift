@@ -17,22 +17,6 @@ enum ThumbnailDisplayMode: Equatable {
     /// Display a generic file icon
     case genericFileIcon
 
-    /// Determine the display mode for an attachment
-    ///
-    /// - Parameter attachment: The attachment to display
-    /// - Returns: The appropriate display mode based on attachment properties
-    static func from(_ attachment: Attachment) -> ThumbnailDisplayMode {
-        if let thumbnailData = attachment.thumbnailData, !thumbnailData.isEmpty {
-            .thumbnail(thumbnailData)
-        } else if attachment.isPDF {
-            .pdfIcon
-        } else if attachment.isImage {
-            .imageIcon
-        } else {
-            .genericFileIcon
-        }
-    }
-
     /// Determine the display mode for a DocumentReferenceRecord.
     ///
     /// - Parameter document: The document to display

@@ -7,10 +7,9 @@ struct BackupPayload: Codable, Equatable {
     let metadata: BackupMetadata
     let persons: [PersonBackup]
     let records: [MedicalRecordBackup]
-    let attachments: [AttachmentBackup]
 
     var isEmpty: Bool {
-        persons.isEmpty && records.isEmpty && attachments.isEmpty
+        persons.isEmpty && records.isEmpty
     }
 }
 
@@ -18,5 +17,4 @@ struct BackupPayload: Codable, Equatable {
 struct BackupMetadata: Codable, Equatable {
     let personCount: Int
     let recordCount: Int
-    let attachmentCount: Int
 }

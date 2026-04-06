@@ -25,12 +25,10 @@ final class PreviewExportService: ExportServiceProtocol, @unchecked Sendable {
             appVersion: "1.0.0",
             metadata: BackupMetadata(
                 personCount: 2,
-                recordCount: 10,
-                attachmentCount: 3
+                recordCount: 10
             ),
             persons: [],
-            records: [],
-            attachments: []
+            records: []
         )
     }
 }
@@ -79,12 +77,10 @@ final class PreviewBackupFileService: BackupFileServiceProtocol, @unchecked Send
             appVersion: "1.0.0",
             metadata: BackupMetadata(
                 personCount: 0,
-                recordCount: 0,
-                attachmentCount: 0
+                recordCount: 0
             ),
             persons: [],
-            records: [],
-            attachments: []
+            records: []
         )
     }
 
@@ -94,12 +90,10 @@ final class PreviewBackupFileService: BackupFileServiceProtocol, @unchecked Send
             appVersion: "1.0.0",
             metadata: BackupMetadata(
                 personCount: 0,
-                recordCount: 0,
-                attachmentCount: 0
+                recordCount: 0
             ),
             persons: [],
-            records: [],
-            attachments: []
+            records: []
         )
     }
 

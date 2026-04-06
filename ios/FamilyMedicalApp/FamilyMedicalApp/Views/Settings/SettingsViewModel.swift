@@ -137,23 +137,12 @@ private struct DefaultDependencies {
             fmkService: fmkService
         )
         let recordRepository = MedicalRecordRepository(coreDataStack: coreDataStack)
-        let attachmentRepository = AttachmentRepository(
-            coreDataStack: coreDataStack,
-            encryptionService: encryptionService,
-            fmkService: fmkService
-        )
         let recordContentService = RecordContentService(encryptionService: encryptionService)
-        let attachmentService = Self.makeAttachmentService(
-            attachmentRepository: attachmentRepository,
-            encryptionService: encryptionService,
-            fmkService: fmkService
-        )
 
         self.exportService = ExportService(
             personRepository: personRepository,
             recordRepository: recordRepository,
             recordContentService: recordContentService,
-            attachmentService: attachmentService,
             fmkService: fmkService
         )
 
@@ -161,31 +150,12 @@ private struct DefaultDependencies {
             personRepository: personRepository,
             recordRepository: recordRepository,
             recordContentService: recordContentService,
-            attachmentService: attachmentService,
             fmkService: fmkService
         )
 
         self.backupFileService = BackupFileService(
             keyDerivationService: KeyDerivationService(),
             encryptionService: encryptionService
-        )
-    }
-
-    private static func makeAttachmentService(
-        attachmentRepository: AttachmentRepositoryProtocol,
-        encryptionService: EncryptionServiceProtocol,
-        fmkService: FamilyMemberKeyServiceProtocol
-    ) -> AttachmentService {
-        // File storage init only fails if file system is inaccessible (fatal)
-        guard let fileStorage = try? AttachmentFileStorageService() else {
-            fatalError("Failed to initialize AttachmentFileStorageService - file system inaccessible")
-        }
-        return AttachmentService(
-            attachmentRepository: attachmentRepository,
-            fileStorage: fileStorage,
-            imageProcessor: ImageProcessingService(),
-            encryptionService: encryptionService,
-            fmkService: fmkService
         )
     }
 }

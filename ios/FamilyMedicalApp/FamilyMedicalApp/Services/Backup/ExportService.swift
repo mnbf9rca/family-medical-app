@@ -5,19 +5,16 @@ import Foundation
 private struct BackupCollector {
     var persons: [PersonBackup] = []
     var records: [MedicalRecordBackup] = []
-    var attachments: [AttachmentBackup] = []
 
     func buildPayload(appVersion: String, logger: CategoryLoggerProtocol) -> BackupPayload {
         let metadata = BackupMetadata(
             personCount: persons.count,
-            recordCount: records.count,
-            attachmentCount: attachments.count
+            recordCount: records.count
         )
 
         logger.debug(
             "Export complete: \(metadata.personCount) persons, "
-                + "\(metadata.recordCount) records, "
-                + "\(metadata.attachmentCount) attachments"
+                + "\(metadata.recordCount) records"
         )
 
         return BackupPayload(
@@ -25,8 +22,7 @@ private struct BackupCollector {
             appVersion: appVersion,
             metadata: metadata,
             persons: persons,
-            records: records,
-            attachments: attachments
+            records: records
         )
     }
 }
@@ -41,7 +37,6 @@ final class ExportService: ExportServiceProtocol, @unchecked Sendable {
     private let personRepository: PersonRepositoryProtocol
     private let recordRepository: MedicalRecordRepositoryProtocol
     private let recordContentService: RecordContentServiceProtocol
-    private let attachmentService: AttachmentServiceProtocol
     private let fmkService: FamilyMemberKeyServiceProtocol
     private let logger: CategoryLoggerProtocol
 
@@ -49,14 +44,12 @@ final class ExportService: ExportServiceProtocol, @unchecked Sendable {
         personRepository: PersonRepositoryProtocol,
         recordRepository: MedicalRecordRepositoryProtocol,
         recordContentService: RecordContentServiceProtocol,
-        attachmentService: AttachmentServiceProtocol,
         fmkService: FamilyMemberKeyServiceProtocol,
         logger: CategoryLoggerProtocol? = nil
     ) {
         self.personRepository = personRepository
         self.recordRepository = recordRepository
         self.recordContentService = recordContentService
-        self.attachmentService = attachmentService
         self.fmkService = fmkService
         self.logger = logger ?? LoggingService.shared.logger(category: .storage)
     }
@@ -91,7 +84,7 @@ final class ExportService: ExportServiceProtocol, @unchecked Sendable {
         let fmk = try retrieveFMK(for: person, primaryKey: primaryKey)
         collector.persons.append(PersonBackup(from: person))
 
-        let records = try await exportRecords(for: person, fmk: fmk, primaryKey: primaryKey, collector: &collector)
+        let records = try await exportRecords(for: person, fmk: fmk)
         collector.records.append(contentsOf: records)
     }
 
@@ -106,9 +99,7 @@ final class ExportService: ExportServiceProtocol, @unchecked Sendable {
 
     private func exportRecords(
         for person: Person,
-        fmk: SymmetricKey,
-        primaryKey: SymmetricKey,
-        collector: inout BackupCollector
+        fmk: SymmetricKey
     ) async throws -> [MedicalRecordBackup] {
         let records: [MedicalRecord]
         do {
@@ -130,56 +121,6 @@ final class ExportService: ExportServiceProtocol, @unchecked Sendable {
             }
 
             backups.append(MedicalRecordBackup(from: record, envelope: envelope))
-
-            let attachments = try await exportAttachments(for: record, personId: person.id, primaryKey: primaryKey)
-            collector.attachments.append(contentsOf: attachments)
-        }
-
-        return backups
-    }
-
-    private func exportAttachments(
-        for record: MedicalRecord,
-        personId: UUID,
-        primaryKey: SymmetricKey
-    ) async throws -> [AttachmentBackup] {
-        let attachments: [Attachment]
-        do {
-            attachments = try await attachmentService.fetchAttachments(
-                recordId: record.id,
-                personId: personId,
-                primaryKey: primaryKey
-            )
-        } catch {
-            logger.error("Failed to fetch attachments during export")
-            throw BackupError.exportFailed("Failed to fetch attachments")
-        }
-
-        var backups: [AttachmentBackup] = []
-
-        for attachment in attachments {
-            let content: Data
-            do {
-                content = try await attachmentService.getContent(
-                    attachment: attachment,
-                    personId: personId,
-                    primaryKey: primaryKey
-                )
-            } catch {
-                logger.error("Failed to retrieve attachment content during export")
-                throw BackupError.exportFailed("Failed to retrieve attachment content")
-            }
-
-            backups.append(AttachmentBackup(
-                id: attachment.id,
-                personId: personId,
-                linkedRecordIds: [record.id],
-                fileName: attachment.fileName,
-                mimeType: attachment.mimeType,
-                content: content,
-                thumbnail: attachment.thumbnailData,
-                uploadedAt: attachment.uploadedAt
-            ))
         }
 
         return backups

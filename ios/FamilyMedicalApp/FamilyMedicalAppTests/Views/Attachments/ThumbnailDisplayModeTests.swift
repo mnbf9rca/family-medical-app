@@ -5,93 +5,91 @@ import Testing
 struct ThumbnailDisplayModeTests {
     // MARK: - Test Helpers
 
-    func makeAttachment(
+    func makeDocument(
         thumbnailData: Data? = nil,
         mimeType: String = "image/jpeg"
-    ) throws -> FamilyMedicalApp.Attachment {
-        try FamilyMedicalApp.Attachment(
-            id: UUID(),
-            fileName: "test.jpg",
+    ) -> DocumentReferenceRecord {
+        DocumentReferenceRecord(
+            title: "test.jpg",
             mimeType: mimeType,
+            fileSize: 1_024,
             contentHMAC: Data(repeating: 0x42, count: 32),
-            encryptedSize: 1_024,
             thumbnailData: thumbnailData,
-            uploadedAt: Date()
+            sourceRecordId: UUID()
         )
     }
 
-    // MARK: - from() Tests
+    // MARK: - from(document:) Tests
 
     @Test
-    func from_withThumbnailData_returnsThumbnail() throws {
+    func from_withThumbnailData_returnsThumbnail() {
         let thumbnailData = Data([0x01, 0x02, 0x03])
-        let attachment = try makeAttachment(thumbnailData: thumbnailData)
+        let document = makeDocument(thumbnailData: thumbnailData)
 
-        let mode = ThumbnailDisplayMode.from(attachment)
+        let mode = ThumbnailDisplayMode.from(document: document)
 
         #expect(mode == .thumbnail(thumbnailData))
     }
 
     @Test
-    func from_withEmptyThumbnailData_doesNotReturnThumbnail() throws {
-        let attachment = try makeAttachment(thumbnailData: Data())
+    func from_withEmptyThumbnailData_doesNotReturnThumbnail() {
+        let document = makeDocument(thumbnailData: Data())
 
-        let mode = ThumbnailDisplayMode.from(attachment)
+        let mode = ThumbnailDisplayMode.from(document: document)
 
         #expect(mode != .thumbnail(Data()))
     }
 
     @Test
-    func from_pdfWithoutThumbnail_returnsPdfIcon() throws {
-        let attachment = try makeAttachment(mimeType: "application/pdf")
+    func from_pdfWithoutThumbnail_returnsPdfIcon() {
+        let document = makeDocument(mimeType: "application/pdf")
 
-        let mode = ThumbnailDisplayMode.from(attachment)
+        let mode = ThumbnailDisplayMode.from(document: document)
 
         #expect(mode == .pdfIcon)
     }
 
     @Test
-    func from_imageWithoutThumbnail_returnsImageIcon() throws {
-        let attachment = try makeAttachment(mimeType: "image/jpeg")
+    func from_imageWithoutThumbnail_returnsImageIcon() {
+        let document = makeDocument(mimeType: "image/jpeg")
 
-        let mode = ThumbnailDisplayMode.from(attachment)
-
-        #expect(mode == .imageIcon)
-    }
-
-    @Test
-    func from_pngImageWithoutThumbnail_returnsImageIcon() throws {
-        let attachment = try makeAttachment(mimeType: "image/png")
-
-        let mode = ThumbnailDisplayMode.from(attachment)
+        let mode = ThumbnailDisplayMode.from(document: document)
 
         #expect(mode == .imageIcon)
     }
 
     @Test
-    func from_unknownTypeWithoutThumbnail_returnsGenericFileIcon() throws {
-        let attachment = try makeAttachment(mimeType: "text/plain")
+    func from_pngImageWithoutThumbnail_returnsImageIcon() {
+        let document = makeDocument(mimeType: "image/png")
 
-        let mode = ThumbnailDisplayMode.from(attachment)
+        let mode = ThumbnailDisplayMode.from(document: document)
+
+        #expect(mode == .imageIcon)
+    }
+
+    @Test
+    func from_unknownTypeWithoutThumbnail_returnsGenericFileIcon() {
+        let document = makeDocument(mimeType: "text/plain")
+
+        let mode = ThumbnailDisplayMode.from(document: document)
 
         #expect(mode == .genericFileIcon)
     }
 
     @Test
-    func from_thumbnailTakesPrecedenceOverMimeType() throws {
+    func from_thumbnailTakesPrecedenceOverMimeType() {
         // Even if it's a PDF, thumbnail data should take precedence
         let thumbnailData = Data([0xFF, 0xD8]) // JPEG magic bytes
-        let attachment = try FamilyMedicalApp.Attachment(
-            id: UUID(),
-            fileName: "document.pdf",
+        let document = DocumentReferenceRecord(
+            title: "document.pdf",
             mimeType: "application/pdf",
+            fileSize: 2_048,
             contentHMAC: Data(repeating: 0x42, count: 32),
-            encryptedSize: 1_024,
             thumbnailData: thumbnailData,
-            uploadedAt: Date()
+            sourceRecordId: UUID()
         )
 
-        let mode = ThumbnailDisplayMode.from(attachment)
+        let mode = ThumbnailDisplayMode.from(document: document)
 
         #expect(mode == .thumbnail(thumbnailData))
     }

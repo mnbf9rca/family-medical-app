@@ -13,34 +13,29 @@ struct ImportServiceExtendedTests {
         personRepository: MockPersonRepository = MockPersonRepository(),
         recordRepository: MockMedicalRecordRepository = MockMedicalRecordRepository(),
         recordContentService: MockRecordContentService = MockRecordContentService(),
-        attachmentService: MockAttachmentService = MockAttachmentService(),
         fmkService: MockFamilyMemberKeyService = MockFamilyMemberKeyService()
     ) -> ImportService {
         ImportService(
             personRepository: personRepository,
             recordRepository: recordRepository,
             recordContentService: recordContentService,
-            attachmentService: attachmentService,
             fmkService: fmkService
         )
     }
 
     func makeTestPayload(
         persons: [PersonBackup] = [],
-        records: [MedicalRecordBackup] = [],
-        attachments: [AttachmentBackup] = []
+        records: [MedicalRecordBackup] = []
     ) -> BackupPayload {
         BackupPayload(
             exportedAt: Date(),
             appVersion: "1.0.0",
             metadata: BackupMetadata(
                 personCount: persons.count,
-                recordCount: records.count,
-                attachmentCount: attachments.count
+                recordCount: records.count
             ),
             persons: persons,
-            records: records,
-            attachments: attachments
+            records: records
         )
     }
 
@@ -72,52 +67,6 @@ struct ImportServiceExtendedTests {
         )
     }
 
-    func makeAttachmentBackup(personId: UUID, recordId: UUID) -> AttachmentBackup {
-        AttachmentBackup(
-            id: UUID(),
-            personId: personId,
-            linkedRecordIds: [recordId],
-            fileName: "test.pdf",
-            mimeType: "application/pdf",
-            content: Data("PDF content".utf8),
-            thumbnail: nil,
-            uploadedAt: Date()
-        )
-    }
-
-    // MARK: - Attachment Import Tests
-
-    @Test("Imports attachments for records")
-    func importsAttachments() async throws {
-        let personRepository = MockPersonRepository()
-        let recordRepository = MockMedicalRecordRepository()
-        let recordContentService = MockRecordContentService()
-        let attachmentService = MockAttachmentService()
-        let fmkService = MockFamilyMemberKeyService()
-
-        let service = makeService(
-            personRepository: personRepository,
-            recordRepository: recordRepository,
-            recordContentService: recordContentService,
-            attachmentService: attachmentService,
-            fmkService: fmkService
-        )
-
-        let personBackup = makePersonBackup()
-        let recordBackup = try makeRecordBackup(personId: personBackup.id)
-        let attachmentBackup = makeAttachmentBackup(personId: personBackup.id, recordId: recordBackup.id)
-        let payload = makeTestPayload(
-            persons: [personBackup],
-            records: [recordBackup],
-            attachments: [attachmentBackup]
-        )
-
-        try await service.importData(payload, primaryKey: testPrimaryKey)
-
-        #expect(attachmentService.addAttachmentCalls.count == 1)
-        #expect(attachmentService.addAttachmentCalls[0].fileName == "test.pdf")
-    }
-
     // MARK: - Full Import Tests
 
     @Test("Full import includes all data types")
@@ -125,64 +74,30 @@ struct ImportServiceExtendedTests {
         let personRepository = MockPersonRepository()
         let recordRepository = MockMedicalRecordRepository()
         let recordContentService = MockRecordContentService()
-        let attachmentService = MockAttachmentService()
         let fmkService = MockFamilyMemberKeyService()
 
         let service = makeService(
             personRepository: personRepository,
             recordRepository: recordRepository,
             recordContentService: recordContentService,
-            attachmentService: attachmentService,
             fmkService: fmkService
         )
 
         let personBackup = makePersonBackup(name: "Full Test")
         let recordBackup = try makeRecordBackup(personId: personBackup.id)
-        let attachmentBackup = makeAttachmentBackup(personId: personBackup.id, recordId: recordBackup.id)
 
         let payload = makeTestPayload(
             persons: [personBackup],
-            records: [recordBackup],
-            attachments: [attachmentBackup]
+            records: [recordBackup]
         )
 
         try await service.importData(payload, primaryKey: testPrimaryKey)
 
         #expect(personRepository.saveCallCount == 1)
         #expect(recordRepository.saveCallCount == 1)
-        #expect(attachmentService.addAttachmentCalls.count == 1)
     }
 
     // MARK: - Error Handling Tests
-
-    @Test("Throws error when attachment save fails")
-    func throwsOnAttachmentSaveFailure() async throws {
-        let personRepository = MockPersonRepository()
-        let recordRepository = MockMedicalRecordRepository()
-        let attachmentService = MockAttachmentService()
-        let fmkService = MockFamilyMemberKeyService()
-        attachmentService.shouldFailAddAttachment = true
-
-        let service = makeService(
-            personRepository: personRepository,
-            recordRepository: recordRepository,
-            attachmentService: attachmentService,
-            fmkService: fmkService
-        )
-
-        let personBackup = makePersonBackup()
-        let recordBackup = try makeRecordBackup(personId: personBackup.id)
-        let attachmentBackup = makeAttachmentBackup(personId: personBackup.id, recordId: recordBackup.id)
-        let payload = makeTestPayload(
-            persons: [personBackup],
-            records: [recordBackup],
-            attachments: [attachmentBackup]
-        )
-
-        await #expect(throws: BackupError.self) {
-            try await service.importData(payload, primaryKey: testPrimaryKey)
-        }
-    }
 
     @Test("Throws error when record has no matching person FMK")
     func throwsWhenRecordHasNoPersonFMK() async throws {
@@ -200,29 +115,6 @@ struct ImportServiceExtendedTests {
         let unrelatedPersonId = UUID()
         let recordBackup = try makeRecordBackup(personId: unrelatedPersonId)
         let payload = makeTestPayload(records: [recordBackup])
-
-        await #expect(throws: BackupError.self) {
-            try await service.importData(payload, primaryKey: testPrimaryKey)
-        }
-    }
-
-    @Test("Throws error when attachment has no matching person FMK")
-    func throwsWhenAttachmentHasNoPersonFMK() async throws {
-        let personRepository = MockPersonRepository()
-        let attachmentService = MockAttachmentService()
-        let fmkService = MockFamilyMemberKeyService()
-
-        let service = makeService(
-            personRepository: personRepository,
-            attachmentService: attachmentService,
-            fmkService: fmkService
-        )
-
-        // Attachment references a person that isn't being imported
-        let unrelatedPersonId = UUID()
-        let recordId = UUID()
-        let attachmentBackup = makeAttachmentBackup(personId: unrelatedPersonId, recordId: recordId)
-        let payload = makeTestPayload(attachments: [attachmentBackup])
 
         await #expect(throws: BackupError.self) {
             try await service.importData(payload, primaryKey: testPrimaryKey)

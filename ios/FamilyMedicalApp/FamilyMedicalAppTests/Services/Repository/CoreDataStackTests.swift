@@ -104,24 +104,6 @@ struct CoreDataStackTests {
         #expect(recordEntity != nil)
     }
 
-    @Test
-    func coreDataModel_hasAttachmentEntity() {
-        let stack = CoreDataStack(inMemory: true)
-        let model = stack.viewContext.persistentStoreCoordinator?.managedObjectModel
-
-        let attachmentEntity = model?.entitiesByName["AttachmentEntity"]
-        #expect(attachmentEntity != nil)
-    }
-
-    @Test
-    func coreDataModel_hasRecordAttachmentEntity() {
-        let stack = CoreDataStack(inMemory: true)
-        let model = stack.viewContext.persistentStoreCoordinator?.managedObjectModel
-
-        let joinEntity = model?.entitiesByName["RecordAttachmentEntity"]
-        #expect(joinEntity != nil)
-    }
-
     // MARK: - Entity Attribute Tests
 
     @Test
@@ -151,31 +133,6 @@ struct CoreDataStackTests {
         #expect(attributes?["version"] != nil)
         #expect(attributes?["previousVersionId"] != nil)
         #expect(attributes?["encryptedContent"] != nil)
-    }
-
-    @Test
-    func attachmentEntity_hasRequiredAttributes() {
-        let stack = CoreDataStack(inMemory: true)
-        let model = stack.viewContext.persistentStoreCoordinator?.managedObjectModel
-        let entity = model?.entitiesByName["AttachmentEntity"]
-
-        let attributes = entity?.attributesByName
-        #expect(attributes?["id"] != nil)
-        #expect(attributes?["uploadedAt"] != nil)
-        #expect(attributes?["contentHMAC"] != nil)
-        #expect(attributes?["encryptedSize"] != nil)
-        #expect(attributes?["encryptedMetadata"] != nil)
-    }
-
-    @Test
-    func recordAttachmentEntity_hasRequiredAttributes() {
-        let stack = CoreDataStack(inMemory: true)
-        let model = stack.viewContext.persistentStoreCoordinator?.managedObjectModel
-        let entity = model?.entitiesByName["RecordAttachmentEntity"]
-
-        let attributes = entity?.attributesByName
-        #expect(attributes?["recordId"] != nil)
-        #expect(attributes?["attachmentId"] != nil)
     }
 }
 

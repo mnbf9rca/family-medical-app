@@ -37,9 +37,8 @@ final class AttachmentFlowUITests: XCTestCase {
     func testAttachmentFlowsConsolidated() throws {
         try XCTSkipIf(true, "Form views removed in #123, re-enable when GenericRecordFormView lands in #127")
         // Setup - single app launch for all tests
-        // Enable seedTestAttachments to auto-create test attachments for coverage
         app = XCUIApplication()
-        app.launchForUITesting(resetState: true, seedTestAttachments: true)
+        app.launchForUITesting(resetState: true)
         app.createAccount()
 
         // Ensure on home view
