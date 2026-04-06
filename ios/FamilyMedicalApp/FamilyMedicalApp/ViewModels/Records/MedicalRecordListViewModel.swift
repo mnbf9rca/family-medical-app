@@ -26,6 +26,12 @@ final class MedicalRecordListViewModel {
     var isLoading = false
     var errorMessage: String?
 
+    /// When non-nil, the view should present the cascade-delete dialog for this record.
+    var pendingCascadeRecordId: UUID?
+
+    /// Attachments discovered during `deleteRecord` when cascade is needed.
+    var pendingCascadeAttachments: [PersistedDocumentReference] = []
+
     // MARK: - Dependencies
 
     private let medicalRecordRepository: MedicalRecordRepositoryProtocol
@@ -134,6 +140,14 @@ final class MedicalRecordListViewModel {
         do {
             switch strategy {
             case .noAttachments:
+                // Always check for attachments before deleting, regardless of UI path.
+                let found = await prepareDelete(recordId: id)
+                if !found.isEmpty {
+                    pendingCascadeRecordId = id
+                    pendingCascadeAttachments = found
+                    isLoading = false
+                    return
+                }
                 try await medicalRecordRepository.delete(id: id)
 
             case .cascadeDelete:
@@ -213,16 +227,23 @@ final class MedicalRecordListViewModel {
             )
             for attachment in attachments {
                 do {
+                    guard let existing = try await medicalRecordRepository.fetch(
+                        id: attachment.recordId
+                    ) else {
+                        continue
+                    }
                     var updatedDoc = attachment.content
                     updatedDoc.sourceRecordId = nil
                     let envelope = try RecordContentEnvelope(updatedDoc)
                     let encrypted = try recordContentService.encrypt(envelope, using: fmk)
                     let updatedRecord = MedicalRecord(
-                        id: attachment.recordId,
-                        personId: person.id,
+                        id: existing.id,
+                        personId: existing.personId,
                         encryptedContent: encrypted,
-                        createdAt: attachment.createdAt,
-                        updatedAt: Date()
+                        createdAt: existing.createdAt,
+                        updatedAt: Date(),
+                        version: existing.version + 1,
+                        previousVersionId: existing.id
                     )
                     try await medicalRecordRepository.save(updatedRecord)
                 } catch {

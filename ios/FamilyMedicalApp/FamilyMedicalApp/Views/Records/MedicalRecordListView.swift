@@ -61,10 +61,7 @@ struct MedicalRecordListView: View {
                 person: person,
                 decryptedRecord: decryptedRecord,
                 onDelete: {
-                    await viewModel.deleteRecord(
-                        id: decryptedRecord.id,
-                        strategy: .noAttachments
-                    )
+                    await viewModel.deleteRecord(id: decryptedRecord.id)
                 },
                 onRecordUpdated: {
                     Task {
@@ -132,6 +129,14 @@ struct MedicalRecordListView: View {
             Button("Cancel", role: .cancel) {}
         } message: { _ in
             Text("This record has \(pendingAttachments.count) attachment(s). What would you like to do?")
+        }
+        .onChange(of: viewModel.pendingCascadeRecordId) { _, newValue in
+            guard let recordId = newValue else { return }
+            recordToDelete = viewModel.records.first { $0.id == recordId }
+            pendingAttachments = viewModel.pendingCascadeAttachments
+            viewModel.pendingCascadeRecordId = nil
+            viewModel.pendingCascadeAttachments = []
+            showingCascadeDialog = true
         }
         .task {
             await viewModel.loadRecords()

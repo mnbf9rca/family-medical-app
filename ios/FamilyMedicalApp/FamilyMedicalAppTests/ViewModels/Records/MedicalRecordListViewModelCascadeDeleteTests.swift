@@ -105,6 +105,7 @@ struct MedicalRecordListViewModelCascadeDeleteTests {
     func deleteWithStrategy_noAttachments_justDeletesRecord() async throws {
         let person = try makeTestPerson()
         let deps = Deps(personId: person.id)
+        deps.queryService.attachmentsResult = []
         let record = MedicalRecord(personId: person.id, encryptedContent: Data())
         let envelope = try makeTestEnvelope()
         let viewModel = makeViewModel(person: person, deps: deps)
@@ -114,6 +115,28 @@ struct MedicalRecordListViewModelCascadeDeleteTests {
 
         #expect(viewModel.records.isEmpty)
         #expect(deps.repo.deleteCallCount == 1)
+    }
+
+    @Test
+    func deleteWithStrategy_noAttachments_triggersCascadeWhenAttachmentsExist() async throws {
+        let person = try makeTestPerson()
+        let deps = Deps(personId: person.id)
+        let parentRecord = MedicalRecord(personId: person.id, encryptedContent: Data())
+        let hmac = Data(repeating: 0xEE, count: 32)
+        let attachment = makeAttachment(title: "scan.pdf", hmac: hmac, sourceRecordId: parentRecord.id)
+        deps.queryService.attachmentsResult = [attachment]
+
+        let envelope = try makeTestEnvelope()
+        let viewModel = makeViewModel(person: person, deps: deps)
+        viewModel.records = [DecryptedRecord(record: parentRecord, envelope: envelope)]
+
+        await viewModel.deleteRecord(id: parentRecord.id, strategy: .noAttachments)
+
+        // Should NOT have deleted the record — cascade dialog should be triggered
+        #expect(deps.repo.deleteCallCount == 0)
+        #expect(viewModel.pendingCascadeRecordId == parentRecord.id)
+        #expect(viewModel.pendingCascadeAttachments.count == 1)
+        #expect(!viewModel.records.isEmpty)
     }
 
     // MARK: - DeletionStrategy.cascadeDelete
@@ -147,13 +170,22 @@ struct MedicalRecordListViewModelCascadeDeleteTests {
         let person = try makeTestPerson()
         let deps = Deps(personId: person.id)
         let parentRecord = MedicalRecord(personId: person.id, encryptedContent: Data())
-        let attachments = [
-            makeAttachment(
-                title: "report.pdf",
-                hmac: Data(repeating: 0xDD, count: 32),
-                sourceRecordId: parentRecord.id
-            )
-        ]
+        let attachment = makeAttachment(
+            title: "report.pdf",
+            hmac: Data(repeating: 0xDD, count: 32),
+            sourceRecordId: parentRecord.id
+        )
+        let attachments = [attachment]
+
+        // Seed the repo with the attachment record so detachAttachments can fetch it
+        let existingAttachmentRecord = MedicalRecord(
+            id: attachment.recordId,
+            personId: person.id,
+            encryptedContent: Data(),
+            version: 3,
+            previousVersionId: nil
+        )
+        deps.repo.addRecord(existingAttachmentRecord)
 
         let envelope = try makeTestEnvelope()
         let viewModel = makeViewModel(person: person, deps: deps)
@@ -171,5 +203,71 @@ struct MedicalRecordListViewModelCascadeDeleteTests {
         let savedDoc = try savedEnvelope.decode(DocumentReferenceRecord.self)
         #expect(savedDoc.sourceRecordId == nil)
         #expect(savedDoc.title == "report.pdf")
+    }
+
+    @Test
+    func detachAttachments_preservesVersionChain() async throws {
+        let person = try makeTestPerson()
+        let deps = Deps(personId: person.id)
+        let parentRecord = MedicalRecord(personId: person.id, encryptedContent: Data())
+        let attachment = makeAttachment(
+            title: "versioned.pdf",
+            hmac: Data(repeating: 0xAA, count: 32),
+            sourceRecordId: parentRecord.id
+        )
+
+        // Seed existing record with version 5
+        let existingAttachmentRecord = MedicalRecord(
+            id: attachment.recordId,
+            personId: person.id,
+            encryptedContent: Data(),
+            version: 5,
+            previousVersionId: UUID()
+        )
+        deps.repo.addRecord(existingAttachmentRecord)
+
+        let envelope = try makeTestEnvelope()
+        let viewModel = makeViewModel(person: person, deps: deps)
+        viewModel.records = [DecryptedRecord(record: parentRecord, envelope: envelope)]
+
+        await viewModel.deleteRecord(
+            id: parentRecord.id,
+            strategy: .keepStandalone,
+            attachments: [attachment]
+        )
+
+        let savedRecords = deps.repo.getAllRecords()
+        #expect(savedRecords.count == 1)
+        let saved = savedRecords[0]
+        #expect(saved.version == 6)
+        #expect(saved.previousVersionId == attachment.recordId)
+    }
+
+    @Test
+    func detachAttachments_skipsWhenRecordNotFound() async throws {
+        let person = try makeTestPerson()
+        let deps = Deps(personId: person.id)
+        let parentRecord = MedicalRecord(personId: person.id, encryptedContent: Data())
+        let attachment = makeAttachment(
+            title: "missing.pdf",
+            hmac: Data(repeating: 0xFF, count: 32),
+            sourceRecordId: parentRecord.id
+        )
+        // Do NOT add the attachment record to the repo
+
+        let envelope = try makeTestEnvelope()
+        let viewModel = makeViewModel(person: person, deps: deps)
+        viewModel.records = [DecryptedRecord(record: parentRecord, envelope: envelope)]
+
+        await viewModel.deleteRecord(
+            id: parentRecord.id,
+            strategy: .keepStandalone,
+            attachments: [attachment]
+        )
+
+        // Parent should still be deleted, but no save should have happened
+        #expect(deps.repo.saveCallCount == 0)
+        #expect(deps.repo.deleteCallCount == 1)
+        #expect(viewModel.records.isEmpty)
     }
 }
