@@ -138,6 +138,25 @@ final class DocumentBlobService: DocumentBlobServiceProtocol, @unchecked Sendabl
         try fileStorage.delete(contentHMAC: contentHMAC)
     }
 
+    // MARK: - Factory
+
+    /// Shared default factory for production use. Replaces copy-pasted
+    /// `createDefaultBlobService()` helpers in individual ViewModels.
+    static func makeDefault() -> DocumentBlobServiceProtocol {
+        let fileStorage: DocumentFileStorageServiceProtocol
+        do {
+            fileStorage = try DocumentFileStorageService()
+        } catch {
+            fatalError("Failed to create DocumentFileStorageService: \(error)")
+        }
+        return DocumentBlobService(
+            fileStorage: fileStorage,
+            imageProcessor: ImageProcessingService(),
+            encryptionService: EncryptionService(),
+            fmkService: FamilyMemberKeyService()
+        )
+    }
+
     // MARK: - Private
 
     private func process(plaintext: Data, mimeType: String) throws -> (Data, Data?) {

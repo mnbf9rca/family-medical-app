@@ -72,7 +72,7 @@ final class MedicalRecordListViewModel {
             recordContentService: resolvedContentService,
             fmkService: resolvedFmkService
         )
-        self.blobService = blobService ?? Self.createDefaultBlobService()
+        self.blobService = blobService ?? DocumentBlobService.makeDefault()
     }
 
     // MARK: - Actions
@@ -201,21 +201,6 @@ final class MedicalRecordListViewModel {
                 logger.logError(error, context: "MedicalRecordListViewModel.cascadeDeleteAttachments")
             }
         }
-    }
-
-    private static func createDefaultBlobService() -> DocumentBlobServiceProtocol {
-        let fileStorage: DocumentFileStorageServiceProtocol
-        do {
-            fileStorage = try DocumentFileStorageService()
-        } catch {
-            fatalError("Failed to create DocumentFileStorageService: \(error)")
-        }
-        return DocumentBlobService(
-            fileStorage: fileStorage,
-            imageProcessor: ImageProcessingService(),
-            encryptionService: EncryptionService(),
-            fmkService: FamilyMemberKeyService()
-        )
     }
 
     private func detachAttachments(_ attachments: [PersistedDocumentReference]) async {

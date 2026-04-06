@@ -100,7 +100,7 @@ final class DocumentPickerViewModel {
         self.personId = personId
         self.sourceRecordId = sourceRecordId
         self.primaryKey = primaryKey
-        self.blobService = blobService ?? Self.createDefaultBlobService()
+        self.blobService = blobService ?? DocumentBlobService.makeDefault()
         self.logger = TracingCategoryLogger(
             wrapping: logger ?? LoggingService.shared.logger(category: .storage)
         )
@@ -274,24 +274,5 @@ final class DocumentPickerViewModel {
         case "pdf": "application/pdf"
         default: "application/octet-stream"
         }
-    }
-
-    // MARK: - Default Blob Service Factory
-
-    private static func createDefaultBlobService() -> DocumentBlobServiceProtocol {
-        let fileStorage: DocumentFileStorageServiceProtocol
-        do {
-            fileStorage = try DocumentFileStorageService()
-        } catch {
-            let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent("Attachments")
-            try? FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
-            fileStorage = DocumentFileStorageService(attachmentsDirectory: tempDir)
-        }
-        return DocumentBlobService(
-            fileStorage: fileStorage,
-            imageProcessor: ImageProcessingService(),
-            encryptionService: EncryptionService(),
-            fmkService: FamilyMemberKeyService()
-        )
     }
 }
