@@ -47,8 +47,25 @@ struct DocumentBlobServiceTests {
         Data([0xFF, 0xD8, 0xFF, 0xE0] + Array(repeating: UInt8(0), count: 128))
     }
 
+    /// Minimal valid PDF that PDFDocument(data:) accepts.
     private static func makePDF() -> Data {
-        Data("%PDF-1.4\n".utf8) + Data(repeating: 0, count: 128)
+        let pdfString = """
+        %PDF-1.0
+        1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj
+        2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj
+        3 0 obj<</Type/Page/MediaBox[0 0 612 792]/Parent 2 0 R>>endobj
+        xref
+        0 4
+        0000000000 65535 f\u{0020}
+        0000000009 00000 n\u{0020}
+        0000000058 00000 n\u{0020}
+        0000000115 00000 n\u{0020}
+        trailer<</Size 4/Root 1 0 R>>
+        startxref
+        190
+        %%EOF
+        """
+        return Data(pdfString.utf8)
     }
 
     // MARK: - store
@@ -79,7 +96,7 @@ struct DocumentBlobServiceTests {
             primaryKey: ctx.primaryKey
         )
         #expect(result.thumbnailData != nil)
-        #expect(ctx.imageProcessor.compressCalls.count == 1)
+        #expect(ctx.imageProcessor.validateCalls.count == 1)
         #expect(ctx.imageProcessor.thumbnailCalls.count == 1)
     }
 
@@ -93,7 +110,7 @@ struct DocumentBlobServiceTests {
             primaryKey: ctx.primaryKey
         )
         #expect(result.thumbnailData == nil)
-        #expect(ctx.imageProcessor.compressCalls.isEmpty)
+        #expect(ctx.imageProcessor.validateCalls.isEmpty)
         #expect(ctx.imageProcessor.thumbnailCalls.isEmpty)
     }
 
@@ -110,8 +127,22 @@ struct DocumentBlobServiceTests {
         }
     }
 
-    @Test("store rejects oversized non-image files")
-    func storeRejectsOversizedFile() async throws {
+    @Test("store rejects oversized image files")
+    func storeRejectsOversizedImageFile() async throws {
+        let ctx = Self.makeFixture()
+        let tooBig = Data([0xFF, 0xD8, 0xFF, 0xE0]) + Data(count: DocumentBlobService.maxFileSizeBytes)
+        await #expect(throws: ModelError.self) {
+            _ = try await ctx.service.store(
+                plaintext: tooBig,
+                mimeType: "image/jpeg",
+                personId: ctx.personId,
+                primaryKey: ctx.primaryKey
+            )
+        }
+    }
+
+    @Test("store rejects oversized PDF files")
+    func storeRejectsOversizedPDFFile() async throws {
         let ctx = Self.makeFixture()
         let tooBig = Data(count: DocumentBlobService.maxFileSizeBytes + 1)
         await #expect(throws: ModelError.self) {
@@ -122,6 +153,21 @@ struct DocumentBlobServiceTests {
                 primaryKey: ctx.primaryKey
             )
         }
+    }
+
+    @Test("store preserves original image bytes without re-encoding")
+    func storePreservesOriginalBytes() async throws {
+        let ctx = Self.makeFixture()
+        let originalData = Self.makeJPEG()
+        _ = try await ctx.service.store(
+            plaintext: originalData,
+            mimeType: "image/jpeg",
+            personId: ctx.personId,
+            primaryKey: ctx.primaryKey
+        )
+        // The encrypted call should receive the original data, not re-encoded data
+        #expect(ctx.encryption.encryptCalls.count == 1)
+        #expect(ctx.encryption.encryptCalls.first?.data == originalData)
     }
 
     @Test("store does not rewrite blob when HMAC already on disk (dedup)")
@@ -150,6 +196,34 @@ struct DocumentBlobServiceTests {
         #expect(first.contentHMAC == ctx.fileStorage.storeCalls.first?.contentHMAC)
     }
 
+    @Test("store validates image via CGImageSource path for image/* MIME")
+    func storeValidatesImageForImageMime() async throws {
+        let ctx = Self.makeFixture()
+        ctx.imageProcessor.validateResult = "image/heic"
+        _ = try await ctx.service.store(
+            plaintext: Self.makeJPEG(),
+            mimeType: "image/heic",
+            personId: ctx.personId,
+            primaryKey: ctx.primaryKey
+        )
+        #expect(ctx.imageProcessor.validateCalls.count == 1)
+    }
+
+    @Test("store routes image data with wrong MIME to image path via header detection")
+    func storeDetectsImageDataEvenWithWrongMime() async throws {
+        let ctx = Self.makeFixture()
+        // JPEG bytes but mimeType says "application/octet-stream"
+        // isImageData() will detect the JPEG header and route to image path
+        _ = try await ctx.service.store(
+            plaintext: Self.makeJPEG(),
+            mimeType: "application/octet-stream",
+            personId: ctx.personId,
+            primaryKey: ctx.primaryKey
+        )
+        #expect(ctx.imageProcessor.validateCalls.count == 1)
+        #expect(ctx.imageProcessor.thumbnailCalls.count == 1)
+    }
+
     // MARK: - retrieve
 
     @Test("retrieve returns decrypted bytes for known HMAC")
@@ -170,8 +244,7 @@ struct DocumentBlobServiceTests {
         #expect(ctx.encryption.decryptCalls.count == 1)
         #expect(ctx.fileStorage.retrieveCalls.count == 1)
         #expect(ctx.fileStorage.retrieveCalls.first == stored.contentHMAC)
-        // The MockImageProcessingService returns the input unchanged when compressResult is nil,
-        // so the round-trip should equal the original plaintext.
+        // Original bytes are stored unchanged, so round-trip equals the original.
         #expect(decrypted == original)
     }
 

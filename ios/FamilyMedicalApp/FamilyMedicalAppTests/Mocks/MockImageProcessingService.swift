@@ -6,10 +6,8 @@ import UIKit
 final class MockImageProcessingService: ImageProcessingServiceProtocol, @unchecked Sendable {
     // MARK: - Call Record Types
 
-    struct CompressCall {
+    struct ValidateCall {
         let data: Data
-        let maxSizeBytes: Int
-        let maxDimension: Int
     }
 
     struct ThumbnailCall {
@@ -19,31 +17,30 @@ final class MockImageProcessingService: ImageProcessingServiceProtocol, @uncheck
 
     // MARK: - Configuration
 
-    var shouldFailCompress = false
+    var shouldFailValidate = false
     var shouldFailThumbnail = false
 
-    /// Optional custom data to return from compress
-    var compressResult: Data?
+    /// MIME type to return from validateImage (defaults to "image/jpeg")
+    var validateResult: String = "image/jpeg"
 
     /// Optional custom data to return from generateThumbnail
     var thumbnailResult: Data?
 
     // MARK: - Call Tracking
 
-    var compressCalls: [CompressCall] = []
+    var validateCalls: [ValidateCall] = []
     var thumbnailCalls: [ThumbnailCall] = []
 
     // MARK: - ImageProcessingServiceProtocol
 
-    func compress(_ imageData: Data, maxSizeBytes: Int, maxDimension: Int) throws -> Data {
-        compressCalls.append(CompressCall(data: imageData, maxSizeBytes: maxSizeBytes, maxDimension: maxDimension))
+    func validateImage(_ imageData: Data) throws -> String {
+        validateCalls.append(ValidateCall(data: imageData))
 
-        if shouldFailCompress {
-            throw ModelError.imageProcessingFailed(reason: "Mock compress failure")
+        if shouldFailValidate {
+            throw ModelError.imageProcessingFailed(reason: "Mock validate failure")
         }
 
-        // Return custom result or the original data
-        return compressResult ?? imageData
+        return validateResult
     }
 
     func generateThumbnail(_ imageData: Data, maxDimension: Int) throws -> Data {
@@ -65,11 +62,11 @@ final class MockImageProcessingService: ImageProcessingServiceProtocol, @uncheck
     // MARK: - Test Helpers
 
     func reset() {
-        compressCalls.removeAll()
+        validateCalls.removeAll()
         thumbnailCalls.removeAll()
-        shouldFailCompress = false
+        shouldFailValidate = false
         shouldFailThumbnail = false
-        compressResult = nil
+        validateResult = "image/jpeg"
         thumbnailResult = nil
     }
 

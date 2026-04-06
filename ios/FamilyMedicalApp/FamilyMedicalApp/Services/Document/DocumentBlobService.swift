@@ -1,5 +1,6 @@
 import CryptoKit
 import Foundation
+import PDFKit
 
 /// Storage of encrypted document blobs on disk, keyed by HMAC-SHA256 of plaintext (keyed with FMK).
 ///
@@ -31,13 +32,7 @@ final class DocumentBlobService: DocumentBlobServiceProtocol, @unchecked Sendabl
     // MARK: - Constants
 
     static let maxFileSizeBytes = 10 * 1_024 * 1_024
-    static let maxImageDimension = 4_096
     static let thumbnailDimension = 200
-    static let supportedMimeTypes: Set<String> = [
-        "image/jpeg",
-        "image/png",
-        "application/pdf"
-    ]
 
     // MARK: - Types
 
@@ -45,6 +40,13 @@ final class DocumentBlobService: DocumentBlobServiceProtocol, @unchecked Sendabl
         let contentHMAC: Data
         let encryptedSize: Int
         let thumbnailData: Data?
+    }
+
+    /// Result of `process()`: the data to store, optional thumbnail, and detected MIME.
+    private struct ProcessedBlob {
+        let data: Data
+        let thumbnailData: Data?
+        let detectedMimeType: String
     }
 
     // MARK: - Dependencies
@@ -82,12 +84,9 @@ final class DocumentBlobService: DocumentBlobServiceProtocol, @unchecked Sendabl
         let start = ContinuousClock.now
         logger.entry("store", "mimeType=\(mimeType)")
         do {
-            guard Self.supportedMimeTypes.contains(mimeType.lowercased()) else {
-                throw ModelError.unsupportedMimeType(mimeType: mimeType)
-            }
             let fmk = try fmkService.retrieveFMK(familyMemberID: personId.uuidString, primaryKey: primaryKey)
-            let (processed, thumbnail) = try process(plaintext: plaintext, mimeType: mimeType)
-            let hmac = Data(HMAC<SHA256>.authenticationCode(for: processed, using: fmk))
+            let processed = try process(plaintext: plaintext, mimeType: mimeType)
+            let hmac = Data(HMAC<SHA256>.authenticationCode(for: processed.data, using: fmk))
 
             let encryptedSize: Int
             if fileStorage.exists(contentHMAC: hmac) {
@@ -95,12 +94,12 @@ final class DocumentBlobService: DocumentBlobServiceProtocol, @unchecked Sendabl
                 // Return 0 as placeholder since we don't know the encrypted size without reading the file.
                 encryptedSize = 0
             } else {
-                let encrypted = try encryptionService.encrypt(processed, using: fmk).combined
+                let encrypted = try encryptionService.encrypt(processed.data, using: fmk).combined
                 _ = try fileStorage.store(encryptedData: encrypted, contentHMAC: hmac)
                 encryptedSize = encrypted.count
             }
             logger.exit("store", duration: ContinuousClock.now - start)
-            return StoredBlob(contentHMAC: hmac, encryptedSize: encryptedSize, thumbnailData: thumbnail)
+            return StoredBlob(contentHMAC: hmac, encryptedSize: encryptedSize, thumbnailData: processed.thumbnailData)
         } catch {
             logger.exitWithError("store", error: error, duration: ContinuousClock.now - start)
             throw error
@@ -159,20 +158,52 @@ final class DocumentBlobService: DocumentBlobServiceProtocol, @unchecked Sendabl
 
     // MARK: - Private
 
-    private func process(plaintext: Data, mimeType: String) throws -> (Data, Data?) {
-        if mimeType.lowercased().hasPrefix("image/") {
-            let compressed = try imageProcessor.compress(
-                plaintext,
-                maxSizeBytes: Self.maxFileSizeBytes,
-                maxDimension: Self.maxImageDimension
-            )
-            let thumbnail = try imageProcessor.generateThumbnail(plaintext, maxDimension: Self.thumbnailDimension)
-            return (compressed, thumbnail)
-        } else {
+    /// Returns `(data, thumbnail, detectedMimeType)`.
+    ///
+    /// - Images: validated via CGImageSource, original bytes stored as-is, JPEG thumbnail generated.
+    /// - PDFs: validated via PDFDocument, stored as-is.
+    /// - Other: rejected.
+    private func process(plaintext: Data, mimeType: String) throws -> ProcessedBlob {
+        if mimeType.lowercased().hasPrefix("image/") || isImageData(plaintext) {
+            let detectedMime = try imageProcessor.validateImage(plaintext)
             guard plaintext.count <= Self.maxFileSizeBytes else {
                 throw ModelError.documentTooLarge(maxSizeMB: Self.maxFileSizeBytes / (1_024 * 1_024))
             }
-            return (plaintext, nil)
+            let thumbnail = try imageProcessor.generateThumbnail(
+                plaintext,
+                maxDimension: Self.thumbnailDimension
+            )
+            return ProcessedBlob(data: plaintext, thumbnailData: thumbnail, detectedMimeType: detectedMime)
+        } else if mimeType.lowercased() == "application/pdf" {
+            guard plaintext.count <= Self.maxFileSizeBytes else {
+                throw ModelError.documentTooLarge(maxSizeMB: Self.maxFileSizeBytes / (1_024 * 1_024))
+            }
+            guard PDFDocument(data: plaintext) != nil else {
+                throw ModelError.imageProcessingFailed(reason: "File content is not a valid PDF")
+            }
+            return ProcessedBlob(data: plaintext, thumbnailData: nil, detectedMimeType: "application/pdf")
+        } else {
+            throw ModelError.unsupportedMimeType(mimeType: mimeType)
         }
+    }
+
+    /// Quick header check to detect image data regardless of the declared MIME type.
+    private func isImageData(_ data: Data) -> Bool {
+        guard data.count >= 4 else { return false }
+        let bytes = [UInt8](data.prefix(4))
+        // JPEG
+        if bytes[0] == 0xFF, bytes[1] == 0xD8 { return true }
+        // PNG
+        if bytes[0] == 0x89, bytes[1] == 0x50, bytes[2] == 0x4E, bytes[3] == 0x47 { return true }
+        // GIF
+        if bytes[0] == 0x47, bytes[1] == 0x49, bytes[2] == 0x46 { return true }
+        // TIFF (little-endian and big-endian)
+        if bytes[0] == 0x49, bytes[1] == 0x49 { return true }
+        if bytes[0] == 0x4D, bytes[1] == 0x4D { return true }
+        // BMP
+        if bytes[0] == 0x42, bytes[1] == 0x4D { return true }
+        // WebP (RIFF header)
+        if bytes[0] == 0x52, bytes[1] == 0x49, bytes[2] == 0x46, bytes[3] == 0x46 { return true }
+        return false
     }
 }

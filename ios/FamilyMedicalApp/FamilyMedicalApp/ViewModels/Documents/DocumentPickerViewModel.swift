@@ -4,6 +4,7 @@ import Observation
 import PhotosUI
 import SwiftUI
 import UIKit
+import UniformTypeIdentifiers
 
 /// ViewModel for selecting and managing DocumentReferenceRecord drafts in a medical record form.
 ///
@@ -182,9 +183,10 @@ final class DocumentPickerViewModel {
                 logger.info("Skipping photo item - could not load data")
                 return
             }
-            let mimeType = Self.detectMimeType(from: data)
-            let fileName = "Photo_\(Self.formatTimestamp(dateProvider())).\(Self.fileExtension(for: mimeType))"
-            try await storeAndAppend(plaintext: data, fileName: fileName, mimeType: mimeType)
+            // Pass "image/unknown" — DocumentBlobService will detect the real MIME
+            // via CGImageSource in process().
+            let fileName = "Photo_\(Self.formatTimestamp(dateProvider())).jpg"
+            try await storeAndAppend(plaintext: data, fileName: fileName, mimeType: "image/unknown")
         } catch let error as ModelError {
             errorMessage = error.userFacingMessage
             logger.logError(error, context: "DocumentPickerViewModel.addFromPhotoLibrary")
@@ -243,36 +245,7 @@ final class DocumentPickerViewModel {
         return formatter.string(from: date)
     }
 
-    private static func detectMimeType(from data: Data) -> String {
-        guard data.count >= 8 else { return "application/octet-stream" }
-        let bytes = [UInt8](data.prefix(8))
-        if bytes[0] == 0x89, bytes[1] == 0x50, bytes[2] == 0x4E, bytes[3] == 0x47 {
-            return "image/png"
-        }
-        if bytes[0] == 0xFF, bytes[1] == 0xD8, bytes[2] == 0xFF {
-            return "image/jpeg"
-        }
-        if bytes[0] == 0x25, bytes[1] == 0x50, bytes[2] == 0x44, bytes[3] == 0x46 {
-            return "application/pdf"
-        }
-        return "application/octet-stream"
-    }
-
-    private static func fileExtension(for mimeType: String) -> String {
-        switch mimeType {
-        case "image/jpeg": "jpg"
-        case "image/png": "png"
-        case "application/pdf": "pdf"
-        default: "bin"
-        }
-    }
-
     private static func mimeType(forPathExtension ext: String) -> String {
-        switch ext.lowercased() {
-        case "jpeg", "jpg": "image/jpeg"
-        case "png": "image/png"
-        case "pdf": "application/pdf"
-        default: "application/octet-stream"
-        }
+        UTType(filenameExtension: ext)?.preferredMIMEType ?? "application/octet-stream"
     }
 }

@@ -1,45 +1,36 @@
+import ImageIO
 import UIKit
+import UniformTypeIdentifiers
 
-/// Protocol for image compression and thumbnail generation
+/// Protocol for image validation and thumbnail generation
 ///
-/// This service handles preprocessing of images before encryption and storage.
-/// It ensures images are within size limits while maintaining quality.
+/// This service validates image data via CGImageSource (Apple's codec layer) and
+/// generates JPEG thumbnails for preview. Original image bytes are stored as-is —
+/// no re-encoding.
 protocol ImageProcessingServiceProtocol: Sendable {
-    /// Compress an image to fit within size and dimension limits
-    ///
-    /// - Parameters:
-    ///   - imageData: Raw image data (JPEG or PNG)
-    ///   - maxSizeBytes: Maximum file size in bytes
-    ///   - maxDimension: Maximum width or height in pixels
-    /// - Returns: Compressed JPEG data
-    /// - Throws: ModelError.imageProcessingFailed if processing fails
-    func compress(_ imageData: Data, maxSizeBytes: Int, maxDimension: Int) throws -> Data
+    /// Validate image data and detect its MIME type via CGImageSource.
+    /// Returns the detected MIME type. Throws if data is not a valid image.
+    func validateImage(_ imageData: Data) throws -> String
 
-    /// Generate a thumbnail from image data
+    /// Generate a JPEG thumbnail for preview.
+    ///
+    /// This performs a full pixel decode (UIImage(data:)) which validates
+    /// content integrity — corrupt pixels are caught here.
     ///
     /// - Parameters:
-    ///   - imageData: Raw image data (JPEG or PNG)
+    ///   - imageData: Raw image data
     ///   - maxDimension: Maximum width or height for thumbnail
     /// - Returns: Thumbnail as JPEG data
     /// - Throws: ModelError.imageProcessingFailed if processing fails
     func generateThumbnail(_ imageData: Data, maxDimension: Int) throws -> Data
 }
 
-/// Default implementation using UIKit for image processing
+/// Default implementation using ImageIO + UIKit for image processing
 final class ImageProcessingService: ImageProcessingServiceProtocol, @unchecked Sendable {
     // MARK: - Constants
 
-    /// Default JPEG compression quality for full images
-    private let defaultCompressionQuality: CGFloat = 0.85
-
     /// JPEG compression quality for thumbnails (smaller = smaller file)
     private let thumbnailCompressionQuality: CGFloat = 0.7
-
-    /// Minimum JPEG quality to try during iterative compression
-    private let minimumCompressionQuality: CGFloat = 0.1
-
-    /// Quality reduction step during iterative compression
-    private let qualityStep: CGFloat = 0.1
 
     // MARK: - Properties
 
@@ -55,28 +46,23 @@ final class ImageProcessingService: ImageProcessingServiceProtocol, @unchecked S
 
     // MARK: - ImageProcessingServiceProtocol
 
-    func compress(_ imageData: Data, maxSizeBytes: Int, maxDimension: Int) throws -> Data {
+    func validateImage(_ imageData: Data) throws -> String {
         let start = ContinuousClock.now
-        logger.entry("compress")
-        guard let image = UIImage(data: imageData) else {
-            logger.error("Failed to create image from data")
-            throw ModelError.imageProcessingFailed(reason: "Could not create image from data")
+        logger.entry("validateImage")
+        guard let source = CGImageSourceCreateWithData(imageData as CFData, nil) else {
+            throw ModelError.imageProcessingFailed(reason: "Could not create image source from data")
         }
-
-        // First, resize if needed
-        let resizedImage = resizeIfNeeded(image, maxDimension: maxDimension)
-
-        // Then compress to meet size limit
-        guard let compressedData = compressToSize(resizedImage, maxSizeBytes: maxSizeBytes) else {
-            logger.error("Failed to compress image to target size")
-            throw ModelError.imageProcessingFailed(reason: "Could not compress image to target size")
+        guard let utTypeString = CGImageSourceGetType(source) as? String,
+              let utType = UTType(utTypeString)
+        else {
+            throw ModelError.imageProcessingFailed(reason: "Could not determine image type")
         }
-
-        let ratio = Double(compressedData.count) / Double(imageData.count) * 100
-        logger.debug("Compressed image: \(imageData.count) → \(compressedData.count) bytes (\(Int(ratio))%)")
-
-        logger.exit("compress", duration: ContinuousClock.now - start)
-        return compressedData
+        guard let mimeType = utType.preferredMIMEType else {
+            throw ModelError.imageProcessingFailed(reason: "No MIME type for detected image format")
+        }
+        logger.debug("Detected image MIME: \(mimeType)")
+        logger.exit("validateImage", duration: ContinuousClock.now - start)
+        return mimeType
     }
 
     func generateThumbnail(_ imageData: Data, maxDimension: Int) throws -> Data {
@@ -130,32 +116,5 @@ final class ImageProcessingService: ImageProcessingServiceProtocol, @unchecked S
         return renderer.image { _ in
             image.draw(in: CGRect(origin: .zero, size: newSize))
         }
-    }
-
-    /// Iteratively compress image until it fits within size limit
-    private func compressToSize(_ image: UIImage, maxSizeBytes: Int) -> Data? {
-        var quality = defaultCompressionQuality
-
-        // Try initial compression
-        guard var data = image.jpegData(compressionQuality: quality) else {
-            return nil
-        }
-
-        // If already under limit, return
-        if data.count <= maxSizeBytes {
-            return data
-        }
-
-        // Iteratively reduce quality until we fit
-        while data.count > maxSizeBytes, quality > minimumCompressionQuality {
-            quality -= qualityStep
-            guard let newData = image.jpegData(compressionQuality: quality) else {
-                return nil
-            }
-            data = newData
-        }
-
-        // Return result even if still over limit (caller can decide)
-        return data
     }
 }
