@@ -20,10 +20,16 @@ final class MedicalRecordDetailViewModel {
     /// instead of the normal field list so they are not left staring at a blank screen.
     private(set) var decodeErrorMessage: String?
 
+    /// Attached DocumentReferenceRecords for this record.
+    var attachments: [PersistedDocumentReference] = []
+    /// Whether attachments are currently being loaded.
+    var isLoadingAttachments = false
+
     // MARK: - Dependencies
 
     private let providerRepository: ProviderRepositoryProtocol
     private let primaryKeyProvider: PrimaryKeyProviderProtocol
+    private let documentReferenceQueryService: DocumentReferenceQueryServiceProtocol?
     private let logger = LoggingService.shared.logger(category: .storage)
 
     // MARK: - Derived
@@ -43,7 +49,8 @@ final class MedicalRecordDetailViewModel {
         decryptedRecord: DecryptedRecord,
         providerRepository: ProviderRepositoryProtocol? = nil,
         primaryKeyProvider: PrimaryKeyProviderProtocol? = nil,
-        fmkService: FamilyMemberKeyServiceProtocol? = nil
+        fmkService: FamilyMemberKeyServiceProtocol? = nil,
+        documentReferenceQueryService: DocumentReferenceQueryServiceProtocol? = nil
     ) {
         self.person = person
         self.decryptedRecord = decryptedRecord
@@ -54,6 +61,7 @@ final class MedicalRecordDetailViewModel {
             fmkService: resolvedFmkService
         )
         self.primaryKeyProvider = primaryKeyProvider ?? PrimaryKeyProvider()
+        self.documentReferenceQueryService = documentReferenceQueryService
         decodeContent()
     }
 
@@ -80,6 +88,27 @@ final class MedicalRecordDetailViewModel {
             logger.logError(error, context: "MedicalRecordDetailViewModel.loadProviderDisplayIfNeeded")
             providerDisplayString = nil
         }
+    }
+
+    /// Load DocumentReferenceRecords attached to this record.
+    /// No-op for `.documentReference` records (they are documents themselves).
+    func loadAttachments() async {
+        guard recordType != .documentReference else { return }
+        guard let queryService = documentReferenceQueryService else { return }
+
+        isLoadingAttachments = true
+        do {
+            let primaryKey = try primaryKeyProvider.getPrimaryKey()
+            attachments = try await queryService.attachmentsFor(
+                sourceRecordId: decryptedRecord.record.id,
+                personId: person.id,
+                primaryKey: primaryKey
+            )
+        } catch {
+            logger.logError(error, context: "MedicalRecordDetailViewModel.loadAttachments")
+            attachments = []
+        }
+        isLoadingAttachments = false
     }
 
     // MARK: - Private
