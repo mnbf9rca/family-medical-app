@@ -100,14 +100,8 @@ struct MedicalRecordDetailView: View {
             }
         }
         .sheet(item: $selectedAttachment) { attachment in
-            if let primaryKey = try? PrimaryKeyProvider().getPrimaryKey() {
-                AttachmentViewerView(
-                    viewModel: AttachmentViewerViewModel(
-                        document: attachment.content,
-                        personId: person.id,
-                        primaryKey: primaryKey
-                    )
-                )
+            if let viewerVM = viewModel.makeViewerViewModel(for: attachment) {
+                AttachmentViewerView(viewModel: viewerVM)
             }
         }
         .task {

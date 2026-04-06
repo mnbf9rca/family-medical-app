@@ -153,16 +153,32 @@ final class MedicalRecordListViewModel {
     // MARK: - Private Deletion Helpers
 
     private func cascadeDeleteAttachments(_ attachments: [PersistedDocumentReference]) async {
+        // Fetch all DocumentReferences once up-front so HMAC dedup checks are O(1) per
+        // attachment instead of O(N) per attachment (avoids N*M decrypt-and-scan).
+        let allDocs: [PersistedDocumentReference]
+        do {
+            let primaryKey = try primaryKeyProvider.getPrimaryKey()
+            allDocs = try await documentReferenceQueryService?.allDocuments(
+                personId: person.id,
+                primaryKey: primaryKey
+            ) ?? []
+        } catch {
+            logger.logError(error, context: "MedicalRecordListViewModel.cascadeDeleteAttachments.prefetch")
+            allDocs = []
+        }
+        let deletingIds = Set(attachments.map(\.recordId))
+
         for attachment in attachments {
             do {
                 try await medicalRecordRepository.delete(id: attachment.recordId)
-                let isReferenced = try await checkHmacReferenced(
-                    contentHMAC: attachment.content.contentHMAC,
-                    excludingRecordId: attachment.recordId
-                )
+                let isReferencedElsewhere = allDocs.contains {
+                    $0.recordId != attachment.recordId &&
+                        !deletingIds.contains($0.recordId) &&
+                        $0.content.contentHMAC == attachment.content.contentHMAC
+                }
                 try await blobService?.deleteIfUnreferenced(
                     contentHMAC: attachment.content.contentHMAC,
-                    isReferencedElsewhere: isReferenced
+                    isReferencedElsewhere: isReferencedElsewhere
                 )
             } catch {
                 logger.logError(error, context: "MedicalRecordListViewModel.cascadeDeleteAttachments")
@@ -198,16 +214,5 @@ final class MedicalRecordListViewModel {
         } catch {
             logger.logError(error, context: "MedicalRecordListViewModel.detachAttachments.keys")
         }
-    }
-
-    private func checkHmacReferenced(contentHMAC: Data, excludingRecordId: UUID) async throws -> Bool {
-        guard let queryService = documentReferenceQueryService else { return false }
-        let primaryKey = try primaryKeyProvider.getPrimaryKey()
-        return try await queryService.isHmacReferencedElsewhere(
-            contentHMAC: contentHMAC,
-            excludingRecordId: excludingRecordId,
-            personId: person.id,
-            primaryKey: primaryKey
-        )
     }
 }

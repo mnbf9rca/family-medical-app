@@ -92,7 +92,8 @@ final class AttachmentBlobService: AttachmentBlobServiceProtocol, @unchecked Sen
             let encryptedSize: Int
             if fileStorage.exists(contentHMAC: hmac) {
                 // Dedup: blob already on disk — skip re-encryption and re-write.
-                encryptedSize = processed.count
+                // Return 0 as placeholder since we don't know the encrypted size without reading the file.
+                encryptedSize = 0
             } else {
                 let encrypted = try encryptionService.encrypt(processed, using: fmk).combined
                 _ = try fileStorage.store(encryptedData: encrypted, contentHMAC: hmac)
