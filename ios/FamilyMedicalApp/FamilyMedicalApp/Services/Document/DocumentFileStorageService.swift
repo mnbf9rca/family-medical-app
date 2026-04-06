@@ -87,7 +87,7 @@ final class DocumentFileStorageService: DocumentFileStorageServiceProtocol, @unc
 
         guard fileManager.fileExists(atPath: fileURL.path) else {
             logger.error("Document file not found")
-            throw ModelError.documentContentCorrupted
+            throw ModelError.documentNotFound()
         }
 
         do {

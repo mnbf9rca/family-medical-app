@@ -44,7 +44,7 @@ final class MockDocumentFileStorageService: DocumentFileStorageServiceProtocol, 
 
         let key = hmacKey(contentHMAC)
         guard let data = storage[key] else {
-            throw ModelError.documentNotFound(documentId: UUID())
+            throw ModelError.documentNotFound()
         }
 
         return data

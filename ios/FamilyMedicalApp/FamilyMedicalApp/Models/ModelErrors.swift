@@ -24,7 +24,7 @@ enum ModelError: LocalizedError, Equatable {
     case documentTooLarge(maxSizeMB: Int)
     case unsupportedMimeType(mimeType: String)
     case documentLimitExceeded(max: Int)
-    case documentNotFound(documentId: UUID)
+    case documentNotFound(documentId: UUID? = nil)
     case documentContentCorrupted
     case documentStorageFailed(reason: String)
     case imageProcessingFailed(reason: String)
@@ -81,7 +81,11 @@ enum ModelError: LocalizedError, Equatable {
         case let .documentLimitExceeded(max):
             "Maximum of \(max) attachments per record exceeded"
         case let .documentNotFound(documentId):
-            "Document \(documentId) not found"
+            if let documentId {
+                "Document \(documentId) not found"
+            } else {
+                "Document not found"
+            }
         case .documentContentCorrupted:
             "Document content could not be read"
         case let .documentStorageFailed(reason):

@@ -45,7 +45,6 @@ struct DocumentThumbnailViewTests {
         )
 
         let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.Button.self)
         _ = try inspected.find(ViewType.ZStack.self)
     }
 
@@ -61,7 +60,7 @@ struct DocumentThumbnailViewTests {
         )
 
         let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.Button.self)
+        _ = try inspected.find(ViewType.ZStack.self)
         _ = try inspected.find(ViewType.Image.self)
     }
 
@@ -76,7 +75,6 @@ struct DocumentThumbnailViewTests {
         )
 
         let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.Button.self)
         _ = try inspected.find(ViewType.ZStack.self)
     }
 
@@ -138,7 +136,7 @@ struct DocumentThumbnailViewTests {
         )
 
         let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.Button.self)
+        _ = try inspected.find(ViewType.ZStack.self)
         #expect(!tapped)
     }
 
@@ -155,7 +153,7 @@ struct DocumentThumbnailViewTests {
 
         let inspected = try view.inspect()
         let buttons = inspected.findAll(ViewType.Button.self)
-        #expect(buttons.count == 2)
+        #expect(buttons.count == 1)
         #expect(!removed)
     }
 
@@ -173,7 +171,7 @@ struct DocumentThumbnailViewTests {
 
         let inspected = try view.inspect()
         let buttons = inspected.findAll(ViewType.Button.self)
-        #expect(buttons.count == 2)
+        #expect(buttons.count == 1)
         #expect(!tapped)
         #expect(!removed)
     }
@@ -191,7 +189,7 @@ struct DocumentThumbnailViewTests {
 
         let inspected = try view.inspect()
         let buttons = inspected.findAll(ViewType.Button.self)
-        #expect(buttons.count == 2)
+        #expect(buttons.count == 1)
     }
 
     @Test
@@ -205,7 +203,7 @@ struct DocumentThumbnailViewTests {
 
         let inspected = try view.inspect()
         let buttons = inspected.findAll(ViewType.Button.self)
-        #expect(buttons.count == 1)
+        #expect(buttons.isEmpty)
     }
 
     // MARK: - Thumbnail Content Tests

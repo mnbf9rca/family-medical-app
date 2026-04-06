@@ -28,31 +28,30 @@ struct DocumentThumbnailView: View {
     }
 
     var body: some View {
-        Button(action: onTap) {
-            ZStack(alignment: .topTrailing) {
-                thumbnailContent
-                    .frame(width: size, height: size)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
+        ZStack(alignment: .topTrailing) {
+            thumbnailContent
+                .frame(width: size, height: size)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .onTapGesture(perform: onTap)
+                .accessibilityAddTraits(.isButton)
+                .accessibilityLabel(document.title)
+                .accessibilityHint("Tap to view full size")
 
-                if let onRemove {
-                    Button(action: onRemove) {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 20))
-                            .foregroundStyle(.white)
-                            .background(
-                                Circle()
-                                    .fill(.black.opacity(0.6))
-                                    .frame(width: 22, height: 22)
-                            )
-                    }
-                    .offset(x: 8, y: -8)
-                    .accessibilityLabel("Remove \(document.title)")
+            if let onRemove {
+                Button(action: onRemove) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 20))
+                        .foregroundStyle(.white)
+                        .background(
+                            Circle()
+                                .fill(.black.opacity(0.6))
+                                .frame(width: 22, height: 22)
+                        )
                 }
+                .offset(x: 8, y: -8)
+                .accessibilityLabel("Remove \(document.title)")
             }
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel(document.title)
-        .accessibilityHint("Tap to view full size")
     }
 
     @ViewBuilder private var thumbnailContent: some View {
