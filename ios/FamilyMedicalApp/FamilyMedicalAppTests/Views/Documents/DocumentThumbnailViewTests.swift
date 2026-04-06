@@ -5,7 +5,7 @@ import ViewInspector
 @testable import FamilyMedicalApp
 
 @MainActor
-struct AttachmentThumbnailViewTests {
+struct DocumentThumbnailViewTests {
     // MARK: - Test Fixtures
 
     func makeDocument(
@@ -38,7 +38,7 @@ struct AttachmentThumbnailViewTests {
     @Test
     func viewRendersSuccessfully() throws {
         let document = makeDocument()
-        let view = AttachmentThumbnailView(
+        let view = DocumentThumbnailView(
             document: document,
             onTap: {},
             onRemove: nil
@@ -54,7 +54,7 @@ struct AttachmentThumbnailViewTests {
         let thumbnailData = makeTestThumbnailData()
         let document = makeDocument(thumbnailData: thumbnailData)
 
-        let view = AttachmentThumbnailView(
+        let view = DocumentThumbnailView(
             document: document,
             onTap: {},
             onRemove: nil
@@ -68,7 +68,7 @@ struct AttachmentThumbnailViewTests {
     @Test
     func viewRendersWithCustomSize() throws {
         let document = makeDocument()
-        let view = AttachmentThumbnailView(
+        let view = DocumentThumbnailView(
             document: document,
             onTap: {},
             onRemove: nil,
@@ -85,7 +85,7 @@ struct AttachmentThumbnailViewTests {
     @Test
     func jpegDocument_showsImageIconWithJPGText() throws {
         let document = makeDocument(mimeType: "image/jpeg")
-        let view = AttachmentThumbnailView(
+        let view = DocumentThumbnailView(
             document: document,
             onTap: {},
             onRemove: nil
@@ -99,7 +99,7 @@ struct AttachmentThumbnailViewTests {
     @Test
     func pngDocument_showsImageIconWithPNGText() throws {
         let document = makeDocument(title: "photo.png", mimeType: "image/png")
-        let view = AttachmentThumbnailView(
+        let view = DocumentThumbnailView(
             document: document,
             onTap: {},
             onRemove: nil
@@ -113,7 +113,7 @@ struct AttachmentThumbnailViewTests {
     @Test
     func pdfDocument_showsDocumentIcon() throws {
         let document = makeDocument(title: "document.pdf", mimeType: "application/pdf")
-        let view = AttachmentThumbnailView(
+        let view = DocumentThumbnailView(
             document: document,
             onTap: {},
             onRemove: nil
@@ -131,7 +131,7 @@ struct AttachmentThumbnailViewTests {
         var tapped = false
         let document = makeDocument()
 
-        let view = AttachmentThumbnailView(
+        let view = DocumentThumbnailView(
             document: document,
             onTap: { tapped = true },
             onRemove: nil
@@ -147,7 +147,7 @@ struct AttachmentThumbnailViewTests {
         var removed = false
         let document = makeDocument()
 
-        let view = AttachmentThumbnailView(
+        let view = DocumentThumbnailView(
             document: document,
             onTap: {},
             onRemove: { removed = true }
@@ -165,7 +165,7 @@ struct AttachmentThumbnailViewTests {
         var removed = false
         let document = makeDocument()
 
-        let view = AttachmentThumbnailView(
+        let view = DocumentThumbnailView(
             document: document,
             onTap: { tapped = true },
             onRemove: { removed = true }
@@ -183,7 +183,7 @@ struct AttachmentThumbnailViewTests {
     @Test
     func viewWithRemoveCallback_showsRemoveButton() throws {
         let document = makeDocument()
-        let view = AttachmentThumbnailView(
+        let view = DocumentThumbnailView(
             document: document,
             onTap: {},
             onRemove: {}
@@ -197,7 +197,7 @@ struct AttachmentThumbnailViewTests {
     @Test
     func viewWithoutRemoveCallback_hidesRemoveButton() throws {
         let document = makeDocument()
-        let view = AttachmentThumbnailView(
+        let view = DocumentThumbnailView(
             document: document,
             onTap: {},
             onRemove: nil
@@ -219,7 +219,7 @@ struct AttachmentThumbnailViewTests {
             thumbnailData: thumbnailData
         )
 
-        let view = AttachmentThumbnailView(
+        let view = DocumentThumbnailView(
             document: document,
             onTap: {},
             onRemove: nil
@@ -237,7 +237,7 @@ struct AttachmentThumbnailViewTests {
             thumbnailData: nil
         )
 
-        let view = AttachmentThumbnailView(
+        let view = DocumentThumbnailView(
             document: document,
             onTap: {},
             onRemove: nil
@@ -256,7 +256,7 @@ struct AttachmentThumbnailViewTests {
             thumbnailData: nil
         )
 
-        let view = AttachmentThumbnailView(
+        let view = DocumentThumbnailView(
             document: document,
             onTap: {},
             onRemove: nil

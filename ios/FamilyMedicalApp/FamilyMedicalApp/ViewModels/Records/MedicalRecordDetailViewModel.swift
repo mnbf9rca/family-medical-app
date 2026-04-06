@@ -116,9 +116,9 @@ final class MedicalRecordDetailViewModel {
 
     /// Creates a viewer ViewModel for the given attachment, using this VM's existing
     /// primaryKeyProvider. Returns nil if the primary key cannot be retrieved.
-    func makeViewerViewModel(for attachment: PersistedDocumentReference) -> AttachmentViewerViewModel? {
+    func makeViewerViewModel(for attachment: PersistedDocumentReference) -> DocumentViewerViewModel? {
         guard let primaryKey = try? primaryKeyProvider.getPrimaryKey() else { return nil }
-        return AttachmentViewerViewModel(
+        return DocumentViewerViewModel(
             document: attachment.content,
             personId: person.id,
             primaryKey: primaryKey

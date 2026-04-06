@@ -5,11 +5,11 @@ import Observation
 /// ViewModel for viewing a DocumentReferenceRecord's decrypted content in full-screen.
 ///
 /// Handles loading, decrypting, and displaying attachment content with security features
-/// like export warnings and memory clearing. Content is fetched via AttachmentBlobService
+/// like export warnings and memory clearing. Content is fetched via DocumentBlobService
 /// keyed by the document's contentHMAC.
 @MainActor
 @Observable
-final class AttachmentViewerViewModel {
+final class DocumentViewerViewModel {
     // MARK: - State
 
     /// The DocumentReferenceRecord being viewed.
@@ -40,7 +40,7 @@ final class AttachmentViewerViewModel {
 
     // MARK: - Dependencies
 
-    @ObservationIgnored private let blobService: AttachmentBlobServiceProtocol
+    @ObservationIgnored private let blobService: DocumentBlobServiceProtocol
     @ObservationIgnored private let logger: TracingCategoryLogger
 
     // MARK: - Computed Properties
@@ -71,7 +71,7 @@ final class AttachmentViewerViewModel {
         document: DocumentReferenceRecord,
         personId: UUID,
         primaryKey: SymmetricKey,
-        blobService: AttachmentBlobServiceProtocol? = nil,
+        blobService: DocumentBlobServiceProtocol? = nil,
         logger: CategoryLoggerProtocol? = nil
     ) {
         self.document = document
@@ -101,10 +101,10 @@ final class AttachmentViewerViewModel {
             )
         } catch let error as ModelError {
             errorMessage = error.userFacingMessage
-            logger.logError(error, context: "AttachmentViewerViewModel.loadContent")
+            logger.logError(error, context: "DocumentViewerViewModel.loadContent")
         } catch {
             errorMessage = "Unable to load attachment. Please try again."
-            logger.logError(error, context: "AttachmentViewerViewModel.loadContent")
+            logger.logError(error, context: "DocumentViewerViewModel.loadContent")
         }
         isLoading = false
     }
@@ -144,7 +144,7 @@ final class AttachmentViewerViewModel {
             try data.write(to: fileURL)
             return fileURL
         } catch {
-            logger.logError(error, context: "AttachmentViewerViewModel.getTemporaryFileURL")
+            logger.logError(error, context: "DocumentViewerViewModel.getTemporaryFileURL")
             return nil
         }
     }
@@ -167,16 +167,16 @@ final class AttachmentViewerViewModel {
 
     // MARK: - Private
 
-    private static func createDefaultBlobService() -> AttachmentBlobServiceProtocol {
-        let fileStorage: AttachmentFileStorageServiceProtocol
+    private static func createDefaultBlobService() -> DocumentBlobServiceProtocol {
+        let fileStorage: DocumentFileStorageServiceProtocol
         do {
-            fileStorage = try AttachmentFileStorageService()
+            fileStorage = try DocumentFileStorageService()
         } catch {
             let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent("Attachments")
             try? FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
-            fileStorage = AttachmentFileStorageService(attachmentsDirectory: tempDir)
+            fileStorage = DocumentFileStorageService(attachmentsDirectory: tempDir)
         }
-        return AttachmentBlobService(
+        return DocumentBlobService(
             fileStorage: fileStorage,
             imageProcessor: ImageProcessingService(),
             encryptionService: EncryptionService(),

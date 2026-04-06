@@ -9,11 +9,11 @@ import UIKit
 ///
 /// The picker maintains an in-memory list of drafts produced from camera, photo-library, or
 /// document-picker input. Each draft wraps a `DocumentReferenceRecord` whose `contentHMAC` points
-/// at an encrypted blob stored via `AttachmentBlobService`. The parent form reads
+/// at an encrypted blob stored via `DocumentBlobService`. The parent form reads
 /// `allDocumentReferences` at save time and persists the records itself.
 @MainActor
 @Observable
-final class AttachmentPickerViewModel {
+final class DocumentPickerViewModel {
     // MARK: - Types
 
     /// A draft attachment — a DocumentReferenceRecord that has been blob-stored but whose
@@ -61,7 +61,7 @@ final class AttachmentPickerViewModel {
 
     // MARK: - Dependencies
 
-    @ObservationIgnored private let blobService: AttachmentBlobServiceProtocol
+    @ObservationIgnored private let blobService: DocumentBlobServiceProtocol
     @ObservationIgnored private let logger: TracingCategoryLogger
     @ObservationIgnored private let dateProvider: @Sendable () -> Date
     @ObservationIgnored private let uuidProvider: @Sendable () -> UUID
@@ -92,7 +92,7 @@ final class AttachmentPickerViewModel {
         sourceRecordId: UUID?,
         primaryKey: SymmetricKey,
         existing: [DocumentReferenceRecord] = [],
-        blobService: AttachmentBlobServiceProtocol? = nil,
+        blobService: DocumentBlobServiceProtocol? = nil,
         logger: CategoryLoggerProtocol? = nil,
         dateProvider: (@Sendable () -> Date)? = nil,
         uuidProvider: (@Sendable () -> UUID)? = nil
@@ -114,7 +114,7 @@ final class AttachmentPickerViewModel {
     /// Add a draft from a camera-captured image.
     func addFromCamera(_ image: UIImage) async {
         guard canAddMore else {
-            errorMessage = ModelError.attachmentLimitExceeded(max: Self.maxPerRecord).userFacingMessage
+            errorMessage = ModelError.documentLimitExceeded(max: Self.maxPerRecord).userFacingMessage
             return
         }
         isLoading = true
@@ -127,10 +127,10 @@ final class AttachmentPickerViewModel {
             try await storeAndAppend(plaintext: imageData, fileName: fileName, mimeType: "image/jpeg")
         } catch let error as ModelError {
             errorMessage = error.userFacingMessage
-            logger.logError(error, context: "AttachmentPickerViewModel.addFromCamera")
+            logger.logError(error, context: "DocumentPickerViewModel.addFromCamera")
         } catch {
             errorMessage = "Unable to add photo. Please try again."
-            logger.logError(error, context: "AttachmentPickerViewModel.addFromCamera")
+            logger.logError(error, context: "DocumentPickerViewModel.addFromCamera")
         }
         isLoading = false
     }
@@ -141,7 +141,7 @@ final class AttachmentPickerViewModel {
         errorMessage = nil
         for item in items {
             guard canAddMore else {
-                errorMessage = ModelError.attachmentLimitExceeded(max: Self.maxPerRecord).userFacingMessage
+                errorMessage = ModelError.documentLimitExceeded(max: Self.maxPerRecord).userFacingMessage
                 break
             }
             await loadAndAppendPhotoItem(item)
@@ -155,7 +155,7 @@ final class AttachmentPickerViewModel {
         errorMessage = nil
         for url in urls {
             guard canAddMore else {
-                errorMessage = ModelError.attachmentLimitExceeded(max: Self.maxPerRecord).userFacingMessage
+                errorMessage = ModelError.documentLimitExceeded(max: Self.maxPerRecord).userFacingMessage
                 break
             }
             await loadAndAppendURL(url)
@@ -187,9 +187,9 @@ final class AttachmentPickerViewModel {
             try await storeAndAppend(plaintext: data, fileName: fileName, mimeType: mimeType)
         } catch let error as ModelError {
             errorMessage = error.userFacingMessage
-            logger.logError(error, context: "AttachmentPickerViewModel.addFromPhotoLibrary")
+            logger.logError(error, context: "DocumentPickerViewModel.addFromPhotoLibrary")
         } catch {
-            logger.logError(error, context: "AttachmentPickerViewModel.addFromPhotoLibrary")
+            logger.logError(error, context: "DocumentPickerViewModel.addFromPhotoLibrary")
         }
     }
 
@@ -207,10 +207,10 @@ final class AttachmentPickerViewModel {
             try await storeAndAppend(plaintext: data, fileName: fileName, mimeType: mimeType)
         } catch let error as ModelError {
             errorMessage = error.userFacingMessage
-            logger.logError(error, context: "AttachmentPickerViewModel.addFromDocumentPicker")
+            logger.logError(error, context: "DocumentPickerViewModel.addFromDocumentPicker")
         } catch {
             errorMessage = "Unable to add document. Please try again."
-            logger.logError(error, context: "AttachmentPickerViewModel.addFromDocumentPicker")
+            logger.logError(error, context: "DocumentPickerViewModel.addFromDocumentPicker")
         }
     }
 
@@ -278,16 +278,16 @@ final class AttachmentPickerViewModel {
 
     // MARK: - Default Blob Service Factory
 
-    private static func createDefaultBlobService() -> AttachmentBlobServiceProtocol {
-        let fileStorage: AttachmentFileStorageServiceProtocol
+    private static func createDefaultBlobService() -> DocumentBlobServiceProtocol {
+        let fileStorage: DocumentFileStorageServiceProtocol
         do {
-            fileStorage = try AttachmentFileStorageService()
+            fileStorage = try DocumentFileStorageService()
         } catch {
             let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent("Attachments")
             try? FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
-            fileStorage = AttachmentFileStorageService(attachmentsDirectory: tempDir)
+            fileStorage = DocumentFileStorageService(attachmentsDirectory: tempDir)
         }
-        return AttachmentBlobService(
+        return DocumentBlobService(
             fileStorage: fileStorage,
             imageProcessor: ImageProcessingService(),
             encryptionService: EncryptionService(),

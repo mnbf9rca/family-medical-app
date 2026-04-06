@@ -5,12 +5,12 @@ import UIKit
 @testable import FamilyMedicalApp
 
 @MainActor
-struct AttachmentPickerViewModelTests {
+struct DocumentPickerViewModelTests {
     // MARK: - Test Fixtures
 
     struct TestFixtures {
-        let viewModel: AttachmentPickerViewModel
-        let blobService: MockAttachmentBlobService
+        let viewModel: DocumentPickerViewModel
+        let blobService: MockDocumentBlobService
         let personId: UUID
         let sourceRecordId: UUID?
         let primaryKey: SymmetricKey
@@ -20,11 +20,11 @@ struct AttachmentPickerViewModelTests {
         sourceRecordId: UUID? = UUID(),
         existing: [DocumentReferenceRecord] = []
     ) -> TestFixtures {
-        let blobService = MockAttachmentBlobService()
+        let blobService = MockDocumentBlobService()
         let primaryKey = SymmetricKey(size: .bits256)
         let personId = UUID()
 
-        let viewModel = AttachmentPickerViewModel(
+        let viewModel = DocumentPickerViewModel(
             personId: personId,
             sourceRecordId: sourceRecordId,
             primaryKey: primaryKey,
@@ -112,7 +112,7 @@ struct AttachmentPickerViewModelTests {
     @Test
     func canAddMore_atLimit_returnsFalse() {
         var existing: [DocumentReferenceRecord] = []
-        for index in 0 ..< AttachmentPickerViewModel.maxPerRecord {
+        for index in 0 ..< DocumentPickerViewModel.maxPerRecord {
             existing.append(makeDocumentReference(title: "f\(index).jpg", hmacByte: UInt8(index)))
         }
         let fixtures = makeFixtures(existing: existing)
@@ -123,7 +123,7 @@ struct AttachmentPickerViewModelTests {
     @Test
     func remainingSlots_empty_returnsMax() {
         let fixtures = makeFixtures()
-        #expect(fixtures.viewModel.remainingSlots == AttachmentPickerViewModel.maxPerRecord)
+        #expect(fixtures.viewModel.remainingSlots == DocumentPickerViewModel.maxPerRecord)
     }
 
     @Test
@@ -134,7 +134,7 @@ struct AttachmentPickerViewModelTests {
         ]
         let fixtures = makeFixtures(existing: existing)
 
-        #expect(fixtures.viewModel.remainingSlots == AttachmentPickerViewModel.maxPerRecord - 2)
+        #expect(fixtures.viewModel.remainingSlots == DocumentPickerViewModel.maxPerRecord - 2)
     }
 
     @Test
@@ -145,7 +145,7 @@ struct AttachmentPickerViewModelTests {
         ]
         let fixtures = makeFixtures(existing: existing)
 
-        #expect(fixtures.viewModel.countSummary == "2 of \(AttachmentPickerViewModel.maxPerRecord) attachments")
+        #expect(fixtures.viewModel.countSummary == "2 of \(DocumentPickerViewModel.maxPerRecord) attachments")
     }
 
     @Test
@@ -215,7 +215,7 @@ struct AttachmentPickerViewModelTests {
     @Test
     func addFromCamera_atLimit_setsError() async {
         var existing: [DocumentReferenceRecord] = []
-        for index in 0 ..< AttachmentPickerViewModel.maxPerRecord {
+        for index in 0 ..< DocumentPickerViewModel.maxPerRecord {
             existing.append(makeDocumentReference(title: "f\(index).jpg", hmacByte: UInt8(index)))
         }
         let fixtures = makeFixtures(existing: existing)

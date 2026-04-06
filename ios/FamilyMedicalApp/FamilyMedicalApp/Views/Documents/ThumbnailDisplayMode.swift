@@ -1,8 +1,8 @@
 import UIKit
 
-/// Determines how an attachment thumbnail should be displayed
+/// Determines how a document thumbnail should be displayed
 ///
-/// This enum extracts the display logic from AttachmentThumbnailView into a testable component.
+/// This enum extracts the display logic from DocumentThumbnailView into a testable component.
 /// The View can use this to decide which content to render without embedding the logic in the body.
 enum ThumbnailDisplayMode: Equatable {
     /// Display the actual thumbnail image

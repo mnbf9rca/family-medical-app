@@ -7,8 +7,8 @@ import SwiftUI
 /// Displays drafts as thumbnails with an "Add" button that opens a menu with camera,
 /// photo library, and document picker options. The parent form reads
 /// `viewModel.allDocumentReferences` at save time to persist the drafts.
-struct AttachmentPickerView: View {
-    @Bindable var viewModel: AttachmentPickerViewModel
+struct DocumentPickerView: View {
+    @Bindable var viewModel: DocumentPickerViewModel
 
     private let gridColumns = [
         GridItem(.adaptive(minimum: 70, maximum: 90), spacing: 8)
@@ -18,7 +18,7 @@ struct AttachmentPickerView: View {
         VStack(alignment: .leading, spacing: 8) {
             LazyVGrid(columns: gridColumns, alignment: .leading, spacing: 8) {
                 ForEach(viewModel.drafts) { draft in
-                    AttachmentThumbnailView(
+                    DocumentThumbnailView(
                         document: draft.content,
                         onTap: {
                             // Tapping is handled at the parent-form level later.
@@ -166,8 +166,8 @@ private enum PickerPreviewHelpers {
 #Preview("Empty") {
     Form {
         Section("Attachments") {
-            AttachmentPickerView(
-                viewModel: AttachmentPickerViewModel(
+            DocumentPickerView(
+                viewModel: DocumentPickerViewModel(
                     personId: UUID(),
                     sourceRecordId: UUID(),
                     primaryKey: SymmetricKey(size: .bits256),
@@ -186,8 +186,8 @@ private enum PickerPreviewHelpers {
 
     Form {
         Section("Attachments") {
-            AttachmentPickerView(
-                viewModel: AttachmentPickerViewModel(
+            DocumentPickerView(
+                viewModel: DocumentPickerViewModel(
                     personId: UUID(),
                     sourceRecordId: UUID(),
                     primaryKey: SymmetricKey(size: .bits256),
@@ -203,8 +203,8 @@ private enum PickerPreviewHelpers {
 
     Form {
         Section("Attachments") {
-            AttachmentPickerView(
-                viewModel: AttachmentPickerViewModel(
+            DocumentPickerView(
+                viewModel: DocumentPickerViewModel(
                     personId: UUID(),
                     sourceRecordId: UUID(),
                     primaryKey: SymmetricKey(size: .bits256),

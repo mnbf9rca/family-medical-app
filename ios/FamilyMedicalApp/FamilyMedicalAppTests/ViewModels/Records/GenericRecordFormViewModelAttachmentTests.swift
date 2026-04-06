@@ -11,40 +11,40 @@ struct GenericRecordFormViewModelAttachmentTests {
         try PersonTestHelper.makeTestPerson()
     }
 
-    // MARK: - createAttachmentPickerIfNeeded
+    // MARK: - createDocumentPickerIfNeeded
 
     @Test
-    func createAttachmentPickerIfNeeded_createsPickerForNonDocumentReferenceType() throws {
+    func createDocumentPickerIfNeeded_createsPickerForNonDocumentReferenceType() throws {
         let person = try makeTestPerson()
         let deps = FormViewModelDeps(personId: person.id)
         let vm = FormTestSupport.makeViewModel(person: person, recordType: .immunization, deps: deps)
 
-        vm.createAttachmentPickerIfNeeded()
+        vm.createDocumentPickerIfNeeded()
 
-        #expect(vm.attachmentPickerViewModel != nil)
+        #expect(vm.documentPickerViewModel != nil)
     }
 
     @Test
-    func createAttachmentPickerIfNeeded_doesNotCreatePickerForDocumentReferenceType() throws {
+    func createDocumentPickerIfNeeded_doesNotCreatePickerForDocumentReferenceType() throws {
         let person = try makeTestPerson()
         let deps = FormViewModelDeps(personId: person.id)
         let vm = FormTestSupport.makeViewModel(person: person, recordType: .documentReference, deps: deps)
 
-        vm.createAttachmentPickerIfNeeded()
+        vm.createDocumentPickerIfNeeded()
 
-        #expect(vm.attachmentPickerViewModel == nil)
+        #expect(vm.documentPickerViewModel == nil)
     }
 
     @Test
-    func createAttachmentPickerIfNeeded_doesNotRecreateIfAlreadyExists() throws {
+    func createDocumentPickerIfNeeded_doesNotRecreateIfAlreadyExists() throws {
         let person = try makeTestPerson()
         let deps = FormViewModelDeps(personId: person.id)
         let vm = FormTestSupport.makeViewModel(person: person, recordType: .immunization, deps: deps)
 
-        vm.createAttachmentPickerIfNeeded()
-        let first = vm.attachmentPickerViewModel
-        vm.createAttachmentPickerIfNeeded()
-        let second = vm.attachmentPickerViewModel
+        vm.createDocumentPickerIfNeeded()
+        let first = vm.documentPickerViewModel
+        vm.createDocumentPickerIfNeeded()
+        let second = vm.documentPickerViewModel
 
         #expect(first === second)
     }
@@ -55,7 +55,7 @@ struct GenericRecordFormViewModelAttachmentTests {
     func save_withPendingAttachments_persistsDocumentReferenceRecords() async throws {
         let person = try makeTestPerson()
         let deps = FormViewModelDeps(personId: person.id)
-        let blobService = MockAttachmentBlobService()
+        let blobService = MockDocumentBlobService()
         let vm = FormTestSupport.makeViewModel(
             person: person,
             recordType: .immunization,
@@ -66,8 +66,8 @@ struct GenericRecordFormViewModelAttachmentTests {
         vm.setValue(Date(), for: "occurrenceDate")
 
         // Create attachment picker and add a draft
-        vm.createAttachmentPickerIfNeeded()
-        let pickerVM = try #require(vm.attachmentPickerViewModel)
+        vm.createDocumentPickerIfNeeded()
+        let pickerVM = try #require(vm.documentPickerViewModel)
         await pickerVM.addFromDocumentPicker([makeTempPDFURL()])
 
         #expect(pickerVM.drafts.count == 1)
@@ -115,7 +115,7 @@ struct GenericRecordFormViewModelAttachmentTests {
     func save_withEmptyAttachmentPicker_onlySavesParentRecord() async throws {
         let person = try makeTestPerson()
         let deps = FormViewModelDeps(personId: person.id)
-        let blobService = MockAttachmentBlobService()
+        let blobService = MockDocumentBlobService()
         let vm = FormTestSupport.makeViewModel(
             person: person,
             recordType: .immunization,
@@ -125,7 +125,7 @@ struct GenericRecordFormViewModelAttachmentTests {
         vm.setValue("Pfizer", for: "vaccineCode")
         vm.setValue(Date(), for: "occurrenceDate")
 
-        vm.createAttachmentPickerIfNeeded()
+        vm.createDocumentPickerIfNeeded()
         // No drafts added
 
         let ok = await vm.save()
@@ -139,7 +139,7 @@ struct GenericRecordFormViewModelAttachmentTests {
         let person = try makeTestPerson()
         let deps = FormViewModelDeps(personId: person.id)
         deps.repo.shouldFailSave = true
-        let blobService = MockAttachmentBlobService()
+        let blobService = MockDocumentBlobService()
         let vm = FormTestSupport.makeViewModel(
             person: person,
             recordType: .immunization,
@@ -149,8 +149,8 @@ struct GenericRecordFormViewModelAttachmentTests {
         vm.setValue("Moderna", for: "vaccineCode")
         vm.setValue(Date(), for: "occurrenceDate")
 
-        vm.createAttachmentPickerIfNeeded()
-        let pickerVM = try #require(vm.attachmentPickerViewModel)
+        vm.createDocumentPickerIfNeeded()
+        let pickerVM = try #require(vm.documentPickerViewModel)
         await pickerVM.addFromDocumentPicker([makeTempPDFURL()])
 
         let ok = await vm.save()
@@ -164,7 +164,7 @@ struct GenericRecordFormViewModelAttachmentTests {
     func save_attachmentSaveError_doesNotFailParent() async throws {
         let person = try makeTestPerson()
         let deps = FormViewModelDeps(personId: person.id)
-        let blobService = MockAttachmentBlobService()
+        let blobService = MockDocumentBlobService()
         let vm = FormTestSupport.makeViewModel(
             person: person,
             recordType: .immunization,
@@ -174,8 +174,8 @@ struct GenericRecordFormViewModelAttachmentTests {
         vm.setValue("Moderna", for: "vaccineCode")
         vm.setValue(Date(), for: "occurrenceDate")
 
-        vm.createAttachmentPickerIfNeeded()
-        let pickerVM = try #require(vm.attachmentPickerViewModel)
+        vm.createDocumentPickerIfNeeded()
+        let pickerVM = try #require(vm.documentPickerViewModel)
         await pickerVM.addFromDocumentPicker([makeTempPDFURL()])
 
         // Make repo fail on the second save call (attachment), succeed on first (parent)

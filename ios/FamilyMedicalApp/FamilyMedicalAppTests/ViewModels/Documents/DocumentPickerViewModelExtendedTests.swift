@@ -4,14 +4,14 @@ import Testing
 import UIKit
 @testable import FamilyMedicalApp
 
-/// Extended tests for AttachmentPickerViewModel - Document picker flow and multi-draft scenarios.
+/// Extended tests for DocumentPickerViewModel - Document picker flow and multi-draft scenarios.
 @MainActor
-struct AttachmentPickerViewModelExtendedTests {
+struct DocumentPickerViewModelExtendedTests {
     // MARK: - Test Fixtures
 
     struct TestFixtures {
-        let viewModel: AttachmentPickerViewModel
-        let blobService: MockAttachmentBlobService
+        let viewModel: DocumentPickerViewModel
+        let blobService: MockDocumentBlobService
         let personId: UUID
         let sourceRecordId: UUID?
     }
@@ -20,11 +20,11 @@ struct AttachmentPickerViewModelExtendedTests {
         sourceRecordId: UUID? = UUID(),
         existing: [DocumentReferenceRecord] = []
     ) -> TestFixtures {
-        let blobService = MockAttachmentBlobService()
+        let blobService = MockDocumentBlobService()
         let primaryKey = SymmetricKey(size: .bits256)
         let personId = UUID()
 
-        let viewModel = AttachmentPickerViewModel(
+        let viewModel = DocumentPickerViewModel(
             personId: personId,
             sourceRecordId: sourceRecordId,
             primaryKey: primaryKey,
@@ -89,7 +89,7 @@ struct AttachmentPickerViewModelExtendedTests {
     @Test
     func addFromDocumentPicker_atLimit_setsError() async throws {
         var existing: [DocumentReferenceRecord] = []
-        for index in 0 ..< AttachmentPickerViewModel.maxPerRecord {
+        for index in 0 ..< DocumentPickerViewModel.maxPerRecord {
             existing.append(makeDocumentReference(title: "f\(index).jpg", hmacByte: UInt8(index)))
         }
         let fixtures = makeFixtures(existing: existing)
@@ -101,7 +101,7 @@ struct AttachmentPickerViewModelExtendedTests {
         await fixtures.viewModel.addFromDocumentPicker([url])
 
         #expect(fixtures.viewModel.errorMessage != nil)
-        #expect(fixtures.viewModel.drafts.count == AttachmentPickerViewModel.maxPerRecord)
+        #expect(fixtures.viewModel.drafts.count == DocumentPickerViewModel.maxPerRecord)
     }
 
     @Test
@@ -193,14 +193,14 @@ struct AttachmentPickerViewModelExtendedTests {
 
         await fixtures.viewModel.addFromDocumentPicker(urls)
 
-        #expect(fixtures.viewModel.drafts.count <= AttachmentPickerViewModel.maxPerRecord)
+        #expect(fixtures.viewModel.drafts.count <= DocumentPickerViewModel.maxPerRecord)
         #expect(!fixtures.viewModel.isLoading)
     }
 
     @Test
     func addFromDocumentPicker_serviceFailure_setsError() async throws {
         let fixtures = makeFixtures()
-        fixtures.blobService.storeError = ModelError.attachmentStorageFailed(reason: "boom")
+        fixtures.blobService.storeError = ModelError.documentStorageFailed(reason: "boom")
         let data = Data("%PDF-1.4".utf8)
         let url = try writeTempFile(name: "fail_\(UUID().uuidString).pdf", contents: data)
         defer { try? FileManager.default.removeItem(at: url) }
@@ -254,7 +254,7 @@ struct AttachmentPickerViewModelExtendedTests {
     @Test
     func addFromPhotoLibrary_atLimit_guardFires() {
         var existing: [DocumentReferenceRecord] = []
-        for index in 0 ..< AttachmentPickerViewModel.maxPerRecord {
+        for index in 0 ..< DocumentPickerViewModel.maxPerRecord {
             existing.append(makeDocumentReference(title: "f\(index).jpg", hmacByte: UInt8(index)))
         }
         let fixtures = makeFixtures(existing: existing)

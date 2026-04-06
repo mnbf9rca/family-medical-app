@@ -3,14 +3,14 @@ import Foundation
 import Testing
 @testable import FamilyMedicalApp
 
-/// Tests for AttachmentViewerViewModel initialization, computed properties, and content loading.
+/// Tests for DocumentViewerViewModel initialization, computed properties, and content loading.
 @MainActor
-struct AttachmentViewerViewModelTests {
+struct DocumentViewerViewModelTests {
     // MARK: - Test Fixtures
 
     struct TestFixtures {
-        let viewModel: AttachmentViewerViewModel
-        let blobService: MockAttachmentBlobService
+        let viewModel: DocumentViewerViewModel
+        let blobService: MockDocumentBlobService
         let document: DocumentReferenceRecord
         let personId: UUID
         let primaryKey: SymmetricKey
@@ -22,7 +22,7 @@ struct AttachmentViewerViewModelTests {
         fileSize: Int = 1_024,
         retrieveResult: Data = Data("test content".utf8)
     ) -> TestFixtures {
-        let blobService = MockAttachmentBlobService()
+        let blobService = MockDocumentBlobService()
         blobService.retrieveResult = retrieveResult
         let primaryKey = SymmetricKey(size: .bits256)
         let personId = UUID()
@@ -34,7 +34,7 @@ struct AttachmentViewerViewModelTests {
             contentHMAC: Data(repeating: 0xAB, count: 32)
         )
 
-        let viewModel = AttachmentViewerViewModel(
+        let viewModel = DocumentViewerViewModel(
             document: document,
             personId: personId,
             primaryKey: primaryKey,
@@ -170,7 +170,7 @@ struct AttachmentViewerViewModelTests {
     @Test
     func loadContent_failure_setsError() async {
         let fixtures = makeFixtures()
-        fixtures.blobService.retrieveError = ModelError.attachmentContentCorrupted
+        fixtures.blobService.retrieveError = ModelError.documentContentCorrupted
 
         await fixtures.viewModel.loadContent()
 
@@ -227,7 +227,7 @@ struct AttachmentViewerViewModelTests {
     @Test
     func loadContent_failure_setsLoadingFalse() async {
         let fixtures = makeFixtures()
-        fixtures.blobService.retrieveError = ModelError.attachmentContentCorrupted
+        fixtures.blobService.retrieveError = ModelError.documentContentCorrupted
 
         await fixtures.viewModel.loadContent()
 

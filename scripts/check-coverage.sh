@@ -52,8 +52,8 @@ FILE_EXCEPTIONS = {
     "EncryptionService.swift": 80.0,  # Defensive catch blocks unreachable without mocking CryptoKit
     "CoreDataStack.swift": 67.0,  # Test infrastructure methods (deleteAllData) difficult to test without mocking Core Data internals
     # SwiftUI Views - body closures don't execute in ViewInspector unit tests, UI tests don't count toward coverage
-    "AttachmentViewerView.swift": 55.0,  # Full-screen viewer with PDFKit/UIImage - thin closures call ViewModel methods
-    "AttachmentPickerView.swift": 63.0,  # PhotosPicker/Menu/sheet closures - CI has ~5% variance from local
+    "DocumentViewerView.swift": 55.0,  # Full-screen viewer with PDFKit/UIImage - thin closures call ViewModel methods
+    "DocumentPickerView.swift": 63.0,  # PhotosPicker/Menu/sheet closures - CI has ~5% variance from local
     "MedicalRecordListView.swift": 63.0,  # List with nav/sheet/dialog closures - remaining uncovered are lazily-evaluated SwiftUI closures unreachable from ViewInspector
     "PersonDetailView.swift": 72.0,  # Sheet/onChange closures - delegates to PersonDetailViewModel (100%)
     "AddPersonView.swift": 70.0,  # Form with TextField/Toggle/DatePicker closures - delegates to HomeViewModel. CI variance after UI test skips in #123, restore in #127
@@ -70,10 +70,10 @@ FILE_EXCEPTIONS = {
     # Demo Setup View - loading screen with animated sparkles; .task modifier calls ViewModel which is fully tested
     "DemoSetupView.swift": 0.0,
     # ViewModels with static factory methods that use production dependencies
-    "AttachmentViewerViewModel.swift": 71.0,  # createDefaultAttachmentService() uses real Core Data/services
-    "AttachmentPickerViewModel.swift": 58.0,  # createDefaultAttachmentService() + test seeding code; CI variance ~5%. Dropped during FHIR migration (#123) — restore to 68% in #127
+    "DocumentViewerViewModel.swift": 71.0,  # createDefaultDocumentService() uses real Core Data/services
+    "DocumentPickerViewModel.swift": 58.0,  # createDefaultDocumentService() + test seeding code; CI variance ~5%. Dropped during FHIR migration (#123) — restore to 68% in #127
     # Services with file system operations - CI/local variance in directory creation paths
-    "AttachmentFileStorageService.swift": 79.0,  # Local 80%, CI 89% - variance in default init tests
+    "DocumentFileStorageService.swift": 79.0,  # Local 80%, CI 89% - variance in default init tests
     # OPAQUE authentication - requires backend server for full integration testing
     # Coverage varies as code is refactored; tested via MockOpaqueAuthService in unit tests
     "OpaqueAuthService.swift": 13.0,  # Requires running OPAQUE server; actual ~15.8%

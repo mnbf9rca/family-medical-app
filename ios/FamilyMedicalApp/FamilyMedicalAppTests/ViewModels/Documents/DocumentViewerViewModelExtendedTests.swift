@@ -3,14 +3,14 @@ import Foundation
 import Testing
 @testable import FamilyMedicalApp
 
-/// Extended tests for AttachmentViewerViewModel - temp files, security, and error handling.
+/// Extended tests for DocumentViewerViewModel - temp files, security, and error handling.
 @MainActor
-struct AttachmentViewerViewModelExtendedTests {
+struct DocumentViewerViewModelExtendedTests {
     // MARK: - Test Fixtures
 
     struct TestFixtures {
-        let viewModel: AttachmentViewerViewModel
-        let blobService: MockAttachmentBlobService
+        let viewModel: DocumentViewerViewModel
+        let blobService: MockDocumentBlobService
         let document: DocumentReferenceRecord
         let personId: UUID
     }
@@ -19,7 +19,7 @@ struct AttachmentViewerViewModelExtendedTests {
         title: String = "test.jpg",
         mimeType: String = "image/jpeg"
     ) -> TestFixtures {
-        let blobService = MockAttachmentBlobService()
+        let blobService = MockDocumentBlobService()
         blobService.retrieveResult = Data("test content".utf8)
         let primaryKey = SymmetricKey(size: .bits256)
         let personId = UUID()
@@ -31,7 +31,7 @@ struct AttachmentViewerViewModelExtendedTests {
             contentHMAC: Data(repeating: 0xAB, count: 32)
         )
 
-        let viewModel = AttachmentViewerViewModel(
+        let viewModel = DocumentViewerViewModel(
             document: document,
             personId: personId,
             primaryKey: primaryKey,
@@ -142,7 +142,7 @@ struct AttachmentViewerViewModelExtendedTests {
 
     @Test
     func displayFileSize_formatsCorrectly() {
-        let blobService = MockAttachmentBlobService()
+        let blobService = MockDocumentBlobService()
         let primaryKey = SymmetricKey(size: .bits256)
         let document = DocumentReferenceRecord(
             title: "large.jpg",
@@ -151,7 +151,7 @@ struct AttachmentViewerViewModelExtendedTests {
             contentHMAC: Data(repeating: 0, count: 32)
         )
 
-        let viewModel = AttachmentViewerViewModel(
+        let viewModel = DocumentViewerViewModel(
             document: document,
             personId: UUID(),
             primaryKey: primaryKey,
@@ -166,7 +166,7 @@ struct AttachmentViewerViewModelExtendedTests {
     @Test
     func loadContent_modelError_setsUserFacingMessage() async {
         let fixtures = makeFixtures()
-        fixtures.blobService.retrieveError = ModelError.attachmentNotFound(attachmentId: UUID())
+        fixtures.blobService.retrieveError = ModelError.documentNotFound(documentId: UUID())
 
         await fixtures.viewModel.loadContent()
 

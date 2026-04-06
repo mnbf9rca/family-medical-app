@@ -1,19 +1,19 @@
 import CryptoKit
 import Foundation
 
-/// Storage of encrypted attachment blobs on disk, keyed by HMAC-SHA256 of plaintext (keyed with FMK).
+/// Storage of encrypted document blobs on disk, keyed by HMAC-SHA256 of plaintext (keyed with FMK).
 ///
 /// Per ADR-0004: blobs live separately from record metadata so that syncing a text-field edit does
 /// not re-upload the blob. HMAC keying with the Family Member Key prevents rainbow-table attacks
 /// on known content.
-protocol AttachmentBlobServiceProtocol: Sendable {
+protocol DocumentBlobServiceProtocol: Sendable {
     /// Encrypt, store, and return storage metadata for a plaintext blob.
     func store(
         plaintext: Data,
         mimeType: String,
         personId: UUID,
         primaryKey: SymmetricKey
-    ) async throws -> AttachmentBlobService.StoredBlob
+    ) async throws -> DocumentBlobService.StoredBlob
 
     /// Fetch and decrypt a previously stored blob.
     func retrieve(
@@ -27,7 +27,7 @@ protocol AttachmentBlobServiceProtocol: Sendable {
     func deleteIfUnreferenced(contentHMAC: Data, isReferencedElsewhere: Bool) async throws
 }
 
-final class AttachmentBlobService: AttachmentBlobServiceProtocol, @unchecked Sendable {
+final class DocumentBlobService: DocumentBlobServiceProtocol, @unchecked Sendable {
     // MARK: - Constants
 
     static let maxFileSizeBytes = 10 * 1_024 * 1_024
@@ -49,14 +49,14 @@ final class AttachmentBlobService: AttachmentBlobServiceProtocol, @unchecked Sen
 
     // MARK: - Dependencies
 
-    private let fileStorage: AttachmentFileStorageServiceProtocol
+    private let fileStorage: DocumentFileStorageServiceProtocol
     private let imageProcessor: ImageProcessingServiceProtocol
     private let encryptionService: EncryptionServiceProtocol
     private let fmkService: FamilyMemberKeyServiceProtocol
     private let logger: TracingCategoryLogger
 
     init(
-        fileStorage: AttachmentFileStorageServiceProtocol,
+        fileStorage: DocumentFileStorageServiceProtocol,
         imageProcessor: ImageProcessingServiceProtocol,
         encryptionService: EncryptionServiceProtocol,
         fmkService: FamilyMemberKeyServiceProtocol,
@@ -71,7 +71,7 @@ final class AttachmentBlobService: AttachmentBlobServiceProtocol, @unchecked Sen
         )
     }
 
-    // MARK: - AttachmentBlobServiceProtocol
+    // MARK: - DocumentBlobServiceProtocol
 
     func store(
         plaintext: Data,
@@ -122,8 +122,8 @@ final class AttachmentBlobService: AttachmentBlobServiceProtocol, @unchecked Sen
                 let payload = try EncryptedPayload(combined: encrypted)
                 plaintext = try encryptionService.decrypt(payload, using: fmk)
             } catch {
-                logger.logError(error, context: "AttachmentBlobService.retrieve.decrypt")
-                throw ModelError.attachmentContentCorrupted
+                logger.logError(error, context: "DocumentBlobService.retrieve.decrypt")
+                throw ModelError.documentContentCorrupted
             }
             logger.exit("retrieve", duration: ContinuousClock.now - start)
             return plaintext
@@ -151,7 +151,7 @@ final class AttachmentBlobService: AttachmentBlobServiceProtocol, @unchecked Sen
             return (compressed, thumbnail)
         } else {
             guard plaintext.count <= Self.maxFileSizeBytes else {
-                throw ModelError.attachmentTooLarge(maxSizeMB: Self.maxFileSizeBytes / (1_024 * 1_024))
+                throw ModelError.documentTooLarge(maxSizeMB: Self.maxFileSizeBytes / (1_024 * 1_024))
             }
             return (plaintext, nil)
         }

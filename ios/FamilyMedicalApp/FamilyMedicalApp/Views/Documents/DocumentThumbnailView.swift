@@ -4,7 +4,7 @@ import SwiftUI
 ///
 /// Shows the inline thumbnail image if available, or a file-type icon for PDFs and files
 /// without thumbnails. Uses `ThumbnailDisplayMode` so the display logic remains testable.
-struct AttachmentThumbnailView: View {
+struct DocumentThumbnailView: View {
     /// The document to display
     let document: DocumentReferenceRecord
 
@@ -119,7 +119,7 @@ private enum PreviewHelpers {
     let sampleImage = UIImage(systemName: "photo")
     let thumbnailData = sampleImage?.jpegData(compressionQuality: 0.7)
 
-    AttachmentThumbnailView(
+    DocumentThumbnailView(
         document: PreviewHelpers.makeDocument(
             title: "vaccine_card.jpg",
             mimeType: "image/jpeg",
@@ -132,7 +132,7 @@ private enum PreviewHelpers {
 }
 
 #Preview("PDF") {
-    AttachmentThumbnailView(
+    DocumentThumbnailView(
         document: PreviewHelpers.makeDocument(
             title: "prescription.pdf",
             mimeType: "application/pdf"
@@ -152,7 +152,7 @@ private enum PreviewHelpers {
 
     LazyVGrid(columns: [GridItem(.adaptive(minimum: 80))], spacing: 12) {
         ForEach(Array(documents.enumerated()), id: \.offset) { _, doc in
-            AttachmentThumbnailView(
+            DocumentThumbnailView(
                 document: doc,
                 onTap: {},
                 onRemove: {}

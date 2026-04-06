@@ -2,12 +2,12 @@ import CryptoKit
 import Foundation
 @testable import FamilyMedicalApp
 
-/// Test mock for AttachmentBlobServiceProtocol.
+/// Test mock for DocumentBlobServiceProtocol.
 ///
 /// Records all calls and returns deterministic results. Use `storeResult`, `retrieveResult`,
 /// `storeError`, etc. to control outputs per-test. If no explicit `storeResult` is set the
 /// mock synthesizes a StoredBlob using SHA256 of the plaintext as the HMAC.
-final class MockAttachmentBlobService: AttachmentBlobServiceProtocol, @unchecked Sendable {
+final class MockDocumentBlobService: DocumentBlobServiceProtocol, @unchecked Sendable {
     struct StoreCall {
         let plaintext: Data
         let mimeType: String
@@ -18,7 +18,7 @@ final class MockAttachmentBlobService: AttachmentBlobServiceProtocol, @unchecked
     var retrieveCalls: [Data] = []
     var deleteCalls: [Data] = []
 
-    var storeResult: AttachmentBlobService.StoredBlob?
+    var storeResult: DocumentBlobService.StoredBlob?
     var storeError: Error?
     var retrieveResult: Data?
     var retrieveError: Error?
@@ -29,7 +29,7 @@ final class MockAttachmentBlobService: AttachmentBlobServiceProtocol, @unchecked
         mimeType: String,
         personId: UUID,
         primaryKey _: SymmetricKey
-    ) async throws -> AttachmentBlobService.StoredBlob {
+    ) async throws -> DocumentBlobService.StoredBlob {
         storeCalls.append(StoreCall(plaintext: plaintext, mimeType: mimeType, personId: personId))
         if let storeError {
             throw storeError
@@ -39,7 +39,7 @@ final class MockAttachmentBlobService: AttachmentBlobServiceProtocol, @unchecked
         }
         let hmac = Data(SHA256.hash(data: plaintext))
         let thumbnail: Data? = mimeType.lowercased().hasPrefix("image/") ? Data([0xAA, 0xBB]) : nil
-        return AttachmentBlobService.StoredBlob(
+        return DocumentBlobService.StoredBlob(
             contentHMAC: hmac,
             encryptedSize: plaintext.count,
             thumbnailData: thumbnail

@@ -3,13 +3,13 @@ import Foundation
 import Testing
 @testable import FamilyMedicalApp
 
-@Suite("AttachmentBlobService Tests")
-struct AttachmentBlobServiceTests {
+@Suite("DocumentBlobService Tests")
+struct DocumentBlobServiceTests {
     // MARK: - Fixtures
 
     private struct Fixture {
-        let service: AttachmentBlobService
-        let fileStorage: MockAttachmentFileStorageService
+        let service: DocumentBlobService
+        let fileStorage: MockDocumentFileStorageService
         let imageProcessor: MockImageProcessingService
         let encryption: MockEncryptionService
         let fmkService: MockFamilyMemberKeyService
@@ -18,7 +18,7 @@ struct AttachmentBlobServiceTests {
     }
 
     private static func makeFixture() -> Fixture {
-        let fileStorage = MockAttachmentFileStorageService()
+        let fileStorage = MockDocumentFileStorageService()
         let imageProcessor = MockImageProcessingService()
         let encryption = MockEncryptionService()
         let fmkService = MockFamilyMemberKeyService()
@@ -26,7 +26,7 @@ struct AttachmentBlobServiceTests {
         let primaryKey = SymmetricKey(size: .bits256)
         let fmk = SymmetricKey(size: .bits256)
         fmkService.setFMK(fmk, for: personId.uuidString)
-        let service = AttachmentBlobService(
+        let service = DocumentBlobService(
             fileStorage: fileStorage,
             imageProcessor: imageProcessor,
             encryptionService: encryption,
@@ -113,7 +113,7 @@ struct AttachmentBlobServiceTests {
     @Test("store rejects oversized non-image files")
     func storeRejectsOversizedFile() async throws {
         let ctx = Self.makeFixture()
-        let tooBig = Data(count: AttachmentBlobService.maxFileSizeBytes + 1)
+        let tooBig = Data(count: DocumentBlobService.maxFileSizeBytes + 1)
         await #expect(throws: ModelError.self) {
             _ = try await ctx.service.store(
                 plaintext: tooBig,
@@ -187,7 +187,7 @@ struct AttachmentBlobServiceTests {
         }
     }
 
-    @Test("retrieve surfaces attachmentContentCorrupted when decryption fails")
+    @Test("retrieve surfaces documentContentCorrupted when decryption fails")
     func retrieveCorruptedBlob() async throws {
         let ctx = Self.makeFixture()
         // Seed storage with arbitrary "encrypted" bytes the mock encryption does not know

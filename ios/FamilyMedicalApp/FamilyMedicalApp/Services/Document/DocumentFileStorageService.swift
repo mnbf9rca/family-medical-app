@@ -1,34 +1,34 @@
 import Foundation
 
-/// Protocol for storing and retrieving encrypted attachment content on the filesystem
+/// Protocol for storing and retrieving encrypted document content on the filesystem
 ///
-/// This service handles the actual file storage of encrypted attachment data, separate from
+/// This service handles the actual file storage of encrypted document data, separate from
 /// the metadata stored in Core Data. Files are named by their content HMAC for deduplication.
 ///
-/// Per ADR-0004: Attachments are stored separately from medical record metadata to enable
+/// Per ADR-0004: Document blobs are stored separately from medical record metadata to enable
 /// efficient sync (editing a note field doesn't re-upload attached photos).
-protocol AttachmentFileStorageServiceProtocol: Sendable {
+protocol DocumentFileStorageServiceProtocol: Sendable {
     /// Store encrypted data and return the storage URL
     ///
     /// - Parameters:
-    ///   - encryptedData: The encrypted attachment content
+    ///   - encryptedData: The encrypted document content
     ///   - contentHMAC: HMAC-SHA256 of the plaintext content (keyed with FMK)
     /// - Returns: URL where the data was stored
-    /// - Throws: ModelError.attachmentStorageFailed if storage fails
+    /// - Throws: ModelError.documentStorageFailed if storage fails
     func store(encryptedData: Data, contentHMAC: Data) throws -> URL
 
     /// Retrieve encrypted content by its HMAC
     ///
     /// - Parameter contentHMAC: The content HMAC used as filename
-    /// - Returns: The encrypted attachment data
-    /// - Throws: ModelError.attachmentNotFound if file doesn't exist,
-    ///           ModelError.attachmentContentCorrupted if read fails
+    /// - Returns: The encrypted document data
+    /// - Throws: ModelError.documentNotFound if file doesn't exist,
+    ///           ModelError.documentContentCorrupted if read fails
     func retrieve(contentHMAC: Data) throws -> Data
 
     /// Delete content by its HMAC
     ///
     /// - Parameter contentHMAC: The content HMAC of the file to delete
-    /// - Throws: ModelError.attachmentStorageFailed if deletion fails
+    /// - Throws: ModelError.documentStorageFailed if deletion fails
     func delete(contentHMAC: Data) throws
 
     /// Check if content exists for the given HMAC
@@ -38,8 +38,8 @@ protocol AttachmentFileStorageServiceProtocol: Sendable {
     func exists(contentHMAC: Data) -> Bool
 }
 
-/// Default implementation storing attachments in Application Support/Attachments/
-final class AttachmentFileStorageService: AttachmentFileStorageServiceProtocol, @unchecked Sendable {
+/// Default implementation storing documents in Application Support/Attachments/
+final class DocumentFileStorageService: DocumentFileStorageServiceProtocol, @unchecked Sendable {
     // MARK: - Properties
 
     private let fileManager: FileManager
@@ -62,7 +62,7 @@ final class AttachmentFileStorageService: AttachmentFileStorageServiceProtocol, 
         self.logger = logger ?? LoggingService.shared.logger(category: .storage)
     }
 
-    // MARK: - AttachmentFileStorageServiceProtocol
+    // MARK: - DocumentFileStorageServiceProtocol
 
     func store(encryptedData: Data, contentHMAC: Data) throws -> URL {
         let fileURL = fileURL(for: contentHMAC)
@@ -74,11 +74,11 @@ final class AttachmentFileStorageService: AttachmentFileStorageServiceProtocol, 
 
         do {
             try encryptedData.write(to: fileURL, options: [.atomic, .completeFileProtection])
-            logger.debug("Stored attachment: \(encryptedData.count) bytes")
+            logger.debug("Stored document: \(encryptedData.count) bytes")
             return fileURL
         } catch {
-            logger.logError(error, context: "AttachmentFileStorageService.store")
-            throw ModelError.attachmentStorageFailed(reason: error.localizedDescription)
+            logger.logError(error, context: "DocumentFileStorageService.store")
+            throw ModelError.documentStorageFailed(reason: error.localizedDescription)
         }
     }
 
@@ -86,15 +86,15 @@ final class AttachmentFileStorageService: AttachmentFileStorageServiceProtocol, 
         let fileURL = fileURL(for: contentHMAC)
 
         guard fileManager.fileExists(atPath: fileURL.path) else {
-            logger.error("Attachment file not found")
-            throw ModelError.attachmentNotFound(attachmentId: UUID()) // Generic UUID since we only have HMAC
+            logger.error("Document file not found")
+            throw ModelError.documentNotFound(documentId: UUID()) // Generic UUID since we only have HMAC
         }
 
         do {
             return try Data(contentsOf: fileURL)
         } catch {
-            logger.logError(error, context: "AttachmentFileStorageService.retrieve")
-            throw ModelError.attachmentContentCorrupted
+            logger.logError(error, context: "DocumentFileStorageService.retrieve")
+            throw ModelError.documentContentCorrupted
         }
     }
 
@@ -108,10 +108,10 @@ final class AttachmentFileStorageService: AttachmentFileStorageServiceProtocol, 
 
         do {
             try fileManager.removeItem(at: fileURL)
-            logger.debug("Deleted attachment file")
+            logger.debug("Deleted document file")
         } catch {
-            logger.logError(error, context: "AttachmentFileStorageService.delete")
-            throw ModelError.attachmentStorageFailed(reason: error.localizedDescription)
+            logger.logError(error, context: "DocumentFileStorageService.delete")
+            throw ModelError.documentStorageFailed(reason: error.localizedDescription)
         }
     }
 
@@ -139,7 +139,7 @@ final class AttachmentFileStorageService: AttachmentFileStorageServiceProtocol, 
                 in: .userDomainMask
             ).first
         else {
-            throw ModelError.attachmentStorageFailed(reason: "Application Support directory not found")
+            throw ModelError.documentStorageFailed(reason: "Application Support directory not found")
         }
 
         let attachmentsURL = appSupportURL.appendingPathComponent("Attachments", isDirectory: true)
@@ -152,7 +152,7 @@ final class AttachmentFileStorageService: AttachmentFileStorageServiceProtocol, 
                     attributes: [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication]
                 )
             } catch {
-                throw ModelError.attachmentStorageFailed(reason: error.localizedDescription)
+                throw ModelError.documentStorageFailed(reason: error.localizedDescription)
             }
         }
 

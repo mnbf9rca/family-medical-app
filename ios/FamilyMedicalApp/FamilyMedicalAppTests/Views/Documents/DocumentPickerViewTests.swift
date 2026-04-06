@@ -5,12 +5,12 @@ import ViewInspector
 @testable import FamilyMedicalApp
 
 @MainActor
-struct AttachmentPickerViewTests {
+struct DocumentPickerViewTests {
     // MARK: - Test Fixtures
 
-    func makeViewModel(existing: [DocumentReferenceRecord] = []) -> AttachmentPickerViewModel {
-        let blobService = MockAttachmentBlobService()
-        return AttachmentPickerViewModel(
+    func makeViewModel(existing: [DocumentReferenceRecord] = []) -> DocumentPickerViewModel {
+        let blobService = MockDocumentBlobService()
+        return DocumentPickerViewModel(
             personId: UUID(),
             sourceRecordId: UUID(),
             primaryKey: SymmetricKey(size: .bits256),
@@ -37,7 +37,7 @@ struct AttachmentPickerViewTests {
     @Test
     func viewRendersSuccessfully() throws {
         let viewModel = makeViewModel()
-        let view = AttachmentPickerView(viewModel: viewModel)
+        let view = DocumentPickerView(viewModel: viewModel)
 
         let inspected = try view.inspect()
         _ = try inspected.find(ViewType.VStack.self)
@@ -47,7 +47,7 @@ struct AttachmentPickerViewTests {
     func viewRendersWithExistingDrafts() throws {
         let document = makeDocument()
         let viewModel = makeViewModel(existing: [document])
-        let view = AttachmentPickerView(viewModel: viewModel)
+        let view = DocumentPickerView(viewModel: viewModel)
 
         let inspected = try view.inspect()
         _ = try inspected.find(ViewType.LazyVGrid.self)
@@ -56,7 +56,7 @@ struct AttachmentPickerViewTests {
     @Test
     func viewShowsCountSummary() throws {
         let viewModel = makeViewModel()
-        let view = AttachmentPickerView(viewModel: viewModel)
+        let view = DocumentPickerView(viewModel: viewModel)
 
         let text = try view.inspect().find(text: viewModel.countSummary)
         #expect(try text.string() == viewModel.countSummary)
@@ -65,7 +65,7 @@ struct AttachmentPickerViewTests {
     @Test
     func viewShowsAddButton() throws {
         let viewModel = makeViewModel()
-        let view = AttachmentPickerView(viewModel: viewModel)
+        let view = DocumentPickerView(viewModel: viewModel)
 
         #expect(viewModel.canAddMore)
         let inspected = try view.inspect()
@@ -75,11 +75,11 @@ struct AttachmentPickerViewTests {
     @Test
     func viewWithMaxDrafts_hidesAddButton() throws {
         var documents: [DocumentReferenceRecord] = []
-        for index in 0 ..< AttachmentPickerViewModel.maxPerRecord {
+        for index in 0 ..< DocumentPickerViewModel.maxPerRecord {
             documents.append(makeDocument(title: "file\(index).jpg", hmacByte: UInt8(index)))
         }
         let viewModel = makeViewModel(existing: documents)
-        let view = AttachmentPickerView(viewModel: viewModel)
+        let view = DocumentPickerView(viewModel: viewModel)
 
         #expect(!viewModel.canAddMore)
         let inspected = try view.inspect()
@@ -95,7 +95,7 @@ struct AttachmentPickerViewTests {
         let viewModel = makeViewModel()
         viewModel.errorMessage = "Test error message"
 
-        let view = AttachmentPickerView(viewModel: viewModel)
+        let view = DocumentPickerView(viewModel: viewModel)
         let inspected = try view.inspect()
         let errorText = try inspected.find(text: "Test error message")
         #expect(try errorText.string() == "Test error message")
@@ -105,7 +105,7 @@ struct AttachmentPickerViewTests {
     func viewHidesErrorWhenNil() throws {
         let viewModel = makeViewModel()
         viewModel.errorMessage = nil
-        let view = AttachmentPickerView(viewModel: viewModel)
+        let view = DocumentPickerView(viewModel: viewModel)
 
         let inspected = try view.inspect()
         #expect(throws: (any Error).self) {
@@ -122,7 +122,7 @@ struct AttachmentPickerViewTests {
         let viewModel = makeViewModel()
         viewModel.isLoading = true
 
-        let view = AttachmentPickerView(viewModel: viewModel)
+        let view = DocumentPickerView(viewModel: viewModel)
         let inspected = try view.inspect()
         _ = try inspected.find(ViewType.ProgressView.self)
     }
@@ -132,7 +132,7 @@ struct AttachmentPickerViewTests {
         let viewModel = makeViewModel()
         viewModel.isLoading = false
 
-        let view = AttachmentPickerView(viewModel: viewModel)
+        let view = DocumentPickerView(viewModel: viewModel)
         let inspected = try view.inspect()
         #expect(throws: (any Error).self) {
             _ = try inspected.find(ViewType.ProgressView.self)
@@ -148,7 +148,7 @@ struct AttachmentPickerViewTests {
             makeDocument(title: "photo2.jpg", hmacByte: 0x02),
             makeDocument(title: "doc.pdf", mimeType: "application/pdf", hmacByte: 0x03)
         ])
-        let view = AttachmentPickerView(viewModel: viewModel)
+        let view = DocumentPickerView(viewModel: viewModel)
 
         let inspected = try view.inspect()
         _ = try inspected.find(ViewType.LazyVGrid.self)
@@ -160,7 +160,7 @@ struct AttachmentPickerViewTests {
     @Test
     func addButtonExists_whenBelowLimit() throws {
         let viewModel = makeViewModel()
-        let view = AttachmentPickerView(viewModel: viewModel)
+        let view = DocumentPickerView(viewModel: viewModel)
 
         let inspected = try view.inspect()
         _ = try inspected.find(ViewType.Menu.self)
@@ -169,11 +169,11 @@ struct AttachmentPickerViewTests {
     @Test
     func addButtonHidden_whenAtLimit() throws {
         var documents: [DocumentReferenceRecord] = []
-        for index in 0 ..< AttachmentPickerViewModel.maxPerRecord {
+        for index in 0 ..< DocumentPickerViewModel.maxPerRecord {
             documents.append(makeDocument(title: "file\(index).jpg", hmacByte: UInt8(index)))
         }
         let viewModel = makeViewModel(existing: documents)
-        let view = AttachmentPickerView(viewModel: viewModel)
+        let view = DocumentPickerView(viewModel: viewModel)
 
         let inspected = try view.inspect()
         #expect(throws: (any Error).self) {
@@ -188,7 +188,7 @@ struct AttachmentPickerViewTests {
         let viewModel = makeViewModel(existing: [
             makeDocument(title: "test_photo.jpg", hmacByte: 0x01)
         ])
-        let view = AttachmentPickerView(viewModel: viewModel)
+        let view = DocumentPickerView(viewModel: viewModel)
 
         let inspected = try view.inspect()
         _ = try inspected.find(ViewType.LazyVGrid.self)
@@ -197,7 +197,7 @@ struct AttachmentPickerViewTests {
     @Test
     func emptyGrid_rendersWithOnlyAddButton() throws {
         let viewModel = makeViewModel(existing: [])
-        let view = AttachmentPickerView(viewModel: viewModel)
+        let view = DocumentPickerView(viewModel: viewModel)
 
         let inspected = try view.inspect()
         _ = try inspected.find(ViewType.LazyVGrid.self)
@@ -235,7 +235,7 @@ struct AttachmentPickerViewTests {
     @Test
     func menuContainsPhotoLibraryButton() throws {
         let viewModel = makeViewModel()
-        let view = AttachmentPickerView(viewModel: viewModel)
+        let view = DocumentPickerView(viewModel: viewModel)
 
         let inspected = try view.inspect()
         let menu = try inspected.find(ViewType.Menu.self)
@@ -246,7 +246,7 @@ struct AttachmentPickerViewTests {
     @Test
     func menuContainsDocumentPickerButton() throws {
         let viewModel = makeViewModel()
-        let view = AttachmentPickerView(viewModel: viewModel)
+        let view = DocumentPickerView(viewModel: viewModel)
 
         let inspected = try view.inspect()
         let menu = try inspected.find(ViewType.Menu.self)
@@ -262,18 +262,18 @@ struct AttachmentPickerViewTests {
             makeDocument(title: "photo1.jpg", hmacByte: 0x01),
             makeDocument(title: "photo2.jpg", hmacByte: 0x02)
         ])
-        let view = AttachmentPickerView(viewModel: viewModel)
+        let view = DocumentPickerView(viewModel: viewModel)
 
         let inspected = try view.inspect()
         let grid = try inspected.find(ViewType.LazyVGrid.self)
-        let thumbnails = grid.findAll(AttachmentThumbnailView.self)
+        let thumbnails = grid.findAll(DocumentThumbnailView.self)
         #expect(thumbnails.count == 2)
     }
 
     @Test
     func accessibilityLabel_isSetCorrectly() throws {
         let viewModel = makeViewModel()
-        let view = AttachmentPickerView(viewModel: viewModel)
+        let view = DocumentPickerView(viewModel: viewModel)
 
         let inspected = try view.inspect()
         let vstack = try inspected.find(ViewType.VStack.self)
@@ -284,7 +284,7 @@ struct AttachmentPickerViewTests {
     @Test
     func gridUsesAdaptiveColumns() throws {
         let viewModel = makeViewModel()
-        let view = AttachmentPickerView(viewModel: viewModel)
+        let view = DocumentPickerView(viewModel: viewModel)
 
         let inspected = try view.inspect()
         let grid = try inspected.find(ViewType.LazyVGrid.self)

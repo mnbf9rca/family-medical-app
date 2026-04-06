@@ -165,10 +165,10 @@ struct MedicalRecordDetailViewActionTests {
         ViewHosting.host(view: view)
 
         // Find the attachment thumbnail and tap the Button wrapping it.
-        // AttachmentThumbnailView uses Button(action: onTap), not .onTapGesture.
+        // DocumentThumbnailView uses Button(action: onTap), not .onTapGesture.
         let inspected = try view.inspect()
         _ = try inspected.find(text: "Attachments")
-        let thumbnail = try inspected.find(AttachmentThumbnailView.self)
+        let thumbnail = try inspected.find(DocumentThumbnailView.self)
         let tapButton = try thumbnail.find(ViewType.Button.self)
         try tapButton.tap()
 

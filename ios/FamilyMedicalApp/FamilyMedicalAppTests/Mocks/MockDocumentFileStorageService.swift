@@ -1,8 +1,8 @@
 import Foundation
 @testable import FamilyMedicalApp
 
-/// Mock implementation of AttachmentFileStorageService for testing
-final class MockAttachmentFileStorageService: AttachmentFileStorageServiceProtocol, @unchecked Sendable {
+/// Mock implementation of DocumentFileStorageService for testing
+final class MockDocumentFileStorageService: DocumentFileStorageServiceProtocol, @unchecked Sendable {
     // MARK: - State
 
     /// In-memory storage keyed by HMAC hex string
@@ -21,13 +21,13 @@ final class MockAttachmentFileStorageService: AttachmentFileStorageServiceProtoc
     var deleteCalls: [Data] = []
     var existsCalls: [Data] = []
 
-    // MARK: - AttachmentFileStorageServiceProtocol
+    // MARK: - DocumentFileStorageServiceProtocol
 
     func store(encryptedData: Data, contentHMAC: Data) throws -> URL {
         storeCalls.append((encryptedData, contentHMAC))
 
         if shouldFailStore {
-            throw ModelError.attachmentStorageFailed(reason: "Mock store failure")
+            throw ModelError.documentStorageFailed(reason: "Mock store failure")
         }
 
         let key = hmacKey(contentHMAC)
@@ -39,12 +39,12 @@ final class MockAttachmentFileStorageService: AttachmentFileStorageServiceProtoc
         retrieveCalls.append(contentHMAC)
 
         if shouldFailRetrieve {
-            throw ModelError.attachmentContentCorrupted
+            throw ModelError.documentContentCorrupted
         }
 
         let key = hmacKey(contentHMAC)
         guard let data = storage[key] else {
-            throw ModelError.attachmentNotFound(attachmentId: UUID())
+            throw ModelError.documentNotFound(documentId: UUID())
         }
 
         return data
@@ -54,7 +54,7 @@ final class MockAttachmentFileStorageService: AttachmentFileStorageServiceProtoc
         deleteCalls.append(contentHMAC)
 
         if shouldFailDelete {
-            throw ModelError.attachmentStorageFailed(reason: "Mock delete failure")
+            throw ModelError.documentStorageFailed(reason: "Mock delete failure")
         }
 
         let key = hmacKey(contentHMAC)

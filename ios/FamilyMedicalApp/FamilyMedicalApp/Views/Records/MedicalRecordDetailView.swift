@@ -101,7 +101,7 @@ struct MedicalRecordDetailView: View {
         }
         .sheet(item: $selectedAttachment) { attachment in
             if let viewerVM = viewModel.makeViewerViewModel(for: attachment) {
-                AttachmentViewerView(viewModel: viewerVM)
+                DocumentViewerView(viewModel: viewerVM)
             }
         }
         .task {
@@ -167,7 +167,7 @@ struct MedicalRecordDetailView: View {
             let columns = [GridItem(.adaptive(minimum: 70, maximum: 90), spacing: 8)]
             LazyVGrid(columns: columns, alignment: .leading, spacing: 8) {
                 ForEach(viewModel.attachments) { attachment in
-                    AttachmentThumbnailView(
+                    DocumentThumbnailView(
                         document: attachment.content,
                         onTap: {
                             selectedAttachment = attachment

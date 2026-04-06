@@ -8,9 +8,9 @@ import SwiftUI
 /// - Images with pinch-to-zoom
 /// - PDF documents with PDFKit
 /// - Share/export with security warning
-struct AttachmentViewerView: View {
+struct DocumentViewerView: View {
     /// ViewModel for content loading and state
-    @Bindable var viewModel: AttachmentViewerViewModel
+    @Bindable var viewModel: DocumentViewerViewModel
 
     /// Environment for dismissing the view
     @Environment(\.dismiss)
@@ -235,7 +235,7 @@ private enum ViewerPreviewHelpers {
 }
 
 #Preview("Image") {
-    let viewModel = AttachmentViewerViewModel(
+    let viewModel = DocumentViewerViewModel(
         document: ViewerPreviewHelpers.makeDocument(
             title: "test_image.jpg",
             mimeType: "image/jpeg"
@@ -243,11 +243,11 @@ private enum ViewerPreviewHelpers {
         personId: UUID(),
         primaryKey: SymmetricKey(size: .bits256)
     )
-    AttachmentViewerView(viewModel: viewModel)
+    DocumentViewerView(viewModel: viewModel)
 }
 
 #Preview("PDF") {
-    let viewModel = AttachmentViewerViewModel(
+    let viewModel = DocumentViewerViewModel(
         document: ViewerPreviewHelpers.makeDocument(
             title: "document.pdf",
             mimeType: "application/pdf"
@@ -255,5 +255,5 @@ private enum ViewerPreviewHelpers {
         personId: UUID(),
         primaryKey: SymmetricKey(size: .bits256)
     )
-    AttachmentViewerView(viewModel: viewModel)
+    DocumentViewerView(viewModel: viewModel)
 }

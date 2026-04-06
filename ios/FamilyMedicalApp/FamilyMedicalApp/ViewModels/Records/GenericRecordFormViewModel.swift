@@ -34,7 +34,7 @@ final class GenericRecordFormViewModel {
 
     /// Attachment picker for adding DocumentReferenceRecords to this record.
     /// Nil for `.documentReference` record type (they ARE documents, not containers).
-    var attachmentPickerViewModel: AttachmentPickerViewModel?
+    var documentPickerViewModel: DocumentPickerViewModel?
 
     // MARK: - Dependencies (exposed to views)
 
@@ -47,7 +47,7 @@ final class GenericRecordFormViewModel {
     private let recordContentService: RecordContentServiceProtocol
     private let primaryKeyProvider: PrimaryKeyProviderProtocol
     private let fmkService: FamilyMemberKeyServiceProtocol
-    private let blobService: AttachmentBlobServiceProtocol?
+    private let blobService: DocumentBlobServiceProtocol?
     private let logger = LoggingService.shared.logger(category: .storage)
 
     /// Snapshot of unknown fields from the existing record (preserved on save).
@@ -79,7 +79,7 @@ final class GenericRecordFormViewModel {
         fmkService: FamilyMemberKeyServiceProtocol? = nil,
         providerRepository: ProviderRepositoryProtocol? = nil,
         autocompleteService: AutocompleteServiceProtocol? = nil,
-        blobService: AttachmentBlobServiceProtocol? = nil
+        blobService: DocumentBlobServiceProtocol? = nil
     ) {
         self.person = person
         self.recordType = recordType
@@ -156,19 +156,19 @@ final class GenericRecordFormViewModel {
 
     /// Creates the attachment picker ViewModel if the record type supports attachments.
     /// No-op for `.documentReference` (those are documents themselves, not containers).
-    func createAttachmentPickerIfNeeded() {
+    func createDocumentPickerIfNeeded() {
         guard recordType != .documentReference else { return }
-        guard attachmentPickerViewModel == nil else { return }
+        guard documentPickerViewModel == nil else { return }
         do {
             let primaryKey = try primaryKeyProvider.getPrimaryKey()
-            attachmentPickerViewModel = AttachmentPickerViewModel(
+            documentPickerViewModel = DocumentPickerViewModel(
                 personId: person.id,
                 sourceRecordId: existingRecord?.record.id,
                 primaryKey: primaryKey,
                 blobService: blobService
             )
         } catch {
-            logger.logError(error, context: "GenericRecordFormViewModel.createAttachmentPickerIfNeeded")
+            logger.logError(error, context: "GenericRecordFormViewModel.createDocumentPickerIfNeeded")
         }
     }
 
@@ -307,7 +307,7 @@ final class GenericRecordFormViewModel {
     }
 
     private func saveAttachmentDrafts(parentRecordId: UUID, fmk: SymmetricKey) async {
-        guard let pickerVM = attachmentPickerViewModel else { return }
+        guard let pickerVM = documentPickerViewModel else { return }
         let drafts = pickerVM.allDocumentReferences
         guard !drafts.isEmpty else { return }
 

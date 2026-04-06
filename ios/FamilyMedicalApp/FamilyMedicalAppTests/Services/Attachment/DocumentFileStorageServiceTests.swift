@@ -2,15 +2,15 @@ import Foundation
 import Testing
 @testable import FamilyMedicalApp
 
-struct AttachmentFileStorageServiceTests {
+struct DocumentFileStorageServiceTests {
     // MARK: - Test Fixtures
 
-    func makeService() throws -> (service: AttachmentFileStorageService, tempDir: URL) {
+    func makeService() throws -> (service: DocumentFileStorageService, tempDir: URL) {
         let tempDir = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
         // Inject mock logger to avoid LoggingService.shared singleton timing dependencies
-        let service = AttachmentFileStorageService(
+        let service = DocumentFileStorageService(
             attachmentsDirectory: tempDir,
             logger: MockCategoryLogger(category: .storage)
         )
@@ -255,7 +255,7 @@ struct AttachmentFileStorageServiceTests {
     @Test
     func init_default_createsService() throws {
         // This tests the default init that creates the Application Support/Attachments directory
-        let service = try AttachmentFileStorageService()
+        let service = try DocumentFileStorageService()
 
         // Verify service is functional by storing and retrieving
         let data = makeTestData()
@@ -273,7 +273,7 @@ struct AttachmentFileStorageServiceTests {
 
     @Test
     func init_default_usesApplicationSupportDirectory() throws {
-        let service = try AttachmentFileStorageService()
+        let service = try DocumentFileStorageService()
         let data = makeTestData()
         let hmac = makeTestHMAC()
 
@@ -291,7 +291,7 @@ struct AttachmentFileStorageServiceTests {
     func init_default_createsDirectoryIfNotExists() throws {
         // This tests that createAttachmentsDirectory is called and works
         // The directory might already exist, so this just ensures no error
-        let service = try AttachmentFileStorageService()
+        let service = try DocumentFileStorageService()
         #expect(service.exists(contentHMAC: makeTestHMAC()) == false)
     }
 

@@ -13,7 +13,7 @@ struct MedicalRecordListViewModelCascadeDeleteTests {
         let keyProvider = MockPrimaryKeyProvider()
         let fmk = MockFamilyMemberKeyService()
         let queryService = MockDocumentReferenceQueryService()
-        let blobService = MockAttachmentBlobService()
+        let blobService = MockDocumentBlobService()
         let fmkKey = SymmetricKey(size: .bits256)
 
         init(personId: UUID) {

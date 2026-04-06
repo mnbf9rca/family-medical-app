@@ -44,7 +44,7 @@ enum FormTestSupport {
         recordType: RecordType,
         existingRecord: DecryptedRecord? = nil,
         deps: FormViewModelDeps,
-        blobService: AttachmentBlobServiceProtocol? = nil
+        blobService: DocumentBlobServiceProtocol? = nil
     ) -> GenericRecordFormViewModel {
         GenericRecordFormViewModel(
             person: person,

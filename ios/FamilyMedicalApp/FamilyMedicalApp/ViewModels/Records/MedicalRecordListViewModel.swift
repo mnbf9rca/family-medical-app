@@ -33,7 +33,7 @@ final class MedicalRecordListViewModel {
     private let primaryKeyProvider: PrimaryKeyProviderProtocol
     private let fmkService: FamilyMemberKeyServiceProtocol
     private let documentReferenceQueryService: DocumentReferenceQueryServiceProtocol
-    private let blobService: AttachmentBlobServiceProtocol
+    private let blobService: DocumentBlobServiceProtocol
     private let logger = LoggingService.shared.logger(category: .storage)
 
     // MARK: - Initialization
@@ -46,7 +46,7 @@ final class MedicalRecordListViewModel {
         primaryKeyProvider: PrimaryKeyProviderProtocol? = nil,
         fmkService: FamilyMemberKeyServiceProtocol? = nil,
         documentReferenceQueryService: DocumentReferenceQueryServiceProtocol? = nil,
-        blobService: AttachmentBlobServiceProtocol? = nil
+        blobService: DocumentBlobServiceProtocol? = nil
     ) {
         self.person = person
         self.recordType = recordType
@@ -189,14 +189,14 @@ final class MedicalRecordListViewModel {
         }
     }
 
-    private static func createDefaultBlobService() -> AttachmentBlobServiceProtocol {
-        let fileStorage: AttachmentFileStorageServiceProtocol
+    private static func createDefaultBlobService() -> DocumentBlobServiceProtocol {
+        let fileStorage: DocumentFileStorageServiceProtocol
         do {
-            fileStorage = try AttachmentFileStorageService()
+            fileStorage = try DocumentFileStorageService()
         } catch {
-            fatalError("Failed to create AttachmentFileStorageService: \(error)")
+            fatalError("Failed to create DocumentFileStorageService: \(error)")
         }
-        return AttachmentBlobService(
+        return DocumentBlobService(
             fileStorage: fileStorage,
             imageProcessor: ImageProcessingService(),
             encryptionService: EncryptionService(),

@@ -3,14 +3,14 @@ import Foundation
 import Testing
 @testable import FamilyMedicalApp
 
-/// Tests for AttachmentViewerViewModel export flow, temporary files, and display properties.
+/// Tests for DocumentViewerViewModel export flow, temporary files, and display properties.
 @MainActor
-struct AttachmentViewerViewModelExportTests {
+struct DocumentViewerViewModelExportTests {
     // MARK: - Test Fixtures
 
     struct TestFixtures {
-        let viewModel: AttachmentViewerViewModel
-        let blobService: MockAttachmentBlobService
+        let viewModel: DocumentViewerViewModel
+        let blobService: MockDocumentBlobService
         let document: DocumentReferenceRecord
     }
 
@@ -18,7 +18,7 @@ struct AttachmentViewerViewModelExportTests {
         title: String = "test.jpg",
         mimeType: String = "image/jpeg"
     ) -> TestFixtures {
-        let blobService = MockAttachmentBlobService()
+        let blobService = MockDocumentBlobService()
         blobService.retrieveResult = Data("test content".utf8)
         let primaryKey = SymmetricKey(size: .bits256)
 
@@ -29,7 +29,7 @@ struct AttachmentViewerViewModelExportTests {
             contentHMAC: Data(repeating: 0xAB, count: 32)
         )
 
-        let viewModel = AttachmentViewerViewModel(
+        let viewModel = DocumentViewerViewModel(
             document: document,
             personId: UUID(),
             primaryKey: primaryKey,
@@ -219,7 +219,7 @@ struct AttachmentViewerViewModelExportTests {
     @Test
     func personId_isCorrectlySet() {
         let expectedPersonId = UUID()
-        let blobService = MockAttachmentBlobService()
+        let blobService = MockDocumentBlobService()
         let primaryKey = SymmetricKey(size: .bits256)
         let document = DocumentReferenceRecord(
             title: "test.jpg",
@@ -228,7 +228,7 @@ struct AttachmentViewerViewModelExportTests {
             contentHMAC: Data(repeating: 0, count: 32)
         )
 
-        let viewModel = AttachmentViewerViewModel(
+        let viewModel = DocumentViewerViewModel(
             document: document,
             personId: expectedPersonId,
             primaryKey: primaryKey,
