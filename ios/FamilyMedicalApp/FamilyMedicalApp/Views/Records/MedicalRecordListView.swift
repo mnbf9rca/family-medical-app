@@ -8,6 +8,8 @@ struct MedicalRecordListView: View {
     @State private var viewModel: MedicalRecordListViewModel
     @State private var recordToDelete: DecryptedRecord?
     @State private var showingDeleteConfirmation = false
+    @State private var showingCascadeDialog = false
+    @State private var pendingAttachments: [PersistedDocumentReference] = []
     @State private var showingCreateForm = false
 
     init(person: Person, recordType: RecordType, viewModel: MedicalRecordListViewModel? = nil) {
@@ -59,7 +61,10 @@ struct MedicalRecordListView: View {
                 person: person,
                 decryptedRecord: decryptedRecord,
                 onDelete: {
-                    await viewModel.deleteRecord(id: decryptedRecord.id)
+                    await viewModel.deleteRecord(
+                        id: decryptedRecord.id,
+                        strategy: .noAttachments
+                    )
                 },
                 onRecordUpdated: {
                     Task {
@@ -90,11 +95,43 @@ struct MedicalRecordListView: View {
         ) { record in
             Button("Delete", role: .destructive) {
                 Task {
-                    await viewModel.deleteRecord(id: record.id)
+                    await viewModel.deleteRecord(
+                        id: record.id,
+                        strategy: .noAttachments
+                    )
                 }
             }
         } message: { _ in
             Text("Are you sure you want to delete this record?")
+        }
+        .confirmationDialog(
+            "Delete Record with Attachments",
+            isPresented: $showingCascadeDialog,
+            presenting: recordToDelete
+        ) { record in
+            Button("Delete record and \(pendingAttachments.count) attachment(s)", role: .destructive) {
+                let toDelete = pendingAttachments
+                Task {
+                    await viewModel.deleteRecord(
+                        id: record.id,
+                        strategy: .cascadeDelete,
+                        attachments: toDelete
+                    )
+                }
+            }
+            Button("Delete record, keep attachments") {
+                let toKeep = pendingAttachments
+                Task {
+                    await viewModel.deleteRecord(
+                        id: record.id,
+                        strategy: .keepStandalone,
+                        attachments: toKeep
+                    )
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: { _ in
+            Text("This record has \(pendingAttachments.count) attachment(s). What would you like to do?")
         }
         .task {
             await viewModel.loadRecords()
@@ -106,7 +143,16 @@ struct MedicalRecordListView: View {
 
     private func deleteRecords(at offsets: IndexSet) {
         guard let index = offsets.first else { return }
-        recordToDelete = viewModel.records[index]
-        showingDeleteConfirmation = true
+        let record = viewModel.records[index]
+        recordToDelete = record
+        Task {
+            let attachments = await viewModel.prepareDelete(recordId: record.id)
+            if attachments.isEmpty {
+                showingDeleteConfirmation = true
+            } else {
+                pendingAttachments = attachments
+                showingCascadeDialog = true
+            }
+        }
     }
 }

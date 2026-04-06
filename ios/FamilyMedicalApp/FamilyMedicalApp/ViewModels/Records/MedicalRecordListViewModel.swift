@@ -6,6 +6,18 @@ import Observation
 @MainActor
 @Observable
 final class MedicalRecordListViewModel {
+    // MARK: - Types
+
+    /// Strategy for handling attachments when deleting a parent record.
+    enum DeletionStrategy {
+        /// Record has no attachments; delete it directly.
+        case noAttachments
+        /// Delete the parent record and all its attachment records + orphan blobs.
+        case cascadeDelete
+        /// Detach attachments (set sourceRecordId to nil) then delete the parent.
+        case keepStandalone
+    }
+
     // MARK: - State
 
     let person: Person
@@ -20,6 +32,8 @@ final class MedicalRecordListViewModel {
     private let recordContentService: RecordContentServiceProtocol
     private let primaryKeyProvider: PrimaryKeyProviderProtocol
     private let fmkService: FamilyMemberKeyServiceProtocol
+    private let documentReferenceQueryService: DocumentReferenceQueryServiceProtocol?
+    private let blobService: AttachmentBlobServiceProtocol?
     private let logger = LoggingService.shared.logger(category: .storage)
 
     // MARK: - Initialization
@@ -30,7 +44,9 @@ final class MedicalRecordListViewModel {
         medicalRecordRepository: MedicalRecordRepositoryProtocol? = nil,
         recordContentService: RecordContentServiceProtocol? = nil,
         primaryKeyProvider: PrimaryKeyProviderProtocol? = nil,
-        fmkService: FamilyMemberKeyServiceProtocol? = nil
+        fmkService: FamilyMemberKeyServiceProtocol? = nil,
+        documentReferenceQueryService: DocumentReferenceQueryServiceProtocol? = nil,
+        blobService: AttachmentBlobServiceProtocol? = nil
     ) {
         self.person = person
         self.recordType = recordType
@@ -42,6 +58,8 @@ final class MedicalRecordListViewModel {
         )
         self.primaryKeyProvider = primaryKeyProvider ?? PrimaryKeyProvider()
         self.fmkService = fmkService ?? FamilyMemberKeyService()
+        self.documentReferenceQueryService = documentReferenceQueryService
+        self.blobService = blobService
     }
 
     // MARK: - Actions
@@ -86,12 +104,43 @@ final class MedicalRecordListViewModel {
         isLoading = false
     }
 
-    func deleteRecord(id: UUID) async {
+    /// Fetch attachments for a record before deletion, so the view can offer a cascade dialog.
+    func prepareDelete(recordId: UUID) async -> [PersistedDocumentReference] {
+        guard let queryService = documentReferenceQueryService else { return [] }
+        do {
+            let primaryKey = try primaryKeyProvider.getPrimaryKey()
+            return try await queryService.attachmentsFor(
+                sourceRecordId: recordId,
+                personId: person.id,
+                primaryKey: primaryKey
+            )
+        } catch {
+            logger.logError(error, context: "MedicalRecordListViewModel.prepareDelete")
+            return []
+        }
+    }
+
+    func deleteRecord(
+        id: UUID,
+        strategy: DeletionStrategy = .noAttachments,
+        attachments: [PersistedDocumentReference] = []
+    ) async {
         isLoading = true
         errorMessage = nil
 
         do {
-            try await medicalRecordRepository.delete(id: id)
+            switch strategy {
+            case .noAttachments:
+                try await medicalRecordRepository.delete(id: id)
+
+            case .cascadeDelete:
+                try await medicalRecordRepository.delete(id: id)
+                await cascadeDeleteAttachments(attachments)
+
+            case .keepStandalone:
+                await detachAttachments(attachments)
+                try await medicalRecordRepository.delete(id: id)
+            }
             records.removeAll { $0.id == id }
         } catch {
             errorMessage = "Unable to delete record. Please try again."
@@ -99,5 +148,66 @@ final class MedicalRecordListViewModel {
         }
 
         isLoading = false
+    }
+
+    // MARK: - Private Deletion Helpers
+
+    private func cascadeDeleteAttachments(_ attachments: [PersistedDocumentReference]) async {
+        for attachment in attachments {
+            do {
+                try await medicalRecordRepository.delete(id: attachment.recordId)
+                let isReferenced = try await checkHmacReferenced(
+                    contentHMAC: attachment.content.contentHMAC,
+                    excludingRecordId: attachment.recordId
+                )
+                try await blobService?.deleteIfUnreferenced(
+                    contentHMAC: attachment.content.contentHMAC,
+                    isReferencedElsewhere: isReferenced
+                )
+            } catch {
+                logger.logError(error, context: "MedicalRecordListViewModel.cascadeDeleteAttachments")
+            }
+        }
+    }
+
+    private func detachAttachments(_ attachments: [PersistedDocumentReference]) async {
+        do {
+            let primaryKey = try primaryKeyProvider.getPrimaryKey()
+            let fmk = try fmkService.retrieveFMK(
+                familyMemberID: person.id.uuidString,
+                primaryKey: primaryKey
+            )
+            for attachment in attachments {
+                do {
+                    var updatedDoc = attachment.content
+                    updatedDoc.sourceRecordId = nil
+                    let envelope = try RecordContentEnvelope(updatedDoc)
+                    let encrypted = try recordContentService.encrypt(envelope, using: fmk)
+                    let updatedRecord = MedicalRecord(
+                        id: attachment.recordId,
+                        personId: person.id,
+                        encryptedContent: encrypted,
+                        createdAt: attachment.createdAt,
+                        updatedAt: Date()
+                    )
+                    try await medicalRecordRepository.save(updatedRecord)
+                } catch {
+                    logger.logError(error, context: "MedicalRecordListViewModel.detachAttachments")
+                }
+            }
+        } catch {
+            logger.logError(error, context: "MedicalRecordListViewModel.detachAttachments.keys")
+        }
+    }
+
+    private func checkHmacReferenced(contentHMAC: Data, excludingRecordId: UUID) async throws -> Bool {
+        guard let queryService = documentReferenceQueryService else { return false }
+        let primaryKey = try primaryKeyProvider.getPrimaryKey()
+        return try await queryService.isHmacReferencedElsewhere(
+            contentHMAC: contentHMAC,
+            excludingRecordId: excludingRecordId,
+            personId: person.id,
+            primaryKey: primaryKey
+        )
     }
 }
