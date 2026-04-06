@@ -61,7 +61,7 @@ struct GenericRecordFormView: View {
             }
             .task {
                 await viewModel.loadProviders()
-                viewModel.createDocumentPickerIfNeeded()
+                await viewModel.createDocumentPickerIfNeeded()
             }
         }
     }

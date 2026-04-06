@@ -29,6 +29,7 @@ struct FormViewModelDeps {
     let fmk = MockFamilyMemberKeyService()
     let providers = MockProviderRepository()
     let autocomplete = AutocompleteServiceStub()
+    let docRefQueryService = MockDocumentReferenceQueryService()
     let fmkKey = SymmetricKey(size: .bits256)
 
     init(personId: UUID) {
@@ -56,7 +57,8 @@ enum FormTestSupport {
             fmkService: deps.fmk,
             providerRepository: deps.providers,
             autocompleteService: deps.autocomplete,
-            blobService: blobService
+            blobService: blobService,
+            documentReferenceQueryService: deps.docRefQueryService
         )
     }
 }

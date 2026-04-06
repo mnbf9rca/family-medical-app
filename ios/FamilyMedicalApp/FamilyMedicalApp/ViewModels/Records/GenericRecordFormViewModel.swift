@@ -48,6 +48,7 @@ final class GenericRecordFormViewModel {
     private let primaryKeyProvider: PrimaryKeyProviderProtocol
     private let fmkService: FamilyMemberKeyServiceProtocol
     private let blobService: DocumentBlobServiceProtocol?
+    private let documentReferenceQueryService: DocumentReferenceQueryServiceProtocol
     private let logger = LoggingService.shared.logger(category: .storage)
 
     /// Snapshot of unknown fields from the existing record (preserved on save).
@@ -79,21 +80,29 @@ final class GenericRecordFormViewModel {
         fmkService: FamilyMemberKeyServiceProtocol? = nil,
         providerRepository: ProviderRepositoryProtocol? = nil,
         autocompleteService: AutocompleteServiceProtocol? = nil,
-        blobService: DocumentBlobServiceProtocol? = nil
+        blobService: DocumentBlobServiceProtocol? = nil,
+        documentReferenceQueryService: DocumentReferenceQueryServiceProtocol? = nil
     ) {
         self.person = person
         self.recordType = recordType
         self.existingRecord = existingRecord
-        self.medicalRecordRepository = medicalRecordRepository ?? MedicalRecordRepository(
+        let resolvedRecordRepo = medicalRecordRepository ?? MedicalRecordRepository(
             coreDataStack: CoreDataStack.shared
         )
-        self.recordContentService = recordContentService ?? RecordContentService(
+        self.medicalRecordRepository = resolvedRecordRepo
+        let resolvedContentService = recordContentService ?? RecordContentService(
             encryptionService: EncryptionService()
         )
+        self.recordContentService = resolvedContentService
         self.primaryKeyProvider = primaryKeyProvider ?? PrimaryKeyProvider()
         let resolvedFmkService = fmkService ?? FamilyMemberKeyService()
         self.fmkService = resolvedFmkService
         self.blobService = blobService
+        self.documentReferenceQueryService = documentReferenceQueryService ?? DocumentReferenceQueryService(
+            recordRepository: resolvedRecordRepo,
+            recordContentService: resolvedContentService,
+            fmkService: resolvedFmkService
+        )
         self.providerRepository = providerRepository ?? ProviderRepository(
             coreDataStack: CoreDataStack.shared,
             encryptionService: EncryptionService(),
@@ -156,15 +165,26 @@ final class GenericRecordFormViewModel {
 
     /// Creates the attachment picker ViewModel if the record type supports attachments.
     /// No-op for `.documentReference` (those are documents themselves, not containers).
-    func createDocumentPickerIfNeeded() {
+    /// In edit mode, fetches existing attachments so they count toward `maxPerRecord`.
+    func createDocumentPickerIfNeeded() async {
         guard recordType != .documentReference else { return }
         guard documentPickerViewModel == nil else { return }
         do {
             let primaryKey = try primaryKeyProvider.getPrimaryKey()
+            var existingDocs: [DocumentReferenceRecord] = []
+            if let existingRecord {
+                let persisted = try await documentReferenceQueryService.attachmentsFor(
+                    sourceRecordId: existingRecord.record.id,
+                    personId: person.id,
+                    primaryKey: primaryKey
+                )
+                existingDocs = persisted.map(\.content)
+            }
             documentPickerViewModel = DocumentPickerViewModel(
                 personId: person.id,
                 sourceRecordId: existingRecord?.record.id,
                 primaryKey: primaryKey,
+                existing: existingDocs,
                 blobService: blobService
             )
         } catch {
