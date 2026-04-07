@@ -53,7 +53,7 @@ struct BackupSchemaValidatorTests {
         let payload = try BackupPayload(
             exportedAt: #require(ISO8601DateFormatter().date(from: "2026-02-01T12:00:00Z")),
             appVersion: "1.0.0",
-            metadata: BackupMetadata(personCount: 1, recordCount: 0, attachmentCount: 0),
+            metadata: BackupMetadata(personCount: 1, recordCount: 0),
             persons: [
                 PersonBackup(
                     id: UUID(),
@@ -65,8 +65,7 @@ struct BackupSchemaValidatorTests {
                     updatedAt: Date()
                 )
             ],
-            records: [],
-            attachments: []
+            records: []
         )
 
         let file = BackupFile(
@@ -106,7 +105,7 @@ struct BackupSchemaValidatorTests {
         let payload = try BackupPayload(
             exportedAt: #require(ISO8601DateFormatter().date(from: "2026-02-01T12:00:00Z")),
             appVersion: "1.0.0",
-            metadata: BackupMetadata(personCount: 1, recordCount: 1, attachmentCount: 0),
+            metadata: BackupMetadata(personCount: 1, recordCount: 1),
             persons: [
                 PersonBackup(
                     id: personId,
@@ -123,8 +122,7 @@ struct BackupSchemaValidatorTests {
                     from: MedicalRecord(id: UUID(), personId: personId, encryptedContent: Data()),
                     envelope: envelope
                 )
-            ],
-            attachments: []
+            ]
         )
 
         let file = BackupFile(
@@ -200,10 +198,9 @@ struct BackupSchemaValidatorTests {
             "data": {
                 "exportedAt": "2026-02-01T12:00:00Z",
                 "appVersion": "1.0.0",
-                "metadata": {"personCount": 0, "recordCount": 0, "attachmentCount": 0},
+                "metadata": {"personCount": 0, "recordCount": 0},
                 "persons": [],
-                "records": [],
-                "attachments": []
+                "records": []
             }
         }
         """.utf8)
@@ -244,10 +241,9 @@ struct BackupSchemaValidatorTests {
             "data": {
                 "exportedAt": "2026-02-01T12:00:00Z",
                 "appVersion": "1.0.0",
-                "metadata": {"personCount": 0, "recordCount": 0, "attachmentCount": 0},
+                "metadata": {"personCount": 0, "recordCount": 0},
                 "persons": [],
-                "records": [],
-                "attachments": []
+                "records": []
             }
         }
         """.utf8)
@@ -269,10 +265,9 @@ struct BackupSchemaValidatorTests {
             "data": {
                 "exportedAt": "2026-02-01T12:00:00Z",
                 "appVersion": "1.0.0",
-                "metadata": {"personCount": 0, "recordCount": 0, "attachmentCount": 0},
+                "metadata": {"personCount": 0, "recordCount": 0},
                 "persons": [],
-                "records": [],
-                "attachments": []
+                "records": []
             }
         }
         """.utf8)

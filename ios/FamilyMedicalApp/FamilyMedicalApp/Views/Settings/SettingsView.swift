@@ -448,7 +448,6 @@ struct ImportPreviewSheet: View {
         Section {
             InfoRow(label: "Family Members", value: "\(payload.metadata.personCount)")
             InfoRow(label: "Medical Records", value: "\(payload.metadata.recordCount)")
-            InfoRow(label: "Attachments", value: "\(payload.metadata.attachmentCount)")
         } header: {
             Text("Contents")
         }

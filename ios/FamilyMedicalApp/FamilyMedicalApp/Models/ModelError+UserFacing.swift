@@ -50,27 +50,19 @@ extension ModelError {
             }
         case let .validationFailed(fieldName, reason):
             return "\(fieldName): \(reason)"
-        // Attachment errors
-        case .fileNameEmpty:
-            return "File name cannot be empty."
-        case let .fileNameTooLong(maxLength):
-            return "File name must be no more than \(maxLength) character\(maxLength == 1 ? "" : "s")."
-        case let .mimeTypeTooLong(maxLength):
-            return "MIME type must be no more than \(maxLength) character\(maxLength == 1 ? "" : "s")."
-        case .invalidFileSize:
-            return "File size is invalid."
-        case let .attachmentTooLarge(maxSizeMB):
+        // Document errors
+        case let .documentTooLarge(maxSizeMB):
             return "File is too large. Maximum size is \(maxSizeMB) MB."
         case let .unsupportedMimeType(mimeType):
             return "File type '\(mimeType)' is not supported. Please use JPEG, PNG, or PDF."
-        case let .attachmentLimitExceeded(max):
+        case let .documentLimitExceeded(max):
             return "Maximum of \(max) attachments per record reached."
-        case .attachmentNotFound:
-            return "Attachment not found."
-        case .attachmentContentCorrupted:
-            return "Unable to read attachment content."
-        case let .attachmentStorageFailed(reason):
-            return "Failed to save attachment: \(reason)"
+        case .documentNotFound:
+            return "Document not found."
+        case .documentContentCorrupted:
+            return "Unable to read document content."
+        case let .documentStorageFailed(reason):
+            return "Failed to save document: \(reason)"
         case let .imageProcessingFailed(reason):
             return "Failed to process image: \(reason)"
         }

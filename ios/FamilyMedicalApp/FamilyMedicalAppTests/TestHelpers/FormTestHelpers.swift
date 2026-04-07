@@ -29,6 +29,7 @@ struct FormViewModelDeps {
     let fmk = MockFamilyMemberKeyService()
     let providers = MockProviderRepository()
     let autocomplete = AutocompleteServiceStub()
+    let docRefQueryService = MockDocumentReferenceQueryService()
     let fmkKey = SymmetricKey(size: .bits256)
 
     init(personId: UUID) {
@@ -43,7 +44,8 @@ enum FormTestSupport {
         person: Person,
         recordType: RecordType,
         existingRecord: DecryptedRecord? = nil,
-        deps: FormViewModelDeps
+        deps: FormViewModelDeps,
+        blobService: DocumentBlobServiceProtocol? = nil
     ) -> GenericRecordFormViewModel {
         GenericRecordFormViewModel(
             person: person,
@@ -54,7 +56,9 @@ enum FormTestSupport {
             primaryKeyProvider: deps.keyProvider,
             fmkService: deps.fmk,
             providerRepository: deps.providers,
-            autocompleteService: deps.autocomplete
+            autocompleteService: deps.autocomplete,
+            blobService: blobService,
+            documentReferenceQueryService: deps.docRefQueryService
         )
     }
 }

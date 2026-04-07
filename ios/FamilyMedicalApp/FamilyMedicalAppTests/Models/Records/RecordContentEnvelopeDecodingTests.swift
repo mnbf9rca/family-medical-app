@@ -151,7 +151,10 @@ struct RecordContentEnvelopeDecodingTests {
         case .procedure:
             "{\"procedureName\":\"X\",\"tags\":[]}"
         case .documentReference:
-            "{\"title\":\"X\",\"mimeType\":\"application/octet-stream\",\"fileSize\":0,\"tags\":[]}"
+            """
+            {"title":"X","mimeType":"application/octet-stream",\
+            "fileSize":0,"contentHMAC":"AQID","tags":[]}
+            """
         case .familyMemberHistory:
             "{\"relationship\":\"X\",\"conditionName\":\"Y\",\"tags\":[]}"
         case .clinicalNote:
@@ -375,7 +378,10 @@ struct RecordContentEnvelopeWrapTests {
         case .procedure:
             "{\"procedureName\":\"X\",\"tags\":[]}"
         case .documentReference:
-            "{\"title\":\"X\",\"mimeType\":\"application/octet-stream\",\"fileSize\":0,\"tags\":[]}"
+            """
+            {"title":"X","mimeType":"application/octet-stream",\
+            "fileSize":0,"contentHMAC":"AQID","tags":[]}
+            """
         case .familyMemberHistory:
             "{\"relationship\":\"X\",\"conditionName\":\"Y\",\"tags\":[]}"
         case .clinicalNote:

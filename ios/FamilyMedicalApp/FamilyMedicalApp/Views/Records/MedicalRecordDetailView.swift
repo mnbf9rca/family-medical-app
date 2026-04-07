@@ -17,6 +17,7 @@ struct MedicalRecordDetailView: View {
     @State private var showingDeleteConfirmation = false
     @State private var isDeleting = false
     @State private var showingEditForm = false
+    @State private var selectedAttachment: PersistedDocumentReference?
 
     init(
         person: Person,
@@ -51,6 +52,9 @@ struct MedicalRecordDetailView: View {
             }
             if !viewModel.unknownFields.isEmpty {
                 unknownFieldsSection
+            }
+            if !viewModel.attachments.isEmpty {
+                attachmentsSection
             }
         }
         .navigationTitle(viewModel.recordType.displayName)
@@ -94,8 +98,14 @@ struct MedicalRecordDetailView: View {
                 ProgressView()
             }
         }
+        .sheet(item: $selectedAttachment) { attachment in
+            if let viewerVM = viewModel.makeViewerViewModel(for: attachment) {
+                DocumentViewerView(viewModel: viewerVM)
+            }
+        }
         .task {
             await viewModel.loadProviderDisplayIfNeeded()
+            await viewModel.loadAttachments()
         }
     }
 
@@ -148,6 +158,25 @@ struct MedicalRecordDetailView: View {
         } footer: {
             Text("Fields from a newer app version, preserved for forward compatibility.")
                 .font(.caption)
+        }
+    }
+
+    private var attachmentsSection: some View {
+        Section("Attachments") {
+            let columns = [GridItem(.adaptive(minimum: 70, maximum: 90), spacing: 8)]
+            LazyVGrid(columns: columns, alignment: .leading, spacing: 8) {
+                ForEach(viewModel.attachments) { attachment in
+                    DocumentThumbnailView(
+                        document: attachment.content,
+                        onTap: {
+                            selectedAttachment = attachment
+                        },
+                        onRemove: nil,
+                        size: 70
+                    )
+                }
+            }
+            .padding(.vertical, 4)
         }
     }
 

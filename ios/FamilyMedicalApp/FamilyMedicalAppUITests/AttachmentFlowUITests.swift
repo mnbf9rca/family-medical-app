@@ -37,9 +37,8 @@ final class AttachmentFlowUITests: XCTestCase {
     func testAttachmentFlowsConsolidated() throws {
         try XCTSkipIf(true, "Form views removed in #123, re-enable when GenericRecordFormView lands in #127")
         // Setup - single app launch for all tests
-        // Enable seedTestAttachments to auto-create test attachments for coverage
         app = XCUIApplication()
-        app.launchForUITesting(resetState: true, seedTestAttachments: true)
+        app.launchForUITesting(resetState: true)
         app.createAccount()
 
         // Ensure on home view
@@ -94,7 +93,7 @@ final class AttachmentFlowUITests: XCTestCase {
         addAttachmentButton.tap()
 
         // At least one option should exist
-        // Menu labels from AttachmentPickerView: "Take Photo", "Choose from Library", "Choose File"
+        // Menu labels from DocumentPickerView: "Take Photo", "Choose from Library", "Choose File"
         let cameraOption = app.buttons["Take Photo"]
         let photoLibraryOption = app.buttons["Choose from Library"]
         let filesOption = app.buttons["Choose File"]
@@ -212,7 +211,7 @@ final class AttachmentFlowUITests: XCTestCase {
             "Seeded test attachment thumbnail should exist"
         )
 
-        // TEST 6: Tap thumbnail to execute onTap closure (coverage for AttachmentPickerView)
+        // TEST 6: Tap thumbnail to execute onTap closure (coverage for DocumentPickerView)
         // The viewer navigation is not yet implemented, but tapping still exercises the code path
         thumbnailButton.tap()
 
@@ -231,7 +230,7 @@ final class AttachmentFlowUITests: XCTestCase {
 
         // Note: Remove button test skipped - nested buttons in SwiftUI require coordinate-based
         // tapping which is fragile across different device sizes. The onRemove closure is
-        // covered by unit tests in AttachmentPickerViewModelTests.
+        // covered by unit tests in DocumentPickerViewModelTests.
 
         // Dismiss form using helper (deterministic cleanup)
         app.dismissCurrentView()

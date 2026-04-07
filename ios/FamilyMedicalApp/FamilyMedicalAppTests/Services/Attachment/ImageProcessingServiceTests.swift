@@ -37,154 +37,51 @@ struct ImageProcessingServiceTests {
         return image.pngData()!
     }
 
-    // MARK: - Compress Tests
+    // MARK: - validateImage Tests
 
     @Test
-    func compress_smallImage_returnsData() throws {
+    func validateImage_jpegData_returnsJPEGMime() throws {
         let imageData = makeTestImage(width: 100, height: 100)
 
-        let compressed = try service.compress(
-            imageData,
-            maxSizeBytes: 10_000_000, // 10 MB
-            maxDimension: 4_096
-        )
+        let mimeType = try service.validateImage(imageData)
 
-        #expect(!compressed.isEmpty)
+        #expect(mimeType == "image/jpeg")
     }
 
     @Test
-    func compress_imageWithinLimits_returnsProcessed() throws {
-        let imageData = makeTestImage(width: 200, height: 200)
+    func validateImage_pngData_returnsPNGMime() throws {
+        let pngData = makeTestPNG(width: 100, height: 100)
 
-        let compressed = try service.compress(
-            imageData,
-            maxSizeBytes: 10_000_000,
-            maxDimension: 4_096
-        )
+        let mimeType = try service.validateImage(pngData)
 
-        // Should return data (processed or original)
-        #expect(!compressed.isEmpty)
-
-        // Verify it's valid JPEG
-        let image = UIImage(data: compressed)
-        #expect(image != nil)
+        #expect(mimeType == "image/png")
     }
 
     @Test
-    func compress_oversizedImage_resizesToMaxDimension() throws {
-        // Create a large image (2000x1000)
-        let imageData = makeTestImage(width: 2_000, height: 1_000)
-
-        let compressed = try service.compress(
-            imageData,
-            maxSizeBytes: 10_000_000,
-            maxDimension: 500
-        )
-
-        // Verify output is valid image
-        guard let outputImage = UIImage(data: compressed) else {
-            Issue.record("Compressed data is not a valid image")
-            return
-        }
-
-        // Should be resized (max dimension 500)
-        let maxDim = max(outputImage.size.width, outputImage.size.height)
-        #expect(maxDim <= 500)
-    }
-
-    @Test
-    func compress_squareOversizedImage_resizesCorrectly() throws {
-        let imageData = makeTestImage(width: 1_000, height: 1_000)
-
-        let compressed = try service.compress(
-            imageData,
-            maxSizeBytes: 10_000_000,
-            maxDimension: 300
-        )
-
-        guard let outputImage = UIImage(data: compressed) else {
-            Issue.record("Compressed data is not a valid image")
-            return
-        }
-
-        #expect(outputImage.size.width <= 300)
-        #expect(outputImage.size.height <= 300)
-    }
-
-    @Test
-    func compress_invalidData_throwsError() throws {
+    func validateImage_invalidData_throwsError() throws {
         let invalidData = Data("not an image".utf8)
 
         #expect(throws: ModelError.self) {
-            _ = try service.compress(
-                invalidData,
-                maxSizeBytes: 10_000_000,
-                maxDimension: 4_096
-            )
+            _ = try service.validateImage(invalidData)
         }
     }
 
     @Test
-    func compress_pngImage_convertsToJPEG() throws {
-        let pngData = makeTestPNG(width: 100, height: 100)
+    func validateImage_emptyData_throwsError() throws {
+        let emptyData = Data()
 
-        let compressed = try service.compress(
-            pngData,
-            maxSizeBytes: 10_000_000,
-            maxDimension: 4_096
-        )
-
-        // JPEG magic bytes: FF D8 FF
-        let bytes = [UInt8](compressed.prefix(3))
-        #expect(bytes[0] == 0xFF)
-        #expect(bytes[1] == 0xD8)
-        #expect(bytes[2] == 0xFF)
+        #expect(throws: ModelError.self) {
+            _ = try service.validateImage(emptyData)
+        }
     }
 
     @Test
-    func compress_portraitImage_maintainsAspectRatio() throws {
-        // Portrait image: 500 wide, 1000 tall
-        let imageData = makeTestImage(width: 500, height: 1_000)
+    func validateImage_largeJPEG_returnsCorrectMime() throws {
+        let imageData = makeTestImage(width: 3_000, height: 2_000)
 
-        let compressed = try service.compress(
-            imageData,
-            maxSizeBytes: 10_000_000,
-            maxDimension: 400
-        )
+        let mimeType = try service.validateImage(imageData)
 
-        guard let outputImage = UIImage(data: compressed) else {
-            Issue.record("Compressed data is not a valid image")
-            return
-        }
-
-        // Max dimension should be 400 (the height)
-        #expect(outputImage.size.height <= 400)
-        // Width should maintain ratio (approximately half of height)
-        let ratio = outputImage.size.width / outputImage.size.height
-        #expect(ratio > 0.4 && ratio < 0.6) // ~0.5 with some tolerance
-    }
-
-    @Test
-    func compress_landscapeImage_maintainsAspectRatio() throws {
-        // Landscape image: 1000 wide, 500 tall
-        let imageData = makeTestImage(width: 1_000, height: 500)
-
-        let compressed = try service.compress(
-            imageData,
-            maxSizeBytes: 10_000_000,
-            maxDimension: 400
-        )
-
-        guard let outputImage = UIImage(data: compressed) else {
-            Issue.record("Compressed data is not a valid image")
-            return
-        }
-
-        // Max dimension should be 400 (the width)
-        #expect(outputImage.size.width <= 400)
-        // Height should maintain ratio (approximately half of width)
-        let ratio = outputImage.size.height / outputImage.size.width
-        #expect(ratio > 0.4 && ratio < 0.6)
+        #expect(mimeType == "image/jpeg")
     }
 
     // MARK: - Generate Thumbnail Tests
@@ -280,37 +177,7 @@ struct ImageProcessingServiceTests {
         #expect(ratio > 1.8 && ratio < 2.2) // ~2.0 with tolerance
     }
 
-    // MARK: - Size Limit Tests
-
-    @Test
-    func compress_iterativelyReducesQuality() throws {
-        // Create a moderately sized image
-        let imageData = makeTestImage(width: 800, height: 800)
-
-        // Request very small max size to force quality reduction
-        let compressed = try service.compress(
-            imageData,
-            maxSizeBytes: 5_000, // Very small target
-            maxDimension: 800
-        )
-
-        // Should return some data (may or may not hit target)
-        #expect(!compressed.isEmpty)
-
-        // Should be smaller than original
-        #expect(compressed.count < imageData.count)
-    }
-
     // MARK: - Empty/Edge Cases
-
-    @Test
-    func compress_emptyData_throwsError() throws {
-        let emptyData = Data()
-
-        #expect(throws: ModelError.self) {
-            _ = try service.compress(emptyData, maxSizeBytes: 10_000_000, maxDimension: 4_096)
-        }
-    }
 
     @Test
     func generateThumbnail_emptyData_throwsError() throws {

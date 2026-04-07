@@ -13,14 +13,12 @@ struct ExportServiceExtendedTests {
         personRepository: MockPersonRepository = MockPersonRepository(),
         recordRepository: MockMedicalRecordRepository = MockMedicalRecordRepository(),
         recordContentService: MockRecordContentService = MockRecordContentService(),
-        attachmentService: MockAttachmentService = MockAttachmentService(),
         fmkService: MockFamilyMemberKeyService = MockFamilyMemberKeyService()
     ) -> ExportService {
         ExportService(
             personRepository: personRepository,
             recordRepository: recordRepository,
             recordContentService: recordContentService,
-            attachmentService: attachmentService,
             fmkService: fmkService
         )
     }
@@ -40,26 +38,13 @@ struct ExportServiceExtendedTests {
         return try RecordContentEnvelope(immunization)
     }
 
-    func makeTestAttachment() throws -> FamilyMedicalApp.Attachment {
-        try FamilyMedicalApp.Attachment(
-            id: UUID(),
-            fileName: "test.pdf",
-            mimeType: "application/pdf",
-            contentHMAC: Data(repeating: 0x01, count: 32),
-            encryptedSize: 1_024,
-            thumbnailData: nil,
-            uploadedAt: Date()
-        )
-    }
-
     // MARK: - Full Export Tests
 
-    @Test("Full export includes all data types")
+    @Test("Full export includes persons and records")
     func fullExportIncludesAllData() async throws {
         let personRepository = MockPersonRepository()
         let recordRepository = MockMedicalRecordRepository()
         let recordContentService = MockRecordContentService()
-        let attachmentService = MockAttachmentService()
         let fmkService = MockFamilyMemberKeyService()
 
         let person = try makeTestPerson(name: "Full Test")
@@ -80,18 +65,10 @@ struct ExportServiceExtendedTests {
         )
         recordRepository.addRecord(record)
 
-        let attachment = try makeTestAttachment()
-        attachmentService.addTestAttachment(
-            attachment,
-            content: Data("content".utf8),
-            linkedToRecord: record.id
-        )
-
         let service = makeService(
             personRepository: personRepository,
             recordRepository: recordRepository,
             recordContentService: recordContentService,
-            attachmentService: attachmentService,
             fmkService: fmkService
         )
 
@@ -99,7 +76,6 @@ struct ExportServiceExtendedTests {
 
         #expect(payload.persons.count == 1)
         #expect(payload.records.count == 1)
-        #expect(payload.attachments.count == 1)
         #expect(!payload.isEmpty)
     }
 

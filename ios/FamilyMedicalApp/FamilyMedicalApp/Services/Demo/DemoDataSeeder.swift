@@ -50,15 +50,6 @@ final class DemoDataSeeder: DemoDataSeederProtocol, @unchecked Sendable {
         let encryptionService = EncryptionService()
         let fmkService = FamilyMemberKeyService()
 
-        // AttachmentFileStorageService init can throw, but if it fails we have bigger problems
-        // Use fatalError since this is called during app initialization
-        let fileStorage: AttachmentFileStorageServiceProtocol
-        do {
-            fileStorage = try AttachmentFileStorageService()
-        } catch {
-            fatalError("Failed to initialize attachment file storage: \(error)")
-        }
-
         return ImportService(
             personRepository: PersonRepository(
                 coreDataStack: coreDataStack,
@@ -69,17 +60,6 @@ final class DemoDataSeeder: DemoDataSeederProtocol, @unchecked Sendable {
                 coreDataStack: coreDataStack
             ),
             recordContentService: RecordContentService(encryptionService: encryptionService),
-            attachmentService: AttachmentService(
-                attachmentRepository: AttachmentRepository(
-                    coreDataStack: coreDataStack,
-                    encryptionService: encryptionService,
-                    fmkService: fmkService
-                ),
-                fileStorage: fileStorage,
-                imageProcessor: ImageProcessingService(),
-                encryptionService: encryptionService,
-                fmkService: fmkService
-            ),
             fmkService: fmkService
         )
     }

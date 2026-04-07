@@ -15,8 +15,7 @@
     "appVersion": "1.0.0",
     "metadata": {
       "personCount": 3,
-      "recordCount": 0,
-      "attachmentCount": 0
+      "recordCount": 0
     },
     "persons": [
       {
@@ -47,7 +46,6 @@
         "updatedAt": "2026-01-01T00:00:00Z"
       }
     ],
-    "records": [],
-    "attachments": []
+    "records": []
   }
 }

@@ -33,10 +33,9 @@ struct SettingsViewModelExtendedTests {
         let testPayload = BackupPayload(
             exportedAt: Date(),
             appVersion: "1.0.0",
-            metadata: BackupMetadata(personCount: 3, recordCount: 10, attachmentCount: 2),
+            metadata: BackupMetadata(personCount: 3, recordCount: 10),
             persons: [],
-            records: [],
-            attachments: []
+            records: []
         )
         backupFileService.mockDecryptedPayload = testPayload
 

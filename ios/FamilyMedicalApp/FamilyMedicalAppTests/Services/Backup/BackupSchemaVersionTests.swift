@@ -25,10 +25,9 @@ struct BackupSchemaVersionTests {
             "data": {
                 "exportedAt": "2026-02-01T12:00:00Z",
                 "appVersion": "1.0.0",
-                "metadata": {"personCount": 0, "recordCount": 0, "attachmentCount": 0, "schemaCount": 0},
+                "metadata": {"personCount": 0, "recordCount": 0, "schemaCount": 0},
                 "persons": [],
                 "records": [],
-                "attachments": [],
                 "schemas": []
             }
         }

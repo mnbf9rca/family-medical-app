@@ -13,6 +13,8 @@ final class MockMedicalRecordRepository: MedicalRecordRepositoryProtocol, @unche
     var shouldFailFetch = false
     var shouldFailDelete = false
     var shouldFailExists = false
+    /// When set, save fails only on the Nth call (1-based). Overrides shouldFailSave for that call.
+    var failOnSaveCallNumber: Int?
 
     // MARK: - Call Tracking
 
@@ -29,6 +31,10 @@ final class MockMedicalRecordRepository: MedicalRecordRepositoryProtocol, @unche
 
         if shouldFailSave {
             throw RepositoryError.saveFailed("Mock save failed")
+        }
+
+        if let failNumber = failOnSaveCallNumber, saveCallCount == failNumber {
+            throw RepositoryError.saveFailed("Mock save failed on call #\(failNumber)")
         }
 
         records[record.id] = record
@@ -82,6 +88,7 @@ final class MockMedicalRecordRepository: MedicalRecordRepositoryProtocol, @unche
         shouldFailFetch = false
         shouldFailDelete = false
         shouldFailExists = false
+        failOnSaveCallNumber = nil
         saveCallCount = 0
         fetchCallCount = 0
         fetchForPersonCallCount = 0

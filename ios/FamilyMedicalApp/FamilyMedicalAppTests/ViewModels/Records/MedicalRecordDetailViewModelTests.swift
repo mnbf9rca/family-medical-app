@@ -21,6 +21,7 @@ struct MedicalRecordDetailViewModelTests {
         let providers = MockProviderRepository()
         let keyProvider = MockPrimaryKeyProvider()
         let fmk = MockFamilyMemberKeyService()
+        let queryService = MockDocumentReferenceQueryService()
 
         init(personId: UUID) {
             keyProvider.primaryKey = SymmetricKey(size: .bits256)
@@ -38,7 +39,8 @@ struct MedicalRecordDetailViewModelTests {
             decryptedRecord: decryptedRecord,
             providerRepository: deps.providers,
             primaryKeyProvider: deps.keyProvider,
-            fmkService: deps.fmk
+            fmkService: deps.fmk,
+            documentReferenceQueryService: deps.queryService
         )
     }
 
@@ -202,5 +204,71 @@ struct MedicalRecordDetailViewModelTests {
         #expect(vm.decodeErrorMessage != nil)
         #expect(vm.knownFieldValues.isEmpty)
         #expect(vm.unknownFields.isEmpty)
+    }
+
+    // MARK: - Attachment Loading
+
+    @Test
+    func loadAttachments_populatesAttachmentsArray() async throws {
+        let person = try makeTestPerson()
+        let deps = Deps(personId: person.id)
+        let content = ImmunizationRecord(vaccineCode: "Pfizer", occurrenceDate: Date())
+        let decrypted = try makeDecryptedRecord(content, personId: person.id)
+
+        let docRef = DocumentReferenceRecord(
+            title: "vaccine_card.jpg",
+            mimeType: "image/jpeg",
+            fileSize: 1_024,
+            contentHMAC: Data(repeating: 0xAA, count: 32),
+            sourceRecordId: decrypted.record.id
+        )
+        deps.queryService.attachmentsResult = [
+            PersistedDocumentReference(
+                recordId: UUID(),
+                content: docRef,
+                createdAt: Date(),
+                updatedAt: Date()
+            )
+        ]
+
+        let vm = makeViewModel(person: person, decryptedRecord: decrypted, deps: deps)
+
+        await vm.loadAttachments()
+
+        #expect(vm.attachments.count == 1)
+        #expect(vm.attachments.first?.content.title == "vaccine_card.jpg")
+        #expect(vm.isLoadingAttachments == false)
+    }
+
+    @Test
+    func loadAttachments_emptyResultWhenNoAttachmentsExist() async throws {
+        let person = try makeTestPerson()
+        let deps = Deps(personId: person.id)
+        let content = ImmunizationRecord(vaccineCode: "Pfizer", occurrenceDate: Date())
+        let decrypted = try makeDecryptedRecord(content, personId: person.id)
+        deps.queryService.attachmentsResult = []
+
+        let vm = makeViewModel(person: person, decryptedRecord: decrypted, deps: deps)
+
+        await vm.loadAttachments()
+
+        #expect(vm.attachments.isEmpty)
+        #expect(vm.isLoadingAttachments == false)
+    }
+
+    @Test
+    func loadAttachments_handlesErrorGracefully() async throws {
+        let person = try makeTestPerson()
+        let deps = Deps(personId: person.id)
+        let content = ImmunizationRecord(vaccineCode: "Pfizer", occurrenceDate: Date())
+        let decrypted = try makeDecryptedRecord(content, personId: person.id)
+        deps.queryService.attachmentsError = RepositoryError.fetchFailed("test error")
+
+        let vm = makeViewModel(person: person, decryptedRecord: decrypted, deps: deps)
+
+        await vm.loadAttachments()
+
+        #expect(vm.attachments.isEmpty)
+        #expect(vm.isLoadingAttachments == false)
     }
 }

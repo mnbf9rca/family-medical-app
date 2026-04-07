@@ -42,10 +42,9 @@ struct BackupFileTests {
         let payload = BackupPayload(
             exportedAt: Date(),
             appVersion: "1.0.0",
-            metadata: BackupMetadata(personCount: 1, recordCount: 5, attachmentCount: 2),
+            metadata: BackupMetadata(personCount: 1, recordCount: 5),
             persons: [],
-            records: [],
-            attachments: []
+            records: []
         )
 
         let file = BackupFile(
@@ -143,17 +142,16 @@ struct BackupPayloadTests {
         let empty = BackupPayload(
             exportedAt: Date(),
             appVersion: "1.0",
-            metadata: BackupMetadata(personCount: 0, recordCount: 0, attachmentCount: 0),
+            metadata: BackupMetadata(personCount: 0, recordCount: 0),
             persons: [],
-            records: [],
-            attachments: []
+            records: []
         )
         #expect(empty.isEmpty)
 
         let withPerson = BackupPayload(
             exportedAt: Date(),
             appVersion: "1.0",
-            metadata: BackupMetadata(personCount: 1, recordCount: 0, attachmentCount: 0),
+            metadata: BackupMetadata(personCount: 1, recordCount: 0),
             persons: [
                 PersonBackup(
                     id: UUID(),
@@ -165,8 +163,7 @@ struct BackupPayloadTests {
                     updatedAt: Date()
                 )
             ],
-            records: [],
-            attachments: []
+            records: []
         )
         #expect(!withPerson.isEmpty)
     }

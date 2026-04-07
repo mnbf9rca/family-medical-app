@@ -27,7 +27,12 @@ struct DecryptedRecordTests {
             try RecordContentEnvelope(ProcedureRecord(procedureName: "Test"))
         case .documentReference:
             try RecordContentEnvelope(
-                DocumentReferenceRecord(title: "Test", mimeType: "text/plain", fileSize: 0)
+                DocumentReferenceRecord(
+                    title: "Test",
+                    mimeType: "application/pdf",
+                    fileSize: 0,
+                    contentHMAC: Data([0x01])
+                )
             )
         case .familyMemberHistory:
             try RecordContentEnvelope(
