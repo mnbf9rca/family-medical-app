@@ -32,7 +32,8 @@ struct DemoDataSeederTests {
             appVersion: "1.0",
             metadata: BackupMetadata(
                 personCount: expectedPersonCount,
-                recordCount: 0
+                recordCount: 0,
+                providerCount: 0
             ),
             persons: (0 ..< expectedPersonCount).map { index in
                 PersonBackup(
@@ -45,7 +46,8 @@ struct DemoDataSeederTests {
                     updatedAt: Date()
                 )
             },
-            records: []
+            records: [],
+            providers: []
         )
 
         let mockImport = MockImportService()
@@ -117,9 +119,10 @@ final class MockDemoDataLoader: DemoDataLoaderProtocol, @unchecked Sendable {
     var payload = BackupPayload(
         exportedAt: Date(),
         appVersion: "1.0",
-        metadata: BackupMetadata(personCount: 0, recordCount: 0),
+        metadata: BackupMetadata(personCount: 0, recordCount: 0, providerCount: 0),
         persons: [],
-        records: []
+        records: [],
+        providers: []
     )
 
     func loadDemoData() throws -> BackupPayload {

@@ -80,9 +80,10 @@ struct BackupSchemaValidatorTests {
         let payload = try BackupPayload(
             exportedAt: #require(ISO8601DateFormatter().date(from: "2026-02-01T12:00:00Z")),
             appVersion: "1.0.0",
-            metadata: BackupMetadata(personCount: 1, recordCount: 0),
+            metadata: BackupMetadata(personCount: 1, recordCount: 0, providerCount: 0),
             persons: [makeTestPersonBackup()],
-            records: []
+            records: [],
+            providers: []
         )
         try serializeAndValidate(makeUnencryptedFile(payload: payload))
     }
@@ -99,7 +100,7 @@ struct BackupSchemaValidatorTests {
         let payload = try BackupPayload(
             exportedAt: #require(ISO8601DateFormatter().date(from: "2026-02-01T12:00:00Z")),
             appVersion: "1.0.0",
-            metadata: BackupMetadata(personCount: 1, recordCount: 1),
+            metadata: BackupMetadata(personCount: 1, recordCount: 1, providerCount: 0),
             persons: [makeTestPersonBackup(id: personId)],
             records: [
                 MedicalRecordBackup(
@@ -110,7 +111,8 @@ struct BackupSchemaValidatorTests {
                     ),
                     envelope: envelope
                 )
-            ]
+            ],
+            providers: []
         )
         try serializeAndValidate(makeUnencryptedFile(payload: payload))
     }

@@ -102,9 +102,10 @@ final class MockBackupFileService: BackupFileServiceProtocol, @unchecked Sendabl
         return mockDecryptedPayload ?? BackupPayload(
             exportedAt: Date(),
             appVersion: "1.0.0",
-            metadata: BackupMetadata(personCount: 0, recordCount: 0),
+            metadata: BackupMetadata(personCount: 0, recordCount: 0, providerCount: 0),
             persons: [],
-            records: []
+            records: [],
+            providers: []
         )
     }
 
@@ -112,9 +113,10 @@ final class MockBackupFileService: BackupFileServiceProtocol, @unchecked Sendabl
         file.data ?? BackupPayload(
             exportedAt: Date(),
             appVersion: "1.0.0",
-            metadata: BackupMetadata(personCount: 0, recordCount: 0),
+            metadata: BackupMetadata(personCount: 0, recordCount: 0, providerCount: 0),
             persons: [],
-            records: []
+            records: [],
+            providers: []
         )
     }
 
