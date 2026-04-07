@@ -27,7 +27,8 @@ struct PersonDetailViewTests {
             medicalRecordRepository: mockRecordRepo,
             recordContentService: mockContentService,
             primaryKeyProvider: mockKeyProvider,
-            fmkService: mockFMKService
+            fmkService: mockFMKService,
+            providerRepository: MockProviderRepository()
         )
     }
 
@@ -70,7 +71,8 @@ struct PersonDetailViewTests {
             medicalRecordRepository: mockRecordRepo,
             recordContentService: mockContentService,
             primaryKeyProvider: mockKeyProvider,
-            fmkService: mockFMKService
+            fmkService: mockFMKService,
+            providerRepository: MockProviderRepository()
         )
 
         // Manually set loading state
@@ -99,7 +101,8 @@ struct PersonDetailViewTests {
             medicalRecordRepository: mockRecordRepo,
             recordContentService: mockContentService,
             primaryKeyProvider: mockKeyProvider,
-            fmkService: mockFMKService
+            fmkService: mockFMKService,
+            providerRepository: MockProviderRepository()
         )
 
         let view = PersonDetailView(person: person, viewModel: viewModel)
@@ -135,7 +138,8 @@ struct PersonDetailViewTests {
             medicalRecordRepository: mockRecordRepo,
             recordContentService: mockContentService,
             primaryKeyProvider: mockKeyProvider,
-            fmkService: mockFMKService
+            fmkService: mockFMKService,
+            providerRepository: MockProviderRepository()
         )
 
         await viewModel.loadRecordCounts()
@@ -226,7 +230,8 @@ struct PersonDetailViewTests {
             medicalRecordRepository: mockRecordRepo,
             recordContentService: mockContentService,
             primaryKeyProvider: mockKeyProvider,
-            fmkService: mockFMKService
+            fmkService: mockFMKService,
+            providerRepository: MockProviderRepository()
         )
 
         await viewModel.loadRecordCounts()

@@ -10,6 +10,7 @@ final class PersonDetailViewModel {
 
     let person: Person
     var recordCounts: [RecordType: Int] = [:]
+    var providerCount: Int = 0
     var isLoading = false
     var errorMessage: String?
 
@@ -19,6 +20,7 @@ final class PersonDetailViewModel {
     private let recordContentService: RecordContentServiceProtocol
     private let primaryKeyProvider: PrimaryKeyProviderProtocol
     private let fmkService: FamilyMemberKeyServiceProtocol
+    private let providerRepository: ProviderRepositoryProtocol
     private let logger = LoggingService.shared.logger(category: .storage)
 
     // MARK: - Initialization
@@ -28,7 +30,8 @@ final class PersonDetailViewModel {
         medicalRecordRepository: MedicalRecordRepositoryProtocol? = nil,
         recordContentService: RecordContentServiceProtocol? = nil,
         primaryKeyProvider: PrimaryKeyProviderProtocol? = nil,
-        fmkService: FamilyMemberKeyServiceProtocol? = nil
+        fmkService: FamilyMemberKeyServiceProtocol? = nil,
+        providerRepository: ProviderRepositoryProtocol? = nil
     ) {
         self.person = person
         self.medicalRecordRepository = medicalRecordRepository ?? MedicalRecordRepository(
@@ -39,6 +42,11 @@ final class PersonDetailViewModel {
         )
         self.primaryKeyProvider = primaryKeyProvider ?? PrimaryKeyProvider()
         self.fmkService = fmkService ?? FamilyMemberKeyService()
+        self.providerRepository = providerRepository ?? ProviderRepository(
+            coreDataStack: CoreDataStack.shared,
+            encryptionService: EncryptionService(),
+            fmkService: FamilyMemberKeyService()
+        )
     }
 
     // MARK: - Actions
@@ -70,6 +78,19 @@ final class PersonDetailViewModel {
         } catch {
             errorMessage = "Unable to load records. Please try again."
             logger.logError(error, context: "PersonDetailViewModel.loadRecordCounts")
+        }
+
+        // Load provider count independently so a failure here
+        // doesn't prevent record counts from displaying.
+        do {
+            let primaryKey = try primaryKeyProvider.getPrimaryKey()
+            let providers = try await providerRepository.fetchAll(
+                forPerson: person.id,
+                primaryKey: primaryKey
+            )
+            providerCount = providers.count
+        } catch {
+            logger.logError(error, context: "PersonDetailViewModel.loadProviderCount")
         }
 
         isLoading = false
