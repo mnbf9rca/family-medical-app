@@ -87,6 +87,50 @@ protocol MedicalRecordContent: Codable, Sendable {
     var unknownFields: [String: JSONValue] { get set }
 }
 
+// MARK: - Unknown Field Preservation Helpers
+
+/// Shared CodingKey type for accessing unknown/forward-compat fields during encoding and decoding.
+/// Used by the protocol extension helpers below — no need to define per record type.
+private struct DynamicCodingKey: CodingKey {
+    var stringValue: String
+    init(stringValue: String) {
+        self.stringValue = stringValue
+    }
+
+    var intValue: Int? {
+        nil
+    }
+
+    init?(intValue: Int) {
+        nil
+    }
+}
+
+extension MedicalRecordContent {
+    /// Decode all JSON keys not present in `knownKeys` into a `[String: JSONValue]` dictionary.
+    /// Call at the end of `init(from:)` after decoding all typed properties.
+    static func captureUnknownFields(
+        from decoder: Decoder,
+        knownKeys: Set<String>
+    ) throws -> [String: JSONValue] {
+        let container = try decoder.container(keyedBy: DynamicCodingKey.self)
+        var unknown: [String: JSONValue] = [:]
+        for key in container.allKeys where !knownKeys.contains(key.stringValue) {
+            unknown[key.stringValue] = try container.decode(JSONValue.self, forKey: key)
+        }
+        return unknown
+    }
+
+    /// Re-emit previously captured unknown fields into the encoder output.
+    /// Call at the end of `encode(to:)` after encoding all typed properties.
+    func emitUnknownFields(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: DynamicCodingKey.self)
+        for (key, value) in unknownFields {
+            try container.encode(value, forKey: DynamicCodingKey(stringValue: key))
+        }
+    }
+}
+
 // MARK: - FieldMetadata
 
 /// Describes a single field for the generic form renderer.

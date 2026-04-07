@@ -67,14 +67,13 @@ final class AutocompleteService: AutocompleteServiceProtocol, Sendable {
             logger.error("Resource not found: \(resource).json")
             return []
         }
-        guard
-            let data = try? Data(contentsOf: url),
-            let array = try? JSONDecoder().decode([String].self, from: data)
-        else {
-            logger.error("Failed to decode resource: \(resource).json")
+        do {
+            let data = try Data(contentsOf: url)
+            return try JSONDecoder().decode([String].self, from: data)
+        } catch {
+            logger.logError(error, context: "AutocompleteService.loadStringArray(\(resource))")
             return []
         }
-        return array
     }
 
     private static func loadJSON<T: Decodable>(from resource: String, bundle: Bundle) -> [T] {
@@ -82,14 +81,13 @@ final class AutocompleteService: AutocompleteServiceProtocol, Sendable {
             logger.error("Resource not found: \(resource).json")
             return []
         }
-        guard
-            let data = try? Data(contentsOf: url),
-            let array = try? JSONDecoder().decode([T].self, from: data)
-        else {
-            logger.error("Failed to decode resource: \(resource).json")
+        do {
+            let data = try Data(contentsOf: url)
+            return try JSONDecoder().decode([T].self, from: data)
+        } catch {
+            logger.logError(error, context: "AutocompleteService.loadJSON(\(resource))")
             return []
         }
-        return array
     }
 
     private static func findResource(_ name: String, withExtension ext: String, bundle: Bundle) -> URL? {

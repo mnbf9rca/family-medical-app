@@ -230,4 +230,32 @@ struct GenericRecordFormViewModelTests {
 
         #expect(vm.providers.isEmpty)
     }
+
+    @Test
+    func addProvider_savesAndAppendsToProvidersArray() async throws {
+        let person = try makeTestPerson()
+        let deps = FormViewModelDeps(personId: person.id)
+        let vm = FormTestSupport.makeViewModel(person: person, recordType: .immunization, deps: deps)
+        let provider = Provider(name: "Dr. Smith", organization: nil)
+
+        let success = await vm.addProvider(provider)
+
+        #expect(success == true)
+        #expect(vm.providers.count == 1)
+        #expect(vm.providers.first?.name == "Dr. Smith")
+    }
+
+    @Test
+    func addProvider_returnsFalseOnRepositoryError() async throws {
+        let person = try makeTestPerson()
+        let deps = FormViewModelDeps(personId: person.id)
+        deps.providers.shouldFailSave = true
+        let vm = FormTestSupport.makeViewModel(person: person, recordType: .immunization, deps: deps)
+        let provider = Provider(name: "Dr. Jones", organization: nil)
+
+        let success = await vm.addProvider(provider)
+
+        #expect(success == false)
+        #expect(vm.providers.isEmpty)
+    }
 }
