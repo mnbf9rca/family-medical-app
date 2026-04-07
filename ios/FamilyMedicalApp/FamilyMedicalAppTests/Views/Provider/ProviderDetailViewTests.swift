@@ -34,7 +34,7 @@ struct ProviderDetailViewTests {
     @Test
     func viewRendersInCreateMode() throws {
         let person = try makeTestPerson()
-        let view = ProviderDetailView(person: person) { _ in }
+        let view = ProviderDetailView(person: person) { _ in true }
 
         let inspected = try view.inspect()
         _ = try inspected.find(ViewType.NavigationStack.self)
@@ -43,7 +43,7 @@ struct ProviderDetailViewTests {
     @Test
     func viewRendersFormInCreateMode() throws {
         let person = try makeTestPerson()
-        let view = ProviderDetailView(person: person) { _ in }
+        let view = ProviderDetailView(person: person) { _ in true }
 
         let inspected = try view.inspect()
         _ = try inspected.find(ViewType.Form.self)
@@ -52,7 +52,7 @@ struct ProviderDetailViewTests {
     @Test
     func viewShowsUXHintInCreateMode() throws {
         let person = try makeTestPerson()
-        let view = ProviderDetailView(person: person) { _ in }
+        let view = ProviderDetailView(person: person) { _ in true }
 
         let inspected = try view.inspect()
         _ = try inspected.find(text: "Is this a person or a practice? Fill in their name, organization, or both.")
@@ -62,7 +62,7 @@ struct ProviderDetailViewTests {
     func viewDoesNotShowUXHintInEditMode() throws {
         let person = try makeTestPerson()
         let existingProvider = makeProvider()
-        let view = ProviderDetailView(person: person, existingProvider: existingProvider) { _ in }
+        let view = ProviderDetailView(person: person, existingProvider: existingProvider) { _ in true }
 
         let inspected = try view.inspect()
         // In edit mode, the hint section should not be present
@@ -77,7 +77,7 @@ struct ProviderDetailViewTests {
     func viewRendersInEditMode() throws {
         let person = try makeTestPerson()
         let existingProvider = makeProvider()
-        let view = ProviderDetailView(person: person, existingProvider: existingProvider) { _ in }
+        let view = ProviderDetailView(person: person, existingProvider: existingProvider) { _ in true }
 
         let inspected = try view.inspect()
         _ = try inspected.find(ViewType.NavigationStack.self)
@@ -87,7 +87,7 @@ struct ProviderDetailViewTests {
     func viewRendersFormInEditMode() throws {
         let person = try makeTestPerson()
         let existingProvider = makeProvider()
-        let view = ProviderDetailView(person: person, existingProvider: existingProvider) { _ in }
+        let view = ProviderDetailView(person: person, existingProvider: existingProvider) { _ in true }
 
         let inspected = try view.inspect()
         _ = try inspected.find(ViewType.Form.self)
@@ -98,7 +98,7 @@ struct ProviderDetailViewTests {
     @Test
     func formHasNameField() throws {
         let person = try makeTestPerson()
-        let view = ProviderDetailView(person: person) { _ in }
+        let view = ProviderDetailView(person: person) { _ in true }
 
         let inspected = try view.inspect()
         let form = try inspected.find(ViewType.Form.self)
@@ -111,7 +111,7 @@ struct ProviderDetailViewTests {
     @Test
     func formHasOrganizationField() throws {
         let person = try makeTestPerson()
-        let view = ProviderDetailView(person: person) { _ in }
+        let view = ProviderDetailView(person: person) { _ in true }
 
         let inspected = try view.inspect()
         let form = try inspected.find(ViewType.Form.self)
@@ -123,7 +123,7 @@ struct ProviderDetailViewTests {
     @Test
     func formHasSpecialtyField() throws {
         let person = try makeTestPerson()
-        let view = ProviderDetailView(person: person) { _ in }
+        let view = ProviderDetailView(person: person) { _ in true }
 
         let inspected = try view.inspect()
         let form = try inspected.find(ViewType.Form.self)
@@ -135,7 +135,7 @@ struct ProviderDetailViewTests {
     @Test
     func formHasPhoneField() throws {
         let person = try makeTestPerson()
-        let view = ProviderDetailView(person: person) { _ in }
+        let view = ProviderDetailView(person: person) { _ in true }
 
         let inspected = try view.inspect()
         let form = try inspected.find(ViewType.Form.self)
@@ -147,7 +147,7 @@ struct ProviderDetailViewTests {
     @Test
     func formHasAddressField() throws {
         let person = try makeTestPerson()
-        let view = ProviderDetailView(person: person) { _ in }
+        let view = ProviderDetailView(person: person) { _ in true }
 
         let inspected = try view.inspect()
         let form = try inspected.find(ViewType.Form.self)
@@ -159,7 +159,7 @@ struct ProviderDetailViewTests {
     @Test
     func formHasNotesField() throws {
         let person = try makeTestPerson()
-        let view = ProviderDetailView(person: person) { _ in }
+        let view = ProviderDetailView(person: person) { _ in true }
 
         let inspected = try view.inspect()
         let form = try inspected.find(ViewType.Form.self)
@@ -172,7 +172,7 @@ struct ProviderDetailViewTests {
     func formPreFillsNameFromExistingProvider() throws {
         let person = try makeTestPerson()
         let existingProvider = makeProvider(name: "Dr. Jane Doe")
-        let view = ProviderDetailView(person: person, existingProvider: existingProvider) { _ in }
+        let view = ProviderDetailView(person: person, existingProvider: existingProvider) { _ in true }
 
         let inspected = try view.inspect()
         let nameField = try inspected.find(ViewType.TextField.self) {
@@ -186,7 +186,7 @@ struct ProviderDetailViewTests {
     func formPreFillsOrganizationFromExistingProvider() throws {
         let person = try makeTestPerson()
         let existingProvider = makeProvider(name: "Dr. Smith", organization: "City Hospital")
-        let view = ProviderDetailView(person: person, existingProvider: existingProvider) { _ in }
+        let view = ProviderDetailView(person: person, existingProvider: existingProvider) { _ in true }
 
         let inspected = try view.inspect()
         let orgField = try inspected.find(ViewType.TextField.self) {
@@ -200,7 +200,7 @@ struct ProviderDetailViewTests {
     func formPreFillsSpecialtyFromExistingProvider() throws {
         let person = try makeTestPerson()
         let existingProvider = makeProvider(specialty: "Neurology")
-        let view = ProviderDetailView(person: person, existingProvider: existingProvider) { _ in }
+        let view = ProviderDetailView(person: person, existingProvider: existingProvider) { _ in true }
 
         let inspected = try view.inspect()
         let specialtyField = try inspected.find(ViewType.TextField.self) {
@@ -214,7 +214,7 @@ struct ProviderDetailViewTests {
     func formPreFillsPhoneFromExistingProvider() throws {
         let person = try makeTestPerson()
         let existingProvider = makeProvider(phone: "555-1234")
-        let view = ProviderDetailView(person: person, existingProvider: existingProvider) { _ in }
+        let view = ProviderDetailView(person: person, existingProvider: existingProvider) { _ in true }
 
         let inspected = try view.inspect()
         let phoneField = try inspected.find(ViewType.TextField.self) {
@@ -228,7 +228,7 @@ struct ProviderDetailViewTests {
     func formPreFillsAddressFromExistingProvider() throws {
         let person = try makeTestPerson()
         let existingProvider = makeProvider(address: "456 Oak Ave")
-        let view = ProviderDetailView(person: person, existingProvider: existingProvider) { _ in }
+        let view = ProviderDetailView(person: person, existingProvider: existingProvider) { _ in true }
 
         let inspected = try view.inspect()
         let addressField = try inspected.find(ViewType.TextField.self) {
@@ -242,7 +242,7 @@ struct ProviderDetailViewTests {
     func formPreFillsNotesFromExistingProvider() throws {
         let person = try makeTestPerson()
         let existingProvider = makeProvider(notes: "Very helpful")
-        let view = ProviderDetailView(person: person, existingProvider: existingProvider) { _ in }
+        let view = ProviderDetailView(person: person, existingProvider: existingProvider) { _ in true }
 
         let inspected = try view.inspect()
         _ = try inspected.find(ViewType.TextEditor.self)
@@ -253,7 +253,7 @@ struct ProviderDetailViewTests {
     @Test
     func saveButtonExists() throws {
         let person = try makeTestPerson()
-        let view = ProviderDetailView(person: person) { _ in }
+        let view = ProviderDetailView(person: person) { _ in true }
 
         let inspected = try view.inspect()
         _ = try inspected.find(button: "Save")
@@ -262,7 +262,7 @@ struct ProviderDetailViewTests {
     @Test
     func cancelButtonExists() throws {
         let person = try makeTestPerson()
-        let view = ProviderDetailView(person: person) { _ in }
+        let view = ProviderDetailView(person: person) { _ in true }
 
         let inspected = try view.inspect()
         _ = try inspected.find(button: "Cancel")
@@ -273,7 +273,7 @@ struct ProviderDetailViewTests {
     @Test
     func formHasProviderInformationSection() throws {
         let person = try makeTestPerson()
-        let view = ProviderDetailView(person: person) { _ in }
+        let view = ProviderDetailView(person: person) { _ in true }
 
         let inspected = try view.inspect()
         let form = try inspected.find(ViewType.Form.self)
@@ -285,7 +285,7 @@ struct ProviderDetailViewTests {
     @Test
     func formHasContactSection() throws {
         let person = try makeTestPerson()
-        let view = ProviderDetailView(person: person) { _ in }
+        let view = ProviderDetailView(person: person) { _ in true }
 
         let inspected = try view.inspect()
         let form = try inspected.find(ViewType.Form.self)
@@ -296,7 +296,7 @@ struct ProviderDetailViewTests {
     @Test
     func formHasNotesSection() throws {
         let person = try makeTestPerson()
-        let view = ProviderDetailView(person: person) { _ in }
+        let view = ProviderDetailView(person: person) { _ in true }
 
         let inspected = try view.inspect()
         let form = try inspected.find(ViewType.Form.self)
@@ -308,7 +308,7 @@ struct ProviderDetailViewTests {
     func editModeFormHasExpectedSections() throws {
         let person = try makeTestPerson()
         let existingProvider = makeProvider()
-        let view = ProviderDetailView(person: person, existingProvider: existingProvider) { _ in }
+        let view = ProviderDetailView(person: person, existingProvider: existingProvider) { _ in true }
 
         let inspected = try view.inspect()
         let form = try inspected.find(ViewType.Form.self)
@@ -324,7 +324,7 @@ struct ProviderDetailViewTests {
     @Test
     func createModeFieldsStartEmpty() throws {
         let person = try makeTestPerson()
-        let view = ProviderDetailView(person: person) { _ in }
+        let view = ProviderDetailView(person: person) { _ in true }
 
         let inspected = try view.inspect()
         let nameField = try inspected.find(ViewType.TextField.self) {
@@ -345,7 +345,7 @@ struct ProviderDetailViewTests {
             address: "789 Full St",
             notes: "Full notes"
         )
-        let view = ProviderDetailView(person: person, existingProvider: existingProvider) { _ in }
+        let view = ProviderDetailView(person: person, existingProvider: existingProvider) { _ in true }
 
         let inspected = try view.inspect()
         _ = try inspected.find(ViewType.Form.self)

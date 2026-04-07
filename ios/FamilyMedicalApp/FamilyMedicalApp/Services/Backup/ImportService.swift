@@ -68,7 +68,7 @@ final class ImportService: ImportServiceProtocol, @unchecked Sendable {
         do {
             person = try backup.toPerson()
         } catch {
-            logger.error("Failed to create person from backup")
+            logger.logError(error, context: "ImportService.importPerson")
             throw BackupError.importFailed("Invalid person data in backup")
         }
 
@@ -76,14 +76,14 @@ final class ImportService: ImportServiceProtocol, @unchecked Sendable {
         do {
             try fmkService.storeFMK(fmk, familyMemberID: person.id.uuidString, primaryKey: primaryKey)
         } catch {
-            logger.error("Failed to store FMK for imported person")
+            logger.logError(error, context: "ImportService.importPerson")
             throw BackupError.importFailed("Failed to create encryption key for person")
         }
 
         do {
             try await personRepository.save(person, primaryKey: primaryKey)
         } catch {
-            logger.error("Failed to save imported person")
+            logger.logError(error, context: "ImportService.importPerson")
             throw BackupError.importFailed("Failed to save person")
         }
 
@@ -104,7 +104,7 @@ final class ImportService: ImportServiceProtocol, @unchecked Sendable {
         do {
             envelope = try backup.toEnvelope()
         } catch {
-            logger.error("Invalid record type in backup")
+            logger.logError(error, context: "ImportService.importRecord")
             throw BackupError.corruptedFile
         }
 
@@ -112,7 +112,7 @@ final class ImportService: ImportServiceProtocol, @unchecked Sendable {
         do {
             encryptedContent = try recordContentService.encrypt(envelope, using: fmk)
         } catch {
-            logger.error("Failed to encrypt record content during import")
+            logger.logError(error, context: "ImportService.importRecord")
             throw BackupError.importFailed("Failed to encrypt medical record")
         }
 
@@ -129,7 +129,7 @@ final class ImportService: ImportServiceProtocol, @unchecked Sendable {
         do {
             try await recordRepository.save(record)
         } catch {
-            logger.error("Failed to save imported record")
+            logger.logError(error, context: "ImportService.importRecord")
             throw BackupError.importFailed("Failed to save medical record")
         }
 
@@ -144,14 +144,14 @@ final class ImportService: ImportServiceProtocol, @unchecked Sendable {
         do {
             provider = try backup.toProvider()
         } catch {
-            logger.error("Failed to create provider from backup")
+            logger.logError(error, context: "ImportService.importProvider")
             throw BackupError.corruptedFile
         }
 
         do {
             try await providerRepository.save(provider, personId: backup.personId, primaryKey: primaryKey)
         } catch {
-            logger.error("Failed to save imported provider")
+            logger.logError(error, context: "ImportService.importProvider")
             throw BackupError.importFailed("Failed to save provider")
         }
 

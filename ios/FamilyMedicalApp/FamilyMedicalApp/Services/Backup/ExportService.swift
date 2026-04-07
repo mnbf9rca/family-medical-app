@@ -78,7 +78,7 @@ final class ExportService: ExportServiceProtocol, @unchecked Sendable {
         do {
             return try await personRepository.fetchAll(primaryKey: primaryKey)
         } catch {
-            logger.error("Failed to fetch persons for export")
+            logger.logError(error, context: "ExportService.fetchPersons")
             throw BackupError.exportFailed("Failed to fetch persons: \(error.localizedDescription)")
         }
     }
@@ -102,7 +102,7 @@ final class ExportService: ExportServiceProtocol, @unchecked Sendable {
         do {
             return try fmkService.retrieveFMK(familyMemberID: person.id.uuidString, primaryKey: primaryKey)
         } catch {
-            logger.error("Failed to retrieve FMK for person during export")
+            logger.logError(error, context: "ExportService.retrieveFMK")
             throw BackupError.exportFailed("Failed to retrieve encryption key for person")
         }
     }
@@ -115,7 +115,7 @@ final class ExportService: ExportServiceProtocol, @unchecked Sendable {
         do {
             records = try await recordRepository.fetchForPerson(personId: person.id)
         } catch {
-            logger.error("Failed to fetch records for person during export")
+            logger.logError(error, context: "ExportService.exportRecords")
             throw BackupError.exportFailed("Failed to fetch medical records")
         }
 
@@ -126,7 +126,7 @@ final class ExportService: ExportServiceProtocol, @unchecked Sendable {
             do {
                 envelope = try recordContentService.decrypt(record.encryptedContent, using: fmk)
             } catch {
-                logger.error("Failed to decrypt record content during export")
+                logger.logError(error, context: "ExportService.exportRecords")
                 throw BackupError.exportFailed("Failed to decrypt medical record")
             }
 
@@ -144,7 +144,7 @@ final class ExportService: ExportServiceProtocol, @unchecked Sendable {
         do {
             providers = try await providerRepository.fetchAll(forPerson: person.id, primaryKey: primaryKey)
         } catch {
-            logger.error("Failed to fetch providers for person during export")
+            logger.logError(error, context: "ExportService.exportProviders")
             throw BackupError.exportFailed("Failed to fetch providers")
         }
 

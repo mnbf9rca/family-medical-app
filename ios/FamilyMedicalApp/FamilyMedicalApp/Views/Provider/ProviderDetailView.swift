@@ -4,7 +4,7 @@ import SwiftUI
 struct ProviderDetailView: View {
     let person: Person
     let existingProvider: Provider?
-    let onSave: (Provider) async -> Void
+    let onSave: (Provider) async -> Bool
 
     @Environment(\.dismiss)
     private var dismiss
@@ -16,12 +16,13 @@ struct ProviderDetailView: View {
     @State private var address: String
     @State private var notes: String
     @State private var validationError: String?
+    @State private var saveError: String?
     @State private var isSaving = false
 
     init(
         person: Person,
         existingProvider: Provider? = nil,
-        onSave: @escaping (Provider) async -> Void
+        onSave: @escaping (Provider) async -> Bool
     ) {
         self.person = person
         self.existingProvider = existingProvider
@@ -96,6 +97,14 @@ struct ProviderDetailView: View {
                             .font(.footnote)
                     }
                 }
+
+                if let saveError {
+                    Section {
+                        Text(saveError)
+                            .foregroundStyle(.red)
+                            .font(.footnote)
+                    }
+                }
             }
             .navigationTitle(isEditing ? "Edit Provider" : "New Provider")
             .navigationBarTitleDisplayMode(.inline)
@@ -117,6 +126,7 @@ struct ProviderDetailView: View {
 
     private func save() async {
         validationError = nil
+        saveError = nil
 
         guard trimmedName != nil || trimmedOrganization != nil else {
             validationError = "Please provide at least a name or organization."
@@ -150,9 +160,14 @@ struct ProviderDetailView: View {
             )
         }
 
-        await onSave(provider)
+        let success = await onSave(provider)
         isSaving = false
-        dismiss()
+
+        if success {
+            dismiss()
+        } else {
+            saveError = "Unable to save provider. Please try again."
+        }
     }
 
     private func nonEmpty(_ value: String) -> String? {

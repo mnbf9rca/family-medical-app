@@ -355,6 +355,69 @@ struct ProviderBackupTests {
         }
     }
 
+    @Test("ProviderBackup toProvider throws when name is empty and organization is nil")
+    func toProviderThrowsForEmptyName() {
+        let backup = ProviderBackup(
+            id: UUID(),
+            personId: UUID(),
+            name: "",
+            organization: nil,
+            createdAt: Date(),
+            updatedAt: Date()
+        )
+
+        #expect(throws: BackupError.self) {
+            _ = try backup.toProvider()
+        }
+    }
+
+    @Test("ProviderBackup toProvider throws when name is whitespace-only and organization is nil")
+    func toProviderThrowsForWhitespaceName() {
+        let backup = ProviderBackup(
+            id: UUID(),
+            personId: UUID(),
+            name: "   ",
+            organization: nil,
+            createdAt: Date(),
+            updatedAt: Date()
+        )
+
+        #expect(throws: BackupError.self) {
+            _ = try backup.toProvider()
+        }
+    }
+
+    @Test("ProviderBackup toProvider trims organization when name is nil")
+    func toProviderTrimsOrganization() throws {
+        let backup = ProviderBackup(
+            id: UUID(),
+            personId: UUID(),
+            name: nil,
+            organization: "  Valid Org  ",
+            createdAt: Date(),
+            updatedAt: Date()
+        )
+
+        let provider = try backup.toProvider()
+        #expect(provider.organization == "Valid Org")
+    }
+
+    @Test("ProviderBackup toProvider converts whitespace-only specialty to nil")
+    func toProviderTrimsWhitespaceSpecialty() throws {
+        let backup = ProviderBackup(
+            id: UUID(),
+            personId: UUID(),
+            name: "Dr. Smith",
+            organization: nil,
+            specialty: "   ",
+            createdAt: Date(),
+            updatedAt: Date()
+        )
+
+        let provider = try backup.toProvider()
+        #expect(provider.specialty == nil)
+    }
+
     @Test("ProviderBackup round-trips through JSON")
     func roundTrip() throws {
         // Use whole-second dates to avoid sub-second precision loss in ISO 8601 round-trip
@@ -379,5 +442,78 @@ struct ProviderBackupTests {
         let decoded = try decoder.decode(ProviderBackup.self, from: data)
 
         #expect(decoded == original)
+    }
+}
+
+@Suite("PersonBackup Trimming Tests")
+struct PersonBackupTrimmingTests {
+    @Test("PersonBackup toPerson converts whitespace-only notes to nil")
+    func toPersonTrimsWhitespaceNotes() throws {
+        let backup = PersonBackup(
+            id: UUID(),
+            name: "Test Person",
+            dateOfBirth: nil,
+            labels: [],
+            notes: "   ",
+            createdAt: Date(),
+            updatedAt: Date()
+        )
+
+        let person = try backup.toPerson()
+        #expect(person.notes == nil)
+    }
+
+    @Test("PersonBackup toPerson converts whitespace-only gender to nil")
+    func toPersonTrimsWhitespaceGender() throws {
+        let backup = PersonBackup(
+            id: UUID(),
+            name: "Test Person",
+            dateOfBirth: nil,
+            labels: [],
+            notes: nil,
+            gender: "  \t  ",
+            createdAt: Date(),
+            updatedAt: Date()
+        )
+
+        let person = try backup.toPerson()
+        #expect(person.gender == nil)
+    }
+
+    @Test("PersonBackup toPerson converts whitespace-only bloodType to nil")
+    func toPersonTrimsWhitespaceBloodType() throws {
+        let backup = PersonBackup(
+            id: UUID(),
+            name: "Test Person",
+            dateOfBirth: nil,
+            labels: [],
+            notes: nil,
+            bloodType: " \n ",
+            createdAt: Date(),
+            updatedAt: Date()
+        )
+
+        let person = try backup.toPerson()
+        #expect(person.bloodType == nil)
+    }
+
+    @Test("PersonBackup toPerson preserves valid optional fields after trimming")
+    func toPersonPreservesValidFields() throws {
+        let backup = PersonBackup(
+            id: UUID(),
+            name: "Test Person",
+            dateOfBirth: nil,
+            labels: [],
+            notes: "  Some notes  ",
+            gender: " Male ",
+            bloodType: " A+ ",
+            createdAt: Date(),
+            updatedAt: Date()
+        )
+
+        let person = try backup.toPerson()
+        #expect(person.notes == "Some notes")
+        #expect(person.gender == "Male")
+        #expect(person.bloodType == "A+")
     }
 }

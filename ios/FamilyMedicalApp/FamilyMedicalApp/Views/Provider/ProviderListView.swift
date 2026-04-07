@@ -54,11 +54,13 @@ struct ProviderListView: View {
         .sheet(isPresented: $showingCreateSheet) {
             ProviderDetailView(person: person) { provider in
                 await viewModel.saveProvider(provider)
+                return viewModel.errorMessage == nil
             }
         }
         .sheet(item: $providerToEdit) { provider in
             ProviderDetailView(person: person, existingProvider: provider) { updated in
                 await viewModel.saveProvider(updated)
+                return viewModel.errorMessage == nil
             }
         }
         .overlay {
