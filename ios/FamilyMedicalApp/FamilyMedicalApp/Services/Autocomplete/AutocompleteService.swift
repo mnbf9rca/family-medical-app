@@ -64,7 +64,7 @@ final class AutocompleteService: AutocompleteServiceProtocol, Sendable {
 
     private static func loadStringArray(from resource: String, bundle: Bundle) -> [String] {
         guard let url = findResource(resource, withExtension: "json", bundle: bundle) else {
-            logger.error("Resource not found: \(resource, privacy: .public).json")
+            logger.error("Resource not found: \(resource).json")
             return []
         }
         do {
@@ -78,7 +78,7 @@ final class AutocompleteService: AutocompleteServiceProtocol, Sendable {
 
     private static func loadJSON<T: Decodable>(from resource: String, bundle: Bundle) -> [T] {
         guard let url = findResource(resource, withExtension: "json", bundle: bundle) else {
-            logger.error("Resource not found: \(resource, privacy: .public).json")
+            logger.error("Resource not found: \(resource).json")
             return []
         }
         do {
