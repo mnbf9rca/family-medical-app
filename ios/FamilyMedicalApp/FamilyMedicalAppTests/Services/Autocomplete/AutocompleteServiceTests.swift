@@ -213,3 +213,20 @@ struct AutocompleteServiceDirectTests {
         #expect(!results.contains("Weight"))
     }
 }
+
+// MARK: - Missing Resource Tests
+
+/// Anchor class whose bundle (the test target) does NOT contain Autocomplete JSON resources.
+private final class TestBundleAnchor {}
+
+@Suite("AutocompleteService Missing Resource Tests")
+struct AutocompleteServiceMissingResourceTests {
+    @Test("Gracefully returns empty results when bundle has no autocomplete resources")
+    func emptyResultsWhenResourcesMissing() {
+        let service = AutocompleteService(bundle: Bundle(for: TestBundleAnchor.self))
+        #expect(service.suggestions(for: .cvxVaccines, query: "").isEmpty)
+        #expect(service.suggestions(for: .whoMedications, query: "").isEmpty)
+        #expect(service.suggestions(for: .observationTypes, query: "").isEmpty)
+        #expect(service.observationTypes().isEmpty)
+    }
+}
