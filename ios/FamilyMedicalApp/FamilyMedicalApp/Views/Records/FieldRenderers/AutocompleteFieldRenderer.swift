@@ -107,6 +107,8 @@ struct AutocompleteFieldRenderer: View {
             }
             if metadata.isProviderReference {
                 Button {
+                    showingSuggestions = false
+                    isFocused = false
                     showingCreateProvider = true
                 } label: {
                     Label("Add new provider\u{2026}", systemImage: "plus.circle")
