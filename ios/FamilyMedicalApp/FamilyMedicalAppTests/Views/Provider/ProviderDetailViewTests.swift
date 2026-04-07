@@ -66,9 +66,9 @@ struct ProviderDetailViewTests {
 
         let inspected = try view.inspect()
         // In edit mode, the hint section should not be present
-        let hintTexts = inspected
-            .findAll(text: "Is this a person or a practice? Fill in their name, organization, or both.")
-        #expect(hintTexts.isEmpty)
+        let hintText = try? inspected
+            .find(text: "Is this a person or a practice? Fill in their name, organization, or both.")
+        #expect(hintText == nil)
     }
 
     // MARK: - Edit Mode Tests
