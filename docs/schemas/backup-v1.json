@@ -299,8 +299,8 @@
       "description": "Healthcare provider data",
       "required": ["id", "personId", "createdAt", "updatedAt", "version"],
       "anyOf": [
-        { "required": ["name"], "properties": { "name": { "type": "string" } } },
-        { "required": ["organization"], "properties": { "organization": { "type": "string" } } }
+        { "required": ["name"], "properties": { "name": { "type": "string", "minLength": 1, "pattern": "\\S" } } },
+        { "required": ["organization"], "properties": { "organization": { "type": "string", "minLength": 1, "pattern": "\\S" } } }
       ],
       "properties": {
         "id": {
