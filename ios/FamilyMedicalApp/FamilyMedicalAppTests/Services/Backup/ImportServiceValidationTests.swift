@@ -13,29 +13,34 @@ struct ImportServiceValidationTests {
         personRepository: MockPersonRepository = MockPersonRepository(),
         recordRepository: MockMedicalRecordRepository = MockMedicalRecordRepository(),
         recordContentService: MockRecordContentService = MockRecordContentService(),
+        providerRepository: MockProviderRepository = MockProviderRepository(),
         fmkService: MockFamilyMemberKeyService = MockFamilyMemberKeyService()
     ) -> ImportService {
         ImportService(
             personRepository: personRepository,
             recordRepository: recordRepository,
             recordContentService: recordContentService,
+            providerRepository: providerRepository,
             fmkService: fmkService
         )
     }
 
     func makeTestPayload(
         persons: [PersonBackup] = [],
-        records: [MedicalRecordBackup] = []
+        records: [MedicalRecordBackup] = [],
+        providers: [ProviderBackup] = []
     ) -> BackupPayload {
         BackupPayload(
             exportedAt: Date(),
             appVersion: "1.0.0",
             metadata: BackupMetadata(
                 personCount: persons.count,
-                recordCount: records.count
+                recordCount: records.count,
+                providerCount: providers.count
             ),
             persons: persons,
-            records: records
+            records: records,
+            providers: providers
         )
     }
 

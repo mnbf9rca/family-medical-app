@@ -138,11 +138,17 @@ private struct DefaultDependencies {
         )
         let recordRepository = MedicalRecordRepository(coreDataStack: coreDataStack)
         let recordContentService = RecordContentService(encryptionService: encryptionService)
+        let providerRepository = ProviderRepository(
+            coreDataStack: coreDataStack,
+            encryptionService: encryptionService,
+            fmkService: fmkService
+        )
 
         self.exportService = ExportService(
             personRepository: personRepository,
             recordRepository: recordRepository,
             recordContentService: recordContentService,
+            providerRepository: providerRepository,
             fmkService: fmkService
         )
 
@@ -150,6 +156,7 @@ private struct DefaultDependencies {
             personRepository: personRepository,
             recordRepository: recordRepository,
             recordContentService: recordContentService,
+            providerRepository: providerRepository,
             fmkService: fmkService
         )
 

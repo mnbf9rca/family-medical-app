@@ -16,7 +16,7 @@ final class MockExportService: ExportServiceProtocol, @unchecked Sendable {
         return BackupPayload(
             exportedAt: Date(),
             appVersion: "1.0.0",
-            metadata: BackupMetadata(personCount: 1, recordCount: 2),
+            metadata: BackupMetadata(personCount: 1, recordCount: 2, providerCount: 0),
             persons: [
                 PersonBackup(
                     id: UUID(),
@@ -28,7 +28,8 @@ final class MockExportService: ExportServiceProtocol, @unchecked Sendable {
                     updatedAt: Date()
                 )
             ],
-            records: []
+            records: [],
+            providers: []
         )
     }
 }

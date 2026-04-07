@@ -11,6 +11,7 @@ final class ImportService: ImportServiceProtocol, @unchecked Sendable {
     private let personRepository: PersonRepositoryProtocol
     private let recordRepository: MedicalRecordRepositoryProtocol
     private let recordContentService: RecordContentServiceProtocol
+    private let providerRepository: ProviderRepositoryProtocol
     private let fmkService: FamilyMemberKeyServiceProtocol
     private let logger: TracingCategoryLogger
 
@@ -18,12 +19,14 @@ final class ImportService: ImportServiceProtocol, @unchecked Sendable {
         personRepository: PersonRepositoryProtocol,
         recordRepository: MedicalRecordRepositoryProtocol,
         recordContentService: RecordContentServiceProtocol,
+        providerRepository: ProviderRepositoryProtocol,
         fmkService: FamilyMemberKeyServiceProtocol,
         logger: CategoryLoggerProtocol? = nil
     ) {
         self.personRepository = personRepository
         self.recordRepository = recordRepository
         self.recordContentService = recordContentService
+        self.providerRepository = providerRepository
         self.fmkService = fmkService
         self.logger = TracingCategoryLogger(
             wrapping: logger ?? LoggingService.shared.logger(category: .backup)
@@ -45,9 +48,14 @@ final class ImportService: ImportServiceProtocol, @unchecked Sendable {
             try await importRecord(recordBackup, personFMKs: personFMKs)
         }
 
+        for providerBackup in payload.providers {
+            try await importProvider(providerBackup, primaryKey: primaryKey)
+        }
+
         logger.debug(
             "Import complete: \(payload.persons.count) persons, "
-                + "\(payload.records.count) records"
+                + "\(payload.records.count) records, "
+                + "\(payload.providers.count) providers"
         )
         logger.exit("importData", duration: ContinuousClock.now - start)
     }
@@ -126,5 +134,27 @@ final class ImportService: ImportServiceProtocol, @unchecked Sendable {
         }
 
         logger.exit("importRecord", duration: ContinuousClock.now - start)
+    }
+
+    private func importProvider(_ backup: ProviderBackup, primaryKey: SymmetricKey) async throws {
+        let start = ContinuousClock.now
+        logger.entry("importProvider")
+
+        let provider: Provider
+        do {
+            provider = try backup.toProvider()
+        } catch {
+            logger.error("Failed to create provider from backup")
+            throw BackupError.corruptedFile
+        }
+
+        do {
+            try await providerRepository.save(provider, personId: backup.personId, primaryKey: primaryKey)
+        } catch {
+            logger.error("Failed to save imported provider")
+            throw BackupError.importFailed("Failed to save provider")
+        }
+
+        logger.exit("importProvider", duration: ContinuousClock.now - start)
     }
 }

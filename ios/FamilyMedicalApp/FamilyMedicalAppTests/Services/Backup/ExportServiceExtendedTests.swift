@@ -13,12 +13,14 @@ struct ExportServiceExtendedTests {
         personRepository: MockPersonRepository = MockPersonRepository(),
         recordRepository: MockMedicalRecordRepository = MockMedicalRecordRepository(),
         recordContentService: MockRecordContentService = MockRecordContentService(),
+        providerRepository: MockProviderRepository = MockProviderRepository(),
         fmkService: MockFamilyMemberKeyService = MockFamilyMemberKeyService()
     ) -> ExportService {
         ExportService(
             personRepository: personRepository,
             recordRepository: recordRepository,
             recordContentService: recordContentService,
+            providerRepository: providerRepository,
             fmkService: fmkService
         )
     }

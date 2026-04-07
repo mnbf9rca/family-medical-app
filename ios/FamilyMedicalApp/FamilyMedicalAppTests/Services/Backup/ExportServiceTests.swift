@@ -13,12 +13,14 @@ struct ExportServiceTests {
         personRepository: MockPersonRepository = MockPersonRepository(),
         recordRepository: MockMedicalRecordRepository = MockMedicalRecordRepository(),
         recordContentService: MockRecordContentService = MockRecordContentService(),
+        providerRepository: MockProviderRepository = MockProviderRepository(),
         fmkService: MockFamilyMemberKeyService = MockFamilyMemberKeyService()
     ) -> ExportService {
         ExportService(
             personRepository: personRepository,
             recordRepository: recordRepository,
             recordContentService: recordContentService,
+            providerRepository: providerRepository,
             fmkService: fmkService
         )
     }
@@ -139,5 +141,56 @@ struct ExportServiceTests {
         #expect(payload.records[0].personId == person.id)
         #expect(payload.records[0].recordType == "immunization")
         #expect(payload.metadata.recordCount == 1)
+    }
+
+    // MARK: - Provider Export Tests
+
+    @Test("Exports providers for persons")
+    func exportsProviders() async throws {
+        let personRepository = MockPersonRepository()
+        let providerRepository = MockProviderRepository()
+        let fmkService = MockFamilyMemberKeyService()
+
+        let person = try makeTestPerson()
+        let fmk = SymmetricKey(size: .bits256)
+        personRepository.addPerson(person)
+        fmkService.setFMK(fmk, for: person.id.uuidString)
+
+        let provider = Provider(name: "Dr. Smith", organization: "City Hospital")
+        providerRepository.addProvider(provider, personId: person.id)
+
+        let service = makeService(
+            personRepository: personRepository,
+            providerRepository: providerRepository,
+            fmkService: fmkService
+        )
+
+        let payload = try await service.exportData(primaryKey: testPrimaryKey)
+
+        #expect(payload.providers.count == 1)
+        #expect(payload.providers[0].personId == person.id)
+        #expect(payload.providers[0].name == "Dr. Smith")
+        #expect(payload.providers[0].organization == "City Hospital")
+        #expect(payload.metadata.providerCount == 1)
+    }
+
+    @Test("Exports empty providers when person has none")
+    func exportsEmptyProvidersWhenNone() async throws {
+        let personRepository = MockPersonRepository()
+        let fmkService = MockFamilyMemberKeyService()
+
+        let person = try makeTestPerson()
+        personRepository.addPerson(person)
+        fmkService.setFMK(SymmetricKey(size: .bits256), for: person.id.uuidString)
+
+        let service = makeService(
+            personRepository: personRepository,
+            fmkService: fmkService
+        )
+
+        let payload = try await service.exportData(primaryKey: testPrimaryKey)
+
+        #expect(payload.providers.isEmpty)
+        #expect(payload.metadata.providerCount == 0)
     }
 }

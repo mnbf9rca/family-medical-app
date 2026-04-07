@@ -167,6 +167,29 @@ struct BackupPayloadTests {
         )
         #expect(!withPerson.isEmpty)
     }
+
+    @Test("BackupPayload isEmpty considers providers")
+    func payloadIsEmptyConsidersProviders() {
+        let personId = UUID()
+        let withProvider = BackupPayload(
+            exportedAt: Date(),
+            appVersion: "1.0",
+            metadata: BackupMetadata(personCount: 0, recordCount: 0, providerCount: 1),
+            persons: [],
+            records: [],
+            providers: [
+                ProviderBackup(
+                    id: UUID(),
+                    personId: personId,
+                    name: "Dr. Test",
+                    organization: nil,
+                    createdAt: Date(),
+                    updatedAt: Date()
+                )
+            ]
+        )
+        #expect(!withProvider.isEmpty)
+    }
 }
 
 @Suite("BackupKDF Tests")
@@ -258,5 +281,99 @@ struct MedicalRecordBackupContentTests {
         #expect(throws: BackupError.self) {
             _ = try backup.toEnvelope()
         }
+    }
+}
+
+@Suite("ProviderBackup Tests")
+struct ProviderBackupTests {
+    @Test("ProviderBackup converts from Provider model")
+    func initFromProvider() {
+        let provider = Provider(
+            id: UUID(),
+            name: "Dr. Smith",
+            organization: "City Hospital",
+            specialty: "Pediatrics"
+        )
+        let personId = UUID()
+
+        let backup = ProviderBackup(from: provider, personId: personId)
+
+        #expect(backup.id == provider.id)
+        #expect(backup.personId == personId)
+        #expect(backup.name == "Dr. Smith")
+        #expect(backup.organization == "City Hospital")
+        #expect(backup.specialty == "Pediatrics")
+        #expect(backup.version == provider.version)
+    }
+
+    @Test("ProviderBackup converts back to Provider model")
+    func toProvider() throws {
+        let backup = ProviderBackup(
+            id: UUID(),
+            personId: UUID(),
+            name: "Dr. Smith",
+            organization: "City Hospital",
+            specialty: "Cardiology",
+            phone: "555-0100",
+            address: "123 Main St",
+            notes: "Great doctor",
+            createdAt: Date(),
+            updatedAt: Date(),
+            version: 2,
+            previousVersionId: UUID()
+        )
+
+        let provider = try backup.toProvider()
+
+        #expect(provider.id == backup.id)
+        #expect(provider.name == "Dr. Smith")
+        #expect(provider.organization == "City Hospital")
+        #expect(provider.specialty == "Cardiology")
+        #expect(provider.phone == "555-0100")
+        #expect(provider.address == "123 Main St")
+        #expect(provider.notes == "Great doctor")
+        #expect(provider.version == 2)
+        #expect(provider.previousVersionId == backup.previousVersionId)
+    }
+
+    @Test("ProviderBackup toProvider throws when both name and organization are nil")
+    func toProviderThrowsForInvalid() {
+        let backup = ProviderBackup(
+            id: UUID(),
+            personId: UUID(),
+            name: nil,
+            organization: nil,
+            createdAt: Date(),
+            updatedAt: Date()
+        )
+
+        #expect(throws: BackupError.self) {
+            _ = try backup.toProvider()
+        }
+    }
+
+    @Test("ProviderBackup round-trips through JSON")
+    func roundTrip() throws {
+        let original = ProviderBackup(
+            id: UUID(),
+            personId: UUID(),
+            name: "Dr. Test",
+            organization: nil,
+            specialty: "General",
+            createdAt: Date(),
+            updatedAt: Date(),
+            version: 1,
+            previousVersionId: nil
+        )
+
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        let data = try encoder.encode(original)
+
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let decoded = try decoder.decode(ProviderBackup.self, from: data)
+
+        #expect(decoded == original)
     }
 }

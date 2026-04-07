@@ -1,8 +1,12 @@
 # Schema-Overlay Data Model for Medical Records
 
+> **Status: Superseded** by [FHIR-Based Record Types](../superpowers/specs/2026-04-03-fhir-based-record-types-design.md)
+>
+> This ADR described the schema-overlay system, which has been replaced with fixed FHIR-based typed record models. The decisions documented here are no longer in effect.
+
 ## Status
 
-**Status**: Accepted
+**Status**: Superseded
 
 ## Context
 
