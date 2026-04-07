@@ -354,14 +354,15 @@ struct ProviderBackupTests {
 
     @Test("ProviderBackup round-trips through JSON")
     func roundTrip() throws {
+        // Use whole-second dates to avoid sub-second precision loss in ISO 8601 round-trip
         let original = ProviderBackup(
             id: UUID(),
             personId: UUID(),
             name: "Dr. Test",
             organization: nil,
             specialty: "General",
-            createdAt: Date(),
-            updatedAt: Date(),
+            createdAt: Date(timeIntervalSince1970: 1_712_505_600),
+            updatedAt: Date(timeIntervalSince1970: 1_712_505_600),
             version: 1,
             previousVersionId: nil
         )

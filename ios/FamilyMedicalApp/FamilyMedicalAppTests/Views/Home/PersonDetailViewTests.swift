@@ -148,8 +148,9 @@ struct PersonDetailViewTests {
         let inspectedView = try view.inspect()
         // Find List within the view hierarchy
         let list = try inspectedView.find(ViewType.List.self)
-        // Verify ForEach exists in the list
-        _ = try list.forEach(0)
+        // Record types are in section 1 (section 0 is "My Providers")
+        let recordTypesSection = try list.section(1)
+        _ = try recordTypesSection.forEach(0)
     }
 
     @Test
@@ -163,7 +164,8 @@ struct PersonDetailViewTests {
         let inspectedView = try view.inspect()
         // Find List within the view hierarchy
         let list = try inspectedView.find(ViewType.List.self)
-        let forEach = try list.forEach(0)
+        // Record types are in section 1 (section 0 is "My Providers")
+        let forEach = try list.section(1).forEach(0)
 
         // Verify NavigationLink exists for first item
         _ = try forEach.navigationLink(0)
@@ -240,7 +242,8 @@ struct PersonDetailViewTests {
         let inspectedView = try view.inspect()
         // Find List within the view hierarchy
         let list = try inspectedView.find(ViewType.List.self)
-        let forEach = try list.forEach(0)
+        // Record types are in section 1 (section 0 is "My Providers")
+        let forEach = try list.section(1).forEach(0)
 
         // Verify each record type appears in the list
         // There should be entries for all RecordType cases
