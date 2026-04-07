@@ -305,17 +305,18 @@ struct ProviderDetailViewTests {
     }
 
     @Test
-    func editModeFormSectionsStartWithProviderInfo() throws {
+    func editModeFormHasExpectedSections() throws {
         let person = try makeTestPerson()
         let existingProvider = makeProvider()
         let view = ProviderDetailView(person: person, existingProvider: existingProvider) { _ in }
 
         let inspected = try view.inspect()
         let form = try inspected.find(ViewType.Form.self)
-        // Edit mode: no hint section, so section 0 is Provider Information
-        _ = try form.section(0)
+        // Edit mode: conditional hint section is absent (Optional at index 0),
+        // so real sections start at index 1 in ViewInspector
         _ = try form.section(1)
         _ = try form.section(2)
+        _ = try form.section(3)
     }
 
     // MARK: - Empty Field Tests
