@@ -81,7 +81,7 @@ struct MedicalRecordDetailViewRenderingTests {
             fmkService: fmk
         )
         await detailVM.loadProviderDisplayIfNeeded()
-        #expect(detailVM.providerDisplayString == "Dr House at Princeton")
+        #expect(detailVM.providerDisplayStrings["providerId"] == "Dr House at Princeton")
 
         let view = MedicalRecordDetailView(
             person: person,

@@ -135,7 +135,7 @@ struct MedicalRecordDetailViewModelTests {
 
         await vm.loadProviderDisplayIfNeeded()
 
-        #expect(vm.providerDisplayString == provider.displayString)
+        #expect(vm.providerDisplayStrings["providerId"] == provider.displayString)
     }
 
     @Test
@@ -148,7 +148,7 @@ struct MedicalRecordDetailViewModelTests {
 
         await vm.loadProviderDisplayIfNeeded()
 
-        #expect(vm.providerDisplayString == nil)
+        #expect(vm.providerDisplayStrings.isEmpty)
         #expect(deps.providers.fetchCallCount == 0)
     }
 
@@ -167,7 +167,29 @@ struct MedicalRecordDetailViewModelTests {
 
         await vm.loadProviderDisplayIfNeeded()
 
-        #expect(vm.providerDisplayString == nil)
+        #expect(vm.providerDisplayStrings.isEmpty)
+    }
+
+    @Test
+    func loadProviderDisplayIfNeeded_resolvesBothProviderReferencesForMedicationStatement() async throws {
+        let person = try makeTestPerson()
+        let deps = Deps(personId: person.id)
+        let pharmacyProvider = Provider(name: "CVS", organization: "CVS Pharmacy")
+        let doctorProvider = Provider(name: "Dr Strange", organization: "Sanctum")
+        deps.providers.addProvider(pharmacyProvider, personId: person.id)
+        deps.providers.addProvider(doctorProvider, personId: person.id)
+        let content = MedicationStatementRecord(
+            medicationName: "Amoxicillin",
+            pharmacyId: pharmacyProvider.id,
+            providerId: doctorProvider.id
+        )
+        let decrypted = try makeDecryptedRecord(content, personId: person.id)
+        let vm = makeViewModel(person: person, decryptedRecord: decrypted, deps: deps)
+
+        await vm.loadProviderDisplayIfNeeded()
+
+        #expect(vm.providerDisplayStrings["pharmacyId"] == pharmacyProvider.displayString)
+        #expect(vm.providerDisplayStrings["providerId"] == doctorProvider.displayString)
     }
 
     // MARK: - Decode Error

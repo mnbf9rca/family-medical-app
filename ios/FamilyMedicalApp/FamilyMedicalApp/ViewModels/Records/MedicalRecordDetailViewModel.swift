@@ -5,7 +5,7 @@ import Observation
 /// ViewModel for the medical record detail screen.
 ///
 /// Decodes the `DecryptedRecord`'s envelope into native field values and, if present,
-/// resolves any `providerId` to a human-readable display string via `ProviderRepository`.
+/// resolves provider reference fields to human-readable display strings via `ProviderRepository`.
 @MainActor
 @Observable
 final class MedicalRecordDetailViewModel {
@@ -15,7 +15,7 @@ final class MedicalRecordDetailViewModel {
     let decryptedRecord: DecryptedRecord
     private(set) var knownFieldValues: [String: Any] = [:]
     private(set) var unknownFields: [String: Any] = [:]
-    private(set) var providerDisplayString: String?
+    private(set) var providerDisplayStrings: [String: String] = [:]
     /// Non-nil when the record's encrypted content could not be decoded. Shown to the user
     /// instead of the normal field list so they are not left staring at a blank screen.
     private(set) var decodeErrorMessage: String?
@@ -71,27 +71,35 @@ final class MedicalRecordDetailViewModel {
 
     // MARK: - Actions
 
-    /// Resolve the provider reference to a display string. Safe to call even when no
-    /// providerId is present (it just no-ops).
+    /// Resolve all provider reference fields to display strings. Safe to call even when no
+    /// provider references are present (it just no-ops).
     func loadProviderDisplayIfNeeded() async {
-        guard let providerKey = recordType.fieldMetadata.first(where: { $0.isProviderReference })?.keyPath,
-              let providerId = knownFieldValues[providerKey] as? UUID
-        else {
-            providerDisplayString = nil
+        let providerFields = recordType.fieldMetadata.filter(\.isProviderReference)
+        guard !providerFields.isEmpty else { return }
+
+        var resolved: [String: String] = [:]
+        guard let primaryKey = try? primaryKeyProvider.getPrimaryKey() else {
+            providerDisplayStrings = resolved
             return
         }
-        do {
-            let primaryKey = try primaryKeyProvider.getPrimaryKey()
-            let provider = try await providerRepository.fetch(
-                byId: providerId,
-                personId: person.id,
-                primaryKey: primaryKey
-            )
-            providerDisplayString = provider?.displayString
-        } catch {
-            logger.logError(error, context: "MedicalRecordDetailViewModel.loadProviderDisplayIfNeeded")
-            providerDisplayString = nil
+        for field in providerFields {
+            guard let providerId = knownFieldValues[field.keyPath] as? UUID else { continue }
+            do {
+                if let provider = try await providerRepository.fetch(
+                    byId: providerId,
+                    personId: person.id,
+                    primaryKey: primaryKey
+                ) {
+                    resolved[field.keyPath] = provider.displayString
+                }
+            } catch {
+                logger.logError(
+                    error,
+                    context: "MedicalRecordDetailViewModel.loadProviderDisplayIfNeeded(\(field.keyPath))"
+                )
+            }
         }
+        providerDisplayStrings = resolved
     }
 
     /// Load DocumentReferenceRecords attached to this record.
