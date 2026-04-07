@@ -60,6 +60,11 @@ final class DemoDataSeeder: DemoDataSeederProtocol, @unchecked Sendable {
                 coreDataStack: coreDataStack
             ),
             recordContentService: RecordContentService(encryptionService: encryptionService),
+            providerRepository: ProviderRepository(
+                coreDataStack: coreDataStack,
+                encryptionService: encryptionService,
+                fmkService: fmkService
+            ),
             fmkService: fmkService
         )
     }

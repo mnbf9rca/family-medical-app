@@ -91,6 +91,12 @@ FILE_EXCEPTIONS = {
     # which needs a running app process; formatter/types are tested separately
     # Task.detached wrapper (PR #115 review) added untestable lines, lowering ratio
     "LogExportService.swift": 45.0,
+    # ProviderListView - sheet/confirmationDialog/swipe closures unreachable from ViewInspector
+    # Delegates to ProviderListViewModel (fully tested). Structure + rendering covered.
+    "ProviderListView.swift": 76.0,
+    # ProviderDetailView - save()/nonEmpty()/trimmed closures + saveError/dismiss branching
+    # unreachable from ViewInspector. Delegates to ProviderRepository (93%+). Form structure covered.
+    "ProviderDetailView.swift": 72.0,
 }
 
 # Load coverage data

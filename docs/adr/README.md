@@ -53,12 +53,12 @@ ADRs document significant architectural decisions, their context, and consequenc
 
 ### Data Models
 
-- [ADR-0007: Schema-Overlay Data Model](adr-0007-schema-overlay-data-model.md) - **Accepted** (2025-12-23)
+- [ADR-0007: Schema-Overlay Data Model](adr-0007-schema-overlay-data-model.md) - **Superseded** (2025-12-23)
   - Type-safe field definitions with runtime validation
   - Separation of schema definition (compile-time) from record storage (runtime)
   - Built-in schema support for common medical record types
   - Custom schema extensibility for user-defined record types
-- [ADR-0009: Schema Evolution in Multi-Master Replication](adr-0009-schema-evolution-multi-master.md) - **Proposed** (2026-01-02)
+- [ADR-0009: Schema Evolution in Multi-Master Replication](adr-0009-schema-evolution-multi-master.md) - **Superseded** (2026-01-02)
   - UUID-based field IDs for collision-free multi-device schema editing
   - Hybrid logical clock versioning (timestamp + deviceId + counter)
   - Field-level merge on sync (union by UUID, last-write-wins per field)

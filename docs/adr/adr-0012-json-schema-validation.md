@@ -70,8 +70,8 @@ When modifying the backup format:
    - Add/modify properties in the relevant `$defs` section
    - Update `required` arrays if adding required fields
 
-2. **Update Swift models** - Edit files in `Services/Backup/`:
-   - Modify `BackupPayload`, `PersonBackup`, `MedicalRecordBackup`, etc.
+2. **Update Swift models** - Edit files in `Models/Backup/`:
+   - Modify `BackupPayload`, `PersonBackup`, `MedicalRecordBackup`, `ProviderBackup`, etc.
    - Ensure `CodingKeys` match the JSON property names in the schema
 
 3. **Run tests** - The schema-model consistency tests will fail if they're out of sync:

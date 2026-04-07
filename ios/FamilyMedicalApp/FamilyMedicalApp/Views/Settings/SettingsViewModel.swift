@@ -138,11 +138,17 @@ private struct DefaultDependencies {
         )
         let recordRepository = MedicalRecordRepository(coreDataStack: coreDataStack)
         let recordContentService = RecordContentService(encryptionService: encryptionService)
+        let providerRepository = ProviderRepository(
+            coreDataStack: coreDataStack,
+            encryptionService: encryptionService,
+            fmkService: fmkService
+        )
 
         self.exportService = ExportService(
             personRepository: personRepository,
             recordRepository: recordRepository,
             recordContentService: recordContentService,
+            providerRepository: providerRepository,
             fmkService: fmkService
         )
 
@@ -150,6 +156,7 @@ private struct DefaultDependencies {
             personRepository: personRepository,
             recordRepository: recordRepository,
             recordContentService: recordContentService,
+            providerRepository: providerRepository,
             fmkService: fmkService
         )
 
@@ -223,10 +230,10 @@ extension SettingsViewModel {
 
             logger.debug("Backup export completed: \(jsonData.count) bytes")
         } catch let error as BackupError {
-            logger.error("Backup export failed: \(error.localizedDescription)")
+            logger.logError(error, context: "SettingsViewModel.performExport")
             errorMessage = error.localizedDescription
         } catch {
-            logger.error("Backup export failed: \(error.localizedDescription)")
+            logger.logError(error, context: "SettingsViewModel.performExport")
             errorMessage = "Export failed: \(error.localizedDescription)"
         }
 
@@ -268,10 +275,10 @@ extension SettingsViewModel {
             let fileData = try Data(contentsOf: url)
             await handleFileData(fileData)
         } catch let error as BackupError {
-            logger.error("Failed to read backup file: \(error.localizedDescription)")
+            logger.logError(error, context: "SettingsViewModel.handleSelectedFile")
             errorMessage = error.localizedDescription
         } catch {
-            logger.error("Failed to read backup file: \(error.localizedDescription)")
+            logger.logError(error, context: "SettingsViewModel.handleSelectedFile")
             errorMessage = "Failed to read backup file: \(error.localizedDescription)"
         }
     }
@@ -300,10 +307,10 @@ extension SettingsViewModel {
                 showingImportPreview = true
             }
         } catch let error as BackupError {
-            logger.error("Failed to parse backup file: \(error.localizedDescription)")
+            logger.logError(error, context: "SettingsViewModel.handleFileData")
             errorMessage = error.localizedDescription
         } catch {
-            logger.error("Failed to parse backup file: \(error.localizedDescription)")
+            logger.logError(error, context: "SettingsViewModel.handleFileData")
             errorMessage = "Failed to read backup file: \(error.localizedDescription)"
         }
     }
@@ -353,10 +360,10 @@ extension SettingsViewModel {
 
             logger.debug("Backup import completed successfully")
         } catch let error as BackupError {
-            logger.error("Backup import failed: \(error.localizedDescription)")
+            logger.logError(error, context: "SettingsViewModel.performImport")
             errorMessage = error.localizedDescription
         } catch {
-            logger.error("Backup import failed: \(error.localizedDescription)")
+            logger.logError(error, context: "SettingsViewModel.performImport")
             errorMessage = "Import failed: \(error.localizedDescription)"
         }
 

@@ -13,29 +13,34 @@ struct ImportServiceTests {
         personRepository: MockPersonRepository = MockPersonRepository(),
         recordRepository: MockMedicalRecordRepository = MockMedicalRecordRepository(),
         recordContentService: MockRecordContentService = MockRecordContentService(),
+        providerRepository: MockProviderRepository = MockProviderRepository(),
         fmkService: MockFamilyMemberKeyService = MockFamilyMemberKeyService()
     ) -> ImportService {
         ImportService(
             personRepository: personRepository,
             recordRepository: recordRepository,
             recordContentService: recordContentService,
+            providerRepository: providerRepository,
             fmkService: fmkService
         )
     }
 
     func makeTestPayload(
         persons: [PersonBackup] = [],
-        records: [MedicalRecordBackup] = []
+        records: [MedicalRecordBackup] = [],
+        providers: [ProviderBackup] = []
     ) -> BackupPayload {
         BackupPayload(
             exportedAt: Date(),
             appVersion: "1.0.0",
             metadata: BackupMetadata(
                 personCount: persons.count,
-                recordCount: records.count
+                recordCount: records.count,
+                providerCount: providers.count
             ),
             persons: persons,
-            records: records
+            records: records,
+            providers: providers
         )
     }
 
@@ -210,6 +215,105 @@ struct ImportServiceTests {
         let payload = makeTestPayload(persons: [personBackup], records: [recordBackup])
 
         await #expect(throws: BackupError.self) {
+            try await service.importData(payload, primaryKey: testPrimaryKey)
+        }
+    }
+
+    // MARK: - Provider Import Tests
+
+    @Test("Imports providers for persons")
+    func importsProviders() async throws {
+        let personRepository = MockPersonRepository()
+        let providerRepository = MockProviderRepository()
+        let fmkService = MockFamilyMemberKeyService()
+
+        let service = makeService(
+            personRepository: personRepository,
+            providerRepository: providerRepository,
+            fmkService: fmkService
+        )
+
+        let personBackup = makePersonBackup()
+        let providerBackup = ProviderBackup(
+            id: UUID(),
+            personId: personBackup.id,
+            name: "Dr. Smith",
+            organization: "City Hospital",
+            createdAt: Date(),
+            updatedAt: Date()
+        )
+        let payload = makeTestPayload(
+            persons: [personBackup],
+            providers: [providerBackup]
+        )
+
+        try await service.importData(payload, primaryKey: testPrimaryKey)
+
+        #expect(providerRepository.saveCallCount == 1)
+        #expect(providerRepository.lastSavedProvider?.name == "Dr. Smith")
+        #expect(providerRepository.lastSavedPersonId == personBackup.id)
+    }
+
+    @Test("Throws error when provider save fails")
+    func throwsOnProviderSaveFailure() async throws {
+        let personRepository = MockPersonRepository()
+        let providerRepository = MockProviderRepository()
+        let fmkService = MockFamilyMemberKeyService()
+        providerRepository.shouldFailSave = true
+
+        let service = makeService(
+            personRepository: personRepository,
+            providerRepository: providerRepository,
+            fmkService: fmkService
+        )
+
+        let personBackup = makePersonBackup()
+        let providerBackup = ProviderBackup(
+            id: UUID(),
+            personId: personBackup.id,
+            name: "Dr. Smith",
+            organization: nil,
+            createdAt: Date(),
+            updatedAt: Date()
+        )
+        let payload = makeTestPayload(
+            persons: [personBackup],
+            providers: [providerBackup]
+        )
+
+        await #expect(throws: BackupError.self) {
+            try await service.importData(payload, primaryKey: testPrimaryKey)
+        }
+    }
+
+    @Test("Throws corruptedFile when provider has no name or organization")
+    func throwsForInvalidProvider() async throws {
+        let personRepository = MockPersonRepository()
+        let providerRepository = MockProviderRepository()
+        let fmkService = MockFamilyMemberKeyService()
+
+        let service = makeService(
+            personRepository: personRepository,
+            providerRepository: providerRepository,
+            fmkService: fmkService
+        )
+
+        let personBackup = makePersonBackup()
+        // Create provider with neither name nor organization
+        let providerBackup = ProviderBackup(
+            id: UUID(),
+            personId: personBackup.id,
+            name: nil,
+            organization: nil,
+            createdAt: Date(),
+            updatedAt: Date()
+        )
+        let payload = makeTestPayload(
+            persons: [personBackup],
+            providers: [providerBackup]
+        )
+
+        await #expect(throws: BackupError.corruptedFile) {
             try await service.importData(payload, primaryKey: testPrimaryKey)
         }
     }

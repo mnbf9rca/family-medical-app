@@ -191,9 +191,10 @@ struct SettingsViewModelTests {
         let testPayload = BackupPayload(
             exportedAt: Date(),
             appVersion: "1.0.0",
-            metadata: BackupMetadata(personCount: 2, recordCount: 5),
+            metadata: BackupMetadata(personCount: 2, recordCount: 5, providerCount: 0),
             persons: [],
-            records: []
+            records: [],
+            providers: []
         )
         backupFileService.mockBackupFile = BackupFile(
             schema: nil,
@@ -225,9 +226,10 @@ struct SettingsViewModelTests {
         viewModel.importPreviewPayload = BackupPayload(
             exportedAt: Date(),
             appVersion: "1.0.0",
-            metadata: BackupMetadata(personCount: 1, recordCount: 1),
+            metadata: BackupMetadata(personCount: 1, recordCount: 1, providerCount: 0),
             persons: [],
-            records: []
+            records: [],
+            providers: []
         )
 
         await viewModel.performImport(primaryKey: testPrimaryKey)
@@ -246,9 +248,10 @@ struct SettingsViewModelTests {
         viewModel.importPreviewPayload = BackupPayload(
             exportedAt: Date(),
             appVersion: "1.0.0",
-            metadata: BackupMetadata(personCount: 1, recordCount: 1),
+            metadata: BackupMetadata(personCount: 1, recordCount: 1, providerCount: 0),
             persons: [],
-            records: []
+            records: [],
+            providers: []
         )
 
         await viewModel.performImport(primaryKey: testPrimaryKey)

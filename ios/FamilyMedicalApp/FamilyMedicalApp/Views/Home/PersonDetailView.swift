@@ -17,12 +17,40 @@ struct PersonDetailView: View {
                     .progressViewStyle(.circular)
             } else {
                 List {
-                    ForEach(RecordType.allCases, id: \.self) { recordType in
-                        NavigationLink(value: recordType) {
-                            RecordTypeRowView(
-                                recordType: recordType,
-                                recordCount: viewModel.recordCounts[recordType] ?? 0
-                            )
+                    Section {
+                        NavigationLink {
+                            ProviderListView(person: person)
+                        } label: {
+                            HStack {
+                                Image(systemName: "stethoscope")
+                                    .foregroundStyle(.tint)
+                                    .frame(width: 30)
+                                    .accessibilityHidden(true)
+
+                                Text("My Providers")
+                                    .font(.body)
+
+                                Spacer()
+
+                                if viewModel.providerCount > 0 {
+                                    Text("\(viewModel.providerCount)")
+                                        .foregroundStyle(.secondary)
+                                        .font(.subheadline)
+                                }
+                            }
+                            .accessibilityElement(children: .combine)
+                            .accessibilityLabel(providerAccessibilityLabel)
+                        }
+                    }
+
+                    Section {
+                        ForEach(RecordType.allCases, id: \.self) { recordType in
+                            NavigationLink(value: recordType) {
+                                RecordTypeRowView(
+                                    recordType: recordType,
+                                    recordCount: viewModel.recordCounts[recordType] ?? 0
+                                )
+                            }
                         }
                     }
                 }
@@ -49,6 +77,16 @@ struct PersonDetailView: View {
         }
         .refreshable {
             await viewModel.loadRecordCounts()
+        }
+    }
+
+    private var providerAccessibilityLabel: String {
+        if viewModel.providerCount == 0 {
+            "My Providers, no providers"
+        } else if viewModel.providerCount == 1 {
+            "My Providers, 1 provider"
+        } else {
+            "My Providers, \(viewModel.providerCount) providers"
         }
     }
 }

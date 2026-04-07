@@ -5,16 +5,19 @@ import Foundation
 private struct BackupCollector {
     var persons: [PersonBackup] = []
     var records: [MedicalRecordBackup] = []
+    var providers: [ProviderBackup] = []
 
     func buildPayload(appVersion: String, logger: CategoryLoggerProtocol) -> BackupPayload {
         let metadata = BackupMetadata(
             personCount: persons.count,
-            recordCount: records.count
+            recordCount: records.count,
+            providerCount: providers.count
         )
 
         logger.debug(
             "Export complete: \(metadata.personCount) persons, "
-                + "\(metadata.recordCount) records"
+                + "\(metadata.recordCount) records, "
+                + "\(metadata.providerCount) providers"
         )
 
         return BackupPayload(
@@ -22,7 +25,8 @@ private struct BackupCollector {
             appVersion: appVersion,
             metadata: metadata,
             persons: persons,
-            records: records
+            records: records,
+            providers: providers
         )
     }
 }
@@ -37,6 +41,7 @@ final class ExportService: ExportServiceProtocol, @unchecked Sendable {
     private let personRepository: PersonRepositoryProtocol
     private let recordRepository: MedicalRecordRepositoryProtocol
     private let recordContentService: RecordContentServiceProtocol
+    private let providerRepository: ProviderRepositoryProtocol
     private let fmkService: FamilyMemberKeyServiceProtocol
     private let logger: CategoryLoggerProtocol
 
@@ -44,12 +49,14 @@ final class ExportService: ExportServiceProtocol, @unchecked Sendable {
         personRepository: PersonRepositoryProtocol,
         recordRepository: MedicalRecordRepositoryProtocol,
         recordContentService: RecordContentServiceProtocol,
+        providerRepository: ProviderRepositoryProtocol,
         fmkService: FamilyMemberKeyServiceProtocol,
         logger: CategoryLoggerProtocol? = nil
     ) {
         self.personRepository = personRepository
         self.recordRepository = recordRepository
         self.recordContentService = recordContentService
+        self.providerRepository = providerRepository
         self.fmkService = fmkService
         self.logger = logger ?? LoggingService.shared.logger(category: .storage)
     }
@@ -71,7 +78,7 @@ final class ExportService: ExportServiceProtocol, @unchecked Sendable {
         do {
             return try await personRepository.fetchAll(primaryKey: primaryKey)
         } catch {
-            logger.error("Failed to fetch persons for export")
+            logger.logError(error, context: "ExportService.fetchPersons")
             throw BackupError.exportFailed("Failed to fetch persons: \(error.localizedDescription)")
         }
     }
@@ -86,13 +93,16 @@ final class ExportService: ExportServiceProtocol, @unchecked Sendable {
 
         let records = try await exportRecords(for: person, fmk: fmk)
         collector.records.append(contentsOf: records)
+
+        let providers = try await exportProviders(for: person, primaryKey: primaryKey)
+        collector.providers.append(contentsOf: providers)
     }
 
     private func retrieveFMK(for person: Person, primaryKey: SymmetricKey) throws -> SymmetricKey {
         do {
             return try fmkService.retrieveFMK(familyMemberID: person.id.uuidString, primaryKey: primaryKey)
         } catch {
-            logger.error("Failed to retrieve FMK for person during export")
+            logger.logError(error, context: "ExportService.retrieveFMK")
             throw BackupError.exportFailed("Failed to retrieve encryption key for person")
         }
     }
@@ -105,7 +115,7 @@ final class ExportService: ExportServiceProtocol, @unchecked Sendable {
         do {
             records = try await recordRepository.fetchForPerson(personId: person.id)
         } catch {
-            logger.error("Failed to fetch records for person during export")
+            logger.logError(error, context: "ExportService.exportRecords")
             throw BackupError.exportFailed("Failed to fetch medical records")
         }
 
@@ -116,7 +126,7 @@ final class ExportService: ExportServiceProtocol, @unchecked Sendable {
             do {
                 envelope = try recordContentService.decrypt(record.encryptedContent, using: fmk)
             } catch {
-                logger.error("Failed to decrypt record content during export")
+                logger.logError(error, context: "ExportService.exportRecords")
                 throw BackupError.exportFailed("Failed to decrypt medical record")
             }
 
@@ -124,6 +134,21 @@ final class ExportService: ExportServiceProtocol, @unchecked Sendable {
         }
 
         return backups
+    }
+
+    private func exportProviders(
+        for person: Person,
+        primaryKey: SymmetricKey
+    ) async throws -> [ProviderBackup] {
+        let providers: [Provider]
+        do {
+            providers = try await providerRepository.fetchAll(forPerson: person.id, primaryKey: primaryKey)
+        } catch {
+            logger.logError(error, context: "ExportService.exportProviders")
+            throw BackupError.exportFailed("Failed to fetch providers")
+        }
+
+        return providers.map { ProviderBackup(from: $0, personId: person.id) }
     }
 
     private func appVersion() -> String {

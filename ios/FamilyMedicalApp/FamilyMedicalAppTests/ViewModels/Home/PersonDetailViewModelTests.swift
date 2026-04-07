@@ -89,7 +89,8 @@ struct PersonDetailViewModelTests {
             medicalRecordRepository: mockRecordRepo,
             recordContentService: mockContentService,
             primaryKeyProvider: mockKeyProvider,
-            fmkService: mockFMKService
+            fmkService: mockFMKService,
+            providerRepository: MockProviderRepository()
         )
 
         await viewModel.loadRecordCounts()
@@ -127,7 +128,8 @@ struct PersonDetailViewModelTests {
             medicalRecordRepository: mockRecordRepo,
             recordContentService: mockContentService,
             primaryKeyProvider: mockKeyProvider,
-            fmkService: mockFMKService
+            fmkService: mockFMKService,
+            providerRepository: MockProviderRepository()
         )
 
         await viewModel.loadRecordCounts()
@@ -152,7 +154,8 @@ struct PersonDetailViewModelTests {
             medicalRecordRepository: mockRecordRepo,
             recordContentService: mockContentService,
             primaryKeyProvider: mockKeyProvider,
-            fmkService: mockFMKService
+            fmkService: mockFMKService,
+            providerRepository: MockProviderRepository()
         )
 
         await viewModel.loadRecordCounts()
@@ -176,7 +179,8 @@ struct PersonDetailViewModelTests {
             medicalRecordRepository: mockRecordRepo,
             recordContentService: mockContentService,
             primaryKeyProvider: mockKeyProvider,
-            fmkService: mockFMKService
+            fmkService: mockFMKService,
+            providerRepository: MockProviderRepository()
         )
 
         await viewModel.loadRecordCounts()
@@ -202,7 +206,8 @@ struct PersonDetailViewModelTests {
             medicalRecordRepository: mockRecordRepo,
             recordContentService: mockContentService,
             primaryKeyProvider: mockKeyProvider,
-            fmkService: mockFMKService
+            fmkService: mockFMKService,
+            providerRepository: MockProviderRepository()
         )
 
         await viewModel.loadRecordCounts()
@@ -229,7 +234,8 @@ struct PersonDetailViewModelTests {
             medicalRecordRepository: mockRecordRepo,
             recordContentService: mockContentService,
             primaryKeyProvider: mockKeyProvider,
-            fmkService: mockFMKService
+            fmkService: mockFMKService,
+            providerRepository: MockProviderRepository()
         )
 
         await viewModel.loadRecordCounts()
@@ -259,7 +265,8 @@ struct PersonDetailViewModelTests {
             medicalRecordRepository: mockRecordRepo,
             recordContentService: mockContentService,
             primaryKeyProvider: mockKeyProvider,
-            fmkService: mockFMKService
+            fmkService: mockFMKService,
+            providerRepository: MockProviderRepository()
         )
 
         await viewModel.loadRecordCounts()
@@ -267,5 +274,67 @@ struct PersonDetailViewModelTests {
         // Decryption errors are logged per-record, not fatal
         #expect(viewModel.recordCounts.isEmpty)
         #expect(viewModel.isLoading == false)
+    }
+
+    // MARK: - Provider Count Tests
+
+    @Test
+    func loadRecordCountsIncludesProviderCount() async throws {
+        let person = try createTestPerson()
+
+        let mockRecordRepo = MockMedicalRecordRepository()
+        let mockContentService = MockRecordContentService()
+        let mockKeyProvider = MockPrimaryKeyProvider(primaryKey: testPrimaryKey)
+        let mockFMKService = MockFamilyMemberKeyService()
+        mockFMKService.setFMK(testFMK, for: person.id.uuidString)
+
+        let mockProviderRepo = MockProviderRepository()
+        mockProviderRepo.addProvider(
+            Provider(name: "Dr. Smith"),
+            personId: person.id
+        )
+        mockProviderRepo.addProvider(
+            Provider(organization: "City Hospital"),
+            personId: person.id
+        )
+
+        let viewModel = PersonDetailViewModel(
+            person: person,
+            medicalRecordRepository: mockRecordRepo,
+            recordContentService: mockContentService,
+            primaryKeyProvider: mockKeyProvider,
+            fmkService: mockFMKService,
+            providerRepository: mockProviderRepo
+        )
+
+        await viewModel.loadRecordCounts()
+
+        #expect(viewModel.providerCount == 2)
+        #expect(viewModel.errorMessage == nil)
+    }
+
+    @Test
+    func loadRecordCountsProviderCountZeroWhenNoProviders() async throws {
+        let person = try createTestPerson()
+
+        let mockRecordRepo = MockMedicalRecordRepository()
+        let mockContentService = MockRecordContentService()
+        let mockKeyProvider = MockPrimaryKeyProvider(primaryKey: testPrimaryKey)
+        let mockFMKService = MockFamilyMemberKeyService()
+        mockFMKService.setFMK(testFMK, for: person.id.uuidString)
+
+        let viewModel = PersonDetailViewModel(
+            person: person,
+            medicalRecordRepository: mockRecordRepo,
+            recordContentService: mockContentService,
+            primaryKeyProvider: mockKeyProvider,
+            fmkService: mockFMKService,
+            providerRepository: MockProviderRepository()
+        )
+
+        await viewModel.loadRecordCounts()
+
+        #expect(viewModel.providerCount == 0)
+        #expect(viewModel.errorMessage == nil)
     }
 }

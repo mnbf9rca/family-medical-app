@@ -42,9 +42,10 @@ struct BackupFileTests {
         let payload = BackupPayload(
             exportedAt: Date(),
             appVersion: "1.0.0",
-            metadata: BackupMetadata(personCount: 1, recordCount: 5),
+            metadata: BackupMetadata(personCount: 1, recordCount: 5, providerCount: 0),
             persons: [],
-            records: []
+            records: [],
+            providers: []
         )
 
         let file = BackupFile(
@@ -142,16 +143,17 @@ struct BackupPayloadTests {
         let empty = BackupPayload(
             exportedAt: Date(),
             appVersion: "1.0",
-            metadata: BackupMetadata(personCount: 0, recordCount: 0),
+            metadata: BackupMetadata(personCount: 0, recordCount: 0, providerCount: 0),
             persons: [],
-            records: []
+            records: [],
+            providers: []
         )
         #expect(empty.isEmpty)
 
         let withPerson = BackupPayload(
             exportedAt: Date(),
             appVersion: "1.0",
-            metadata: BackupMetadata(personCount: 1, recordCount: 0),
+            metadata: BackupMetadata(personCount: 1, recordCount: 0, providerCount: 0),
             persons: [
                 PersonBackup(
                     id: UUID(),
@@ -163,9 +165,33 @@ struct BackupPayloadTests {
                     updatedAt: Date()
                 )
             ],
-            records: []
+            records: [],
+            providers: []
         )
         #expect(!withPerson.isEmpty)
+    }
+
+    @Test("BackupPayload isEmpty considers providers")
+    func payloadIsEmptyConsidersProviders() {
+        let personId = UUID()
+        let withProvider = BackupPayload(
+            exportedAt: Date(),
+            appVersion: "1.0",
+            metadata: BackupMetadata(personCount: 0, recordCount: 0, providerCount: 1),
+            persons: [],
+            records: [],
+            providers: [
+                ProviderBackup(
+                    id: UUID(),
+                    personId: personId,
+                    name: "Dr. Test",
+                    organization: nil,
+                    createdAt: Date(),
+                    updatedAt: Date()
+                )
+            ]
+        )
+        #expect(!withProvider.isEmpty)
     }
 }
 
@@ -258,5 +284,252 @@ struct MedicalRecordBackupContentTests {
         #expect(throws: BackupError.self) {
             _ = try backup.toEnvelope()
         }
+    }
+}
+
+@Suite("ProviderBackup Tests")
+struct ProviderBackupTests {
+    @Test("ProviderBackup converts from Provider model")
+    func initFromProvider() {
+        let provider = Provider(
+            id: UUID(),
+            name: "Dr. Smith",
+            organization: "City Hospital",
+            specialty: "Pediatrics"
+        )
+        let personId = UUID()
+
+        let backup = ProviderBackup(from: provider, personId: personId)
+
+        #expect(backup.id == provider.id)
+        #expect(backup.personId == personId)
+        #expect(backup.name == "Dr. Smith")
+        #expect(backup.organization == "City Hospital")
+        #expect(backup.specialty == "Pediatrics")
+        #expect(backup.version == provider.version)
+    }
+
+    @Test("ProviderBackup converts back to Provider model")
+    func toProvider() throws {
+        let backup = ProviderBackup(
+            id: UUID(),
+            personId: UUID(),
+            name: "Dr. Smith",
+            organization: "City Hospital",
+            specialty: "Cardiology",
+            phone: "555-0100",
+            address: "123 Main St",
+            notes: "Great doctor",
+            createdAt: Date(),
+            updatedAt: Date(),
+            version: 2,
+            previousVersionId: UUID()
+        )
+
+        let provider = try backup.toProvider()
+
+        #expect(provider.id == backup.id)
+        #expect(provider.name == "Dr. Smith")
+        #expect(provider.organization == "City Hospital")
+        #expect(provider.specialty == "Cardiology")
+        #expect(provider.phone == "555-0100")
+        #expect(provider.address == "123 Main St")
+        #expect(provider.notes == "Great doctor")
+        #expect(provider.version == 2)
+        #expect(provider.previousVersionId == backup.previousVersionId)
+    }
+
+    @Test("ProviderBackup toProvider throws when both name and organization are nil")
+    func toProviderThrowsForInvalid() {
+        let backup = ProviderBackup(
+            id: UUID(),
+            personId: UUID(),
+            name: nil,
+            organization: nil,
+            createdAt: Date(),
+            updatedAt: Date()
+        )
+
+        #expect(throws: BackupError.self) {
+            _ = try backup.toProvider()
+        }
+    }
+
+    @Test("ProviderBackup toProvider throws when name is empty and organization is nil")
+    func toProviderThrowsForEmptyName() {
+        let backup = ProviderBackup(
+            id: UUID(),
+            personId: UUID(),
+            name: "",
+            organization: nil,
+            createdAt: Date(),
+            updatedAt: Date()
+        )
+
+        #expect(throws: BackupError.self) {
+            _ = try backup.toProvider()
+        }
+    }
+
+    @Test("ProviderBackup toProvider throws when name is whitespace-only and organization is nil")
+    func toProviderThrowsForWhitespaceName() {
+        let backup = ProviderBackup(
+            id: UUID(),
+            personId: UUID(),
+            name: "   ",
+            organization: nil,
+            createdAt: Date(),
+            updatedAt: Date()
+        )
+
+        #expect(throws: BackupError.self) {
+            _ = try backup.toProvider()
+        }
+    }
+
+    @Test("ProviderBackup toProvider trims organization when name is nil")
+    func toProviderTrimsOrganization() throws {
+        let backup = ProviderBackup(
+            id: UUID(),
+            personId: UUID(),
+            name: nil,
+            organization: "  Valid Org  ",
+            createdAt: Date(),
+            updatedAt: Date()
+        )
+
+        let provider = try backup.toProvider()
+        #expect(provider.organization == "Valid Org")
+    }
+
+    @Test("ProviderBackup toProvider throws when both name and organization are whitespace-only")
+    func toProviderThrowsForBothWhitespace() {
+        let backup = ProviderBackup(
+            id: UUID(),
+            personId: UUID(),
+            name: "   ",
+            organization: "   ",
+            createdAt: Date(),
+            updatedAt: Date()
+        )
+
+        #expect(throws: BackupError.self) {
+            _ = try backup.toProvider()
+        }
+    }
+
+    @Test("ProviderBackup toProvider converts whitespace-only specialty to nil")
+    func toProviderTrimsWhitespaceSpecialty() throws {
+        let backup = ProviderBackup(
+            id: UUID(),
+            personId: UUID(),
+            name: "Dr. Smith",
+            organization: nil,
+            specialty: "   ",
+            createdAt: Date(),
+            updatedAt: Date()
+        )
+
+        let provider = try backup.toProvider()
+        #expect(provider.specialty == nil)
+    }
+
+    @Test("ProviderBackup round-trips through JSON")
+    func roundTrip() throws {
+        // Use whole-second dates to avoid sub-second precision loss in ISO 8601 round-trip
+        let original = ProviderBackup(
+            id: UUID(),
+            personId: UUID(),
+            name: "Dr. Test",
+            organization: nil,
+            specialty: "General",
+            createdAt: Date(timeIntervalSince1970: 1_712_505_600),
+            updatedAt: Date(timeIntervalSince1970: 1_712_505_600),
+            version: 1,
+            previousVersionId: nil
+        )
+
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        let data = try encoder.encode(original)
+
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let decoded = try decoder.decode(ProviderBackup.self, from: data)
+
+        #expect(decoded == original)
+    }
+}
+
+@Suite("PersonBackup Trimming Tests")
+struct PersonBackupTrimmingTests {
+    @Test("PersonBackup toPerson converts whitespace-only notes to nil")
+    func toPersonTrimsWhitespaceNotes() throws {
+        let backup = PersonBackup(
+            id: UUID(),
+            name: "Test Person",
+            dateOfBirth: nil,
+            labels: [],
+            notes: "   ",
+            createdAt: Date(),
+            updatedAt: Date()
+        )
+
+        let person = try backup.toPerson()
+        #expect(person.notes == nil)
+    }
+
+    @Test("PersonBackup toPerson converts whitespace-only gender to nil")
+    func toPersonTrimsWhitespaceGender() throws {
+        let backup = PersonBackup(
+            id: UUID(),
+            name: "Test Person",
+            dateOfBirth: nil,
+            labels: [],
+            notes: nil,
+            gender: "  \t  ",
+            createdAt: Date(),
+            updatedAt: Date()
+        )
+
+        let person = try backup.toPerson()
+        #expect(person.gender == nil)
+    }
+
+    @Test("PersonBackup toPerson converts whitespace-only bloodType to nil")
+    func toPersonTrimsWhitespaceBloodType() throws {
+        let backup = PersonBackup(
+            id: UUID(),
+            name: "Test Person",
+            dateOfBirth: nil,
+            labels: [],
+            notes: nil,
+            bloodType: " \n ",
+            createdAt: Date(),
+            updatedAt: Date()
+        )
+
+        let person = try backup.toPerson()
+        #expect(person.bloodType == nil)
+    }
+
+    @Test("PersonBackup toPerson preserves valid optional fields after trimming")
+    func toPersonPreservesValidFields() throws {
+        let backup = PersonBackup(
+            id: UUID(),
+            name: "Test Person",
+            dateOfBirth: nil,
+            labels: [],
+            notes: "  Some notes  ",
+            gender: " Male ",
+            bloodType: " A+ ",
+            createdAt: Date(),
+            updatedAt: Date()
+        )
+
+        let person = try backup.toPerson()
+        #expect(person.notes == "Some notes")
+        #expect(person.gender == "Male")
+        #expect(person.bloodType == "A+")
     }
 }

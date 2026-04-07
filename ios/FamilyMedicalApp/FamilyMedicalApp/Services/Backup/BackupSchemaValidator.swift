@@ -83,7 +83,7 @@ final class BackupSchemaValidator: BackupSchemaValidatorProtocol, @unchecked Sen
         do {
             jsonObject = try JSONSerialization.jsonObject(with: jsonData, options: [])
         } catch {
-            logger.error("Failed to parse JSON: \(error.localizedDescription)")
+            logger.logError(error, context: "BackupSchemaValidator.validate")
             return .invalid(["Invalid JSON: \(error.localizedDescription)"])
         }
 
@@ -106,7 +106,7 @@ final class BackupSchemaValidator: BackupSchemaValidatorProtocol, @unchecked Sen
         do {
             jsonValue = try JSONDecoder().decode(JSONSchema.JSONValue.self, from: jsonData)
         } catch {
-            logger.error("Failed to decode JSON to JSONSchema.JSONValue: \(error.localizedDescription)")
+            logger.logError(error, context: "BackupSchemaValidator.validate")
             return .invalid(["Failed to decode JSON: \(error.localizedDescription)"])
         }
 
@@ -135,7 +135,7 @@ final class BackupSchemaValidator: BackupSchemaValidatorProtocol, @unchecked Sen
             do {
                 return try Schema(instance: schemaString)
             } catch {
-                logger.notice("Failed to parse bundled schema: \(error.localizedDescription)")
+                logger.logError(error, context: "BackupSchemaValidator.loadSchema")
             }
         }
 
@@ -146,7 +146,7 @@ final class BackupSchemaValidator: BackupSchemaValidatorProtocol, @unchecked Sen
             do {
                 return try Schema(instance: schemaString)
             } catch {
-                logger.notice("Failed to parse schema from Resources: \(error.localizedDescription)")
+                logger.logError(error, context: "BackupSchemaValidator.loadSchema")
             }
         }
 

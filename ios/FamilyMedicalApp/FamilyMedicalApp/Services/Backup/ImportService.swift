@@ -11,6 +11,7 @@ final class ImportService: ImportServiceProtocol, @unchecked Sendable {
     private let personRepository: PersonRepositoryProtocol
     private let recordRepository: MedicalRecordRepositoryProtocol
     private let recordContentService: RecordContentServiceProtocol
+    private let providerRepository: ProviderRepositoryProtocol
     private let fmkService: FamilyMemberKeyServiceProtocol
     private let logger: TracingCategoryLogger
 
@@ -18,12 +19,14 @@ final class ImportService: ImportServiceProtocol, @unchecked Sendable {
         personRepository: PersonRepositoryProtocol,
         recordRepository: MedicalRecordRepositoryProtocol,
         recordContentService: RecordContentServiceProtocol,
+        providerRepository: ProviderRepositoryProtocol,
         fmkService: FamilyMemberKeyServiceProtocol,
         logger: CategoryLoggerProtocol? = nil
     ) {
         self.personRepository = personRepository
         self.recordRepository = recordRepository
         self.recordContentService = recordContentService
+        self.providerRepository = providerRepository
         self.fmkService = fmkService
         self.logger = TracingCategoryLogger(
             wrapping: logger ?? LoggingService.shared.logger(category: .backup)
@@ -45,9 +48,14 @@ final class ImportService: ImportServiceProtocol, @unchecked Sendable {
             try await importRecord(recordBackup, personFMKs: personFMKs)
         }
 
+        for providerBackup in payload.providers {
+            try await importProvider(providerBackup, primaryKey: primaryKey)
+        }
+
         logger.debug(
             "Import complete: \(payload.persons.count) persons, "
-                + "\(payload.records.count) records"
+                + "\(payload.records.count) records, "
+                + "\(payload.providers.count) providers"
         )
         logger.exit("importData", duration: ContinuousClock.now - start)
     }
@@ -60,7 +68,7 @@ final class ImportService: ImportServiceProtocol, @unchecked Sendable {
         do {
             person = try backup.toPerson()
         } catch {
-            logger.error("Failed to create person from backup")
+            logger.logError(error, context: "ImportService.importPerson")
             throw BackupError.importFailed("Invalid person data in backup")
         }
 
@@ -68,14 +76,14 @@ final class ImportService: ImportServiceProtocol, @unchecked Sendable {
         do {
             try fmkService.storeFMK(fmk, familyMemberID: person.id.uuidString, primaryKey: primaryKey)
         } catch {
-            logger.error("Failed to store FMK for imported person")
+            logger.logError(error, context: "ImportService.importPerson")
             throw BackupError.importFailed("Failed to create encryption key for person")
         }
 
         do {
             try await personRepository.save(person, primaryKey: primaryKey)
         } catch {
-            logger.error("Failed to save imported person")
+            logger.logError(error, context: "ImportService.importPerson")
             throw BackupError.importFailed("Failed to save person")
         }
 
@@ -96,7 +104,7 @@ final class ImportService: ImportServiceProtocol, @unchecked Sendable {
         do {
             envelope = try backup.toEnvelope()
         } catch {
-            logger.error("Invalid record type in backup")
+            logger.logError(error, context: "ImportService.importRecord")
             throw BackupError.corruptedFile
         }
 
@@ -104,7 +112,7 @@ final class ImportService: ImportServiceProtocol, @unchecked Sendable {
         do {
             encryptedContent = try recordContentService.encrypt(envelope, using: fmk)
         } catch {
-            logger.error("Failed to encrypt record content during import")
+            logger.logError(error, context: "ImportService.importRecord")
             throw BackupError.importFailed("Failed to encrypt medical record")
         }
 
@@ -121,10 +129,32 @@ final class ImportService: ImportServiceProtocol, @unchecked Sendable {
         do {
             try await recordRepository.save(record)
         } catch {
-            logger.error("Failed to save imported record")
+            logger.logError(error, context: "ImportService.importRecord")
             throw BackupError.importFailed("Failed to save medical record")
         }
 
         logger.exit("importRecord", duration: ContinuousClock.now - start)
+    }
+
+    private func importProvider(_ backup: ProviderBackup, primaryKey: SymmetricKey) async throws {
+        let start = ContinuousClock.now
+        logger.entry("importProvider")
+
+        let provider: Provider
+        do {
+            provider = try backup.toProvider()
+        } catch {
+            logger.logError(error, context: "ImportService.importProvider")
+            throw BackupError.corruptedFile
+        }
+
+        do {
+            try await providerRepository.save(provider, personId: backup.personId, primaryKey: primaryKey)
+        } catch {
+            logger.logError(error, context: "ImportService.importProvider")
+            throw BackupError.importFailed("Failed to save provider")
+        }
+
+        logger.exit("importProvider", duration: ContinuousClock.now - start)
     }
 }

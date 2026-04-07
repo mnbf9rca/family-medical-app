@@ -159,7 +159,7 @@
     "backupPayload": {
       "type": "object",
       "description": "Decrypted backup payload containing all user data",
-      "required": ["exportedAt", "appVersion", "metadata", "persons", "records"],
+      "required": ["exportedAt", "appVersion", "metadata", "persons", "records", "providers"],
       "properties": {
         "exportedAt": {
           "type": "string",
@@ -182,16 +182,22 @@
           "type": "array",
           "items": { "$ref": "#/$defs/medicalRecord" },
           "description": "All medical records"
+        },
+        "providers": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/provider" },
+          "description": "All healthcare providers"
         }
       }
     },
     "metadata": {
       "type": "object",
       "description": "Summary counts (inside encrypted payload for privacy)",
-      "required": ["personCount", "recordCount"],
+      "required": ["personCount", "recordCount", "providerCount"],
       "properties": {
         "personCount": { "type": "integer", "minimum": 0 },
-        "recordCount": { "type": "integer", "minimum": 0 }
+        "recordCount": { "type": "integer", "minimum": 0 },
+        "providerCount": { "type": "integer", "minimum": 0 }
       }
     },
     "person": {
@@ -267,6 +273,69 @@
           "type": "string",
           "contentEncoding": "base64",
           "description": "Base64-encoded JSON of the typed record content"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Version number for edit history"
+        },
+        "previousVersionId": {
+          "type": ["string", "null"],
+          "format": "uuid",
+          "description": "ID of previous version (for edit tracking)"
+        }
+      }
+    },
+    "provider": {
+      "type": "object",
+      "description": "Healthcare provider data",
+      "required": ["id", "personId", "createdAt", "updatedAt", "version"],
+      "anyOf": [
+        { "required": ["name"], "properties": { "name": { "type": "string", "minLength": 1, "pattern": "\\S" } } },
+        { "required": ["organization"], "properties": { "organization": { "type": "string", "minLength": 1, "pattern": "\\S" } } }
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Unique identifier"
+        },
+        "personId": {
+          "type": "string",
+          "format": "uuid",
+          "description": "ID of the person this provider belongs to"
+        },
+        "name": {
+          "type": ["string", "null"],
+          "description": "Provider's name (individual practitioner)"
+        },
+        "organization": {
+          "type": ["string", "null"],
+          "description": "Organization or facility name"
+        },
+        "specialty": {
+          "type": ["string", "null"],
+          "description": "Medical specialty (e.g., 'Pediatrics', 'Cardiology')"
+        },
+        "phone": {
+          "type": ["string", "null"],
+          "description": "Contact phone number"
+        },
+        "address": {
+          "type": ["string", "null"],
+          "description": "Physical address"
+        },
+        "notes": {
+          "type": ["string", "null"],
+          "description": "Additional notes about this provider"
         },
         "createdAt": {
           "type": "string",
