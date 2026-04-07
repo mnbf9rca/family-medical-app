@@ -78,10 +78,13 @@ final class MedicalRecordDetailViewModel {
         guard !providerFields.isEmpty else { return }
 
         var resolved: [String: String] = [:]
-        do {
-            let primaryKey = try primaryKeyProvider.getPrimaryKey()
-            for field in providerFields {
-                guard let providerId = knownFieldValues[field.keyPath] as? UUID else { continue }
+        guard let primaryKey = try? primaryKeyProvider.getPrimaryKey() else {
+            providerDisplayStrings = resolved
+            return
+        }
+        for field in providerFields {
+            guard let providerId = knownFieldValues[field.keyPath] as? UUID else { continue }
+            do {
                 if let provider = try await providerRepository.fetch(
                     byId: providerId,
                     personId: person.id,
@@ -89,9 +92,12 @@ final class MedicalRecordDetailViewModel {
                 ) {
                     resolved[field.keyPath] = provider.displayString
                 }
+            } catch {
+                logger.logError(
+                    error,
+                    context: "MedicalRecordDetailViewModel.loadProviderDisplayIfNeeded(\(field.keyPath))"
+                )
             }
-        } catch {
-            logger.logError(error, context: "MedicalRecordDetailViewModel.loadProviderDisplayIfNeeded")
         }
         providerDisplayStrings = resolved
     }
