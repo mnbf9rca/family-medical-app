@@ -51,23 +51,6 @@ struct DocumentReferenceRecord: MedicalRecordContent {
         case notes, tags
     }
 
-    // MARK: - Unknown field preservation
-
-    private struct DynamicKey: CodingKey {
-        var stringValue: String
-        init(stringValue: String) {
-            self.stringValue = stringValue
-        }
-
-        var intValue: Int? {
-            nil
-        }
-
-        init?(intValue: Int) {
-            nil
-        }
-    }
-
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         title = try container.decode(String.self, forKey: .title)
@@ -80,14 +63,10 @@ struct DocumentReferenceRecord: MedicalRecordContent {
         notes = try container.decodeIfPresent(String.self, forKey: .notes)
         tags = try container.decodeIfPresent([String].self, forKey: .tags) ?? []
 
-        // Capture unknown fields
-        let knownKeys = Set(CodingKeys.allCases.map(\.stringValue))
-        let dynamicContainer = try decoder.container(keyedBy: DynamicKey.self)
-        var unknown: [String: JSONValue] = [:]
-        for key in dynamicContainer.allKeys where !knownKeys.contains(key.stringValue) {
-            unknown[key.stringValue] = try dynamicContainer.decode(JSONValue.self, forKey: key)
-        }
-        unknownFields = unknown
+        unknownFields = try Self.captureUnknownFields(
+            from: decoder,
+            knownKeys: Set(CodingKeys.allCases.map(\.stringValue))
+        )
     }
 
     func encode(to encoder: Encoder) throws {
@@ -102,11 +81,7 @@ struct DocumentReferenceRecord: MedicalRecordContent {
         try container.encodeIfPresent(notes, forKey: .notes)
         try container.encode(tags, forKey: .tags)
 
-        // Re-emit unknown fields
-        var dynamicContainer = encoder.container(keyedBy: DynamicKey.self)
-        for (key, value) in unknownFields {
-            try dynamicContainer.encode(value, forKey: DynamicKey(stringValue: key))
-        }
+        try emitUnknownFields(to: encoder)
     }
 
     // MARK: - Field metadata for form rendering
