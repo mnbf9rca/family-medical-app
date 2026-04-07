@@ -113,7 +113,7 @@ struct AutocompleteFieldRenderer: View {
                 } label: {
                     Label("Add new provider\u{2026}", systemImage: "plus.circle")
                         .font(.subheadline)
-                        .foregroundStyle(.accent)
+                        .foregroundStyle(Color.accentColor)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.vertical, 6)
                         .padding(.horizontal, 8)
