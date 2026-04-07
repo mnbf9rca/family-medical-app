@@ -402,6 +402,22 @@ struct ProviderBackupTests {
         #expect(provider.organization == "Valid Org")
     }
 
+    @Test("ProviderBackup toProvider throws when both name and organization are whitespace-only")
+    func toProviderThrowsForBothWhitespace() {
+        let backup = ProviderBackup(
+            id: UUID(),
+            personId: UUID(),
+            name: "   ",
+            organization: "   ",
+            createdAt: Date(),
+            updatedAt: Date()
+        )
+
+        #expect(throws: BackupError.self) {
+            _ = try backup.toProvider()
+        }
+    }
+
     @Test("ProviderBackup toProvider converts whitespace-only specialty to nil")
     func toProviderTrimsWhitespaceSpecialty() throws {
         let backup = ProviderBackup(
