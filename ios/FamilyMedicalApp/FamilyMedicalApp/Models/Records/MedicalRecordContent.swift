@@ -91,7 +91,7 @@ protocol MedicalRecordContent: Codable, Sendable {
 
 /// Shared CodingKey type for accessing unknown/forward-compat fields during encoding and decoding.
 /// Used by the protocol extension helpers below — no need to define per record type.
-struct DynamicCodingKey: CodingKey {
+private struct DynamicCodingKey: CodingKey {
     var stringValue: String
     init(stringValue: String) {
         self.stringValue = stringValue
