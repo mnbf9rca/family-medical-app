@@ -16,6 +16,7 @@ struct AutocompleteFieldRenderer: View {
     @Bindable var viewModel: GenericRecordFormViewModel
     @State private var queryText: String = ""
     @State private var showingSuggestions = false
+    @State private var showingCreateProvider = false
     @FocusState private var isFocused: Bool
 
     private var resolver: AutocompleteSuggestionResolver {
@@ -53,7 +54,7 @@ struct AutocompleteFieldRenderer: View {
 
             if showingSuggestions {
                 let suggestions = resolver.suggestions(for: queryText)
-                if !suggestions.isEmpty {
+                if !suggestions.isEmpty || metadata.isProviderReference {
                     suggestionsList(suggestions)
                 }
             }
@@ -61,6 +62,17 @@ struct AutocompleteFieldRenderer: View {
                 Text(error)
                     .font(.caption)
                     .foregroundStyle(.red)
+            }
+        }
+        .sheet(isPresented: $showingCreateProvider) {
+            ProviderDetailView(person: viewModel.person) { provider in
+                let success = await viewModel.addProvider(provider)
+                if success {
+                    viewModel.setValue(provider.id, for: metadata.keyPath)
+                    queryText = provider.displayString
+                    showingSuggestions = false
+                }
+                return success
             }
         }
     }
@@ -92,6 +104,20 @@ struct AutocompleteFieldRenderer: View {
                 }
                 .buttonStyle(.plain)
                 Divider()
+            }
+            if metadata.isProviderReference {
+                Button {
+                    showingCreateProvider = true
+                } label: {
+                    Label("Add new provider\u{2026}", systemImage: "plus.circle")
+                        .font(.subheadline)
+                        .foregroundStyle(.accent)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.vertical, 6)
+                        .padding(.horizontal, 8)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Add new provider")
             }
         }
         .background(Color(.systemBackground))

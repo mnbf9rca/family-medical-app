@@ -205,6 +205,20 @@ final class GenericRecordFormViewModel {
         }
     }
 
+    /// Save a new provider inline and add it to the loaded providers list.
+    /// Returns `true` on success, `false` on failure (error is logged internally).
+    func addProvider(_ provider: Provider) async -> Bool {
+        do {
+            let primaryKey = try primaryKeyProvider.getPrimaryKey()
+            try await providerRepository.save(provider, personId: person.id, primaryKey: primaryKey)
+            providers.append(provider)
+            return true
+        } catch {
+            logger.logError(error, context: "GenericRecordFormViewModel.addProvider")
+            return false
+        }
+    }
+
     // MARK: - Save
 
     /// Save the record. Returns true if the save succeeded.
