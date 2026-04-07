@@ -220,7 +220,6 @@ enum FieldSemantic: Equatable {
 /// Entity types that FieldSemantic.entityReference can refer to.
 enum EntityKind: Equatable {
     case provider
-    case pharmacy
 }
 
 // MARK: - AutocompleteSource

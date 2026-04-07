@@ -196,7 +196,7 @@ struct MedicalRecordDetailView: View {
     private func displayText(for metadata: FieldMetadata) -> String? {
         guard let raw = viewModel.knownFieldValues[metadata.keyPath] else { return nil }
         if metadata.isProviderReference {
-            if let display = viewModel.providerDisplayString {
+            if let display = viewModel.providerDisplayStrings[metadata.keyPath] {
                 return display
             }
             // Provider lookup hasn't resolved yet (or provider was deleted). Fall back to

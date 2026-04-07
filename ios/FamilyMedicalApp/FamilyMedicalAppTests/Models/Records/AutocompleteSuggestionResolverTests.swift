@@ -22,6 +22,14 @@ struct AutocompleteSuggestionResolverTests {
         semantic: .entityReference(.provider)
     )
 
+    private let pharmacyMetadata = FieldMetadata(
+        keyPath: "pharmacyId",
+        displayName: "Pharmacy",
+        fieldType: .autocomplete,
+        displayOrder: 7,
+        semantic: .entityReference(.provider)
+    )
+
     private let plainAutocompleteNoSource = FieldMetadata(
         keyPath: "mystery",
         displayName: "Mystery",
@@ -197,5 +205,45 @@ struct AutocompleteSuggestionResolverTests {
         let resolver = makeResolver(metadata: catalogMetadata)
         let text = resolver.displayText(storedValue: nil)
         #expect(text.isEmpty)
+    }
+
+    // MARK: - Pharmacy field (entity reference to provider)
+
+    @Test
+    func pharmacyField_returnsSameProviderSuggestions() {
+        let providers = [
+            Provider(name: "Dr Smith", organization: "Mercy"),
+            Provider(name: "Dr Jones", organization: "General")
+        ]
+        let resolver = makeResolver(metadata: pharmacyMetadata, providers: providers)
+        let suggestions = resolver.suggestions(for: "")
+        #expect(suggestions.count == 2)
+    }
+
+    @Test
+    func pharmacyField_filtersByProviderName() {
+        let target = Provider(name: "Dr Smith", organization: "Mercy")
+        let providers = [
+            target,
+            Provider(name: "Dr Jones", organization: "General")
+        ]
+        let resolver = makeResolver(metadata: pharmacyMetadata, providers: providers)
+        let suggestions = resolver.suggestions(for: "smith")
+        #expect(suggestions.count == 1)
+        #expect(suggestions.first?.providerId == target.id)
+    }
+
+    @Test
+    func pharmacyField_displayTextResolvesUUID() {
+        let provider = Provider(name: "Dr Smith", organization: "Mercy")
+        let resolver = makeResolver(metadata: pharmacyMetadata, providers: [provider])
+        let text = resolver.displayText(storedValue: provider.id)
+        #expect(text == "Dr Smith at Mercy")
+    }
+
+    @Test
+    func pharmacyField_isEntityReferenceAndProviderReference() {
+        #expect(pharmacyMetadata.isEntityReference == true)
+        #expect(pharmacyMetadata.isProviderReference == true)
     }
 }
