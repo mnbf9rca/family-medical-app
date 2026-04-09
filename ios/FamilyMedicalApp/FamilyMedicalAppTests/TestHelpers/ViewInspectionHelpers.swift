@@ -13,7 +13,7 @@ import ViewInspector
 /// inspects the view value directly via `Mirror`, while SwiftUI's state storage is keyed
 /// to the hosted instance. For the purposes of unit tests this is cosmetic — assertions
 /// are checked against the rendered view structure, which is correct. When Swift Testing
-/// gains a clean async-callback pattern similar to XCTest's `expectation`, tests can
+/// gains a clean async-callback pattern similar to XCTest's `fulfillment(of:)`, tests can
 /// migrate to `view.on(\.didAppear) { ... }` to eliminate the remaining warnings.
 @MainActor
 enum HostedInspection {
