@@ -138,8 +138,8 @@ struct BackupSchemaValidatorDoSTests {
         let result = validator.validate(jsonData: deeplyNested)
         #expect(!result.isValid)
         let hasTypedError = result.errors.contains {
-            if case let .nestingDepthExceeded(actual, max) = $0 {
-                return actual == 6 && max == 5
+            if case let .nestingDepthExceeded(observed, max) = $0 {
+                return observed == 6 && max == 5
             }
             return false
         }

@@ -12,8 +12,9 @@ enum BackupValidationError: Equatable, CustomStringConvertible {
     /// Schema resource not bundled — fail closed
     case schemaUnavailable
 
-    /// DoS: nesting depth exceeded
-    case nestingDepthExceeded(actual: Int, max: Int)
+    /// DoS: nesting depth exceeded. `observed` is the first depth found exceeding
+    /// `max`, not necessarily the true maximum (due to early-exit optimization).
+    case nestingDepthExceeded(observed: Int, max: Int)
 
     /// DoS: array size exceeded
     case arraySizeExceeded(actual: Int, max: Int)
@@ -29,8 +30,8 @@ enum BackupValidationError: Equatable, CustomStringConvertible {
             "Failed to decode JSON: \(detail)"
         case .schemaUnavailable:
             "Backup schema not available; validation cannot proceed"
-        case let .nestingDepthExceeded(actual, max):
-            "JSON nesting depth (\(actual)) exceeds maximum allowed (\(max))"
+        case let .nestingDepthExceeded(observed, max):
+            "JSON nesting depth (\(observed)) exceeds maximum allowed (\(max))"
         case let .arraySizeExceeded(actual, max):
             "Array size (\(actual)) exceeds maximum allowed (\(max))"
         case let .schemaViolation(keyword, path, message):
@@ -200,7 +201,7 @@ final class BackupSchemaValidator: BackupSchemaValidatorProtocol, @unchecked Sen
         // Check nesting depth
         let depth = calculateDepth(jsonObject)
         if depth > maxNestingDepth {
-            errors.append(.nestingDepthExceeded(actual: depth, max: maxNestingDepth))
+            errors.append(.nestingDepthExceeded(observed: depth, max: maxNestingDepth))
         }
 
         // Check array sizes
