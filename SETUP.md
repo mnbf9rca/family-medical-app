@@ -111,7 +111,7 @@ Once environment is ready, create the Xcode project:
 | **Navigation** | React Router | NavigationStack/NavigationLink |
 | **IDE** | VS Code, WebStorm | Xcode (required) |
 | **Package Manager** | npm/yarn | Swift Package Manager (SPM) |
-| **Testing** | Jest, React Testing Library | XCTest |
+| **Testing** | Jest, React Testing Library | Swift Testing (unit), XCUITest (UI) |
 | **Build** | webpack/vite | Xcode Build System |
 
 ### Swift Basics (if you know Python)
