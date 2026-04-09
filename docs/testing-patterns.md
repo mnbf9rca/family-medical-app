@@ -1,5 +1,7 @@
 # iOS Testing Patterns
 
+> **Frameworks:** Unit tests use [Swift Testing](https://developer.apple.com/documentation/testing/) (`import Testing`, `@Test`, `#expect`). UI tests use XCUITest (`import XCTest`, `XCUIApplication`). The sections below are labelled accordingly.
+
 This document captures iOS testing patterns and solutions for common issues.
 
 ## Table of Contents
@@ -123,11 +125,11 @@ Animations are disabled during UI testing (`UIView.setAnimationsEnabled(false)` 
 
 ## UI Test Structure
 
-### XCTest Does NOT Guarantee Test Order
+### XCUITest Does NOT Guarantee Test Order
 
-**⚠️ Critical:** XCTest does NOT guarantee test execution order. Numeric prefixes like `test1_`, `test2_`, `test3_` do NOT ensure tests run in that sequence.
+**⚠️ Critical:** XCUITest does NOT guarantee test execution order. Numeric prefixes like `test1_`, `test2_`, `test3_` do NOT ensure tests run in that sequence.
 
-XCTest may run tests in any order depending on parallel execution settings, environment configuration, and Xcode version.
+XCUITest may run tests in any order depending on parallel execution settings, environment configuration, and Xcode version.
 
 ```swift
 // BAD: These tests depend on execution order that isn't guaranteed

@@ -236,14 +236,14 @@ app.unlockApp(password: "...")
 
 - `UITestHelpers.swift` - Shared helpers on `XCUIApplication` extension
 - `*FlowUITests.swift` - Tests for specific feature flows (e.g., `MedicalRecordFlowUITests`)
-- Use single consolidated test methods for CRUD workflows (XCTest doesn't guarantee ordering)
+- Use single consolidated test methods for CRUD workflows (XCUITest doesn't guarantee ordering)
 
 **When to Use UI Tests vs Unit Tests:**
 
 | Component Type | Test Approach |
 |----------------|---------------|
 | ViewModel logic | Unit tests (Swift Testing) with mocks |
-| SwiftUI View rendering | UI tests (XCTest) - body closures don't execute in unit tests |
+| SwiftUI View rendering | UI tests (XCUITest) - body closures don't execute in unit tests |
 | UIViewControllerRepresentable | UI tests - `makeUIViewController` needs SwiftUI context |
 | Service layer | Unit tests with mocks |
 | Repository layer | Unit tests with mock Core Data stack |

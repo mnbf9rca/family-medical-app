@@ -466,8 +466,11 @@ func migrateAuditLogToSigned(primaryKey: SymmetricKey) async throws {
 ### Unit Tests
 
 ```swift
+import Testing
+
 // Test: Verify signature validation detects modification
-func testSignatureDetectsModification() async throws {
+@Test("Signature detects modification")
+func signatureDetectsModification() async throws {
     let entry = try await createAuditLogEntry(...)
 
     // Tamper with encrypted details
@@ -475,11 +478,14 @@ func testSignatureDetectsModification() async throws {
     tamperedEntry.encryptedDetails[0] ^= 0xFF
 
     // Verification should fail
-    XCTAssertThrowsError(try verifyAuditLogIntegrity([tamperedEntry], primaryKey: primaryKey))
+    #expect(throws: (any Error).self) {
+        try verifyAuditLogIntegrity([tamperedEntry], primaryKey: primaryKey)
+    }
 }
 
 // Test: Verify chain breaks after deletion
-func testChainDetectsDeletion() async throws {
+@Test("Chain detects deletion")
+func chainDetectsDeletion() async throws {
     let entries = try await createMultipleEntries(count: 5)
 
     // Delete middle entry
@@ -487,11 +493,14 @@ func testChainDetectsDeletion() async throws {
     tamperedChain.remove(at: 2)
 
     // Chain verification should fail
-    XCTAssertThrowsError(try verifyAuditLogIntegrity(tamperedChain, primaryKey: primaryKey))
+    #expect(throws: (any Error).self) {
+        try verifyAuditLogIntegrity(tamperedChain, primaryKey: primaryKey)
+    }
 }
 
 // Test: Verify chain breaks after reordering
-func testChainDetectsReordering() async throws {
+@Test("Chain detects reordering")
+func chainDetectsReordering() async throws {
     let entries = try await createMultipleEntries(count: 5)
 
     // Swap entries 2 and 3
@@ -499,7 +508,9 @@ func testChainDetectsReordering() async throws {
     tamperedChain.swapAt(2, 3)
 
     // Chain verification should fail
-    XCTAssertThrowsError(try verifyAuditLogIntegrity(tamperedChain, primaryKey: primaryKey))
+    #expect(throws: (any Error).self) {
+        try verifyAuditLogIntegrity(tamperedChain, primaryKey: primaryKey)
+    }
 }
 ```
 
