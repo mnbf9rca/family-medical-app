@@ -1,17 +1,59 @@
 import Foundation
 import JSONSchema
 
+/// Typed validation errors emitted by `BackupSchemaValidator`.
+enum BackupValidationError: Equatable, CustomStringConvertible {
+    /// JSON could not be parsed
+    case malformedJSON(String)
+
+    /// JSON parsed but couldn't be decoded for schema validation
+    case jsonDecodingFailed(String)
+
+    /// Schema resource not bundled — fail closed
+    case schemaUnavailable
+
+    /// DoS: nesting depth exceeded
+    case nestingDepthExceeded(actual: Int, max: Int)
+
+    /// DoS: array size exceeded
+    case arraySizeExceeded(actual: Int, max: Int)
+
+    /// A JSON Schema keyword failed
+    case schemaViolation(keyword: String, path: String, message: String)
+
+    var description: String {
+        switch self {
+        case let .malformedJSON(detail):
+            "Invalid JSON: \(detail)"
+        case let .jsonDecodingFailed(detail):
+            "Failed to decode JSON: \(detail)"
+        case .schemaUnavailable:
+            "Backup schema not available; validation cannot proceed"
+        case let .nestingDepthExceeded(actual, max):
+            "JSON nesting depth (\(actual)) exceeds maximum allowed (\(max))"
+        case let .arraySizeExceeded(actual, max):
+            "Array size (\(actual)) exceeds maximum allowed (\(max))"
+        case let .schemaViolation(keyword, path, message):
+            if message.isEmpty {
+                "Validation failed at \(path) (keyword: \(keyword))"
+            } else {
+                "\(message) at \(path)"
+            }
+        }
+    }
+}
+
 /// Result of validating JSON against the backup schema
 struct BackupValidationResult: Equatable {
     /// Whether the JSON is valid according to the schema
     let isValid: Bool
 
     /// List of validation errors (empty if valid)
-    let errors: [String]
+    let errors: [BackupValidationError]
 
     static let valid = BackupValidationResult(isValid: true, errors: [])
 
-    static func invalid(_ errors: [String]) -> BackupValidationResult {
+    static func invalid(_ errors: [BackupValidationError]) -> BackupValidationResult {
         BackupValidationResult(isValid: false, errors: errors)
     }
 }
@@ -84,21 +126,20 @@ final class BackupSchemaValidator: BackupSchemaValidatorProtocol, @unchecked Sen
             jsonObject = try JSONSerialization.jsonObject(with: jsonData, options: [])
         } catch {
             logger.logError(error, context: "BackupSchemaValidator.validate")
-            return .invalid(["Invalid JSON: \(error.localizedDescription)"])
+            return .invalid([.malformedJSON(error.localizedDescription)])
         }
 
         // Step 2: Check DoS limits before schema validation
         let dosResult = checkDoSLimits(jsonObject)
         if !dosResult.isValid {
-            logger.notice("DoS limit exceeded: \(dosResult.errors.joined(separator: ", "))")
+            logger.notice("DoS limit exceeded: \(dosResult.errors.map(\.description).joined(separator: ", "))")
             return dosResult
         }
 
         // Step 3: Validate against schema (fail closed if unavailable)
         guard let schema else {
-            let errorMessage = "Backup schema not available; validation cannot proceed"
-            logger.error("\(errorMessage)")
-            return .invalid([errorMessage])
+            logger.error("Backup schema not available; validation cannot proceed")
+            return .invalid([.schemaUnavailable])
         }
 
         // Convert to JSONValue for schema validation
@@ -107,7 +148,7 @@ final class BackupSchemaValidator: BackupSchemaValidatorProtocol, @unchecked Sen
             jsonValue = try JSONDecoder().decode(JSONSchema.JSONValue.self, from: jsonData)
         } catch {
             logger.logError(error, context: "BackupSchemaValidator.validate")
-            return .invalid(["Failed to decode JSON: \(error.localizedDescription)"])
+            return .invalid([.jsonDecodingFailed(error.localizedDescription)])
         }
 
         // Validate against schema
@@ -118,7 +159,7 @@ final class BackupSchemaValidator: BackupSchemaValidatorProtocol, @unchecked Sen
             return .valid
         } else {
             let errors = Self.flattenErrors(result.errors ?? [])
-            logger.notice("Schema validation failed: \(errors.joined(separator: ", "))")
+            logger.notice("Schema validation failed: \(errors.map(\.description).joined(separator: ", "))")
             return .invalid(errors)
         }
     }
@@ -154,18 +195,18 @@ final class BackupSchemaValidator: BackupSchemaValidatorProtocol, @unchecked Sen
     }
 
     private func checkDoSLimits(_ jsonObject: Any) -> BackupValidationResult {
-        var errors: [String] = []
+        var errors: [BackupValidationError] = []
 
         // Check nesting depth
         let depth = calculateDepth(jsonObject)
         if depth > maxNestingDepth {
-            errors.append("JSON nesting depth (\(depth)) exceeds maximum allowed (\(maxNestingDepth))")
+            errors.append(.nestingDepthExceeded(actual: depth, max: maxNestingDepth))
         }
 
         // Check array sizes
         let maxFoundArraySize = findMaxArraySize(jsonObject)
         if maxFoundArraySize > maxArraySize {
-            errors.append("Array size (\(maxFoundArraySize)) exceeds maximum allowed (\(maxArraySize))")
+            errors.append(.arraySizeExceeded(actual: maxFoundArraySize, max: maxArraySize))
         }
 
         return errors.isEmpty ? .valid : .invalid(errors)
@@ -234,17 +275,16 @@ final class BackupSchemaValidator: BackupSchemaValidatorProtocol, @unchecked Sen
         return maxSize
     }
 
-    /// Flatten nested validation errors into simple string messages
-    private static func flattenErrors(_ errors: [ValidationError]) -> [String] {
-        var result: [String] = []
+    /// Flatten nested validation errors into typed `BackupValidationError` values
+    private static func flattenErrors(_ errors: [ValidationError]) -> [BackupValidationError] {
+        var result: [BackupValidationError] = []
 
         for error in errors {
-            let message = if error.message.isEmpty {
-                "Validation failed at \(error.instanceLocation) (keyword: \(error.keyword))"
-            } else {
-                "\(error.message) at \(error.instanceLocation)"
-            }
-            result.append(message)
+            result.append(.schemaViolation(
+                keyword: error.keyword,
+                path: error.instanceLocation.description,
+                message: error.message
+            ))
 
             // Recursively flatten nested errors
             if let nested = error.errors {

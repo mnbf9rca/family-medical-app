@@ -30,7 +30,7 @@ enum BackupError: Error, LocalizedError, Equatable {
     case fileOperationFailed(String)
 
     /// The backup file failed JSON Schema validation
-    case schemaValidationFailed([String])
+    case schemaValidationFailed([BackupValidationError])
 
     var errorDescription: String? {
         switch self {
@@ -53,7 +53,7 @@ enum BackupError: Error, LocalizedError, Equatable {
         case let .fileOperationFailed(reason):
             "File operation failed: \(reason)"
         case let .schemaValidationFailed(errors):
-            "Backup file is invalid: \(errors.joined(separator: "; "))"
+            "Backup file is invalid: \(errors.map(\.description).joined(separator: "; "))"
         }
     }
 }
