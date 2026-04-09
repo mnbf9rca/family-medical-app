@@ -466,6 +466,8 @@ func migrateAuditLogToSigned(primaryKey: SymmetricKey) async throws {
 ### Unit Tests
 
 ```swift
+import Testing
+
 // Test: Verify signature validation detects modification
 @Test("Signature detects modification")
 func signatureDetectsModification() async throws {

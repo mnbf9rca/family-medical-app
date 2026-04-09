@@ -28,7 +28,7 @@ import SwiftUI
 /// ## Thread Safety
 /// Marked `@unchecked Sendable` because:
 /// - Test-only helper, never used in production code
-/// - All usage is single-threaded within Swift Testing (tests run serially on main actor)
+/// - Only used from @MainActor test structs; the mutable state is never accessed concurrently
 /// - The mutable state (`value`) is only accessed synchronously via the binding
 @Observable
 final class BindingTestHarness<Value>: @unchecked Sendable {
