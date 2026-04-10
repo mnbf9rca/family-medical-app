@@ -306,6 +306,35 @@ struct DocumentPickerViewModelTests {
         #expect(fixtures.viewModel.drafts.first?.content.title == original)
     }
 
+    @Test
+    func setTitle_overMaxLength_truncatesToMax() async throws {
+        let fixtures = makeFixtures()
+        let image = makeTestImage()
+        await fixtures.viewModel.addFromCamera(image)
+
+        let draftId = try #require(fixtures.viewModel.drafts.first?.id)
+        let overLong = String(repeating: "z", count: DocumentReferenceRecord.titleMaxLength + 100)
+        fixtures.viewModel.setTitle(overLong, for: draftId)
+
+        // The assignment routes through DocumentReferenceRecord.title's computed
+        // setter, which normalizes via Self.normalizedTitle(_:) — the structural
+        // invariant means setTitle does not need an explicit normalization call.
+        #expect(fixtures.viewModel.drafts.first?.content.title.count == DocumentReferenceRecord.titleMaxLength)
+    }
+
+    @Test
+    func setTitle_exactlyMaxLength_keepsFullTitle() async throws {
+        let fixtures = makeFixtures()
+        let image = makeTestImage()
+        await fixtures.viewModel.addFromCamera(image)
+
+        let draftId = try #require(fixtures.viewModel.drafts.first?.id)
+        let maxTitle = String(repeating: "y", count: DocumentReferenceRecord.titleMaxLength)
+        fixtures.viewModel.setTitle(maxTitle, for: draftId)
+
+        #expect(fixtures.viewModel.drafts.first?.content.title == maxTitle)
+    }
+
     // MARK: - Sheet State Tests
 
     @Test
