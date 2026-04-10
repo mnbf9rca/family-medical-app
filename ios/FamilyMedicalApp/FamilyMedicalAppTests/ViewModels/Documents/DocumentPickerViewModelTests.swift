@@ -316,9 +316,7 @@ struct DocumentPickerViewModelTests {
         let overLong = String(repeating: "z", count: DocumentReferenceRecord.titleMaxLength + 100)
         fixtures.viewModel.setTitle(overLong, for: draftId)
 
-        // The assignment routes through DocumentReferenceRecord.title's computed
-        // setter, which normalizes via Self.normalizedTitle(_:) — the structural
-        // invariant means setTitle does not need an explicit normalization call.
+        // Regression guard: DocumentReferenceRecord.title must enforce length structurally.
         #expect(fixtures.viewModel.drafts.first?.content.title.count == DocumentReferenceRecord.titleMaxLength)
     }
 
