@@ -220,8 +220,9 @@ struct BackupSchemaValidatorTests {
 
         let result = validator.validate(jsonData: invalidJSON)
         #expect(!result.isValid)
-        #expect(result.errors
-            .contains { $0.contains("generator") || $0.contains("checksum") || $0.contains("required") })
+        #expect(result.errors.contains {
+            if case .schemaViolation = $0 { true } else { false }
+        })
     }
 
     @Test("Wrong formatName fails validation")
@@ -281,7 +282,9 @@ struct BackupSchemaValidatorTests {
 
         let result = validator.validate(jsonData: malformedJSON)
         #expect(!result.isValid)
-        #expect(result.errors.contains { $0.lowercased().contains("json") || $0.lowercased().contains("parse") })
+        #expect(result.errors.contains {
+            if case .malformedJSON = $0 { true } else { false }
+        })
     }
 
     // MARK: - Schema Version

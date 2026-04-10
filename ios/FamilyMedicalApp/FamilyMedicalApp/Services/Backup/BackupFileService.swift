@@ -281,7 +281,10 @@ final class BackupFileService: BackupFileServiceProtocol, @unchecked Sendable {
         // Validate against schema BEFORE decoding
         let validationResult = schemaValidator.validate(jsonData: data)
         if !validationResult.isValid {
-            logger.error("Schema validation failed: \(validationResult.errors.joined(separator: ", "))")
+            logger
+                .error(
+                    "Schema validation failed: \(validationResult.errors.map(\.description).joined(separator: ", "))"
+                )
             throw BackupError.schemaValidationFailed(validationResult.errors)
         }
 

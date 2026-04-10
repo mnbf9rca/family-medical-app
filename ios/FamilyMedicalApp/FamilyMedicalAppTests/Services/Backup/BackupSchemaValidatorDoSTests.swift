@@ -19,7 +19,9 @@ struct BackupSchemaValidatorDoSTests {
 
         let result = validator.validate(jsonData: deeplyNested)
         #expect(!result.isValid)
-        #expect(result.errors.contains { $0.contains("depth") || $0.contains("nesting") })
+        #expect(result.errors.contains {
+            if case .nestingDepthExceeded = $0 { true } else { false }
+        })
     }
 
     @Test("Exceeding max array size fails validation")
@@ -32,7 +34,9 @@ struct BackupSchemaValidatorDoSTests {
 
         let result = validator.validate(jsonData: json)
         #expect(!result.isValid)
-        #expect(result.errors.contains { $0.contains("array") || $0.contains("size") })
+        #expect(result.errors.contains {
+            if case .arraySizeExceeded = $0 { true } else { false }
+        })
     }
 
     // MARK: - Edge Cases for DoS Limits
@@ -46,7 +50,9 @@ struct BackupSchemaValidatorDoSTests {
 
         let result = validator.validate(jsonData: json)
         // Will fail schema validation but should pass DoS checks
-        #expect(!result.errors.contains { $0.contains("array") && $0.contains("size") })
+        #expect(!result.errors.contains {
+            if case .arraySizeExceeded = $0 { true } else { false }
+        })
     }
 
     @Test("Empty dictionaries pass DoS validation")
@@ -58,7 +64,9 @@ struct BackupSchemaValidatorDoSTests {
 
         let result = validator.validate(jsonData: json)
         // Will fail schema validation but should pass DoS checks
-        #expect(!result.errors.contains { $0.contains("depth") || $0.contains("nesting") })
+        #expect(!result.errors.contains {
+            if case .nestingDepthExceeded = $0 { true } else { false }
+        })
     }
 
     @Test("Primitive root value passes depth check")
@@ -68,7 +76,9 @@ struct BackupSchemaValidatorDoSTests {
 
         let result = validator.validate(jsonData: json)
         // Will fail schema validation but should pass DoS checks
-        #expect(!result.errors.contains { $0.contains("depth") || $0.contains("nesting") })
+        #expect(!result.errors.contains {
+            if case .nestingDepthExceeded = $0 { true } else { false }
+        })
     }
 
     @Test("Deeply nested arrays trigger depth limit")
@@ -80,7 +90,9 @@ struct BackupSchemaValidatorDoSTests {
 
         let result = validator.validate(jsonData: json)
         #expect(!result.isValid)
-        #expect(result.errors.contains { $0.contains("depth") || $0.contains("nesting") })
+        #expect(result.errors.contains {
+            if case .nestingDepthExceeded = $0 { true } else { false }
+        })
     }
 
     @Test("Nested array sizes are checked")
@@ -92,7 +104,9 @@ struct BackupSchemaValidatorDoSTests {
 
         let result = validator.validate(jsonData: json)
         #expect(!result.isValid)
-        #expect(result.errors.contains { $0.contains("array") || $0.contains("size") })
+        #expect(result.errors.contains {
+            if case .arraySizeExceeded = $0 { true } else { false }
+        })
     }
 
     @Test("Within limits passes DoS checks")
@@ -104,6 +118,48 @@ struct BackupSchemaValidatorDoSTests {
 
         let result = validator.validate(jsonData: json)
         // Will fail schema validation but should pass DoS checks
-        #expect(!result.errors.contains { $0.contains("depth") || $0.contains("array") })
+        #expect(!result.errors.contains {
+            if case .nestingDepthExceeded = $0 { true } else { false }
+        })
+        #expect(!result.errors.contains {
+            if case .arraySizeExceeded = $0 { true } else { false }
+        })
+    }
+
+    // MARK: - Associated Value Tests
+
+    @Test("Nesting depth error carries actual and max values")
+    func nestingDepthErrorCarriesValues() {
+        let validator = BackupSchemaValidator.forTesting(maxNestingDepth: 5)
+        let deeplyNested = Data("""
+        {"a":{"b":{"c":{"d":{"e":{"f":{"g":"too deep"}}}}}}}
+        """.utf8)
+
+        let result = validator.validate(jsonData: deeplyNested)
+        #expect(!result.isValid)
+        let hasTypedError = result.errors.contains {
+            if case let .nestingDepthExceeded(observed, max) = $0 {
+                return observed == 6 && max == 5
+            }
+            return false
+        }
+        #expect(hasTypedError)
+    }
+
+    @Test("Array size error carries actual and max values")
+    func arraySizeErrorCarriesValues() throws {
+        let validator = BackupSchemaValidator.forTesting(maxArraySize: 10)
+        let largeArray = Array(repeating: "item", count: 20)
+        let json = try JSONSerialization.data(withJSONObject: ["items": largeArray])
+
+        let result = validator.validate(jsonData: json)
+        #expect(!result.isValid)
+        let hasTypedError = result.errors.contains {
+            if case let .arraySizeExceeded(actual, max) = $0 {
+                return actual == 20 && max == 10
+            }
+            return false
+        }
+        #expect(hasTypedError)
     }
 }
