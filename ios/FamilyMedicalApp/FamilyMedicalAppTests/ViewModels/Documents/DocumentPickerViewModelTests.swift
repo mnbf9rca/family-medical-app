@@ -196,7 +196,8 @@ struct DocumentPickerViewModelTests {
 
         let draft = try #require(fixtures.viewModel.drafts.first)
         #expect(draft.content.title.hasPrefix("Photo_"))
-        #expect(draft.content.title.hasSuffix(".jpg"))
+        // UTType.jpeg.preferredFilenameExtension is "jpeg", not "jpg".
+        #expect(draft.content.title.hasSuffix(".jpeg"))
     }
 
     @Test

@@ -72,7 +72,6 @@ FILE_EXCEPTIONS = {
     "DemoSetupView.swift": 0.0,
     # ViewModels with static factory methods that use production dependencies
     "DocumentViewerViewModel.swift": 71.0,  # createDefaultDocumentService() uses real Core Data/services
-    "DocumentPickerViewModel.swift": 58.0,  # createDefaultDocumentService() + test seeding code; CI variance ~5%. Dropped during FHIR migration (#123) — restore to 68% in #127
     # Services with file system operations - CI/local variance in directory creation paths
     "DocumentFileStorageService.swift": 79.0,  # Local 80%, CI 89% - variance in default init tests
     # OPAQUE authentication - requires backend server for full integration testing

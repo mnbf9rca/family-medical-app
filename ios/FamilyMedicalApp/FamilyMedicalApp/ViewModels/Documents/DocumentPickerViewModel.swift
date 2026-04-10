@@ -60,6 +60,12 @@ final class DocumentPickerViewModel {
     /// Maximum drafts per record.
     static let maxPerRecord: Int = 5
 
+    /// Sentinel MIME hint passed to `DocumentBlobService.store` when the caller has not
+    /// sniffed the bytes yet. The service runs `CGImageSource` detection regardless of
+    /// the hint and returns the real MIME as `stored.detectedMimeType` — this string is
+    /// only a marker meaning "I don't know, please detect."
+    private static let unknownMimeHint = "image/unknown"
+
     // MARK: - Dependencies
 
     @ObservationIgnored private let blobService: DocumentBlobServiceProtocol
@@ -121,11 +127,14 @@ final class DocumentPickerViewModel {
         isLoading = true
         errorMessage = nil
         do {
+            // UIImagePickerController hands us an already-decoded UIImage, so the camera's
+            // original encoded bytes are not recoverable here; we re-encode to JPEG.
+            // See Issue #160 for the AVCapturePhotoOutput rework that would lift this.
             guard let imageData = image.jpegData(compressionQuality: 0.9) else {
                 throw ModelError.imageProcessingFailed(reason: "Could not convert image to JPEG")
             }
-            let fileName = "Photo_\(Self.formatTimestamp(dateProvider())).jpg"
-            try await storeAndAppend(plaintext: imageData, fileName: fileName, mimeType: "image/jpeg")
+            let baseName = "Photo_\(Self.formatTimestamp(dateProvider()))"
+            try await storeAndAppendGenerated(plaintext: imageData, baseName: baseName, mimeType: "image/jpeg")
         } catch let error as ModelError {
             errorMessage = error.userFacingMessage
             logger.logError(error, context: "DocumentPickerViewModel.addFromCamera")
@@ -183,10 +192,8 @@ final class DocumentPickerViewModel {
                 logger.info("Skipping photo item - could not load data")
                 return
             }
-            // Pass "image/unknown" — DocumentBlobService will detect the real MIME
-            // via CGImageSource in process().
-            let fileName = "Photo_\(Self.formatTimestamp(dateProvider())).jpg"
-            try await storeAndAppend(plaintext: data, fileName: fileName, mimeType: "image/unknown")
+            let baseName = "Photo_\(Self.formatTimestamp(dateProvider()))"
+            try await storeAndAppendGenerated(plaintext: data, baseName: baseName, mimeType: Self.unknownMimeHint)
         } catch let error as ModelError {
             errorMessage = error.userFacingMessage
             logger.logError(error, context: "DocumentPickerViewModel.addFromPhotoLibrary")
@@ -216,6 +223,7 @@ final class DocumentPickerViewModel {
         }
     }
 
+    /// URL document-picker path — uses the user's chosen filename verbatim.
     private func storeAndAppend(plaintext: Data, fileName: String, mimeType: String) async throws {
         let stored = try await blobService.store(
             plaintext: plaintext,
@@ -223,12 +231,36 @@ final class DocumentPickerViewModel {
             personId: personId,
             primaryKey: primaryKey
         )
-        let actualMime = stored.detectedMimeType
+        appendDraft(stored: stored, fileSize: plaintext.count, title: fileName)
+    }
+
+    /// Camera and photo-library paths — synthesizes the title from `baseName` plus the
+    /// canonical extension for the MIME that `DocumentBlobService` detected, so the title
+    /// agrees with the actually-stored bytes instead of whatever the caller guessed.
+    private func storeAndAppendGenerated(plaintext: Data, baseName: String, mimeType: String) async throws {
+        let stored = try await blobService.store(
+            plaintext: plaintext,
+            mimeType: mimeType,
+            personId: personId,
+            primaryKey: primaryKey
+        )
+        let title = baseName.appendingCanonicalExtension(
+            forMimeType: stored.detectedMimeType,
+            fallback: nil
+        )
+        appendDraft(stored: stored, fileSize: plaintext.count, title: title)
+    }
+
+    private func appendDraft(
+        stored: DocumentBlobService.StoredBlob,
+        fileSize: Int,
+        title: String
+    ) {
         let doc = DocumentReferenceRecord(
-            title: fileName,
+            title: title,
             documentType: nil,
-            mimeType: actualMime,
-            fileSize: plaintext.count,
+            mimeType: stored.detectedMimeType,
+            fileSize: fileSize,
             contentHMAC: stored.contentHMAC,
             thumbnailData: stored.thumbnailData,
             sourceRecordId: sourceRecordId,

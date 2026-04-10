@@ -1,7 +1,6 @@
 import CryptoKit
 import Foundation
 import Observation
-import UniformTypeIdentifiers
 
 /// ViewModel for viewing a DocumentReferenceRecord's decrypted content in full-screen.
 ///
@@ -162,7 +161,6 @@ final class DocumentViewerViewModel {
     /// Zero user input in the filesystem path — prevents path traversal by construction.
     private var sanitizedFileName: String {
         let hexPrefix = document.contentHMAC.prefix(8).map { String(format: "%02x", $0) }.joined()
-        let ext = UTType(mimeType: document.mimeType)?.preferredFilenameExtension ?? "bin"
-        return "\(hexPrefix).\(ext)"
+        return hexPrefix.appendingCanonicalExtension(forMimeType: document.mimeType, fallback: "bin")
     }
 }
