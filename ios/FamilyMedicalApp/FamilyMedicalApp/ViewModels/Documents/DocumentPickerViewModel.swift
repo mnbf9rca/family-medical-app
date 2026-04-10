@@ -4,7 +4,6 @@ import Observation
 import PhotosUI
 import SwiftUI
 import UIKit
-import UniformTypeIdentifiers
 
 /// ViewModel for selecting and managing DocumentReferenceRecord drafts in a medical record form.
 ///
@@ -60,11 +59,17 @@ final class DocumentPickerViewModel {
     /// Maximum drafts per record.
     static let maxPerRecord: Int = 5
 
-    /// Sentinel MIME hint passed to `DocumentBlobService.store` when the caller has not
-    /// sniffed the bytes yet. The service runs `CGImageSource` detection regardless of
-    /// the hint and returns the real MIME as `stored.detectedMimeType` — this string is
-    /// only a marker meaning "I don't know, please detect."
-    private static let unknownMimeHint = "image/unknown"
+    // MARK: - Types
+
+    /// How to derive the title of a draft relative to the detected MIME of the blob.
+    private enum TitleStrategy {
+        /// Use this literal string as the title regardless of detected MIME. For the
+        /// URL document-picker path, where the user already picked a real filename.
+        case verbatim(String)
+        /// Append the canonical extension for the detected MIME to this base. For the
+        /// camera and photo-library paths, where the filename is generated.
+        case derived(baseName: String)
+    }
 
     // MARK: - Dependencies
 
@@ -134,7 +139,7 @@ final class DocumentPickerViewModel {
                 throw ModelError.imageProcessingFailed(reason: "Could not convert image to JPEG")
             }
             let baseName = "Photo_\(Self.formatTimestamp(dateProvider()))"
-            try await storeAndAppendGenerated(plaintext: imageData, baseName: baseName, mimeType: "image/jpeg")
+            try await storeAndAppend(plaintext: imageData, title: .derived(baseName: baseName))
         } catch let error as ModelError {
             errorMessage = error.userFacingMessage
             logger.logError(error, context: "DocumentPickerViewModel.addFromCamera")
@@ -193,7 +198,7 @@ final class DocumentPickerViewModel {
                 return
             }
             let baseName = "Photo_\(Self.formatTimestamp(dateProvider()))"
-            try await storeAndAppendGenerated(plaintext: data, baseName: baseName, mimeType: Self.unknownMimeHint)
+            try await storeAndAppend(plaintext: data, title: .derived(baseName: baseName))
         } catch let error as ModelError {
             errorMessage = error.userFacingMessage
             logger.logError(error, context: "DocumentPickerViewModel.addFromPhotoLibrary")
@@ -211,9 +216,7 @@ final class DocumentPickerViewModel {
                 }
             }
             let data = try Data(contentsOf: url)
-            let fileName = url.lastPathComponent
-            let mimeType = Self.mimeType(forPathExtension: url.pathExtension)
-            try await storeAndAppend(plaintext: data, fileName: fileName, mimeType: mimeType)
+            try await storeAndAppend(plaintext: data, title: .verbatim(url.lastPathComponent))
         } catch let error as ModelError {
             errorMessage = error.userFacingMessage
             logger.logError(error, context: "DocumentPickerViewModel.addFromDocumentPicker")
@@ -223,44 +226,23 @@ final class DocumentPickerViewModel {
         }
     }
 
-    /// URL document-picker path — uses the user's chosen filename verbatim.
-    private func storeAndAppend(plaintext: Data, fileName: String, mimeType: String) async throws {
+    private func storeAndAppend(plaintext: Data, title: TitleStrategy) async throws {
         let stored = try await blobService.store(
             plaintext: plaintext,
-            mimeType: mimeType,
             personId: personId,
             primaryKey: primaryKey
         )
-        appendDraft(stored: stored, fileSize: plaintext.count, title: fileName)
-    }
-
-    /// Camera and photo-library paths — synthesizes the title from `baseName` plus the
-    /// canonical extension for the MIME that `DocumentBlobService` detected, so the title
-    /// agrees with the actually-stored bytes instead of whatever the caller guessed.
-    private func storeAndAppendGenerated(plaintext: Data, baseName: String, mimeType: String) async throws {
-        let stored = try await blobService.store(
-            plaintext: plaintext,
-            mimeType: mimeType,
-            personId: personId,
-            primaryKey: primaryKey
-        )
-        let title = baseName.appendingCanonicalExtension(
-            forMimeType: stored.detectedMimeType,
-            fallback: nil
-        )
-        appendDraft(stored: stored, fileSize: plaintext.count, title: title)
-    }
-
-    private func appendDraft(
-        stored: DocumentBlobService.StoredBlob,
-        fileSize: Int,
-        title: String
-    ) {
+        let finalTitle: String = switch title {
+        case let .verbatim(name):
+            name
+        case let .derived(baseName):
+            baseName.appendingCanonicalExtension(forMimeType: stored.detectedMimeType, fallback: nil)
+        }
         let doc = DocumentReferenceRecord(
-            title: title,
+            title: finalTitle,
             documentType: nil,
             mimeType: stored.detectedMimeType,
-            fileSize: fileSize,
+            fileSize: plaintext.count,
             contentHMAC: stored.contentHMAC,
             thumbnailData: stored.thumbnailData,
             sourceRecordId: sourceRecordId,
@@ -276,9 +258,5 @@ final class DocumentPickerViewModel {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd_HH-mm-ss"
         return formatter.string(from: date)
-    }
-
-    private static func mimeType(forPathExtension ext: String) -> String {
-        UTType(filenameExtension: ext)?.preferredMIMEType ?? "application/octet-stream"
     }
 }

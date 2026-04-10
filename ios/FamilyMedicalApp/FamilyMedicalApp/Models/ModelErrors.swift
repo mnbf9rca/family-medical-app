@@ -22,7 +22,7 @@ enum ModelError: LocalizedError, Equatable {
     // MARK: - Document Errors
 
     case documentTooLarge(maxSizeMB: Int)
-    case unsupportedMimeType(mimeType: String)
+    case unsupportedContent
     case documentLimitExceeded(max: Int)
     case documentNotFound(documentId: UUID? = nil)
     case documentContentCorrupted
@@ -76,8 +76,8 @@ enum ModelError: LocalizedError, Equatable {
         // Document errors
         case let .documentTooLarge(maxSizeMB):
             "File exceeds maximum size of \(maxSizeMB) MB"
-        case let .unsupportedMimeType(mimeType):
-            "File type '\(mimeType)' is not supported. Please use JPEG, PNG, or PDF"
+        case .unsupportedContent:
+            "File is not a supported image or PDF"
         case let .documentLimitExceeded(max):
             "Maximum of \(max) attachments per record exceeded"
         case let .documentNotFound(documentId):

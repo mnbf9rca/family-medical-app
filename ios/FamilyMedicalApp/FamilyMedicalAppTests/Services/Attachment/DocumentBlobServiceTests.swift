@@ -1,6 +1,7 @@
 import CryptoKit
 import Foundation
 import Testing
+import UIKit
 @testable import FamilyMedicalApp
 
 @Suite("DocumentBlobService Tests")
@@ -43,8 +44,20 @@ struct DocumentBlobServiceTests {
         )
     }
 
+    /// Real, CGImageSource-decodable JPEG bytes. The service uses content-based detection
+    /// via CGImageSource, so test fixtures cannot rely on a hand-rolled SOI marker — the
+    /// sniffer would reject it. A 10×10 UIGraphicsImageRenderer frame is cheap to build
+    /// and always yields a valid JPEG header plus body.
     private static func makeJPEG() -> Data {
-        Data([0xFF, 0xD8, 0xFF, 0xE0] + Array(repeating: UInt8(0), count: 128))
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: 10, height: 10))
+        let image = renderer.image { ctx in
+            UIColor.blue.setFill()
+            ctx.fill(CGRect(x: 0, y: 0, width: 10, height: 10))
+        }
+        guard let data = image.jpegData(compressionQuality: 0.8) else {
+            fatalError("UIGraphicsImageRenderer failed to produce JPEG bytes")
+        }
+        return data
     }
 
     /// Minimal valid PDF that PDFDocument(data:) accepts.
@@ -75,7 +88,6 @@ struct DocumentBlobServiceTests {
         let ctx = Self.makeFixture()
         let result = try await ctx.service.store(
             plaintext: Self.makeJPEG(),
-            mimeType: "image/jpeg",
             personId: ctx.personId,
             primaryKey: ctx.primaryKey
         )
@@ -86,12 +98,11 @@ struct DocumentBlobServiceTests {
         #expect(ctx.fileStorage.storeCalls.first?.contentHMAC == result.contentHMAC)
     }
 
-    @Test("store generates thumbnail for image MIME types")
+    @Test("store generates thumbnail for image content")
     func storeGeneratesThumbnailForImages() async throws {
         let ctx = Self.makeFixture()
         let result = try await ctx.service.store(
             plaintext: Self.makeJPEG(),
-            mimeType: "image/jpeg",
             personId: ctx.personId,
             primaryKey: ctx.primaryKey
         )
@@ -105,7 +116,6 @@ struct DocumentBlobServiceTests {
         let ctx = Self.makeFixture()
         let result = try await ctx.service.store(
             plaintext: Self.makePDF(),
-            mimeType: "application/pdf",
             personId: ctx.personId,
             primaryKey: ctx.primaryKey
         )
@@ -114,13 +124,14 @@ struct DocumentBlobServiceTests {
         #expect(ctx.imageProcessor.thumbnailCalls.isEmpty)
     }
 
-    @Test("store rejects unsupported MIME types")
-    func storeRejectsUnsupportedMimeType() async throws {
+    @Test("store rejects content that is neither a valid image nor a PDF")
+    func storeRejectsUnsupportedContent() async throws {
         let ctx = Self.makeFixture()
+        // Bytes that do not start with %PDF- and that CGImageSource cannot identify.
+        let arbitrary = Data([0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07])
         await #expect(throws: ModelError.self) {
             _ = try await ctx.service.store(
-                plaintext: Data([0x00]),
-                mimeType: "application/exe",
+                plaintext: arbitrary,
                 personId: ctx.personId,
                 primaryKey: ctx.primaryKey
             )
@@ -134,7 +145,6 @@ struct DocumentBlobServiceTests {
         await #expect(throws: ModelError.self) {
             _ = try await ctx.service.store(
                 plaintext: tooBig,
-                mimeType: "image/jpeg",
                 personId: ctx.personId,
                 primaryKey: ctx.primaryKey
             )
@@ -148,7 +158,6 @@ struct DocumentBlobServiceTests {
         await #expect(throws: ModelError.self) {
             _ = try await ctx.service.store(
                 plaintext: tooBig,
-                mimeType: "application/pdf",
                 personId: ctx.personId,
                 primaryKey: ctx.primaryKey
             )
@@ -161,7 +170,6 @@ struct DocumentBlobServiceTests {
         let originalData = Self.makeJPEG()
         _ = try await ctx.service.store(
             plaintext: originalData,
-            mimeType: "image/jpeg",
             personId: ctx.personId,
             primaryKey: ctx.primaryKey
         )
@@ -176,7 +184,6 @@ struct DocumentBlobServiceTests {
         // First store
         let first = try await ctx.service.store(
             plaintext: Self.makePDF(),
-            mimeType: "application/pdf",
             personId: ctx.personId,
             primaryKey: ctx.primaryKey
         )
@@ -184,7 +191,6 @@ struct DocumentBlobServiceTests {
         // Second store of identical bytes — should dedupe (no second write)
         _ = try await ctx.service.store(
             plaintext: Self.makePDF(),
-            mimeType: "application/pdf",
             personId: ctx.personId,
             primaryKey: ctx.primaryKey
         )
@@ -196,32 +202,17 @@ struct DocumentBlobServiceTests {
         #expect(first.contentHMAC == ctx.fileStorage.storeCalls.first?.contentHMAC)
     }
 
-    @Test("store validates image via CGImageSource path for image/* MIME")
-    func storeValidatesImageForImageMime() async throws {
+    @Test("store validates image via CGImageSource and reports the detected MIME")
+    func storeValidatesImageViaCGImageSource() async throws {
         let ctx = Self.makeFixture()
         ctx.imageProcessor.validateResult = "image/heic"
-        _ = try await ctx.service.store(
+        let result = try await ctx.service.store(
             plaintext: Self.makeJPEG(),
-            mimeType: "image/heic",
             personId: ctx.personId,
             primaryKey: ctx.primaryKey
         )
         #expect(ctx.imageProcessor.validateCalls.count == 1)
-    }
-
-    @Test("store routes image data with wrong MIME to image path via CGImageSource probe")
-    func storeDetectsImageDataEvenWithWrongMime() async throws {
-        let ctx = Self.makeFixture()
-        // JPEG bytes but mimeType says "application/octet-stream"
-        // isImageContent() will detect valid image data via CGImageSource and route to image path
-        _ = try await ctx.service.store(
-            plaintext: Self.makeJPEG(),
-            mimeType: "application/octet-stream",
-            personId: ctx.personId,
-            primaryKey: ctx.primaryKey
-        )
-        #expect(ctx.imageProcessor.validateCalls.count == 1)
-        #expect(ctx.imageProcessor.thumbnailCalls.count == 1)
+        #expect(result.detectedMimeType == "image/heic")
     }
 
     // MARK: - retrieve
@@ -232,7 +223,6 @@ struct DocumentBlobServiceTests {
         let original = Self.makeJPEG()
         let stored = try await ctx.service.store(
             plaintext: original,
-            mimeType: "image/jpeg",
             personId: ctx.personId,
             primaryKey: ctx.primaryKey
         )

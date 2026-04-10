@@ -120,62 +120,6 @@ struct DocumentPickerViewModelExtendedTests {
     }
 
     @Test
-    func addFromDocumentPicker_mimeTypeFromPDFExtension() async throws {
-        let fixtures = makeFixtures()
-        let pdfData = Data("%PDF-1.4".utf8)
-        let url = try writeTempFile(name: "mime_pdf_\(UUID().uuidString).pdf", contents: pdfData)
-        defer { try? FileManager.default.removeItem(at: url) }
-
-        await fixtures.viewModel.addFromDocumentPicker([url])
-
-        if let call = fixtures.blobService.storeCalls.first {
-            #expect(call.mimeType == "application/pdf")
-        }
-    }
-
-    @Test
-    func addFromDocumentPicker_mimeTypeFromJPGExtension() async throws {
-        let fixtures = makeFixtures()
-        let jpegData = Data([0xFF, 0xD8, 0xFF, 0xE0]) + Data("jpeg body".utf8)
-        let url = try writeTempFile(name: "mime_jpeg_\(UUID().uuidString).jpg", contents: jpegData)
-        defer { try? FileManager.default.removeItem(at: url) }
-
-        await fixtures.viewModel.addFromDocumentPicker([url])
-
-        if let call = fixtures.blobService.storeCalls.first {
-            #expect(call.mimeType == "image/jpeg")
-        }
-    }
-
-    @Test
-    func addFromDocumentPicker_mimeTypeFromPNGExtension() async throws {
-        let fixtures = makeFixtures()
-        let pngData = Data([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A])
-        let url = try writeTempFile(name: "mime_png_\(UUID().uuidString).png", contents: pngData)
-        defer { try? FileManager.default.removeItem(at: url) }
-
-        await fixtures.viewModel.addFromDocumentPicker([url])
-
-        if let call = fixtures.blobService.storeCalls.first {
-            #expect(call.mimeType == "image/png")
-        }
-    }
-
-    @Test
-    func addFromDocumentPicker_unknownExtension_fallsToOctetStream() async throws {
-        let fixtures = makeFixtures()
-        let data = Data("unknown body".utf8)
-        let url = try writeTempFile(name: "mime_unknown_\(UUID().uuidString).xyz", contents: data)
-        defer { try? FileManager.default.removeItem(at: url) }
-
-        await fixtures.viewModel.addFromDocumentPicker([url])
-
-        if let call = fixtures.blobService.storeCalls.first {
-            #expect(call.mimeType == "application/octet-stream")
-        }
-    }
-
-    @Test
     func addFromDocumentPicker_multipleFiles_addsSeveralDrafts() async throws {
         let fixtures = makeFixtures()
         let testId = UUID().uuidString

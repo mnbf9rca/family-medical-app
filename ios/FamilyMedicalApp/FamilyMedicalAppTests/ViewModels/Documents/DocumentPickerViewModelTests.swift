@@ -175,16 +175,14 @@ struct DocumentPickerViewModelTests {
     }
 
     @Test
-    func addFromCamera_callsStoreWithJPEG() async {
+    func addFromCamera_callsStore() async {
         let fixtures = makeFixtures()
         let image = makeTestImage()
 
         await fixtures.viewModel.addFromCamera(image)
 
         #expect(fixtures.blobService.storeCalls.count == 1)
-        let call = fixtures.blobService.storeCalls[0]
-        #expect(call.mimeType == "image/jpeg")
-        #expect(call.personId == fixtures.personId)
+        #expect(fixtures.blobService.storeCalls[0].personId == fixtures.personId)
     }
 
     @Test
@@ -203,7 +201,7 @@ struct DocumentPickerViewModelTests {
     @Test
     func addFromCamera_storeFailure_setsError() async {
         let fixtures = makeFixtures()
-        fixtures.blobService.storeError = ModelError.unsupportedMimeType(mimeType: "image/jpeg")
+        fixtures.blobService.storeError = ModelError.unsupportedContent
         let image = makeTestImage()
 
         await fixtures.viewModel.addFromCamera(image)
