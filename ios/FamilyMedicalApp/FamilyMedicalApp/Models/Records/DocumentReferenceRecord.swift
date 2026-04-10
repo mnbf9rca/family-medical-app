@@ -6,6 +6,21 @@ struct DocumentReferenceRecord: MedicalRecordContent {
     static let displayName: String = "Document"
     static let iconSystemName: String = "doc"
 
+    /// Maximum permitted length for `title` at ingestion points. Titles longer than
+    /// this are silently truncated by `normalizedTitle(_:)` rather than rejected —
+    /// the common ingestion path is `url.lastPathComponent` from the document picker,
+    /// which the user cannot easily shorten. 255 matches filesystem filename conventions
+    /// (NTFS, APFS, HFS+) and is wide enough for any reasonable medical document name
+    /// while bounding Core Data row size, backup JSON size, and UI render cost.
+    static let titleMaxLength = 255
+
+    /// Truncate `raw` to at most `titleMaxLength` characters. Use this at every
+    /// ingestion point (init, decode, in-app edit) so an adversarial filename cannot
+    /// bloat the encrypted store or the backup file.
+    static func normalizedTitle(_ raw: String) -> String {
+        String(raw.prefix(titleMaxLength))
+    }
+
     // Type-specific fields
     var title: String
     var documentType: String?
@@ -32,7 +47,7 @@ struct DocumentReferenceRecord: MedicalRecordContent {
         tags: [String] = [],
         unknownFields: [String: JSONValue] = [:]
     ) {
-        self.title = title
+        self.title = Self.normalizedTitle(title)
         self.documentType = documentType
         self.mimeType = mimeType
         self.fileSize = fileSize
@@ -53,7 +68,7 @@ struct DocumentReferenceRecord: MedicalRecordContent {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        title = try container.decode(String.self, forKey: .title)
+        title = try Self.normalizedTitle(container.decode(String.self, forKey: .title))
         documentType = try container.decodeIfPresent(String.self, forKey: .documentType)
         mimeType = try container.decode(String.self, forKey: .mimeType)
         fileSize = try container.decode(Int.self, forKey: .fileSize)
