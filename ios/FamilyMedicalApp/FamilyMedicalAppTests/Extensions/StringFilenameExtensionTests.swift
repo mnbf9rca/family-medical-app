@@ -65,6 +65,20 @@ struct StringFilenameExtensionTests {
         #expect(result == "Photo_20260410_143045")
     }
 
+    @Test
+    func appendingExtension_baseAlreadyHasCanonicalExtension_doesNotDoubleAppend() {
+        let result = "lab_results.pdf"
+            .appendingCanonicalExtension(forMimeType: "application/pdf", fallback: nil)
+        #expect(result == "lab_results.pdf")
+    }
+
+    @Test
+    func appendingExtension_baseHasCanonicalExtensionWithBinFallback_doesNotDoubleAppend() {
+        let result = "scan.png"
+            .appendingCanonicalExtension(forMimeType: "image/png", fallback: "bin")
+        #expect(result == "scan.png")
+    }
+
     // MARK: - fallback: "bin" (share-sheet export mode)
 
     @Test

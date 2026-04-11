@@ -13,14 +13,28 @@ extension String {
     /// is nil — the helper uses `fallback` if provided, otherwise returns the receiver unchanged.
     /// Callers that must produce a file with *some* extension (e.g. for the iOS share sheet) pass
     /// `fallback: "bin"`; callers producing a user-visible display title pass `fallback: nil`.
+    ///
+    /// The helper is idempotent for the canonical extension: calling it on a string
+    /// that already ends with `.<canonicalExtension>` (or `.<fallback>` when the
+    /// fallback path is taken) returns the receiver unchanged, so callers can run
+    /// the helper safely on strings that may or may not already carry the extension.
     func appendingCanonicalExtension(forMimeType mimeType: String, fallback: String?) -> String {
+        let extToAppend: String
         if let type = UTType(mimeType: mimeType),
-           let ext = type.preferredFilenameExtension {
-            return "\(self).\(ext)"
+           let preferred = type.preferredFilenameExtension {
+            extToAppend = preferred
+        } else if let fallback {
+            extToAppend = fallback
+        } else {
+            return self
         }
-        if let fallback {
-            return "\(self).\(fallback)"
+        // Idempotence guard: if the receiver already ends with the extension we
+        // would append, return it unchanged so the helper does not produce
+        // "file.pdf.pdf" when called on a base that already carries the canonical
+        // extension for the detected MIME.
+        if hasSuffix(".\(extToAppend)") {
+            return self
         }
-        return self
+        return "\(self).\(extToAppend)"
     }
 }
