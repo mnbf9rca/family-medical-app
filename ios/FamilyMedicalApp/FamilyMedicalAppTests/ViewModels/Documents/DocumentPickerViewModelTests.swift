@@ -175,16 +175,14 @@ struct DocumentPickerViewModelTests {
     }
 
     @Test
-    func addFromCamera_callsStoreWithJPEG() async {
+    func addFromCamera_callsStore() async {
         let fixtures = makeFixtures()
         let image = makeTestImage()
 
         await fixtures.viewModel.addFromCamera(image)
 
         #expect(fixtures.blobService.storeCalls.count == 1)
-        let call = fixtures.blobService.storeCalls[0]
-        #expect(call.mimeType == "image/jpeg")
-        #expect(call.personId == fixtures.personId)
+        #expect(fixtures.blobService.storeCalls[0].personId == fixtures.personId)
     }
 
     @Test
@@ -196,13 +194,14 @@ struct DocumentPickerViewModelTests {
 
         let draft = try #require(fixtures.viewModel.drafts.first)
         #expect(draft.content.title.hasPrefix("Photo_"))
-        #expect(draft.content.title.hasSuffix(".jpg"))
+        // UTType.jpeg.preferredFilenameExtension is "jpeg", not "jpg".
+        #expect(draft.content.title.hasSuffix(".jpeg"))
     }
 
     @Test
     func addFromCamera_storeFailure_setsError() async {
         let fixtures = makeFixtures()
-        fixtures.blobService.storeError = ModelError.unsupportedMimeType(mimeType: "image/jpeg")
+        fixtures.blobService.storeError = ModelError.unsupportedContent
         let image = makeTestImage()
 
         await fixtures.viewModel.addFromCamera(image)
@@ -305,6 +304,33 @@ struct DocumentPickerViewModelTests {
         fixtures.viewModel.setTitle("NewName.jpg", for: UUID())
 
         #expect(fixtures.viewModel.drafts.first?.content.title == original)
+    }
+
+    @Test
+    func setTitle_overMaxLength_truncatesToMax() async throws {
+        let fixtures = makeFixtures()
+        let image = makeTestImage()
+        await fixtures.viewModel.addFromCamera(image)
+
+        let draftId = try #require(fixtures.viewModel.drafts.first?.id)
+        let overLong = String(repeating: "z", count: DocumentReferenceRecord.titleMaxLength + 100)
+        fixtures.viewModel.setTitle(overLong, for: draftId)
+
+        // Regression guard: DocumentReferenceRecord.title must enforce length structurally.
+        #expect(fixtures.viewModel.drafts.first?.content.title.count == DocumentReferenceRecord.titleMaxLength)
+    }
+
+    @Test
+    func setTitle_exactlyMaxLength_keepsFullTitle() async throws {
+        let fixtures = makeFixtures()
+        let image = makeTestImage()
+        await fixtures.viewModel.addFromCamera(image)
+
+        let draftId = try #require(fixtures.viewModel.drafts.first?.id)
+        let maxTitle = String(repeating: "y", count: DocumentReferenceRecord.titleMaxLength)
+        fixtures.viewModel.setTitle(maxTitle, for: draftId)
+
+        #expect(fixtures.viewModel.drafts.first?.content.title == maxTitle)
     }
 
     // MARK: - Sheet State Tests

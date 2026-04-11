@@ -53,8 +53,8 @@ extension ModelError {
         // Document errors
         case let .documentTooLarge(maxSizeMB):
             return "File is too large. Maximum size is \(maxSizeMB) MB."
-        case let .unsupportedMimeType(mimeType):
-            return "File type '\(mimeType)' is not supported. Please use JPEG, PNG, or PDF."
+        case .unsupportedContent:
+            return "File type is not supported. Please use a supported image format (JPEG, PNG, HEIC, etc.) or PDF."
         case let .documentLimitExceeded(max):
             return "Maximum of \(max) attachments per record reached."
         case .documentNotFound:

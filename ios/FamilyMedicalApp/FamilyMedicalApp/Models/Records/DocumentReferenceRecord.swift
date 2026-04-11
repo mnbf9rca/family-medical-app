@@ -6,8 +6,42 @@ struct DocumentReferenceRecord: MedicalRecordContent {
     static let displayName: String = "Document"
     static let iconSystemName: String = "doc"
 
-    // Type-specific fields
-    var title: String
+    /// Maximum permitted length for `title`, measured in Swift `Character`s
+    /// (extended grapheme clusters). Titles longer than this are silently truncated
+    /// by the `title` setter — the common ingestion path is `url.lastPathComponent`
+    /// from the document picker, which the user cannot easily shorten, so a throw
+    /// would be a dead-end UX.
+    ///
+    /// This is a *loose* upper bound on the underlying UTF-8 byte count rather
+    /// than an exact one: 255 grapheme clusters can be up to roughly 1.5KB for
+    /// pathological Unicode (e.g. family emoji with ZWJ sequences). That is still
+    /// well within the threat model, which is adversarial bloat of the encrypted
+    /// Core Data store, the backup JSON, and the SwiftUI render path — not exact
+    /// filesystem conformance.
+    static let titleMaxLength = 255
+
+    /// Truncate `raw` to at most `titleMaxLength` characters. Use this at every
+    /// ingestion point (init, decode, in-app edit) so an adversarial filename cannot
+    /// bloat the encrypted store or the backup file.
+    static func normalizedTitle(_ raw: String) -> String {
+        String(raw.prefix(titleMaxLength))
+    }
+
+    // MARK: - Type-specific fields
+
+    /// Backing storage for `title`. Never mutate this directly — assign through
+    /// the computed `title` setter so every mutation routes through
+    /// `normalizedTitle(_:)` and the 255-grapheme invariant is preserved.
+    private var _title: String
+
+    /// User-visible document title. Every assignment is automatically truncated
+    /// to `titleMaxLength` grapheme clusters by the setter; no caller anywhere
+    /// in the module can bypass the cap.
+    var title: String {
+        get { _title }
+        set { _title = Self.normalizedTitle(newValue) }
+    }
+
     var documentType: String?
     var mimeType: String
     var fileSize: Int
@@ -32,7 +66,7 @@ struct DocumentReferenceRecord: MedicalRecordContent {
         tags: [String] = [],
         unknownFields: [String: JSONValue] = [:]
     ) {
-        self.title = title
+        self._title = Self.normalizedTitle(title)
         self.documentType = documentType
         self.mimeType = mimeType
         self.fileSize = fileSize
@@ -53,7 +87,7 @@ struct DocumentReferenceRecord: MedicalRecordContent {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        title = try container.decode(String.self, forKey: .title)
+        _title = try Self.normalizedTitle(container.decode(String.self, forKey: .title))
         documentType = try container.decodeIfPresent(String.self, forKey: .documentType)
         mimeType = try container.decode(String.self, forKey: .mimeType)
         fileSize = try container.decode(Int.self, forKey: .fileSize)

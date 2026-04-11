@@ -1,6 +1,5 @@
 import CryptoKit
 import Foundation
-import ImageIO
 import PDFKit
 
 /// Storage of encrypted document blobs on disk, keyed by HMAC-SHA256 of plaintext (keyed with FMK).
@@ -9,10 +8,11 @@ import PDFKit
 /// not re-upload the blob. HMAC keying with the Family Member Key prevents rainbow-table attacks
 /// on known content.
 protocol DocumentBlobServiceProtocol: Sendable {
-    /// Encrypt, store, and return storage metadata for a plaintext blob.
+    /// Encrypt, store, and return storage metadata for a plaintext blob. The content type
+    /// is detected from the bytes themselves (PDF via `%PDF-` magic bytes, images via
+    /// CGImageSource); callers do not pass a MIME hint.
     func store(
         plaintext: Data,
-        mimeType: String,
         personId: UUID,
         primaryKey: SymmetricKey
     ) async throws -> DocumentBlobService.StoredBlob
@@ -79,15 +79,14 @@ final class DocumentBlobService: DocumentBlobServiceProtocol, @unchecked Sendabl
 
     func store(
         plaintext: Data,
-        mimeType: String,
         personId: UUID,
         primaryKey: SymmetricKey
     ) async throws -> StoredBlob {
         let start = ContinuousClock.now
-        logger.entry("store", "mimeType=\(mimeType)")
         do {
             let fmk = try fmkService.retrieveFMK(familyMemberID: personId.uuidString, primaryKey: primaryKey)
-            let processed = try process(plaintext: plaintext, mimeType: mimeType)
+            let processed = try process(plaintext: plaintext)
+            logger.entry("store", "detectedMime=\(processed.detectedMimeType), plaintextSize=\(plaintext.count)")
             let hmac = Data(HMAC<SHA256>.authenticationCode(for: processed.data, using: fmk))
 
             let encryptedSize: Int
@@ -165,44 +164,48 @@ final class DocumentBlobService: DocumentBlobServiceProtocol, @unchecked Sendabl
 
     // MARK: - Private
 
-    /// Returns `(data, thumbnail, detectedMimeType)`.
+    /// Detect content type from the bytes and process accordingly.
     ///
-    /// - Images: validated via CGImageSource, original bytes stored as-is, JPEG thumbnail generated.
-    /// - PDFs: validated via PDFDocument, stored as-is.
-    /// - Other: rejected.
-    private func process(plaintext: Data, mimeType: String) throws -> ProcessedBlob {
-        // Check PDF first — CGImageSource accepts PDF data, so the image probe
-        // must not run when the caller already declared application/pdf.
-        if mimeType.lowercased() == "application/pdf" {
-            guard plaintext.count <= Self.maxFileSizeBytes else {
-                throw ModelError.documentTooLarge(maxSizeMB: Self.maxFileSizeBytes / (1_024 * 1_024))
-            }
+    /// - PDFs: detected by `%PDF-` magic bytes, then validated via `PDFDocument(data:)`,
+    ///   stored as-is with no thumbnail.
+    /// - Images: detected via CGImageSource, original bytes stored as-is, JPEG thumbnail generated.
+    /// - Everything else: rejected.
+    ///
+    /// PDF is checked before images because CGImageSource also accepts PDF data and would
+    /// otherwise mis-route PDFs into the image path.
+    private func process(plaintext: Data) throws -> ProcessedBlob {
+        guard plaintext.count <= Self.maxFileSizeBytes else {
+            throw ModelError.documentTooLarge(maxSizeMB: Self.maxFileSizeBytes / (1_024 * 1_024))
+        }
+        if Self.isPDFContent(plaintext) {
             guard PDFDocument(data: plaintext) != nil else {
                 throw ModelError.imageProcessingFailed(reason: "File content is not a valid PDF")
             }
             return ProcessedBlob(data: plaintext, thumbnailData: nil, detectedMimeType: "application/pdf")
-        } else if mimeType.lowercased().hasPrefix("image/") || isImageContent(plaintext) {
-            guard plaintext.count <= Self.maxFileSizeBytes else {
-                throw ModelError.documentTooLarge(maxSizeMB: Self.maxFileSizeBytes / (1_024 * 1_024))
-            }
-            let detectedMime = try imageProcessor.validateImage(plaintext)
-            let thumbnail = try imageProcessor.generateThumbnail(
-                plaintext,
-                maxDimension: Self.thumbnailDimension
-            )
-            return ProcessedBlob(data: plaintext, thumbnailData: thumbnail, detectedMimeType: detectedMime)
-        } else {
-            throw ModelError.unsupportedMimeType(mimeType: mimeType)
         }
+        // Single CGImageSource pass: validateImage is the only image probe.
+        // Failures here mean the bytes are neither a recognized image format
+        // nor a recognizable container — re-throw as unsupportedContent so the
+        // error type matches the post-PDF "not a known content type" branch.
+        let detectedMime: String
+        do {
+            detectedMime = try imageProcessor.validateImage(plaintext)
+        } catch {
+            logger.debug("validateImage rejected bytes: \(error)")
+            throw ModelError.unsupportedContent
+        }
+        let thumbnail = try imageProcessor.generateThumbnail(
+            plaintext,
+            maxDimension: Self.thumbnailDimension
+        )
+        return ProcessedBlob(data: plaintext, thumbnailData: thumbnail, detectedMimeType: detectedMime)
     }
 
-    /// Uses Apple's CGImageSource to detect whether `data` is a valid image,
-    /// regardless of the declared MIME type. Replaces hand-rolled magic-byte checks.
-    /// Checks that CGImageSource can identify the data type, not just create a lazy source.
-    private func isImageContent(_ data: Data) -> Bool {
-        guard let source = CGImageSourceCreateWithData(data as CFData, nil) else {
-            return false
-        }
-        return CGImageSourceGetType(source) != nil
+    /// PDF files begin with `%PDF-` (25 50 44 46 2D). Cheap byte-prefix check so we can
+    /// avoid the heavier `PDFDocument(data:)` parse for non-PDF inputs.
+    private static func isPDFContent(_ data: Data) -> Bool {
+        let magic: [UInt8] = [0x25, 0x50, 0x44, 0x46, 0x2D]
+        guard data.count >= magic.count else { return false }
+        return data.prefix(magic.count).elementsEqual(magic)
     }
 }

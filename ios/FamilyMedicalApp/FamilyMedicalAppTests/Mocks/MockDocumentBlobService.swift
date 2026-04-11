@@ -10,7 +10,6 @@ import Foundation
 final class MockDocumentBlobService: DocumentBlobServiceProtocol, @unchecked Sendable {
     struct StoreCall {
         let plaintext: Data
-        let mimeType: String
         let personId: UUID
     }
 
@@ -24,13 +23,17 @@ final class MockDocumentBlobService: DocumentBlobServiceProtocol, @unchecked Sen
     var retrieveError: Error?
     var deleteError: Error?
 
+    /// MIME the mock reports as `detectedMimeType` in the synthesized StoredBlob when
+    /// no explicit `storeResult` is set. Defaults to `image/jpeg` so existing fixtures
+    /// that just check "was store called" still get a plausible result.
+    var detectedMimeStub: String = "image/jpeg"
+
     func store(
         plaintext: Data,
-        mimeType: String,
         personId: UUID,
         primaryKey _: SymmetricKey
     ) async throws -> DocumentBlobService.StoredBlob {
-        storeCalls.append(StoreCall(plaintext: plaintext, mimeType: mimeType, personId: personId))
+        storeCalls.append(StoreCall(plaintext: plaintext, personId: personId))
         if let storeError {
             throw storeError
         }
@@ -38,12 +41,12 @@ final class MockDocumentBlobService: DocumentBlobServiceProtocol, @unchecked Sen
             return storeResult
         }
         let hmac = Data(SHA256.hash(data: plaintext))
-        let thumbnail: Data? = mimeType.lowercased().hasPrefix("image/") ? Data([0xAA, 0xBB]) : nil
+        let thumbnail: Data? = detectedMimeStub.lowercased().hasPrefix("image/") ? Data([0xAA, 0xBB]) : nil
         return DocumentBlobService.StoredBlob(
             contentHMAC: hmac,
             encryptedSize: plaintext.count,
             thumbnailData: thumbnail,
-            detectedMimeType: mimeType
+            detectedMimeType: detectedMimeStub
         )
     }
 
