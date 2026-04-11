@@ -73,10 +73,13 @@ struct StringFilenameExtensionTests {
     }
 
     @Test
-    func appendingExtension_baseHasCanonicalExtensionWithBinFallback_doesNotDoubleAppend() {
-        let result = "scan.png"
-            .appendingCanonicalExtension(forMimeType: "image/png", fallback: "bin")
-        #expect(result == "scan.png")
+    func appendingExtension_baseHasFallbackExtension_doesNotDoubleAppend() {
+        // Uses an unrecognized MIME so the canonical-extension branch falls
+        // through to the fallback branch — this exercises the fallback path's
+        // idempotence guard, not the canonical-extension path's.
+        let result = "archive.bin"
+            .appendingCanonicalExtension(forMimeType: "application/x-unknown-xyz", fallback: "bin")
+        #expect(result == "archive.bin")
     }
 
     // MARK: - fallback: "bin" (share-sheet export mode)
