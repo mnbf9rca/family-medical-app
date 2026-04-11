@@ -127,7 +127,12 @@ struct DocumentBlobServiceTests {
     @Test("store rejects content that is neither a valid image nor a PDF")
     func storeRejectsUnsupportedContent() async throws {
         let ctx = Self.makeFixture()
-        // Bytes that do not start with %PDF- and that CGImageSource cannot identify.
+        // Bytes that do not start with %PDF-. In production, CGImageSource
+        // would reject arbitrary bytes inside ImageProcessingService.validateImage;
+        // we mirror that by flipping shouldFailValidate on the mock so the
+        // single-pass image probe in DocumentBlobService.process throws and
+        // is re-thrown as ModelError.unsupportedContent.
+        ctx.imageProcessor.shouldFailValidate = true
         let arbitrary = Data([0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07])
         await #expect(throws: ModelError.self) {
             _ = try await ctx.service.store(

@@ -1,6 +1,5 @@
 import CryptoKit
 import Foundation
-import ImageIO
 import PDFKit
 
 /// Storage of encrypted document blobs on disk, keyed by HMAC-SHA256 of plaintext (keyed with FMK).
@@ -84,10 +83,10 @@ final class DocumentBlobService: DocumentBlobServiceProtocol, @unchecked Sendabl
         primaryKey: SymmetricKey
     ) async throws -> StoredBlob {
         let start = ContinuousClock.now
-        logger.entry("store")
         do {
             let fmk = try fmkService.retrieveFMK(familyMemberID: personId.uuidString, primaryKey: primaryKey)
             let processed = try process(plaintext: plaintext)
+            logger.entry("store", "detectedMime=\(processed.detectedMimeType) plaintextSize=\(plaintext.count)")
             let hmac = Data(HMAC<SHA256>.authenticationCode(for: processed.data, using: fmk))
 
             let encryptedSize: Int
@@ -184,15 +183,21 @@ final class DocumentBlobService: DocumentBlobServiceProtocol, @unchecked Sendabl
             }
             return ProcessedBlob(data: plaintext, thumbnailData: nil, detectedMimeType: "application/pdf")
         }
-        if Self.isImageContent(plaintext) {
-            let detectedMime = try imageProcessor.validateImage(plaintext)
-            let thumbnail = try imageProcessor.generateThumbnail(
-                plaintext,
-                maxDimension: Self.thumbnailDimension
-            )
-            return ProcessedBlob(data: plaintext, thumbnailData: thumbnail, detectedMimeType: detectedMime)
+        // Single CGImageSource pass: validateImage is the only image probe.
+        // Failures here mean the bytes are neither a recognized image format
+        // nor a recognizable container — re-throw as unsupportedContent so the
+        // error type matches the post-PDF "not a known content type" branch.
+        let detectedMime: String
+        do {
+            detectedMime = try imageProcessor.validateImage(plaintext)
+        } catch {
+            throw ModelError.unsupportedContent
         }
-        throw ModelError.unsupportedContent
+        let thumbnail = try imageProcessor.generateThumbnail(
+            plaintext,
+            maxDimension: Self.thumbnailDimension
+        )
+        return ProcessedBlob(data: plaintext, thumbnailData: thumbnail, detectedMimeType: detectedMime)
     }
 
     /// PDF files begin with `%PDF-` (25 50 44 46 2D). Cheap byte-prefix check so we can
@@ -201,14 +206,5 @@ final class DocumentBlobService: DocumentBlobServiceProtocol, @unchecked Sendabl
         let magic: [UInt8] = [0x25, 0x50, 0x44, 0x46, 0x2D]
         guard data.count >= magic.count else { return false }
         return data.prefix(magic.count).elementsEqual(magic)
-    }
-
-    /// Uses Apple's CGImageSource to detect whether `data` is a valid image.
-    /// Checks that CGImageSource can identify the data type, not just create a lazy source.
-    private static func isImageContent(_ data: Data) -> Bool {
-        guard let source = CGImageSourceCreateWithData(data as CFData, nil) else {
-            return false
-        }
-        return CGImageSourceGetType(source) != nil
     }
 }
