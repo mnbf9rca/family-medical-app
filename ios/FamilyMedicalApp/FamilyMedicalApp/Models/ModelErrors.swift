@@ -77,7 +77,7 @@ enum ModelError: LocalizedError, Equatable {
         case let .documentTooLarge(maxSizeMB):
             "File exceeds maximum size of \(maxSizeMB) MB"
         case .unsupportedContent:
-            "File is not a supported image or PDF"
+            "File is not a supported image format or PDF"
         case let .documentLimitExceeded(max):
             "Maximum of \(max) attachments per record exceeded"
         case let .documentNotFound(documentId):
