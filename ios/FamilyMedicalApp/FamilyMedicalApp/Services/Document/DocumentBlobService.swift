@@ -86,7 +86,7 @@ final class DocumentBlobService: DocumentBlobServiceProtocol, @unchecked Sendabl
         do {
             let fmk = try fmkService.retrieveFMK(familyMemberID: personId.uuidString, primaryKey: primaryKey)
             let processed = try process(plaintext: plaintext)
-            logger.entry("store", "detectedMime=\(processed.detectedMimeType) plaintextSize=\(plaintext.count)")
+            logger.entry("store", "detectedMime=\(processed.detectedMimeType), plaintextSize=\(plaintext.count)")
             let hmac = Data(HMAC<SHA256>.authenticationCode(for: processed.data, using: fmk))
 
             let encryptedSize: Int
@@ -191,6 +191,7 @@ final class DocumentBlobService: DocumentBlobServiceProtocol, @unchecked Sendabl
         do {
             detectedMime = try imageProcessor.validateImage(plaintext)
         } catch {
+            logger.debug("validateImage rejected bytes: \(error)")
             throw ModelError.unsupportedContent
         }
         let thumbnail = try imageProcessor.generateThumbnail(
