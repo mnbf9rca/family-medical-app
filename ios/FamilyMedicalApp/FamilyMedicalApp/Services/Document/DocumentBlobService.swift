@@ -90,13 +90,13 @@ final class DocumentBlobService: DocumentBlobServiceProtocol, @unchecked Sendabl
             let hmac = Data(HMAC<SHA256>.authenticationCode(for: processed.data, using: fmk))
 
             let encryptedSize: Int
-            if fileStorage.exists(contentHMAC: hmac) {
+            if fileStorage.exists(contentHMAC: hmac, personId: personId) {
                 // Dedup: blob already on disk — skip re-encryption and re-write.
                 // Return 0 as placeholder since we don't know the encrypted size without reading the file.
                 encryptedSize = 0
             } else {
                 let encrypted = try encryptionService.encrypt(processed.data, using: fmk).combined
-                _ = try fileStorage.store(encryptedData: encrypted, contentHMAC: hmac)
+                _ = try fileStorage.store(encryptedData: encrypted, contentHMAC: hmac, personId: personId)
                 encryptedSize = encrypted.count
             }
             logger.exit("store", duration: ContinuousClock.now - start)
@@ -121,7 +121,7 @@ final class DocumentBlobService: DocumentBlobServiceProtocol, @unchecked Sendabl
         logger.entry("retrieve")
         do {
             let fmk = try fmkService.retrieveFMK(familyMemberID: personId.uuidString, primaryKey: primaryKey)
-            let encrypted = try fileStorage.retrieve(contentHMAC: contentHMAC)
+            let encrypted = try fileStorage.retrieve(contentHMAC: contentHMAC, personId: personId)
             let plaintext: Data
             do {
                 let payload = try EncryptedPayload(combined: encrypted)
@@ -140,7 +140,8 @@ final class DocumentBlobService: DocumentBlobServiceProtocol, @unchecked Sendabl
 
     func deleteIfUnreferenced(contentHMAC: Data, isReferencedElsewhere: Bool) async throws {
         guard !isReferencedElsewhere else { return }
-        try fileStorage.delete(contentHMAC: contentHMAC)
+        // Task 2: will receive personId from caller once DocumentBlobService is converted to an actor
+        try fileStorage.delete(contentHMAC: contentHMAC, personId: UUID())
     }
 
     // MARK: - Factory

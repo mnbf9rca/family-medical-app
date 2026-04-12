@@ -238,7 +238,7 @@ struct DocumentBlobServiceTests {
         )
         #expect(ctx.encryption.decryptCalls.count == 1)
         #expect(ctx.fileStorage.retrieveCalls.count == 1)
-        #expect(ctx.fileStorage.retrieveCalls.first == stored.contentHMAC)
+        #expect(ctx.fileStorage.retrieveCalls.first?.contentHMAC == stored.contentHMAC)
         // Original bytes are stored unchanged, so round-trip equals the original.
         #expect(decrypted == original)
     }
@@ -259,7 +259,7 @@ struct DocumentBlobServiceTests {
     func retrieveCorruptedBlob() async throws {
         let ctx = Self.makeFixture()
         // Seed storage with arbitrary "encrypted" bytes the mock encryption does not know
-        ctx.fileStorage.addTestData(Data([0x01, 0x02, 0x03]), forHMAC: Data([0xBE, 0xEF]))
+        ctx.fileStorage.addTestData(Data([0x01, 0x02, 0x03]), forHMAC: Data([0xBE, 0xEF]), personId: ctx.personId)
         await #expect(throws: ModelError.self) {
             _ = try await ctx.service.retrieve(
                 contentHMAC: Data([0xBE, 0xEF]),
@@ -279,7 +279,7 @@ struct DocumentBlobServiceTests {
             isReferencedElsewhere: false
         )
         #expect(ctx.fileStorage.deleteCalls.count == 1)
-        #expect(ctx.fileStorage.deleteCalls.first == Data([0xAB, 0xCD]))
+        #expect(ctx.fileStorage.deleteCalls.first?.contentHMAC == Data([0xAB, 0xCD]))
     }
 
     @Test("deleteIfUnreferenced keeps blob when other records reference it")

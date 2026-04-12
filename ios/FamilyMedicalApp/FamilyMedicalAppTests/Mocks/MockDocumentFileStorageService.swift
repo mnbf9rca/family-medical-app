@@ -1,11 +1,24 @@
 import Foundation
 @testable import FamilyMedicalApp
 
-/// Mock implementation of DocumentFileStorageService for testing
+/// Mock implementation of DocumentFileStorageService for testing.
+/// Storage is keyed by `"{personId}/{hmacHex}"` to mirror the per-person subdirectory layout.
 final class MockDocumentFileStorageService: DocumentFileStorageServiceProtocol, @unchecked Sendable {
+    // MARK: - Call Record Types
+
+    struct StoreCall: Equatable {
+        let encryptedData: Data
+        let contentHMAC: Data
+        let personId: UUID
+    }
+
+    struct HMACPersonCall: Equatable {
+        let contentHMAC: Data
+        let personId: UUID
+    }
+
     // MARK: - State
 
-    /// In-memory storage keyed by HMAC hex string
     private var storage: [String: Data] = [:]
 
     // MARK: - Configuration
@@ -13,58 +26,79 @@ final class MockDocumentFileStorageService: DocumentFileStorageServiceProtocol, 
     var shouldFailStore = false
     var shouldFailRetrieve = false
     var shouldFailDelete = false
+    var shouldFailListBlobs = false
 
     // MARK: - Call Tracking
 
-    var storeCalls: [(encryptedData: Data, contentHMAC: Data)] = []
-    var retrieveCalls: [Data] = []
-    var deleteCalls: [Data] = []
-    var existsCalls: [Data] = []
+    var storeCalls: [StoreCall] = []
+    var retrieveCalls: [HMACPersonCall] = []
+    var deleteCalls: [HMACPersonCall] = []
+    var existsCalls: [HMACPersonCall] = []
+    var listBlobsCalls: [UUID] = []
+    var blobSizeCalls: [HMACPersonCall] = []
 
     // MARK: - DocumentFileStorageServiceProtocol
 
-    func store(encryptedData: Data, contentHMAC: Data) throws -> URL {
-        storeCalls.append((encryptedData, contentHMAC))
-
+    func store(encryptedData: Data, contentHMAC: Data, personId: UUID) throws -> URL {
+        storeCalls.append(StoreCall(encryptedData: encryptedData, contentHMAC: contentHMAC, personId: personId))
         if shouldFailStore {
             throw ModelError.documentStorageFailed(reason: "Mock store failure")
         }
-
-        let key = hmacKey(contentHMAC)
+        let key = storageKey(personId: personId, hmac: contentHMAC)
         storage[key] = encryptedData
-        return URL(fileURLWithPath: "/mock/attachments/\(key).enc")
+        return URL(fileURLWithPath: "/mock/attachments/\(personId.uuidString)/\(hmacHex(contentHMAC)).enc")
     }
 
-    func retrieve(contentHMAC: Data) throws -> Data {
-        retrieveCalls.append(contentHMAC)
-
+    func retrieve(contentHMAC: Data, personId: UUID) throws -> Data {
+        retrieveCalls.append(HMACPersonCall(contentHMAC: contentHMAC, personId: personId))
         if shouldFailRetrieve {
             throw ModelError.documentContentCorrupted
         }
-
-        let key = hmacKey(contentHMAC)
+        let key = storageKey(personId: personId, hmac: contentHMAC)
         guard let data = storage[key] else {
             throw ModelError.documentNotFound()
         }
-
         return data
     }
 
-    func delete(contentHMAC: Data) throws {
-        deleteCalls.append(contentHMAC)
-
+    func delete(contentHMAC: Data, personId: UUID) throws {
+        deleteCalls.append(HMACPersonCall(contentHMAC: contentHMAC, personId: personId))
         if shouldFailDelete {
             throw ModelError.documentStorageFailed(reason: "Mock delete failure")
         }
-
-        let key = hmacKey(contentHMAC)
+        let key = storageKey(personId: personId, hmac: contentHMAC)
         storage.removeValue(forKey: key)
     }
 
-    func exists(contentHMAC: Data) -> Bool {
-        existsCalls.append(contentHMAC)
-        let key = hmacKey(contentHMAC)
+    func exists(contentHMAC: Data, personId: UUID) -> Bool {
+        existsCalls.append(HMACPersonCall(contentHMAC: contentHMAC, personId: personId))
+        let key = storageKey(personId: personId, hmac: contentHMAC)
         return storage[key] != nil
+    }
+
+    func listBlobs(personId: UUID) throws -> Set<Data> {
+        listBlobsCalls.append(personId)
+        if shouldFailListBlobs {
+            throw ModelError.documentStorageFailed(reason: "Mock listBlobs failure")
+        }
+        let prefix = personId.uuidString + "/"
+        var hmacs = Set<Data>()
+        for key in storage.keys where key.hasPrefix(prefix) {
+            let hexPart = String(key.dropFirst(prefix.count))
+            if let hmac = dataFromHex(hexPart) {
+                hmacs.insert(hmac)
+            }
+        }
+        return hmacs
+    }
+
+    func blobSize(contentHMAC: Data, personId: UUID) throws -> UInt64 {
+        blobSizeCalls.append(HMACPersonCall(contentHMAC: contentHMAC, personId: personId))
+        let key = storageKey(personId: personId, hmac: contentHMAC)
+        guard let data = storage[key] else {
+            throw ModelError.documentNotFound()
+        }
+        return UInt64(data.count)
     }
 
     // MARK: - Test Helpers
@@ -75,18 +109,40 @@ final class MockDocumentFileStorageService: DocumentFileStorageServiceProtocol, 
         retrieveCalls.removeAll()
         deleteCalls.removeAll()
         existsCalls.removeAll()
+        listBlobsCalls.removeAll()
+        blobSizeCalls.removeAll()
         shouldFailStore = false
         shouldFailRetrieve = false
         shouldFailDelete = false
+        shouldFailListBlobs = false
     }
 
     /// Pre-populate storage for testing retrieval
-    func addTestData(_ data: Data, forHMAC hmac: Data) {
-        let key = hmacKey(hmac)
+    func addTestData(_ data: Data, forHMAC hmac: Data, personId: UUID) {
+        let key = storageKey(personId: personId, hmac: hmac)
         storage[key] = data
     }
 
-    private func hmacKey(_ hmac: Data) -> String {
+    // MARK: - Private Helpers
+
+    private func storageKey(personId: UUID, hmac: Data) -> String {
+        "\(personId.uuidString)/\(hmacHex(hmac))"
+    }
+
+    private func hmacHex(_ hmac: Data) -> String {
         hmac.map { String(format: "%02x", $0) }.joined()
+    }
+
+    private func dataFromHex(_ hex: String) -> Data? {
+        guard hex.count.isMultiple(of: 2) else { return nil }
+        var data = Data(capacity: hex.count / 2)
+        var index = hex.startIndex
+        while index < hex.endIndex {
+            let nextIndex = hex.index(index, offsetBy: 2)
+            guard let byte = UInt8(hex[index ..< nextIndex], radix: 16) else { return nil }
+            data.append(byte)
+            index = nextIndex
+        }
+        return data
     }
 }

@@ -7,38 +7,63 @@ import Foundation
 ///
 /// Per ADR-0004: Document blobs are stored separately from medical record metadata to enable
 /// efficient sync (editing a note field doesn't re-upload attached photos).
+///
+/// Blobs are stored under `Attachments/{personId}/{hmac}.enc` to enable per-person orphan cleanup.
 protocol DocumentFileStorageServiceProtocol: Sendable {
     /// Store encrypted data and return the storage URL
     ///
     /// - Parameters:
     ///   - encryptedData: The encrypted document content
     ///   - contentHMAC: HMAC-SHA256 of the plaintext content (keyed with FMK)
+    ///   - personId: The person whose subdirectory should hold the blob
     /// - Returns: URL where the data was stored
     /// - Throws: ModelError.documentStorageFailed if storage fails
-    func store(encryptedData: Data, contentHMAC: Data) throws -> URL
+    func store(encryptedData: Data, contentHMAC: Data, personId: UUID) throws -> URL
 
     /// Retrieve encrypted content by its HMAC
     ///
-    /// - Parameter contentHMAC: The content HMAC used as filename
+    /// - Parameters:
+    ///   - contentHMAC: The content HMAC used as filename
+    ///   - personId: The person whose subdirectory contains the blob
     /// - Returns: The encrypted document data
     /// - Throws: ModelError.documentNotFound if file doesn't exist,
     ///           ModelError.documentContentCorrupted if read fails
-    func retrieve(contentHMAC: Data) throws -> Data
+    func retrieve(contentHMAC: Data, personId: UUID) throws -> Data
 
     /// Delete content by its HMAC
     ///
-    /// - Parameter contentHMAC: The content HMAC of the file to delete
+    /// - Parameters:
+    ///   - contentHMAC: The content HMAC of the file to delete
+    ///   - personId: The person whose subdirectory contains the blob
     /// - Throws: ModelError.documentStorageFailed if deletion fails
-    func delete(contentHMAC: Data) throws
+    func delete(contentHMAC: Data, personId: UUID) throws
 
     /// Check if content exists for the given HMAC
     ///
-    /// - Parameter contentHMAC: The content HMAC to check
+    /// - Parameters:
+    ///   - contentHMAC: The content HMAC to check
+    ///   - personId: The person whose subdirectory to check
     /// - Returns: true if file exists, false otherwise
-    func exists(contentHMAC: Data) -> Bool
+    func exists(contentHMAC: Data, personId: UUID) -> Bool
+
+    /// List all blob HMACs stored for a person
+    ///
+    /// - Parameter personId: The person whose subdirectory to enumerate
+    /// - Returns: Set of HMAC Data values for every `.enc` file found
+    /// - Throws: ModelError.documentStorageFailed if directory enumeration fails
+    func listBlobs(personId: UUID) throws -> Set<Data>
+
+    /// Return the on-disk size of a stored blob in bytes
+    ///
+    /// - Parameters:
+    ///   - contentHMAC: The content HMAC of the file
+    ///   - personId: The person whose subdirectory contains the blob
+    /// - Returns: File size in bytes
+    /// - Throws: ModelError.documentStorageFailed if attributes cannot be read
+    func blobSize(contentHMAC: Data, personId: UUID) throws -> UInt64
 }
 
-/// Default implementation storing documents in Application Support/Attachments/
+/// Default implementation storing documents in Application Support/Attachments/{personId}/
 final class DocumentFileStorageService: DocumentFileStorageServiceProtocol, @unchecked Sendable {
     // MARK: - Properties
 
@@ -64,8 +89,9 @@ final class DocumentFileStorageService: DocumentFileStorageServiceProtocol, @unc
 
     // MARK: - DocumentFileStorageServiceProtocol
 
-    func store(encryptedData: Data, contentHMAC: Data) throws -> URL {
-        let fileURL = fileURL(for: contentHMAC)
+    func store(encryptedData: Data, contentHMAC: Data, personId: UUID) throws -> URL {
+        let dirURL = try ensurePersonDirectory(for: personId)
+        let fileURL = blobURL(for: contentHMAC, in: dirURL)
 
         // If file already exists (deduplication), skip write
         if fileManager.fileExists(atPath: fileURL.path) {
@@ -82,8 +108,8 @@ final class DocumentFileStorageService: DocumentFileStorageServiceProtocol, @unc
         }
     }
 
-    func retrieve(contentHMAC: Data) throws -> Data {
-        let fileURL = fileURL(for: contentHMAC)
+    func retrieve(contentHMAC: Data, personId: UUID) throws -> Data {
+        let fileURL = fileURL(for: contentHMAC, personId: personId)
 
         guard fileManager.fileExists(atPath: fileURL.path) else {
             logger.error("Document file not found")
@@ -98,8 +124,8 @@ final class DocumentFileStorageService: DocumentFileStorageServiceProtocol, @unc
         }
     }
 
-    func delete(contentHMAC: Data) throws {
-        let fileURL = fileURL(for: contentHMAC)
+    func delete(contentHMAC: Data, personId: UUID) throws {
+        let fileURL = fileURL(for: contentHMAC, personId: personId)
 
         // If file doesn't exist, consider it already deleted (idempotent)
         guard fileManager.fileExists(atPath: fileURL.path) else {
@@ -115,23 +141,99 @@ final class DocumentFileStorageService: DocumentFileStorageServiceProtocol, @unc
         }
     }
 
-    func exists(contentHMAC: Data) -> Bool {
-        let fileURL = fileURL(for: contentHMAC)
+    func exists(contentHMAC: Data, personId: UUID) -> Bool {
+        let fileURL = fileURL(for: contentHMAC, personId: personId)
         return fileManager.fileExists(atPath: fileURL.path)
+    }
+
+    func listBlobs(personId: UUID) throws -> Set<Data> {
+        let dirURL = personDirectory(for: personId)
+        guard fileManager.fileExists(atPath: dirURL.path) else {
+            return [] // no directory yet = no blobs
+        }
+        do {
+            let files = try fileManager.contentsOfDirectory(
+                at: dirURL,
+                includingPropertiesForKeys: nil,
+                options: .skipsHiddenFiles
+            )
+            var hmacs = Set<Data>()
+            for file in files where file.pathExtension == "enc" {
+                if let hmac = hmacFromFilename(file.deletingPathExtension().lastPathComponent) {
+                    hmacs.insert(hmac)
+                }
+            }
+            return hmacs
+        } catch {
+            logger.logError(error, context: "DocumentFileStorageService.listBlobs")
+            throw ModelError.documentStorageFailed(reason: error.localizedDescription)
+        }
+    }
+
+    func blobSize(contentHMAC: Data, personId: UUID) throws -> UInt64 {
+        let fileURL = fileURL(for: contentHMAC, personId: personId)
+        do {
+            let attrs = try fileManager.attributesOfItem(atPath: fileURL.path)
+            return attrs[.size] as? UInt64 ?? 0
+        } catch {
+            logger.logError(error, context: "DocumentFileStorageService.blobSize")
+            throw ModelError.documentStorageFailed(reason: error.localizedDescription)
+        }
     }
 
     // MARK: - Private Helpers
 
-    /// Generate file URL from content HMAC
+    /// Return the per-person subdirectory URL (may not exist yet)
+    private func personDirectory(for personId: UUID) -> URL {
+        attachmentsDirectory.appendingPathComponent(personId.uuidString, isDirectory: true)
+    }
+
+    /// Generate a blob file URL given its HMAC and parent directory
     ///
     /// Files are named as `<hmac-hex>.enc` where the HMAC is the hex-encoded
     /// HMAC-SHA256 of the plaintext content.
-    private func fileURL(for contentHMAC: Data) -> URL {
+    private func blobURL(for contentHMAC: Data, in directory: URL) -> URL {
         let hexName = contentHMAC.map { String(format: "%02x", $0) }.joined()
-        return attachmentsDirectory.appendingPathComponent("\(hexName).enc")
+        return directory.appendingPathComponent("\(hexName).enc")
     }
 
-    /// Create the attachments directory if it doesn't exist
+    /// Generate file URL from content HMAC and person ID
+    private func fileURL(for contentHMAC: Data, personId: UUID) -> URL {
+        blobURL(for: contentHMAC, in: personDirectory(for: personId))
+    }
+
+    /// Create the per-person subdirectory if it doesn't exist, and return its URL
+    private func ensurePersonDirectory(for personId: UUID) throws -> URL {
+        let dirURL = personDirectory(for: personId)
+        if !fileManager.fileExists(atPath: dirURL.path) {
+            do {
+                try fileManager.createDirectory(
+                    at: dirURL,
+                    withIntermediateDirectories: true,
+                    attributes: [.protectionKey: FileProtectionType.complete]
+                )
+            } catch {
+                throw ModelError.documentStorageFailed(reason: error.localizedDescription)
+            }
+        }
+        return dirURL
+    }
+
+    /// Decode a hex string back to Data; returns nil on malformed input
+    private func hmacFromFilename(_ hex: String) -> Data? {
+        guard hex.count.isMultiple(of: 2) else { return nil }
+        var data = Data(capacity: hex.count / 2)
+        var index = hex.startIndex
+        while index < hex.endIndex {
+            let nextIndex = hex.index(index, offsetBy: 2)
+            guard let byte = UInt8(hex[index ..< nextIndex], radix: 16) else { return nil }
+            data.append(byte)
+            index = nextIndex
+        }
+        return data
+    }
+
+    /// Create the top-level attachments directory if it doesn't exist
     private static func createAttachmentsDirectory(fileManager: FileManager) throws -> URL {
         guard
             let appSupportURL = fileManager.urls(
