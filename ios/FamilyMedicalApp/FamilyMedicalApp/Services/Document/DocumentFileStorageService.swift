@@ -109,7 +109,6 @@ final class DocumentFileStorageService: DocumentFileStorageServiceProtocol, @unc
             do {
                 try encryptedData.write(to: fileURL, options: [.atomic, .completeFileProtection])
             } catch {
-                logger.logError(error, context: "DocumentFileStorageService.store")
                 throw ModelError.documentStorageFailed(reason: error.localizedDescription)
             }
             logger.exit("store", duration: ContinuousClock.now - start)
@@ -134,7 +133,6 @@ final class DocumentFileStorageService: DocumentFileStorageServiceProtocol, @unc
             do {
                 data = try Data(contentsOf: fileURL)
             } catch {
-                logger.logError(error, context: "DocumentFileStorageService.retrieve")
                 throw ModelError.documentContentCorrupted
             }
             logger.exit("retrieve", duration: ContinuousClock.now - start)
@@ -160,7 +158,6 @@ final class DocumentFileStorageService: DocumentFileStorageServiceProtocol, @unc
             do {
                 try fileManager.removeItem(at: fileURL)
             } catch {
-                logger.logError(error, context: "DocumentFileStorageService.delete")
                 throw ModelError.documentStorageFailed(reason: error.localizedDescription)
             }
             logger.exit("delete", duration: ContinuousClock.now - start)
@@ -196,7 +193,6 @@ final class DocumentFileStorageService: DocumentFileStorageServiceProtocol, @unc
                     options: .skipsHiddenFiles
                 )
             } catch {
-                logger.logError(error, context: "DocumentFileStorageService.listBlobs")
                 throw ModelError.documentStorageFailed(reason: error.localizedDescription)
             }
             var hmacs = Set<Data>()
@@ -230,7 +226,6 @@ final class DocumentFileStorageService: DocumentFileStorageServiceProtocol, @unc
                 let attrs = try fileManager.attributesOfItem(atPath: fileURL.path)
                 size = attrs[.size] as? UInt64 ?? 0
             } catch {
-                logger.logError(error, context: "DocumentFileStorageService.blobSize")
                 throw ModelError.documentStorageFailed(reason: error.localizedDescription)
             }
             logger.exit("blobSize", duration: ContinuousClock.now - start)

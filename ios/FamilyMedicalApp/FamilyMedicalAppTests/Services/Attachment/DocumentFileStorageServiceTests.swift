@@ -285,14 +285,22 @@ extension DocumentFileStorageServiceTests {
         // Store one well-formed blob so the person directory exists and contains a known entry.
         _ = try service.store(encryptedData: makeTestData(), contentHMAC: goodHmac, personId: personId)
 
-        // Drop malformed `.enc` files directly into the person directory:
-        // - `not-hex.enc`: contains characters outside the [0-9a-f] alphabet
-        // - `abcg.enc`: contains an invalid hex character ('g')
-        // - `abc.enc`: odd-length hex stem
+        // Drop malformed `.enc` files directly into the person directory. Two distinct
+        // rejection branches are exercised:
+        //
+        // Even-length guard (hex.count.isMultiple(of: 2) == false):
+        //   - `not-hex.enc`: 7-char stem — odd length, rejected before per-char check
+        //   - `abc.enc`: 3-char stem — odd length
+        //
+        // Per-character hex check (UInt8(_:radix:16) returns nil):
+        //   - `abcg.enc`: 4-char stem, even length, but 'g' is not a hex digit
+        //   - `zzzz.enc`: 4-char stem, even length, all chars non-hex — explicit
+        //                 even-length-but-invalid-hex case
         let personDir = tempDir.appendingPathComponent(personId.uuidString, isDirectory: true)
         try Data().write(to: personDir.appendingPathComponent("not-hex.enc"))
         try Data().write(to: personDir.appendingPathComponent("abcg.enc"))
         try Data().write(to: personDir.appendingPathComponent("abc.enc"))
+        try Data().write(to: personDir.appendingPathComponent("zzzz.enc"))
         // Also an empty stem: `.enc` (produced by e.g. a stray creation) must not yield an empty-HMAC set member.
         try Data().write(to: personDir.appendingPathComponent(".enc"))
 
@@ -311,10 +319,12 @@ extension DocumentFileStorageServiceTests {
         _ = try service.store(encryptedData: makeTestData(), contentHMAC: goodHmac, personId: personId)
 
         let personDir = tempDir.appendingPathComponent(personId.uuidString, isDirectory: true)
-        // A typical macOS metadata file and a stray text file should both be ignored.
-        try Data().write(to: personDir.appendingPathComponent(".DS_Store"))
+        // Non-hidden files with wrong extensions must be excluded by the `pathExtension == "enc"`
+        // guard. Using visible files here (not `.DS_Store`) ensures we exercise that filter
+        // rather than the OS-level `.skipsHiddenFiles` option that would reject `.DS_Store`
+        // before the extension check even runs.
+        try Data("{}".utf8).write(to: personDir.appendingPathComponent("manifest.json"))
         try Data("junk".utf8).write(to: personDir.appendingPathComponent("junk.txt"))
-        // Also an `.enc` file whose name is actually a different extension hidden inside.
         try Data().write(to: personDir.appendingPathComponent("notes.md"))
 
         let blobs = try service.listBlobs(personId: personId)
@@ -343,8 +353,14 @@ extension DocumentFileStorageServiceTests {
         defer { cleanupTempDir(tempDir) }
         let hmac = makeTestHMAC()
         let personId = UUID()
-        #expect(throws: ModelError.self) {
+        // Pin the error case: a missing blob must throw `.documentNotFound`, not
+        // `.documentStorageFailed`. A future regression that swaps the guard for a
+        // generic catch block will fail here.
+        #expect {
             _ = try service.blobSize(contentHMAC: hmac, personId: personId)
+        } throws: { error in
+            guard case ModelError.documentNotFound = error else { return false }
+            return true
         }
     }
 }

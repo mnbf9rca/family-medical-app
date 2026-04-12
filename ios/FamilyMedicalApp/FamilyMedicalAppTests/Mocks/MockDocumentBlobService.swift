@@ -75,7 +75,8 @@ final class MockDocumentBlobService: DocumentBlobServiceProtocol, @unchecked Sen
         personId: UUID,
         isReferencedElsewhere: Bool
     ) async throws {
-        guard !isReferencedElsewhere else { return }
+        // Record the call regardless of the guard so tests can assert on
+        // intended-preserve paths with the same instrumentation as delete paths.
         deleteCalls.append(
             DeleteIfUnreferencedCall(
                 contentHMAC: contentHMAC,
@@ -83,6 +84,7 @@ final class MockDocumentBlobService: DocumentBlobServiceProtocol, @unchecked Sen
                 isReferencedElsewhere: isReferencedElsewhere
             )
         )
+        guard !isReferencedElsewhere else { return }
         if let deleteError {
             throw deleteError
         }
