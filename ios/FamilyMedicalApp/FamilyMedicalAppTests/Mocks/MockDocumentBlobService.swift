@@ -13,9 +13,17 @@ final class MockDocumentBlobService: DocumentBlobServiceProtocol, @unchecked Sen
         let personId: UUID
     }
 
+    /// Records each call to `deleteIfUnreferenced`. Named struct (not a tuple) to
+    /// satisfy SwiftLint `large_tuple` and to give assertions readable field names.
+    struct DeleteIfUnreferencedCall: Equatable {
+        let contentHMAC: Data
+        let personId: UUID
+        let isReferencedElsewhere: Bool
+    }
+
     var storeCalls: [StoreCall] = []
     var retrieveCalls: [Data] = []
-    var deleteCalls: [Data] = []
+    var deleteCalls: [DeleteIfUnreferencedCall] = []
 
     var storeResult: DocumentBlobService.StoredBlob?
     var storeError: Error?
@@ -62,9 +70,19 @@ final class MockDocumentBlobService: DocumentBlobServiceProtocol, @unchecked Sen
         return retrieveResult ?? Data()
     }
 
-    func deleteIfUnreferenced(contentHMAC: Data, isReferencedElsewhere: Bool) async throws {
+    func deleteIfUnreferenced(
+        contentHMAC: Data,
+        personId: UUID,
+        isReferencedElsewhere: Bool
+    ) async throws {
         guard !isReferencedElsewhere else { return }
-        deleteCalls.append(contentHMAC)
+        deleteCalls.append(
+            DeleteIfUnreferencedCall(
+                contentHMAC: contentHMAC,
+                personId: personId,
+                isReferencedElsewhere: isReferencedElsewhere
+            )
+        )
         if let deleteError {
             throw deleteError
         }

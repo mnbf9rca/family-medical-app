@@ -276,10 +276,16 @@ struct DocumentBlobServiceTests {
         let ctx = Self.makeFixture()
         try await ctx.service.deleteIfUnreferenced(
             contentHMAC: Data([0xAB, 0xCD]),
+            personId: ctx.personId,
             isReferencedElsewhere: false
         )
         #expect(ctx.fileStorage.deleteCalls.count == 1)
-        #expect(ctx.fileStorage.deleteCalls.first?.contentHMAC == Data([0xAB, 0xCD]))
+        let call = try #require(ctx.fileStorage.deleteCalls.first)
+        #expect(call.contentHMAC == Data([0xAB, 0xCD]))
+        // personId must be threaded through to the file-storage layer; the service
+        // must never fall back to a random UUID (which would silently miss the
+        // real per-person subdirectory and orphan the blob).
+        #expect(call.personId == ctx.personId)
     }
 
     @Test("deleteIfUnreferenced keeps blob when other records reference it")
@@ -287,6 +293,7 @@ struct DocumentBlobServiceTests {
         let ctx = Self.makeFixture()
         try await ctx.service.deleteIfUnreferenced(
             contentHMAC: Data([0xAB, 0xCD]),
+            personId: ctx.personId,
             isReferencedElsewhere: true
         )
         #expect(ctx.fileStorage.deleteCalls.isEmpty)

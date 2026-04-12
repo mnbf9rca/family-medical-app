@@ -26,7 +26,14 @@ protocol DocumentBlobServiceProtocol: Sendable {
 
     /// Delete a blob from disk if no DocumentReferenceRecord still references it.
     /// Callers determine `isReferencedElsewhere` by querying DocumentReferenceQueryService.
-    func deleteIfUnreferenced(contentHMAC: Data, isReferencedElsewhere: Bool) async throws
+    ///
+    /// - Parameters:
+    ///   - contentHMAC: The HMAC of the blob to potentially delete.
+    ///   - personId: The person whose subdirectory holds the blob. Required so the
+    ///     underlying file-storage service can locate the per-person `.enc` file.
+    ///   - isReferencedElsewhere: If `true`, the blob is preserved (another record still
+    ///     points at this HMAC).
+    func deleteIfUnreferenced(contentHMAC: Data, personId: UUID, isReferencedElsewhere: Bool) async throws
 }
 
 final class DocumentBlobService: DocumentBlobServiceProtocol, @unchecked Sendable {
@@ -83,10 +90,14 @@ final class DocumentBlobService: DocumentBlobServiceProtocol, @unchecked Sendabl
         primaryKey: SymmetricKey
     ) async throws -> StoredBlob {
         let start = ContinuousClock.now
+        // Emit entry *before* any fallible work so every error path has a matching
+        // `exitWithError`. Details that depend on downstream results (detected MIME,
+        // processed size) are logged later via a regular debug line.
+        logger.entry("store", "personId=\(personId), plaintextSize=\(plaintext.count)")
         do {
             let fmk = try fmkService.retrieveFMK(familyMemberID: personId.uuidString, primaryKey: primaryKey)
             let processed = try process(plaintext: plaintext)
-            logger.entry("store", "detectedMime=\(processed.detectedMimeType), plaintextSize=\(plaintext.count)")
+            logger.debug("store detectedMime=\(processed.detectedMimeType), processedSize=\(processed.data.count)")
             let hmac = Data(HMAC<SHA256>.authenticationCode(for: processed.data, using: fmk))
 
             let encryptedSize: Int
@@ -118,7 +129,7 @@ final class DocumentBlobService: DocumentBlobServiceProtocol, @unchecked Sendabl
         primaryKey: SymmetricKey
     ) async throws -> Data {
         let start = ContinuousClock.now
-        logger.entry("retrieve")
+        logger.entry("retrieve", "personId=\(personId)")
         do {
             let fmk = try fmkService.retrieveFMK(familyMemberID: personId.uuidString, primaryKey: primaryKey)
             let encrypted = try fileStorage.retrieve(contentHMAC: contentHMAC, personId: personId)
@@ -138,10 +149,20 @@ final class DocumentBlobService: DocumentBlobServiceProtocol, @unchecked Sendabl
         }
     }
 
-    func deleteIfUnreferenced(contentHMAC: Data, isReferencedElsewhere: Bool) async throws {
-        guard !isReferencedElsewhere else { return }
-        // Task 2: will receive personId from caller once DocumentBlobService is converted to an actor
-        try fileStorage.delete(contentHMAC: contentHMAC, personId: UUID())
+    func deleteIfUnreferenced(contentHMAC: Data, personId: UUID, isReferencedElsewhere: Bool) async throws {
+        let start = ContinuousClock.now
+        logger.entry("deleteIfUnreferenced", "personId=\(personId), referenced=\(isReferencedElsewhere)")
+        guard !isReferencedElsewhere else {
+            logger.exit("deleteIfUnreferenced", duration: ContinuousClock.now - start)
+            return
+        }
+        do {
+            try fileStorage.delete(contentHMAC: contentHMAC, personId: personId)
+            logger.exit("deleteIfUnreferenced", duration: ContinuousClock.now - start)
+        } catch {
+            logger.exitWithError("deleteIfUnreferenced", error: error, duration: ContinuousClock.now - start)
+            throw error
+        }
     }
 
     // MARK: - Factory

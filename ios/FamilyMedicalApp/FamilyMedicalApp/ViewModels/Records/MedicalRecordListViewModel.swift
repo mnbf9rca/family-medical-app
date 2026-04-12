@@ -196,6 +196,7 @@ final class MedicalRecordListViewModel {
                     }
                     try await blobService.deleteIfUnreferenced(
                         contentHMAC: attachment.content.contentHMAC,
+                        personId: person.id,
                         isReferencedElsewhere: isReferencedElsewhere
                     )
                 } else {

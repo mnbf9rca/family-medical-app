@@ -275,6 +275,51 @@ extension DocumentFileStorageServiceTests {
         #expect(blobs2.contains(hmac2))
         #expect(!blobs2.contains(hmac1))
     }
+
+    @Test
+    func listBlobs_ignoresMalformedFilenames_returnsValidOnly() throws {
+        let (service, tempDir) = try makeService()
+        defer { cleanupTempDir(tempDir) }
+        let personId = UUID()
+        let goodHmac = Data([0xDE, 0xAD, 0xBE, 0xEF])
+        // Store one well-formed blob so the person directory exists and contains a known entry.
+        _ = try service.store(encryptedData: makeTestData(), contentHMAC: goodHmac, personId: personId)
+
+        // Drop malformed `.enc` files directly into the person directory:
+        // - `not-hex.enc`: contains characters outside the [0-9a-f] alphabet
+        // - `abcg.enc`: contains an invalid hex character ('g')
+        // - `abc.enc`: odd-length hex stem
+        let personDir = tempDir.appendingPathComponent(personId.uuidString, isDirectory: true)
+        try Data().write(to: personDir.appendingPathComponent("not-hex.enc"))
+        try Data().write(to: personDir.appendingPathComponent("abcg.enc"))
+        try Data().write(to: personDir.appendingPathComponent("abc.enc"))
+        // Also an empty stem: `.enc` (produced by e.g. a stray creation) must not yield an empty-HMAC set member.
+        try Data().write(to: personDir.appendingPathComponent(".enc"))
+
+        let blobs = try service.listBlobs(personId: personId)
+        // Silently excluded, no throw; only the valid blob is returned.
+        #expect(blobs == [goodHmac])
+        #expect(!blobs.contains(Data()))
+    }
+
+    @Test
+    func listBlobs_ignoresNonEncFiles_returnsValidOnly() throws {
+        let (service, tempDir) = try makeService()
+        defer { cleanupTempDir(tempDir) }
+        let personId = UUID()
+        let goodHmac = Data([0x01, 0x23, 0x45, 0x67])
+        _ = try service.store(encryptedData: makeTestData(), contentHMAC: goodHmac, personId: personId)
+
+        let personDir = tempDir.appendingPathComponent(personId.uuidString, isDirectory: true)
+        // A typical macOS metadata file and a stray text file should both be ignored.
+        try Data().write(to: personDir.appendingPathComponent(".DS_Store"))
+        try Data("junk".utf8).write(to: personDir.appendingPathComponent("junk.txt"))
+        // Also an `.enc` file whose name is actually a different extension hidden inside.
+        try Data().write(to: personDir.appendingPathComponent("notes.md"))
+
+        let blobs = try service.listBlobs(personId: personId)
+        #expect(blobs == [goodHmac])
+    }
 }
 
 // MARK: - blobSize Tests

@@ -12,7 +12,7 @@ final class MockDocumentFileStorageService: DocumentFileStorageServiceProtocol, 
         let personId: UUID
     }
 
-    struct HMACPersonCall: Equatable {
+    struct BlobLookup: Equatable {
         let contentHMAC: Data
         let personId: UUID
     }
@@ -31,11 +31,11 @@ final class MockDocumentFileStorageService: DocumentFileStorageServiceProtocol, 
     // MARK: - Call Tracking
 
     var storeCalls: [StoreCall] = []
-    var retrieveCalls: [HMACPersonCall] = []
-    var deleteCalls: [HMACPersonCall] = []
-    var existsCalls: [HMACPersonCall] = []
+    var retrieveCalls: [BlobLookup] = []
+    var deleteCalls: [BlobLookup] = []
+    var existsCalls: [BlobLookup] = []
     var listBlobsCalls: [UUID] = []
-    var blobSizeCalls: [HMACPersonCall] = []
+    var blobSizeCalls: [BlobLookup] = []
 
     // MARK: - DocumentFileStorageServiceProtocol
 
@@ -50,7 +50,7 @@ final class MockDocumentFileStorageService: DocumentFileStorageServiceProtocol, 
     }
 
     func retrieve(contentHMAC: Data, personId: UUID) throws -> Data {
-        retrieveCalls.append(HMACPersonCall(contentHMAC: contentHMAC, personId: personId))
+        retrieveCalls.append(BlobLookup(contentHMAC: contentHMAC, personId: personId))
         if shouldFailRetrieve {
             throw ModelError.documentContentCorrupted
         }
@@ -62,7 +62,7 @@ final class MockDocumentFileStorageService: DocumentFileStorageServiceProtocol, 
     }
 
     func delete(contentHMAC: Data, personId: UUID) throws {
-        deleteCalls.append(HMACPersonCall(contentHMAC: contentHMAC, personId: personId))
+        deleteCalls.append(BlobLookup(contentHMAC: contentHMAC, personId: personId))
         if shouldFailDelete {
             throw ModelError.documentStorageFailed(reason: "Mock delete failure")
         }
@@ -71,7 +71,7 @@ final class MockDocumentFileStorageService: DocumentFileStorageServiceProtocol, 
     }
 
     func exists(contentHMAC: Data, personId: UUID) -> Bool {
-        existsCalls.append(HMACPersonCall(contentHMAC: contentHMAC, personId: personId))
+        existsCalls.append(BlobLookup(contentHMAC: contentHMAC, personId: personId))
         let key = storageKey(personId: personId, hmac: contentHMAC)
         return storage[key] != nil
     }
@@ -93,7 +93,7 @@ final class MockDocumentFileStorageService: DocumentFileStorageServiceProtocol, 
     }
 
     func blobSize(contentHMAC: Data, personId: UUID) throws -> UInt64 {
-        blobSizeCalls.append(HMACPersonCall(contentHMAC: contentHMAC, personId: personId))
+        blobSizeCalls.append(BlobLookup(contentHMAC: contentHMAC, personId: personId))
         let key = storageKey(personId: personId, hmac: contentHMAC)
         guard let data = storage[key] else {
             throw ModelError.documentNotFound()

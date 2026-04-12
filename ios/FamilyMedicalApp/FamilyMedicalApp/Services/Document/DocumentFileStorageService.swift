@@ -69,7 +69,7 @@ final class DocumentFileStorageService: DocumentFileStorageServiceProtocol, @unc
 
     private let fileManager: FileManager
     private let attachmentsDirectory: URL
-    private let logger: CategoryLoggerProtocol
+    private let logger: TracingCategoryLogger
 
     // MARK: - Initialization
 
@@ -77,107 +77,167 @@ final class DocumentFileStorageService: DocumentFileStorageServiceProtocol, @unc
     init(logger: CategoryLoggerProtocol? = nil) throws {
         self.fileManager = FileManager.default
         self.attachmentsDirectory = try Self.createAttachmentsDirectory(fileManager: fileManager)
-        self.logger = logger ?? LoggingService.shared.logger(category: .storage)
+        self.logger = TracingCategoryLogger(
+            wrapping: logger ?? LoggingService.shared.logger(category: .storage)
+        )
     }
 
     /// Initialize with custom directory (for testing)
     init(attachmentsDirectory: URL, fileManager: FileManager = .default, logger: CategoryLoggerProtocol? = nil) {
         self.fileManager = fileManager
         self.attachmentsDirectory = attachmentsDirectory
-        self.logger = logger ?? LoggingService.shared.logger(category: .storage)
+        self.logger = TracingCategoryLogger(
+            wrapping: logger ?? LoggingService.shared.logger(category: .storage)
+        )
     }
 
     // MARK: - DocumentFileStorageServiceProtocol
 
     func store(encryptedData: Data, contentHMAC: Data, personId: UUID) throws -> URL {
-        let dirURL = try ensurePersonDirectory(for: personId)
-        let fileURL = blobURL(for: contentHMAC, in: dirURL)
-
-        // If file already exists (deduplication), skip write
-        if fileManager.fileExists(atPath: fileURL.path) {
-            return fileURL
-        }
-
+        let start = ContinuousClock.now
+        logger.entry("store", "personId=\(personId), size=\(encryptedData.count)")
         do {
-            try encryptedData.write(to: fileURL, options: [.atomic, .completeFileProtection])
-            logger.debug("Stored document: \(encryptedData.count) bytes")
+            let dirURL = try ensurePersonDirectory(for: personId)
+            let fileURL = blobURL(for: contentHMAC, in: dirURL)
+
+            // If file already exists (deduplication), skip write
+            if fileManager.fileExists(atPath: fileURL.path) {
+                logger.exit("store", duration: ContinuousClock.now - start)
+                return fileURL
+            }
+
+            do {
+                try encryptedData.write(to: fileURL, options: [.atomic, .completeFileProtection])
+            } catch {
+                logger.logError(error, context: "DocumentFileStorageService.store")
+                throw ModelError.documentStorageFailed(reason: error.localizedDescription)
+            }
+            logger.exit("store", duration: ContinuousClock.now - start)
             return fileURL
         } catch {
-            logger.logError(error, context: "DocumentFileStorageService.store")
-            throw ModelError.documentStorageFailed(reason: error.localizedDescription)
+            logger.exitWithError("store", error: error, duration: ContinuousClock.now - start)
+            throw error
         }
     }
 
     func retrieve(contentHMAC: Data, personId: UUID) throws -> Data {
-        let fileURL = fileURL(for: contentHMAC, personId: personId)
-
-        guard fileManager.fileExists(atPath: fileURL.path) else {
-            logger.error("Document file not found")
-            throw ModelError.documentNotFound()
-        }
-
+        let start = ContinuousClock.now
+        logger.entry("retrieve", "personId=\(personId)")
         do {
-            return try Data(contentsOf: fileURL)
+            let fileURL = fileURL(for: contentHMAC, personId: personId)
+
+            guard fileManager.fileExists(atPath: fileURL.path) else {
+                throw ModelError.documentNotFound()
+            }
+
+            let data: Data
+            do {
+                data = try Data(contentsOf: fileURL)
+            } catch {
+                logger.logError(error, context: "DocumentFileStorageService.retrieve")
+                throw ModelError.documentContentCorrupted
+            }
+            logger.exit("retrieve", duration: ContinuousClock.now - start)
+            return data
         } catch {
-            logger.logError(error, context: "DocumentFileStorageService.retrieve")
-            throw ModelError.documentContentCorrupted
+            logger.exitWithError("retrieve", error: error, duration: ContinuousClock.now - start)
+            throw error
         }
     }
 
     func delete(contentHMAC: Data, personId: UUID) throws {
-        let fileURL = fileURL(for: contentHMAC, personId: personId)
-
-        // If file doesn't exist, consider it already deleted (idempotent)
-        guard fileManager.fileExists(atPath: fileURL.path) else {
-            return
-        }
-
+        let start = ContinuousClock.now
+        logger.entry("delete", "personId=\(personId)")
         do {
-            try fileManager.removeItem(at: fileURL)
-            logger.debug("Deleted document file")
+            let fileURL = fileURL(for: contentHMAC, personId: personId)
+
+            // If file doesn't exist, consider it already deleted (idempotent)
+            guard fileManager.fileExists(atPath: fileURL.path) else {
+                logger.exit("delete", duration: ContinuousClock.now - start)
+                return
+            }
+
+            do {
+                try fileManager.removeItem(at: fileURL)
+            } catch {
+                logger.logError(error, context: "DocumentFileStorageService.delete")
+                throw ModelError.documentStorageFailed(reason: error.localizedDescription)
+            }
+            logger.exit("delete", duration: ContinuousClock.now - start)
         } catch {
-            logger.logError(error, context: "DocumentFileStorageService.delete")
-            throw ModelError.documentStorageFailed(reason: error.localizedDescription)
+            logger.exitWithError("delete", error: error, duration: ContinuousClock.now - start)
+            throw error
         }
     }
 
     func exists(contentHMAC: Data, personId: UUID) -> Bool {
+        let start = ContinuousClock.now
+        logger.entry("exists", "personId=\(personId)")
         let fileURL = fileURL(for: contentHMAC, personId: personId)
-        return fileManager.fileExists(atPath: fileURL.path)
+        let present = fileManager.fileExists(atPath: fileURL.path)
+        logger.exit("exists", duration: ContinuousClock.now - start)
+        return present
     }
 
     func listBlobs(personId: UUID) throws -> Set<Data> {
-        let dirURL = personDirectory(for: personId)
-        guard fileManager.fileExists(atPath: dirURL.path) else {
-            return [] // no directory yet = no blobs
-        }
+        let start = ContinuousClock.now
+        logger.entry("listBlobs", "personId=\(personId)")
         do {
-            let files = try fileManager.contentsOfDirectory(
-                at: dirURL,
-                includingPropertiesForKeys: nil,
-                options: .skipsHiddenFiles
-            )
+            let dirURL = personDirectory(for: personId)
+            guard fileManager.fileExists(atPath: dirURL.path) else {
+                logger.exit("listBlobs", duration: ContinuousClock.now - start)
+                return [] // no directory yet = no blobs
+            }
+            let files: [URL]
+            do {
+                files = try fileManager.contentsOfDirectory(
+                    at: dirURL,
+                    includingPropertiesForKeys: nil,
+                    options: .skipsHiddenFiles
+                )
+            } catch {
+                logger.logError(error, context: "DocumentFileStorageService.listBlobs")
+                throw ModelError.documentStorageFailed(reason: error.localizedDescription)
+            }
             var hmacs = Set<Data>()
             for file in files where file.pathExtension == "enc" {
                 if let hmac = hmacFromFilename(file.deletingPathExtension().lastPathComponent) {
                     hmacs.insert(hmac)
                 }
             }
+            logger.debug("listBlobs returned \(hmacs.count) blobs")
+            logger.exit("listBlobs", duration: ContinuousClock.now - start)
             return hmacs
         } catch {
-            logger.logError(error, context: "DocumentFileStorageService.listBlobs")
-            throw ModelError.documentStorageFailed(reason: error.localizedDescription)
+            logger.exitWithError("listBlobs", error: error, duration: ContinuousClock.now - start)
+            throw error
         }
     }
 
     func blobSize(contentHMAC: Data, personId: UUID) throws -> UInt64 {
-        let fileURL = fileURL(for: contentHMAC, personId: personId)
+        let start = ContinuousClock.now
+        logger.entry("blobSize", "personId=\(personId)")
         do {
-            let attrs = try fileManager.attributesOfItem(atPath: fileURL.path)
-            return attrs[.size] as? UInt64 ?? 0
+            let fileURL = fileURL(for: contentHMAC, personId: personId)
+            // Distinguish "file missing" (a race with concurrent deletion — expected
+            // during cleanup scans) from "attributes unreadable" (permissions/IO error).
+            // The cleanup scanner can swallow `documentNotFound` safely.
+            guard fileManager.fileExists(atPath: fileURL.path) else {
+                throw ModelError.documentNotFound()
+            }
+            let size: UInt64
+            do {
+                let attrs = try fileManager.attributesOfItem(atPath: fileURL.path)
+                size = attrs[.size] as? UInt64 ?? 0
+            } catch {
+                logger.logError(error, context: "DocumentFileStorageService.blobSize")
+                throw ModelError.documentStorageFailed(reason: error.localizedDescription)
+            }
+            logger.exit("blobSize", duration: ContinuousClock.now - start)
+            return size
         } catch {
-            logger.logError(error, context: "DocumentFileStorageService.blobSize")
-            throw ModelError.documentStorageFailed(reason: error.localizedDescription)
+            logger.exitWithError("blobSize", error: error, duration: ContinuousClock.now - start)
+            throw error
         }
     }
 
@@ -202,26 +262,33 @@ final class DocumentFileStorageService: DocumentFileStorageServiceProtocol, @unc
         blobURL(for: contentHMAC, in: personDirectory(for: personId))
     }
 
-    /// Create the per-person subdirectory if it doesn't exist, and return its URL
+    /// Create the per-person subdirectory if it doesn't exist, and return its URL.
+    ///
+    /// `createDirectory(withIntermediateDirectories: true)` is idempotent — it succeeds
+    /// whether or not the directory exists, so no pre-`fileExists` guard is needed.
+    /// `.protectionKey` is only applied on actual creation; re-calling on an existing
+    /// directory is a no-op for attributes.
     private func ensurePersonDirectory(for personId: UUID) throws -> URL {
         let dirURL = personDirectory(for: personId)
-        if !fileManager.fileExists(atPath: dirURL.path) {
-            do {
-                try fileManager.createDirectory(
-                    at: dirURL,
-                    withIntermediateDirectories: true,
-                    attributes: [.protectionKey: FileProtectionType.complete]
-                )
-            } catch {
-                throw ModelError.documentStorageFailed(reason: error.localizedDescription)
-            }
+        do {
+            try fileManager.createDirectory(
+                at: dirURL,
+                withIntermediateDirectories: true,
+                attributes: [.protectionKey: FileProtectionType.complete]
+            )
+        } catch {
+            throw ModelError.documentStorageFailed(reason: error.localizedDescription)
         }
         return dirURL
     }
 
-    /// Decode a hex string back to Data; returns nil on malformed input
+    /// Decode a hex string back to Data; returns nil on malformed input.
+    ///
+    /// An empty string produces `nil` so a stray `.enc` file (or any zero-length
+    /// filename stem) is rejected rather than inserting an empty-HMAC entry into
+    /// the caller's Set.
     private func hmacFromFilename(_ hex: String) -> Data? {
-        guard hex.count.isMultiple(of: 2) else { return nil }
+        guard !hex.isEmpty, hex.count.isMultiple(of: 2) else { return nil }
         var data = Data(capacity: hex.count / 2)
         var index = hex.startIndex
         while index < hex.endIndex {
