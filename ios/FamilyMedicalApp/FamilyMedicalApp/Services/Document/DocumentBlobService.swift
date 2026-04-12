@@ -71,7 +71,8 @@ actor DocumentBlobService: DocumentBlobServiceProtocol {
 
     // MARK: - Types
 
-    struct StoredBlob: Equatable {
+    struct StoredBlob: Equatable { // Explicit Sendable to prevent silent regression if fields change — auto-inference
+        // is fragile under future edits.
         let contentHMAC: Data
         let encryptedSize: Int
         let thumbnailData: Data?
@@ -95,10 +96,10 @@ actor DocumentBlobService: DocumentBlobServiceProtocol {
 
     // MARK: - In-Flight State
 
-    /// HMACs of blobs currently being written to disk but not yet committed to
-    /// Core Data. The cleanup scanner consults this set and skips any HMAC still
-    /// in flight to avoid deleting a blob during the small window between the
-    /// on-disk write and the Core Data save.
+    /// HMACs that have been speculatively written to disk but not yet committed
+    /// to Core Data. Cleared on commit or rollback. Process-local: a crash mid-flight
+    /// is safe because the blob either already landed on disk (benign orphan the
+    /// next cleanup scan will remove) or never did.
     private var inFlightHMACs: Set<Data> = []
 
     init(
@@ -244,15 +245,23 @@ actor DocumentBlobService: DocumentBlobServiceProtocol {
     // MARK: - In-Flight Tracking
 
     func markInFlight(contentHMAC: Data) {
-        inFlightHMACs.insert(contentHMAC)
-        logger.debug("markInFlight count=\(inFlightHMACs.count)")
+        let (inserted, _) = inFlightHMACs.insert(contentHMAC)
+        if !inserted {
+            logger.debug("markInFlight: HMAC already in flight, count=\(inFlightHMACs.count)")
+        } else {
+            logger.debug("markInFlight: added, count=\(inFlightHMACs.count)")
+        }
     }
 
     func clearInFlight(contentHMAC: Data) {
-        inFlightHMACs.remove(contentHMAC)
-        logger.debug("clearInFlight count=\(inFlightHMACs.count)")
+        if inFlightHMACs.remove(contentHMAC) == nil {
+            logger.debug("clearInFlight: HMAC not in flight, count=\(inFlightHMACs.count)")
+        } else {
+            logger.debug("clearInFlight: removed, count=\(inFlightHMACs.count)")
+        }
     }
 
+    /// No debug log on isInFlight: called per-blob in cleanup scans, would flood logs.
     func isInFlight(contentHMAC: Data) -> Bool {
         inFlightHMACs.contains(contentHMAC)
     }

@@ -47,10 +47,16 @@ final class MockDocumentBlobService: DocumentBlobServiceProtocol, @unchecked Sen
     var retrieveError: Error?
     var deleteError: Error?
     var deleteDirectError: Error?
+    var listBlobsError: Error?
+    var blobSizeError: Error?
 
     /// HMACs for which deleteDirect should throw. Overrides deleteDirectError
     /// when set. Used to simulate partial failures in cleanup tests (Task 4).
     var deleteDirectFailForHMACs: Set<Data> = []
+
+    /// HMACs for which blobSize should throw. Mirrors deleteDirectFailForHMACs pattern
+    /// for per-HMAC error injection in cleanup tests.
+    var blobSizeFailForHMACs: Set<Data> = []
 
     // MARK: - In-Flight State for Tests
 
@@ -127,13 +133,22 @@ final class MockDocumentBlobService: DocumentBlobServiceProtocol, @unchecked Sen
 
     // MARK: - Cleanup Support
 
-    func listBlobs(personId: UUID) async -> Set<Data> {
+    func listBlobs(personId: UUID) async throws -> Set<Data> {
         listBlobsCalls.append(personId)
+        if let listBlobsError {
+            throw listBlobsError
+        }
         return blobsOnDisk[personId] ?? []
     }
 
-    func blobSize(contentHMAC: Data, personId: UUID) async -> UInt64 {
+    func blobSize(contentHMAC: Data, personId: UUID) async throws -> UInt64 {
         blobSizeCalls.append(BlobLookup(contentHMAC: contentHMAC, personId: personId))
+        if let blobSizeError {
+            throw blobSizeError
+        }
+        if blobSizeFailForHMACs.contains(contentHMAC) {
+            throw ModelError.documentStorageFailed(reason: "Mock per-hmac blobSize failure")
+        }
         return blobSizes[contentHMAC] ?? 1_024
     }
 
@@ -187,6 +202,9 @@ final class MockDocumentBlobService: DocumentBlobServiceProtocol, @unchecked Sen
         deleteError = nil
         deleteDirectError = nil
         deleteDirectFailForHMACs.removeAll()
+        listBlobsError = nil
+        blobSizeError = nil
+        blobSizeFailForHMACs.removeAll()
 
         inFlightHMACs.removeAll()
         blobsOnDisk.removeAll()

@@ -336,6 +336,53 @@ private struct DocumentBlobServiceInFlightTests {
         #expect(await !(ctx.service.isInFlight(contentHMAC: hmacAlpha)))
         #expect(await ctx.service.isInFlight(contentHMAC: hmacBeta))
     }
+
+    @Test("markInFlight on an already-in-flight HMAC is idempotent")
+    func inFlightReMarkIsIdempotent() async {
+        let ctx = DocumentBlobServiceTests.makeFixture()
+        let hmac = Data([0x42])
+
+        await ctx.service.markInFlight(contentHMAC: hmac)
+        await ctx.service.markInFlight(contentHMAC: hmac)
+        let present = await ctx.service.isInFlight(contentHMAC: hmac)
+        #expect(present)
+
+        await ctx.service.clearInFlight(contentHMAC: hmac)
+        let absent = await ctx.service.isInFlight(contentHMAC: hmac)
+        #expect(!absent)
+    }
+
+    @Test("In-flight set is race-safe under concurrent mark/query")
+    func inFlightConcurrentStress() async {
+        let ctx = DocumentBlobServiceTests.makeFixture()
+        let hmacs = (0 ..< 50).map { Data([UInt8($0)]) }
+
+        await withTaskGroup(of: Void.self) { group in
+            for hmac in hmacs {
+                group.addTask {
+                    await ctx.service.markInFlight(contentHMAC: hmac)
+                }
+            }
+        }
+
+        for hmac in hmacs {
+            let present = await ctx.service.isInFlight(contentHMAC: hmac)
+            #expect(present, "HMAC should be in flight after concurrent marks")
+        }
+
+        await withTaskGroup(of: Void.self) { group in
+            for hmac in hmacs {
+                group.addTask {
+                    await ctx.service.clearInFlight(contentHMAC: hmac)
+                }
+            }
+        }
+
+        for hmac in hmacs {
+            let present = await ctx.service.isInFlight(contentHMAC: hmac)
+            #expect(!present, "HMAC should be cleared after concurrent clears")
+        }
+    }
 }
 
 // MARK: - Cleanup Pass-Throughs
@@ -365,6 +412,8 @@ private struct DocumentBlobServiceCleanupTests {
         let size = try await ctx.service.blobSize(contentHMAC: hmac, personId: ctx.personId)
         #expect(size == 42)
         #expect(ctx.fileStorage.blobSizeCalls.count == 1)
+        #expect(ctx.fileStorage.blobSizeCalls.first?.contentHMAC == hmac)
+        #expect(ctx.fileStorage.blobSizeCalls.first?.personId == ctx.personId)
     }
 
     @Test("deleteDirect removes the blob unconditionally")
