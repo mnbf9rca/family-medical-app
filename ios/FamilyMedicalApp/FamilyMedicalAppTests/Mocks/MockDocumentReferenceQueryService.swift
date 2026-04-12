@@ -11,16 +11,19 @@ final class MockDocumentReferenceQueryService: DocumentReferenceQueryServiceProt
     var attachmentsForCalls: [UUID] = []
     var allDocumentsCalls: [UUID] = []
     var isHmacReferencedCalls: [(contentHMAC: Data, excludingRecordId: UUID)] = []
+    var allReferencedHMACsCalls: [UUID] = []
 
     // MARK: - Configurable Results
 
     var attachmentsResult: [PersistedDocumentReference] = []
     var allDocumentsResult: [PersistedDocumentReference] = []
     var isHmacReferencedResult = false
+    var allReferencedHMACsResult: Set<Data> = []
 
     var attachmentsError: Error?
     var allDocumentsError: Error?
     var isHmacReferencedError: Error?
+    var allReferencedHMACsError: Error?
 
     // MARK: - DocumentReferenceQueryServiceProtocol
 
@@ -58,5 +61,14 @@ final class MockDocumentReferenceQueryService: DocumentReferenceQueryServiceProt
             throw isHmacReferencedError
         }
         return isHmacReferencedResult
+    }
+
+    func allReferencedHMACs(
+        personId: UUID,
+        primaryKey: SymmetricKey
+    ) async throws -> Set<Data> {
+        allReferencedHMACsCalls.append(personId)
+        if let allReferencedHMACsError { throw allReferencedHMACsError }
+        return allReferencedHMACsResult
     }
 }

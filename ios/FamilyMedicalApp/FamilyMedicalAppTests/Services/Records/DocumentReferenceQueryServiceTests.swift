@@ -224,4 +224,51 @@ struct DocumentReferenceQueryServiceTests {
         )
         #expect(referenced == false)
     }
+
+    // MARK: - allReferencedHMACs
+
+    @Test("allReferencedHMACs returns set of contentHMAC values from all DocumentReferenceRecords")
+    func allReferencedHMACs() async throws {
+        let ctx = Self.makeFixture()
+        let hmac1 = Data([0x01, 0x02, 0x03])
+        let hmac2 = Data([0x04, 0x05, 0x06])
+
+        _ = try Self.persist(
+            DocumentReferenceRecord(
+                title: "doc1.pdf",
+                mimeType: "application/pdf",
+                fileSize: 100,
+                contentHMAC: hmac1
+            ),
+            in: ctx
+        )
+        _ = try Self.persist(
+            DocumentReferenceRecord(
+                title: "doc2.jpg",
+                mimeType: "image/jpeg",
+                fileSize: 200,
+                contentHMAC: hmac2
+            ),
+            in: ctx
+        )
+
+        let result = try await ctx.service.allReferencedHMACs(
+            personId: ctx.personId,
+            primaryKey: ctx.primaryKey
+        )
+
+        #expect(result == Set([hmac1, hmac2]))
+    }
+
+    @Test("allReferencedHMACs returns empty set when no DocumentReferenceRecords exist")
+    func allReferencedHMACs_empty() async throws {
+        let ctx = Self.makeFixture()
+
+        let result = try await ctx.service.allReferencedHMACs(
+            personId: ctx.personId,
+            primaryKey: ctx.primaryKey
+        )
+
+        #expect(result.isEmpty)
+    }
 }
