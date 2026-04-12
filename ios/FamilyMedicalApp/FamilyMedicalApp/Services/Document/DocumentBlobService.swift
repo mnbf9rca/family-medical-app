@@ -34,9 +34,36 @@ protocol DocumentBlobServiceProtocol: Sendable {
     ///   - isReferencedElsewhere: If `true`, the blob is preserved (another record still
     ///     points at this HMAC).
     func deleteIfUnreferenced(contentHMAC: Data, personId: UUID, isReferencedElsewhere: Bool) async throws
+
+    // MARK: - Cleanup Support
+
+    /// List every blob HMAC currently on disk for a person.
+    /// Used by the orphan cleanup scanner to compare against the set of
+    /// referenced HMACs from the database.
+    func listBlobs(personId: UUID) async throws -> Set<Data>
+
+    /// Return the on-disk size of a specific blob in bytes.
+    func blobSize(contentHMAC: Data, personId: UUID) async throws -> UInt64
+
+    /// Delete a blob unconditionally (no reference check). Used by the cleanup
+    /// scanner, which has already determined the blob is an orphan.
+    func deleteDirect(contentHMAC: Data, personId: UUID) async throws
+
+    // MARK: - In-Flight Tracking
+
+    /// Mark a content HMAC as "currently being written" so the cleanup scanner
+    /// does not delete it as an orphan during the gap between blob storage
+    /// and Core Data commit.
+    func markInFlight(contentHMAC: Data) async
+
+    /// Clear a previously marked in-flight HMAC (on commit or rollback).
+    func clearInFlight(contentHMAC: Data) async
+
+    /// Check whether an HMAC is currently marked as in-flight.
+    func isInFlight(contentHMAC: Data) async -> Bool
 }
 
-final class DocumentBlobService: DocumentBlobServiceProtocol, @unchecked Sendable {
+actor DocumentBlobService: DocumentBlobServiceProtocol {
     // MARK: - Constants
 
     static let maxFileSizeBytes = 10 * 1_024 * 1_024
@@ -65,6 +92,14 @@ final class DocumentBlobService: DocumentBlobServiceProtocol, @unchecked Sendabl
     private let encryptionService: EncryptionServiceProtocol
     private let fmkService: FamilyMemberKeyServiceProtocol
     private let logger: TracingCategoryLogger
+
+    // MARK: - In-Flight State
+
+    /// HMACs of blobs currently being written to disk but not yet committed to
+    /// Core Data. The cleanup scanner consults this set and skips any HMAC still
+    /// in flight to avoid deleting a blob during the small window between the
+    /// on-disk write and the Core Data save.
+    private var inFlightHMACs: Set<Data> = []
 
     init(
         fileStorage: DocumentFileStorageServiceProtocol,
@@ -163,6 +198,63 @@ final class DocumentBlobService: DocumentBlobServiceProtocol, @unchecked Sendabl
             logger.exitWithError("deleteIfUnreferenced", error: error, duration: ContinuousClock.now - start)
             throw error
         }
+    }
+
+    // MARK: - Cleanup Support
+
+    func listBlobs(personId: UUID) async throws -> Set<Data> {
+        let start = ContinuousClock.now
+        logger.entry("listBlobs", "personId=\(personId)")
+        do {
+            let blobs = try fileStorage.listBlobs(personId: personId)
+            logger.debug("listBlobs returned \(blobs.count) blobs")
+            logger.exit("listBlobs", duration: ContinuousClock.now - start)
+            return blobs
+        } catch {
+            logger.exitWithError("listBlobs", error: error, duration: ContinuousClock.now - start)
+            throw error
+        }
+    }
+
+    func blobSize(contentHMAC: Data, personId: UUID) async throws -> UInt64 {
+        let start = ContinuousClock.now
+        logger.entry("blobSize", "personId=\(personId)")
+        do {
+            let size = try fileStorage.blobSize(contentHMAC: contentHMAC, personId: personId)
+            logger.exit("blobSize", duration: ContinuousClock.now - start)
+            return size
+        } catch {
+            logger.exitWithError("blobSize", error: error, duration: ContinuousClock.now - start)
+            throw error
+        }
+    }
+
+    func deleteDirect(contentHMAC: Data, personId: UUID) async throws {
+        let start = ContinuousClock.now
+        logger.entry("deleteDirect", "personId=\(personId)")
+        do {
+            try fileStorage.delete(contentHMAC: contentHMAC, personId: personId)
+            logger.exit("deleteDirect", duration: ContinuousClock.now - start)
+        } catch {
+            logger.exitWithError("deleteDirect", error: error, duration: ContinuousClock.now - start)
+            throw error
+        }
+    }
+
+    // MARK: - In-Flight Tracking
+
+    func markInFlight(contentHMAC: Data) {
+        inFlightHMACs.insert(contentHMAC)
+        logger.debug("markInFlight count=\(inFlightHMACs.count)")
+    }
+
+    func clearInFlight(contentHMAC: Data) {
+        inFlightHMACs.remove(contentHMAC)
+        logger.debug("clearInFlight count=\(inFlightHMACs.count)")
+    }
+
+    func isInFlight(contentHMAC: Data) -> Bool {
+        inFlightHMACs.contains(contentHMAC)
     }
 
     // MARK: - Factory

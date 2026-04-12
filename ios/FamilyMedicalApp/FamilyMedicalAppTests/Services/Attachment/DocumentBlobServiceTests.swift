@@ -8,7 +8,7 @@ import UIKit
 struct DocumentBlobServiceTests {
     // MARK: - Fixtures
 
-    private struct Fixture {
+    struct Fixture {
         let service: DocumentBlobService
         let fileStorage: MockDocumentFileStorageService
         let imageProcessor: MockImageProcessingService
@@ -18,7 +18,7 @@ struct DocumentBlobServiceTests {
         let primaryKey: SymmetricKey
     }
 
-    private static func makeFixture() -> Fixture {
+    static func makeFixture() -> Fixture {
         let fileStorage = MockDocumentFileStorageService()
         let imageProcessor = MockImageProcessingService()
         let encryption = MockEncryptionService()
@@ -297,5 +297,97 @@ struct DocumentBlobServiceTests {
             isReferencedElsewhere: true
         )
         #expect(ctx.fileStorage.deleteCalls.isEmpty)
+    }
+}
+
+// MARK: - In-Flight Tracking
+
+@Suite("DocumentBlobService In-Flight Tracking")
+private struct DocumentBlobServiceInFlightTests {
+    @Test("markInFlight registers HMAC, clearInFlight unregisters it, isInFlight reflects state")
+    func inFlightRoundTrip() async {
+        let ctx = DocumentBlobServiceTests.makeFixture()
+        let hmac = Data([0x01, 0x02, 0x03])
+
+        let beforeMark = await ctx.service.isInFlight(contentHMAC: hmac)
+        #expect(!beforeMark)
+
+        await ctx.service.markInFlight(contentHMAC: hmac)
+        let afterMark = await ctx.service.isInFlight(contentHMAC: hmac)
+        #expect(afterMark)
+
+        await ctx.service.clearInFlight(contentHMAC: hmac)
+        let afterClear = await ctx.service.isInFlight(contentHMAC: hmac)
+        #expect(!afterClear)
+    }
+
+    @Test("inFlight state is per-HMAC and independent")
+    func inFlightMultipleHMACs() async {
+        let ctx = DocumentBlobServiceTests.makeFixture()
+        let hmacAlpha = Data([0x01])
+        let hmacBeta = Data([0x02])
+
+        await ctx.service.markInFlight(contentHMAC: hmacAlpha)
+        await ctx.service.markInFlight(contentHMAC: hmacBeta)
+        #expect(await ctx.service.isInFlight(contentHMAC: hmacAlpha))
+        #expect(await ctx.service.isInFlight(contentHMAC: hmacBeta))
+
+        await ctx.service.clearInFlight(contentHMAC: hmacAlpha)
+        #expect(await !(ctx.service.isInFlight(contentHMAC: hmacAlpha)))
+        #expect(await ctx.service.isInFlight(contentHMAC: hmacBeta))
+    }
+}
+
+// MARK: - Cleanup Pass-Throughs
+
+@Suite("DocumentBlobService Cleanup Pass-Throughs")
+private struct DocumentBlobServiceCleanupTests {
+    @Test("listBlobs delegates to file storage")
+    func listBlobsDelegates() async throws {
+        let ctx = DocumentBlobServiceTests.makeFixture()
+        let hmac1 = Data([0x01])
+        let hmac2 = Data([0x02])
+        ctx.fileStorage.addTestData(Data("a".utf8), forHMAC: hmac1, personId: ctx.personId)
+        ctx.fileStorage.addTestData(Data("b".utf8), forHMAC: hmac2, personId: ctx.personId)
+
+        let blobs = try await ctx.service.listBlobs(personId: ctx.personId)
+        #expect(blobs == [hmac1, hmac2])
+        #expect(ctx.fileStorage.listBlobsCalls == [ctx.personId])
+    }
+
+    @Test("blobSize delegates to file storage")
+    func blobSizeDelegates() async throws {
+        let ctx = DocumentBlobServiceTests.makeFixture()
+        let hmac = Data([0x01])
+        let data = Data(repeating: 0, count: 42)
+        ctx.fileStorage.addTestData(data, forHMAC: hmac, personId: ctx.personId)
+
+        let size = try await ctx.service.blobSize(contentHMAC: hmac, personId: ctx.personId)
+        #expect(size == 42)
+        #expect(ctx.fileStorage.blobSizeCalls.count == 1)
+    }
+
+    @Test("deleteDirect removes the blob unconditionally")
+    func deleteDirectRemovesBlob() async throws {
+        let ctx = DocumentBlobServiceTests.makeFixture()
+        let hmac = Data([0x01])
+        ctx.fileStorage.addTestData(Data("x".utf8), forHMAC: hmac, personId: ctx.personId)
+
+        try await ctx.service.deleteDirect(contentHMAC: hmac, personId: ctx.personId)
+
+        #expect(!ctx.fileStorage.exists(contentHMAC: hmac, personId: ctx.personId))
+        #expect(ctx.fileStorage.deleteCalls.count == 1)
+    }
+
+    @Test("deleteDirect surfaces file storage errors")
+    func deleteDirectSurfacesErrors() async throws {
+        let ctx = DocumentBlobServiceTests.makeFixture()
+        ctx.fileStorage.shouldFailDelete = true
+        await #expect(throws: ModelError.self) {
+            try await ctx.service.deleteDirect(
+                contentHMAC: Data([0xAA]),
+                personId: ctx.personId
+            )
+        }
     }
 }
