@@ -71,13 +71,16 @@ actor DocumentBlobService: DocumentBlobServiceProtocol {
 
     // MARK: - Types
 
-    struct StoredBlob: Equatable { // Explicit Sendable to prevent silent regression if fields change — auto-inference
-        // is fragile under future edits.
+    // swiftformat:disable redundantSendable
+    /// Explicit Sendable to prevent silent regression if fields change — auto-inference is fragile under future edits.
+    struct StoredBlob: Equatable, Sendable {
         let contentHMAC: Data
         let encryptedSize: Int
         let thumbnailData: Data?
         let detectedMimeType: String
     }
+
+    // swiftformat:enable redundantSendable
 
     /// Result of `process()`: the data to store, optional thumbnail, and detected MIME.
     private struct ProcessedBlob {
