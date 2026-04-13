@@ -17,6 +17,7 @@ struct SettingsView: View {
                     demoModeSection
                 }
                 backupSection
+                storageManagementSection
                 diagnosticLogsSection
             }
             .navigationTitle("Settings")
@@ -92,6 +93,35 @@ struct SettingsView: View {
             } message: {
                 Text("All demo data will be deleted. You'll return to the welcome screen.")
             }
+            .alert("Clean Up Storage?", isPresented: $viewModel.showingCleanupConfirmation) {
+                Button("Clean Up", role: .destructive) {
+                    Task {
+                        await viewModel.performCleanup(primaryKey: primaryKey)
+                    }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                if let result = viewModel.cleanupDryRunResult {
+                    Text(
+                        "Found \(result.orphanCount) orphaned file\(result.orphanCount == 1 ? "" : "s") "
+                            + "(\(viewModel.formattedCleanupSize)). Clean up?"
+                    )
+                }
+            }
+            .alert("Storage Cleanup", isPresented: $viewModel.showingCleanupResult) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                if let result = viewModel.cleanupResult {
+                    if result.orphanCount > 0 {
+                        Text(
+                            "Freed \(viewModel.formattedCleanupSize) from "
+                                + "\(result.orphanCount) orphaned file\(result.orphanCount == 1 ? "" : "s")."
+                        )
+                    } else {
+                        Text("No orphaned files found.")
+                    }
+                }
+            }
             .onChange(of: viewModel.demoModeExited) { _, exited in
                 if exited {
                     dismiss()
@@ -139,6 +169,30 @@ struct SettingsView: View {
             Text("Backup & Restore")
         } footer: {
             Text("Export your data to a secure backup file, or restore from a previous backup.")
+        }
+    }
+
+    private var storageManagementSection: some View {
+        Section {
+            Button {
+                Task {
+                    await viewModel.checkStorage(primaryKey: primaryKey)
+                }
+            } label: {
+                HStack {
+                    Label("Clean Up Storage", systemImage: "trash.circle")
+                    Spacer()
+                    if viewModel.isCheckingStorage || viewModel.isCleaningStorage {
+                        ProgressView()
+                    }
+                }
+            }
+            .disabled(viewModel.isCheckingStorage || viewModel.isCleaningStorage)
+            .accessibilityIdentifier("cleanUpStorageButton")
+        } header: {
+            Text("Storage Management")
+        } footer: {
+            Text("Remove orphaned attachment files that are no longer referenced by any record.")
         }
     }
 
