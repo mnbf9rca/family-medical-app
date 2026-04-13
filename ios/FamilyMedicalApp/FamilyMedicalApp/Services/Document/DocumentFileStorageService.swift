@@ -224,7 +224,12 @@ final class DocumentFileStorageService: DocumentFileStorageServiceProtocol, @unc
             let size: UInt64
             do {
                 let attrs = try fileManager.attributesOfItem(atPath: fileURL.path)
-                size = attrs[.size] as? UInt64 ?? 0
+                guard let resolvedSize = attrs[.size] as? UInt64 else {
+                    throw ModelError.documentStorageFailed(
+                        reason: "Unexpected file size attribute type for \(fileURL.lastPathComponent)"
+                    )
+                }
+                size = resolvedSize
             } catch {
                 throw ModelError.documentStorageFailed(reason: error.localizedDescription)
             }
