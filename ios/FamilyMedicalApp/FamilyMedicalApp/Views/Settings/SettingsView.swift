@@ -102,10 +102,11 @@ struct SettingsView: View {
                 Button("Cancel", role: .cancel) {}
             } message: {
                 if let result = viewModel.cleanupDryRunResult {
-                    Text(
-                        "Found \(result.orphanCount) orphaned file\(result.orphanCount == 1 ? "" : "s") "
-                            + "(\(viewModel.formattedCleanupSize)). Clean up?"
+                    let size = ByteCountFormatter.string(
+                        fromByteCount: Int64(result.freedBytes), countStyle: .file
                     )
+                    let plural = result.orphanCount == 1 ? "" : "s"
+                    Text("Found \(result.orphanCount) orphaned file\(plural) (\(size)). Clean up?")
                 }
             }
             .alert("Storage Cleanup", isPresented: $viewModel.showingCleanupResult) {
@@ -113,10 +114,11 @@ struct SettingsView: View {
             } message: {
                 if let result = viewModel.cleanupResult {
                     if result.orphanCount > 0 {
-                        Text(
-                            "Freed \(viewModel.formattedCleanupSize) from "
-                                + "\(result.orphanCount) orphaned file\(result.orphanCount == 1 ? "" : "s")."
+                        let size = ByteCountFormatter.string(
+                            fromByteCount: Int64(result.freedBytes), countStyle: .file
                         )
+                        let plural = result.orphanCount == 1 ? "" : "s"
+                        Text("Freed \(size) from \(result.orphanCount) orphaned file\(plural).")
                     } else {
                         Text("No orphaned files found.")
                     }

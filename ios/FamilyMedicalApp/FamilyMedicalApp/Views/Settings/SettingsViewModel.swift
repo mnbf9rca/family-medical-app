@@ -507,14 +507,6 @@ extension SettingsViewModel {
 
         isCleaningStorage = false
     }
-
-    /// Human-readable string for the current dry-run or cleanup result. Prefers the
-    /// dry-run result if both are present so the confirmation dialog and its subsequent
-    /// result alert can read from the same computed property.
-    var formattedCleanupSize: String {
-        guard let result = cleanupDryRunResult ?? cleanupResult else { return "" }
-        return ByteCountFormatter.string(fromByteCount: Int64(result.freedBytes), countStyle: .file)
-    }
 }
 
 // MARK: - Demo Mode Notifications

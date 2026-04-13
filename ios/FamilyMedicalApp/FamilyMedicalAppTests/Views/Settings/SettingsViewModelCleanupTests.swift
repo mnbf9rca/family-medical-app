@@ -154,23 +154,24 @@ struct SettingsViewModelCleanupTests {
         #expect(fixture.viewModel.cleanupDryRunResult?.freedBytes == 0)
     }
 
-    @Test("formattedCleanupSize returns empty string when no result present")
+    @Test("performCleanup cleanupResult does not reflect stale cleanupDryRunResult when totals diverge")
     @MainActor
-    func formattedCleanupSize_noResult() {
+    func performCleanup_cleanupResultIsolatedFromDryRun() async throws {
         let fixture = Self.makeFixture()
-        #expect(fixture.viewModel.formattedCleanupSize.isEmpty)
-    }
+        try fixture.personRepository.addPerson(Self.makePerson(name: "Alice"))
 
-    @Test("formattedCleanupSize prefers dryRunResult over cleanupResult")
-    @MainActor
-    func formattedCleanupSize_prefersDryRun() {
-        let fixture = Self.makeFixture()
-        fixture.viewModel.cleanupDryRunResult = CleanupResult(orphanCount: 5, freedBytes: 1_000)
-        fixture.viewModel.cleanupResult = CleanupResult(orphanCount: 10, freedBytes: 9_999_999)
+        // Dry-run finds 5 orphans, 2048 bytes
+        fixture.cleanupService.countOrphansResult = CleanupResult(orphanCount: 5, freedBytes: 2_048)
+        await fixture.viewModel.checkStorage(primaryKey: SymmetricKey(size: .bits256))
+        #expect(fixture.viewModel.cleanupDryRunResult?.orphanCount == 5)
+        #expect(fixture.viewModel.cleanupDryRunResult?.freedBytes == 2_048)
 
-        // The dry-run formatted size is ~1 KB which will not contain "9".
-        let formatted = fixture.viewModel.formattedCleanupSize
-        #expect(!formatted.isEmpty)
-        #expect(!formatted.contains("9"))
+        // But the real cleanup only frees 3 orphans / 1024 bytes (partial failure or race)
+        fixture.cleanupService.cleanOrphansResult = CleanupResult(orphanCount: 3, freedBytes: 1_024)
+        await fixture.viewModel.performCleanup(primaryKey: SymmetricKey(size: .bits256))
+
+        // cleanupResult must reflect the real cleanup, not the dry-run
+        #expect(fixture.viewModel.cleanupResult?.orphanCount == 3)
+        #expect(fixture.viewModel.cleanupResult?.freedBytes == 1_024)
     }
 }
