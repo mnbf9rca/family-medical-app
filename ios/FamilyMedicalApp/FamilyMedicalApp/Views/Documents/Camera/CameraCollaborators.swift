@@ -22,22 +22,20 @@ struct LiveAuthorizationStatusProvider: AuthorizationStatusProviding {
 
 // MARK: - PhotoCapturing
 
-/// Wraps `AVCapturePhotoOutput.capturePhoto(with:delegate:)` so tests can
-/// drive the capture callback without a running session.
+/// Abstraction for firing the shutter. The coordinator does NOT need to know
+/// about `AVCapturePhotoCaptureDelegate` — the concrete implementation
+/// (`CameraCaptureController` in production) owns the delegate relationship
+/// and forwards the captured photo back into `coordinator.handlePhoto(_:)`.
+/// Tests use a fake that records call count; they exercise the capture-
+/// success path by calling `coordinator.handlePhoto(_:)` directly with a
+/// `FakeCapturedPhoto`.
+///
+/// `@MainActor` so the forwarder implementation can call through to the
+/// controller without an actor hop (the coordinator already calls this
+/// from a main-actor context).
+@MainActor
 protocol PhotoCapturing: AnyObject {
-    func capture(
-        with settings: AVCapturePhotoSettings,
-        delegate: AVCapturePhotoCaptureDelegate
-    )
-}
-
-extension AVCapturePhotoOutput: PhotoCapturing {
-    func capture(
-        with settings: AVCapturePhotoSettings,
-        delegate: AVCapturePhotoCaptureDelegate
-    ) {
-        capturePhoto(with: settings, delegate: delegate)
-    }
+    func capture(with settings: AVCapturePhotoSettings)
 }
 
 // MARK: - ThermalStateProviding

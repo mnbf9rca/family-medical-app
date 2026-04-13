@@ -104,17 +104,14 @@ final class CameraCaptureCoordinator {
     // MARK: - Capture
 
     /// User tapped the shutter. Transitions `.running → .capturing` and fires
-    /// the capture; the delegate callback will invoke `handlePhoto(_:)` on us
-    /// via `CameraCaptureController`.
+    /// the capture. The concrete `PhotoCapturing` implementation owns the
+    /// delegate relationship and forwards the resulting photo back into
+    /// `handlePhoto(_:)` on the main actor.
     func capturePhoto() {
         guard case .running = state else { return }
         state = .capturing
         let settings = AVCapturePhotoSettings()
-        // Delegate is owned by `CameraCaptureController`, which forwards the
-        // call back into `handlePhoto` — the coordinator does not conform to
-        // AVCapturePhotoCaptureDelegate directly, to keep this file free of
-        // AVFoundation-specific delegate boilerplate.
-        capturer.capture(with: settings, delegate: PhotoDelegateBridge.shared)
+        capturer.capture(with: settings)
     }
 
     /// Called from the glue layer when `didFinishProcessingPhoto` fires.
@@ -219,15 +216,4 @@ final class CameraCaptureCoordinator {
         // check.
         await start()
     }
-}
-
-/// Placeholder delegate. Not actually invoked in tests because
-/// `FakePhotoCapturing.capture` never calls back. `CameraCaptureController`
-/// provides the real delegate in production.
-///
-/// The singleton is stateless — AVCapturePhotoCaptureDelegate methods are
-/// never called on this instance in the coordinator's own code path — so
-/// `@unchecked Sendable` is safe.
-private final class PhotoDelegateBridge: NSObject, AVCapturePhotoCaptureDelegate, @unchecked Sendable {
-    static let shared = PhotoDelegateBridge()
 }
