@@ -221,17 +221,20 @@ final class DocumentFileStorageService: DocumentFileStorageServiceProtocol, @unc
             guard fileManager.fileExists(atPath: fileURL.path) else {
                 throw ModelError.documentNotFound()
             }
-            let size: UInt64
+            let attrs: [FileAttributeKey: Any]
             do {
-                let attrs = try fileManager.attributesOfItem(atPath: fileURL.path)
-                guard let resolvedSize = attrs[.size] as? UInt64 else {
-                    throw ModelError.documentStorageFailed(
-                        reason: "Unexpected file size attribute type for \(fileURL.lastPathComponent)"
-                    )
-                }
-                size = resolvedSize
+                attrs = try fileManager.attributesOfItem(atPath: fileURL.path)
             } catch {
                 throw ModelError.documentStorageFailed(reason: error.localizedDescription)
+            }
+            // Guard lives outside the FileManager do/catch so its crafted reason string
+            // reaches the outer exitWithError tracing intact — an inner catch would
+            // rewrap this typed error via error.localizedDescription and drop the detail.
+            guard let size = attrs[.size] as? UInt64 else {
+                let actualType = attrs[.size].map { "\(type(of: $0))" } ?? "nil"
+                throw ModelError.documentStorageFailed(
+                    reason: "Unexpected file size attribute type '\(actualType)' for \(fileURL.lastPathComponent)"
+                )
             }
             logger.exit("blobSize", duration: ContinuousClock.now - start)
             return size
