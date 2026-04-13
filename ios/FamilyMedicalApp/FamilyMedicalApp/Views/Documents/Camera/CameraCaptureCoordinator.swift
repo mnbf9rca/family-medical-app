@@ -123,6 +123,25 @@ final class CameraCaptureCoordinator {
         }
         state = .captured(data, photo.uniformType)
     }
+
+    /// Throw away the current captured photo and return to live preview.
+    func retake() {
+        guard case .captured = state else { return }
+        state = .running
+    }
+
+    /// Swap front/back camera. Valid only from `.running`.
+    func flipCamera() {
+        guard case .running = state else { return }
+        session.swapCameraPosition()
+    }
+
+    /// Return the captured `(Data, UTType)` if there is one, else nil.
+    /// The caller is responsible for forwarding to `onPhotoCaptured`.
+    func confirm() -> (Data, UTType)? {
+        guard case let .captured(data, type) = state else { return nil }
+        return (data, type)
+    }
 }
 
 /// Placeholder delegate. Not actually invoked in tests because

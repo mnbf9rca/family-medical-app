@@ -224,4 +224,77 @@ struct CameraCaptureCoordinatorTests {
             Issue.record("Expected state unchanged")
         }
     }
+
+    // MARK: - retake / confirm / flipCamera
+
+    @Test
+    func retake_fromCaptured_transitionsToRunning() async {
+        let fixtures = makeFixtures()
+        await fixtures.coordinator.start()
+        fixtures.coordinator.handlePhoto(
+            FakeCapturedPhoto(fileData: SyntheticPhotoFixtures.jpegData(), uniformType: .jpeg)
+        )
+
+        fixtures.coordinator.retake()
+
+        if case .running = fixtures.coordinator.state {} else {
+            Issue.record("Expected .running after retake")
+        }
+    }
+
+    @Test
+    func retake_fromRunning_isNoOp() async {
+        let fixtures = makeFixtures()
+        await fixtures.coordinator.start()
+
+        fixtures.coordinator.retake()
+
+        if case .running = fixtures.coordinator.state {} else {
+            Issue.record("Expected .running (retake from running is a no-op)")
+        }
+    }
+
+    @Test
+    func confirm_fromCaptured_yieldsDataAndType() async throws {
+        let fixtures = makeFixtures()
+        await fixtures.coordinator.start()
+        let heic = SyntheticPhotoFixtures.heicData()
+        fixtures.coordinator.handlePhoto(FakeCapturedPhoto(fileData: heic, uniformType: .heic))
+
+        let confirmed = try #require(fixtures.coordinator.confirm())
+
+        #expect(confirmed.0 == heic)
+        #expect(confirmed.1 == .heic)
+    }
+
+    @Test
+    func confirm_fromRunning_returnsNil() async {
+        let fixtures = makeFixtures()
+        await fixtures.coordinator.start()
+
+        #expect(fixtures.coordinator.confirm() == nil)
+    }
+
+    @Test
+    func flipCamera_fromRunning_callsSessionSwap() async {
+        let fixtures = makeFixtures()
+        await fixtures.coordinator.start()
+
+        fixtures.coordinator.flipCamera()
+
+        #expect(fixtures.session.swapCameraPositionCalls == 1)
+    }
+
+    @Test
+    func flipCamera_fromCaptured_isNoOp() async {
+        let fixtures = makeFixtures()
+        await fixtures.coordinator.start()
+        fixtures.coordinator.handlePhoto(
+            FakeCapturedPhoto(fileData: SyntheticPhotoFixtures.jpegData(), uniformType: .jpeg)
+        )
+
+        fixtures.coordinator.flipCamera()
+
+        #expect(fixtures.session.swapCameraPositionCalls == 0)
+    }
 }
