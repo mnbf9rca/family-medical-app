@@ -59,4 +59,32 @@ final class CameraCaptureCoordinator {
         @unknown default: self.state = .permissionDenied
         }
     }
+
+    // MARK: - Lifecycle
+
+    /// Resolve permissions, and if allowed, start the underlying session.
+    /// Safe to call repeatedly; a no-op when already running.
+    func start() async {
+        switch auth.currentStatus() {
+        case .notDetermined:
+            let granted = await auth.requestAccess()
+            if granted, cameraAvailable() {
+                session.start()
+                state = .running
+            } else {
+                state = .permissionDenied
+            }
+        case .denied, .restricted:
+            state = .permissionDenied
+        case .authorized:
+            guard cameraAvailable() else {
+                state = .cameraUnavailable
+                return
+            }
+            session.start()
+            state = .running
+        @unknown default:
+            state = .permissionDenied
+        }
+    }
 }

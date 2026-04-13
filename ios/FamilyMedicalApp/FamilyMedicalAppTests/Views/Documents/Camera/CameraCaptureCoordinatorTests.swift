@@ -84,4 +84,67 @@ struct CameraCaptureCoordinatorTests {
             Issue.record("Expected .running")
         }
     }
+
+    // MARK: - start()
+
+    @Test
+    func start_fromNotDetermined_granted_transitionsToRunning() async {
+        let fixtures = makeFixtures(authStatus: .notDetermined, accessGranted: true)
+
+        await fixtures.coordinator.start()
+
+        #expect(fixtures.auth.requestAccessCalls == 1)
+        #expect(fixtures.session.startCalls == 1)
+        if case .running = fixtures.coordinator.state {} else {
+            Issue.record("Expected .running after grant, got \(fixtures.coordinator.state)")
+        }
+    }
+
+    @Test
+    func start_fromNotDetermined_denied_transitionsToPermissionDenied() async {
+        let fixtures = makeFixtures(authStatus: .notDetermined, accessGranted: false)
+
+        await fixtures.coordinator.start()
+
+        #expect(fixtures.auth.requestAccessCalls == 1)
+        #expect(fixtures.session.startCalls == 0)
+        if case .permissionDenied = fixtures.coordinator.state {} else {
+            Issue.record("Expected .permissionDenied after deny")
+        }
+    }
+
+    @Test
+    func start_fromAuthorizedWithCamera_startsSessionImmediately() async {
+        let fixtures = makeFixtures(authStatus: .authorized, cameraAvailable: true)
+
+        await fixtures.coordinator.start()
+
+        #expect(fixtures.auth.requestAccessCalls == 0) // already authorized
+        #expect(fixtures.session.startCalls == 1)
+        if case .running = fixtures.coordinator.state {} else {
+            Issue.record("Expected .running")
+        }
+    }
+
+    @Test
+    func start_fromCameraUnavailable_doesNotStartSession() async {
+        let fixtures = makeFixtures(authStatus: .authorized, cameraAvailable: false)
+
+        await fixtures.coordinator.start()
+
+        #expect(fixtures.session.startCalls == 0)
+    }
+
+    @Test
+    func start_fromDenied_doesNotStartSession() async {
+        let fixtures = makeFixtures(authStatus: .denied)
+
+        await fixtures.coordinator.start()
+
+        #expect(fixtures.auth.requestAccessCalls == 0)
+        #expect(fixtures.session.startCalls == 0)
+        if case .permissionDenied = fixtures.coordinator.state {} else {
+            Issue.record("Expected .permissionDenied")
+        }
+    }
 }
