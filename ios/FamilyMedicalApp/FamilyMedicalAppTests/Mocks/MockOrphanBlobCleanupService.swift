@@ -20,6 +20,19 @@ final class MockOrphanBlobCleanupService: OrphanBlobCleanupServiceProtocol, @unc
     var cleanOrphansError: Error?
     var countOrphansError: Error?
 
+    // MARK: - Test Helpers
+
+    /// Resets all call records and stubs to their default values. Use between test cases
+    /// that share a single mock instance.
+    func reset() {
+        cleanOrphansCalls.removeAll()
+        countOrphansCalls.removeAll()
+        cleanOrphansResult = CleanupResult(orphanCount: 0, freedBytes: 0)
+        countOrphansResult = CleanupResult(orphanCount: 0, freedBytes: 0)
+        cleanOrphansError = nil
+        countOrphansError = nil
+    }
+
     // MARK: - OrphanBlobCleanupServiceProtocol
 
     func cleanOrphans(personId: UUID, primaryKey _: SymmetricKey) async throws -> CleanupResult {

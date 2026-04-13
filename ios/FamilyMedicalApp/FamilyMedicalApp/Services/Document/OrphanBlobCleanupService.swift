@@ -62,32 +62,14 @@ final class OrphanBlobCleanupService: OrphanBlobCleanupServiceProtocol, Sendable
         logger.entry("cleanOrphans", "personId=\(personId)")
         do {
             let orphans = try await computeOrphans(personId: personId, primaryKey: primaryKey)
-
-            var deletedCount = 0
-            var freedBytes: UInt64 = 0
-            for hmac in orphans {
+            let (count, bytes) = await sumOrphanSizes(orphans, personId: personId) { hmac in
                 // Size first, delete second. If size fails, skip this HMAC and move on —
                 // one bad file shouldn't abort the sweep. Same for a delete failure.
-                let size: UInt64
-                do {
-                    size = try await blobService.blobSize(contentHMAC: hmac, personId: personId)
-                } catch {
-                    logger.logError(error, context: "OrphanBlobCleanupService.cleanOrphans.blobSize")
-                    continue
-                }
-                do {
-                    try await blobService.deleteDirect(contentHMAC: hmac, personId: personId)
-                } catch {
-                    logger.logError(error, context: "OrphanBlobCleanupService.cleanOrphans.deleteDirect")
-                    continue
-                }
-                deletedCount += 1
-                freedBytes += size
+                try await self.blobService.deleteDirect(contentHMAC: hmac, personId: personId)
             }
-
-            logger.debug("cleanOrphans deleted=\(deletedCount), freedBytes=\(freedBytes)")
+            logger.debug("cleanOrphans deleted=\(count), freedBytes=\(bytes)")
             logger.exit("cleanOrphans", duration: ContinuousClock.now - start)
-            return CleanupResult(orphanCount: deletedCount, freedBytes: freedBytes)
+            return CleanupResult(orphanCount: count, freedBytes: bytes)
         } catch {
             logger.exitWithError("cleanOrphans", error: error, duration: ContinuousClock.now - start)
             throw error
@@ -99,24 +81,9 @@ final class OrphanBlobCleanupService: OrphanBlobCleanupServiceProtocol, Sendable
         logger.entry("countOrphans", "personId=\(personId)")
         do {
             let orphans = try await computeOrphans(personId: personId, primaryKey: primaryKey)
-
-            var count = 0
-            var bytes: UInt64 = 0
-            for hmac in orphans {
-                // Match cleanOrphans semantics: a single unreadable file is skipped,
-                // not fatal. The Settings UI would rather show an approximate count
-                // than an error for one bad blob.
-                let size: UInt64
-                do {
-                    size = try await blobService.blobSize(contentHMAC: hmac, personId: personId)
-                } catch {
-                    logger.logError(error, context: "OrphanBlobCleanupService.countOrphans.blobSize")
-                    continue
-                }
-                count += 1
-                bytes += size
-            }
-
+            // Match cleanOrphans semantics: a single unreadable file is skipped, not fatal.
+            // The Settings UI would rather show an approximate count than an error for one bad blob.
+            let (count, bytes) = await sumOrphanSizes(orphans, personId: personId)
             logger.debug("countOrphans count=\(count), bytes=\(bytes)")
             logger.exit("countOrphans", duration: ContinuousClock.now - start)
             return CleanupResult(orphanCount: count, freedBytes: bytes)
@@ -148,6 +115,50 @@ final class OrphanBlobCleanupService: OrphanBlobCleanupServiceProtocol, Sendable
     }
 
     // MARK: - Private
+
+    /// Iterates `orphans`, calls `blobSize` per item (skipping failures), optionally calls a
+    /// caller-supplied per-item action, and returns the `(count, bytes)` totals.
+    ///
+    /// This is the single source of truth for per-HMAC size accounting shared by
+    /// `cleanOrphans` (which passes a `deleteDirect` action) and `countOrphans` (dry-run,
+    /// no action). Keeping the loop here ensures both methods can't drift in their accounting
+    /// logic.
+    ///
+    /// - Parameters:
+    ///   - orphans: HMACs to process.
+    ///   - personId: The person whose blob store is being scanned.
+    ///   - performPerItem: Optional action to run on each HMAC after a successful `blobSize`.
+    ///     If the action throws, the HMAC is skipped and the failure is logged but not rethrown.
+    /// - Returns: `(count, bytes)` where `count` is the number of HMACs successfully processed
+    ///   and `bytes` is the sum of their sizes.
+    private func sumOrphanSizes(
+        _ orphans: [Data],
+        personId: UUID,
+        performPerItem: ((Data) async throws -> Void)? = nil
+    ) async -> (count: Int, bytes: UInt64) {
+        var count = 0
+        var bytes: UInt64 = 0
+        for hmac in orphans {
+            let size: UInt64
+            do {
+                size = try await blobService.blobSize(contentHMAC: hmac, personId: personId)
+            } catch {
+                logger.logError(error, context: "OrphanBlobCleanupService.sumOrphanSizes.blobSize")
+                continue
+            }
+            if let performPerItem {
+                do {
+                    try await performPerItem(hmac)
+                } catch {
+                    logger.logError(error, context: "OrphanBlobCleanupService.sumOrphanSizes.performPerItem")
+                    continue
+                }
+            }
+            count += 1
+            bytes += size
+        }
+        return (count, bytes)
+    }
 
     /// Collect the orphan HMAC set for a person:
     /// `blobsOnDisk - referencedHMACs - inFlight`.
