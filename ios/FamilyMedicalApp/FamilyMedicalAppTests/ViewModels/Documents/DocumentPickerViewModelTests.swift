@@ -239,6 +239,21 @@ struct DocumentPickerViewModelTests {
     }
 
     @Test
+    func addFromCamera_marksHMACAsInFlight() async throws {
+        let fixtures = makeFixtures()
+        let image = makeTestImage()
+
+        await fixtures.viewModel.addFromCamera(image)
+
+        // storeAndAppend should have marked the stored blob's HMAC as in-flight
+        // so the orphan scanner doesn't reclaim it before the record is saved.
+        #expect(fixtures.blobService.markInFlightCalls.count == 1)
+        let draftHMAC = try #require(fixtures.viewModel.drafts.first?.content.contentHMAC)
+        #expect(fixtures.blobService.markInFlightCalls.first == draftHMAC)
+        #expect(fixtures.blobService.inFlightHMACs.contains(draftHMAC))
+    }
+
+    @Test
     func addFromCamera_populatesDocumentMetadata() async throws {
         let fixtures = makeFixtures()
         let image = makeTestImage()
@@ -278,6 +293,40 @@ struct DocumentPickerViewModelTests {
         fixtures.viewModel.removeDraft(id: UUID())
 
         #expect(fixtures.viewModel.drafts.count == 1)
+    }
+
+    @Test
+    func removeDraft_clearsInFlightForRemovedHMAC() async throws {
+        let fixtures = makeFixtures()
+        let image = makeTestImage()
+        await fixtures.viewModel.addFromCamera(image)
+
+        let draftId = try #require(fixtures.viewModel.drafts.first?.id)
+        let draftHMAC = try #require(fixtures.viewModel.drafts.first?.content.contentHMAC)
+
+        fixtures.viewModel.removeDraft(id: draftId)
+
+        // removeDraft fires its clearInFlight in a detached Task; give it a tick.
+        try await Task.sleep(nanoseconds: 50_000_000)
+
+        #expect(fixtures.viewModel.drafts.isEmpty)
+        #expect(fixtures.blobService.clearInFlightCalls.contains(draftHMAC))
+        #expect(!fixtures.blobService.inFlightHMACs.contains(draftHMAC))
+    }
+
+    @Test
+    func removeDraft_unknownId_doesNotClearInFlight() async throws {
+        let fixtures = makeFixtures()
+        let image = makeTestImage()
+        await fixtures.viewModel.addFromCamera(image)
+
+        fixtures.viewModel.removeDraft(id: UUID())
+
+        // Give any potential background Task a chance to run.
+        try await Task.sleep(nanoseconds: 50_000_000)
+
+        // Nothing should have been cleared — the blob is still pending save.
+        #expect(fixtures.blobService.clearInFlightCalls.isEmpty)
     }
 
     // MARK: - Set Title Tests

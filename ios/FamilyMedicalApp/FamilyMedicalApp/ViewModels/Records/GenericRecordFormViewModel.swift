@@ -352,6 +352,10 @@ final class GenericRecordFormViewModel {
                 let encrypted = try recordContentService.encrypt(attachEnvelope, using: fmk)
                 let attachRecord = MedicalRecord(personId: person.id, encryptedContent: encrypted)
                 try await medicalRecordRepository.save(attachRecord)
+                // Record saved successfully — the blob is no longer speculative, so the
+                // orphan cleanup scan can treat it as a normal reference. A failed save
+                // intentionally leaves the HMAC in-flight so a retry still finds its blob.
+                await pickerVM.clearInFlightForDraft(contentHMAC: docRef.contentHMAC)
             } catch {
                 errorMessage = "Record saved, but some attachments could not be saved."
                 logger.logError(error, context: "GenericRecordFormViewModel.saveAttachmentDrafts")

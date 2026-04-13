@@ -178,9 +178,26 @@ final class DocumentPickerViewModel {
         isLoading = false
     }
 
-    /// Remove a draft. Blob orphan cleanup happens via the delete flow later.
+    /// Remove a draft. Clears in-flight tracking so the orphan cleanup scan can
+    /// reclaim the speculative blob on its next pass. Blob deletion for already-
+    /// saved attachments happens via the delete flow instead.
     func removeDraft(id: UUID) {
-        drafts.removeAll { $0.id == id }
+        guard let index = drafts.firstIndex(where: { $0.id == id }) else { return }
+        let hmac = drafts[index].content.contentHMAC
+        drafts.remove(at: index)
+        // Fire-and-forget: removeDraft is called from the UI and shouldn't become
+        // async just for this side effect. Tests await briefly to observe the clear.
+        Task {
+            await blobService.clearInFlight(contentHMAC: hmac)
+        }
+    }
+
+    /// Clear in-flight tracking for a draft's blob after its record has been saved.
+    /// Exposed so `GenericRecordFormViewModel` can release in-flight state after
+    /// persisting each attachment record, without reaching into the blob service
+    /// directly.
+    func clearInFlightForDraft(contentHMAC: Data) async {
+        await blobService.clearInFlight(contentHMAC: contentHMAC)
     }
 
     /// Update a draft's title.
@@ -232,6 +249,10 @@ final class DocumentPickerViewModel {
             personId: personId,
             primaryKey: primaryKey
         )
+        // Mark the blob as in-flight so the orphan cleanup scan doesn't reclaim it
+        // between now and the form saving the DocumentReferenceRecord. Cleared on
+        // successful record save (via clearInFlightForDraft) or draft removal.
+        await blobService.markInFlight(contentHMAC: stored.contentHMAC)
         let finalTitle: String = switch title {
         case let .verbatim(name):
             name

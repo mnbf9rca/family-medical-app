@@ -161,6 +161,73 @@ struct GenericRecordFormViewModelAttachmentTests {
     }
 
     @Test
+    func save_withPendingAttachments_clearsInFlightForEachSavedAttachment() async throws {
+        let person = try makeTestPerson()
+        let deps = FormViewModelDeps(personId: person.id)
+        let blobService = MockDocumentBlobService()
+        let vm = FormTestSupport.makeViewModel(
+            person: person,
+            recordType: .immunization,
+            deps: deps,
+            blobService: blobService
+        )
+        vm.setValue("Moderna", for: "vaccineCode")
+        vm.setValue(Date(), for: "occurrenceDate")
+
+        await vm.createDocumentPickerIfNeeded()
+        let pickerVM = try #require(vm.documentPickerViewModel)
+        await pickerVM.addFromDocumentPicker([makeTempPDFURL()])
+
+        // storeAndAppend should have marked the blob in-flight.
+        #expect(blobService.markInFlightCalls.count == 1)
+        let draftHMAC = try #require(pickerVM.drafts.first?.content.contentHMAC)
+        #expect(blobService.inFlightHMACs.contains(draftHMAC))
+
+        let ok = await vm.save()
+
+        #expect(ok == true)
+        // After the attachment record save, the form VM should have proxied
+        // clearInFlightForDraft through the picker to the blob service.
+        #expect(blobService.clearInFlightCalls.contains(draftHMAC))
+        #expect(!blobService.inFlightHMACs.contains(draftHMAC))
+    }
+
+    @Test
+    func save_attachmentSaveFails_leavesHMACInFlight() async throws {
+        let person = try makeTestPerson()
+        let deps = FormViewModelDeps(personId: person.id)
+        let blobService = MockDocumentBlobService()
+        let vm = FormTestSupport.makeViewModel(
+            person: person,
+            recordType: .immunization,
+            deps: deps,
+            blobService: blobService
+        )
+        vm.setValue("Moderna", for: "vaccineCode")
+        vm.setValue(Date(), for: "occurrenceDate")
+
+        await vm.createDocumentPickerIfNeeded()
+        let pickerVM = try #require(vm.documentPickerViewModel)
+        await pickerVM.addFromDocumentPicker([makeTempPDFURL()])
+
+        let draftHMAC = try #require(pickerVM.drafts.first?.content.contentHMAC)
+        #expect(blobService.inFlightHMACs.contains(draftHMAC))
+
+        // Fail on attachment save (second call), succeed on parent (first).
+        deps.repo.failOnSaveCallNumber = 2
+
+        let ok = await vm.save()
+
+        // Parent saved, overall returns true but attachment save failed.
+        #expect(ok == true)
+        #expect(vm.errorMessage != nil)
+        // Crucially: in-flight state is NOT cleared for the failed attachment so a
+        // subsequent retry still has the blob on disk.
+        #expect(!blobService.clearInFlightCalls.contains(draftHMAC))
+        #expect(blobService.inFlightHMACs.contains(draftHMAC))
+    }
+
+    @Test
     func save_attachmentSaveError_doesNotFailParent() async throws {
         let person = try makeTestPerson()
         let deps = FormViewModelDeps(personId: person.id)
