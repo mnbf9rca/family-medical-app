@@ -180,6 +180,32 @@ final class CameraCaptureCoordinator {
             }
         }
     }
+
+    // MARK: - Focus
+
+    /// Set the last focus point the user tapped. The view layer observes
+    /// `lastFocusPoint` to drive a tap-to-focus animation; the underlying
+    /// session sets the focus + exposure point of interest.
+    private(set) var lastFocusPoint: CGPoint?
+
+    func focus(at point: CGPoint) {
+        lastFocusPoint = point
+        session.setFocusPoint(point)
+    }
+
+    // MARK: - App lifecycle
+
+    func applicationDidEnterBackground() {
+        session.stop()
+    }
+
+    func applicationWillEnterForeground() async {
+        // Re-evaluate permission and restart the session if we're still
+        // allowed. Users can revoke camera access in Settings while the app
+        // is backgrounded, so this is a real path, not a belt-and-braces
+        // check.
+        await start()
+    }
 }
 
 /// Placeholder delegate. Not actually invoked in tests because
