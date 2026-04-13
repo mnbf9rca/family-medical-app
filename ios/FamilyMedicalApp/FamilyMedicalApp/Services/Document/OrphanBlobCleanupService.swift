@@ -38,7 +38,7 @@ protocol OrphanBlobCleanupServiceProtocol: Sendable {
     func countOrphans(personId: UUID, primaryKey: SymmetricKey) async throws -> CleanupResult
 }
 
-final class OrphanBlobCleanupService: OrphanBlobCleanupServiceProtocol, @unchecked Sendable {
+final class OrphanBlobCleanupService: OrphanBlobCleanupServiceProtocol, Sendable {
     private let blobService: DocumentBlobServiceProtocol
     private let queryService: DocumentReferenceQueryServiceProtocol
     private let logger: TracingCategoryLogger
