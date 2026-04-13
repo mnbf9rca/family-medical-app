@@ -271,4 +271,67 @@ struct DocumentReferenceQueryServiceTests {
 
         #expect(result.isEmpty)
     }
+
+    @Test("allReferencedHMACs deduplicates records sharing the same contentHMAC")
+    func allReferencedHMACs_deduplication() async throws {
+        let ctx = Self.makeFixture()
+        let sharedHMAC = Data([0xAB, 0xCD])
+
+        _ = try Self.persist(
+            DocumentReferenceRecord(title: "A", mimeType: "image/jpeg", fileSize: 1, contentHMAC: sharedHMAC),
+            in: ctx
+        )
+        _ = try Self.persist(
+            DocumentReferenceRecord(title: "B", mimeType: "image/jpeg", fileSize: 1, contentHMAC: sharedHMAC),
+            in: ctx
+        )
+
+        let result = try await ctx.service.allReferencedHMACs(
+            personId: ctx.personId,
+            primaryKey: ctx.primaryKey
+        )
+
+        #expect(result == Set([sharedHMAC]))
+        #expect(result.count == 1)
+    }
+
+    @Test("allReferencedHMACs for one person does not return another person's HMACs")
+    func allReferencedHMACs_perPersonIsolation() async throws {
+        let ctx = Self.makeFixture()
+        let hmacA = Data([0xAA, 0xAA])
+        let hmacB = Data([0xBB, 0xBB])
+
+        // Record for the primary person
+        _ = try Self.persist(
+            DocumentReferenceRecord(title: "personA doc", mimeType: "image/jpeg", fileSize: 1, contentHMAC: hmacA),
+            in: ctx
+        )
+
+        // Build a record for a different person by encrypting with the mock content service
+        // (which ignores the actual key value) and stamping a different personId.
+        let otherPersonId = UUID()
+        let envelope = try RecordContentEnvelope(
+            DocumentReferenceRecord(title: "personB doc", mimeType: "image/jpeg", fileSize: 1, contentHMAC: hmacB)
+        )
+        let encrypted = try ctx.contentService.encrypt(envelope, using: ctx.fmk)
+        let otherRecord = MedicalRecord(
+            id: UUID(),
+            personId: otherPersonId,
+            encryptedContent: encrypted,
+            createdAt: Date(),
+            updatedAt: Date(),
+            version: 1,
+            previousVersionId: nil
+        )
+        ctx.recordRepo.addRecord(otherRecord)
+
+        // Query for ctx.personId — should only get hmacA, not hmacB.
+        let result = try await ctx.service.allReferencedHMACs(
+            personId: ctx.personId,
+            primaryKey: ctx.primaryKey
+        )
+
+        #expect(result == Set([hmacA]))
+        #expect(!result.contains(hmacB))
+    }
 }
