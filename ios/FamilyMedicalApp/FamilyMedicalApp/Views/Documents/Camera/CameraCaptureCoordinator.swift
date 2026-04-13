@@ -27,6 +27,12 @@ final class CameraCaptureCoordinator {
 
     private(set) var state: State
 
+    /// Quality-degradation UI hint set when thermal state goes `.serious` or
+    /// above. Observable by the view so it can show a discreet warning.
+    private(set) var isQualityDegraded: Bool = false
+
+    @ObservationIgnored private var thermalObserver: NSObjectProtocol?
+
     // MARK: - Dependencies
 
     @ObservationIgnored private let auth: AuthorizationStatusProviding
@@ -141,6 +147,38 @@ final class CameraCaptureCoordinator {
     func confirm() -> (Data, UTType)? {
         guard case let .captured(data, type) = state else { return nil }
         return (data, type)
+    }
+
+    // MARK: - Interruption / runtime
+    //
+    // The concrete `CameraCaptureController` subscribes to the relevant
+    // `AVCaptureSession` notifications and forwards them here. Splitting it
+    // this way keeps the coordinator testable without any real session.
+
+    func handleInterruption(began: Bool) {
+        if began {
+            guard case .running = state else { return }
+            state = .interrupted
+        } else {
+            guard case .interrupted = state else { return }
+            state = .running
+        }
+    }
+
+    func handleRuntimeError(_ error: Error) {
+        state = .failed(error)
+    }
+
+    /// Called by `CameraCaptureController` once — registers the thermal
+    /// observer. Separate from `init` so that in unit tests we can construct
+    /// the coordinator and then trigger thermal changes via the fake.
+    func observeThermalState() {
+        isQualityDegraded = thermal.thermalState.rawValue >= ProcessInfo.ThermalState.serious.rawValue
+        thermalObserver = thermal.addObserver { [weak self] newState in
+            Task { @MainActor [weak self] in
+                self?.isQualityDegraded = newState.rawValue >= ProcessInfo.ThermalState.serious.rawValue
+            }
+        }
     }
 }
 

@@ -34,6 +34,7 @@ struct CameraCaptureCoordinatorTests {
             thermal: thermal,
             session: session
         ) { cameraAvailable }
+        coordinator.observeThermalState()
         return TestFixtures(
             coordinator: coordinator,
             auth: auth,
@@ -296,5 +297,101 @@ struct CameraCaptureCoordinatorTests {
         fixtures.coordinator.flipCamera()
 
         #expect(fixtures.session.swapCameraPositionCalls == 0)
+    }
+
+    // MARK: - Interruption and runtime
+
+    @Test
+    func handleInterruption_fromRunning_transitionsToInterrupted() async {
+        let fixtures = makeFixtures()
+        await fixtures.coordinator.start()
+
+        fixtures.coordinator.handleInterruption(began: true)
+
+        if case .interrupted = fixtures.coordinator.state {} else {
+            Issue.record("Expected .interrupted")
+        }
+    }
+
+    @Test
+    func handleInterruption_ended_transitionsBackToRunning() async {
+        let fixtures = makeFixtures()
+        await fixtures.coordinator.start()
+        fixtures.coordinator.handleInterruption(began: true)
+
+        fixtures.coordinator.handleInterruption(began: false)
+
+        if case .running = fixtures.coordinator.state {} else {
+            Issue.record("Expected .running after interruption end")
+        }
+    }
+
+    @Test
+    func handleInterruption_beganFromNonRunning_isNoOp() {
+        let fixtures = makeFixtures(authStatus: .notDetermined)
+
+        fixtures.coordinator.handleInterruption(began: true)
+
+        if case .notDetermined = fixtures.coordinator.state {} else {
+            Issue.record("Expected .notDetermined unchanged")
+        }
+    }
+
+    @Test
+    func handleInterruption_endedFromNonInterrupted_isNoOp() async {
+        let fixtures = makeFixtures()
+        await fixtures.coordinator.start()
+
+        fixtures.coordinator.handleInterruption(began: false)
+
+        if case .running = fixtures.coordinator.state {} else {
+            Issue.record("Expected .running unchanged")
+        }
+    }
+
+    @Test
+    func handleRuntimeError_transitionsToFailed() async {
+        let fixtures = makeFixtures()
+        await fixtures.coordinator.start()
+
+        struct StubError: Error {}
+        fixtures.coordinator.handleRuntimeError(StubError())
+
+        if case .failed = fixtures.coordinator.state {} else {
+            Issue.record("Expected .failed")
+        }
+    }
+
+    // MARK: - Thermal state
+
+    @Test
+    func thermalStateSerious_setsDegradedFlag() async {
+        let fixtures = makeFixtures()
+        await fixtures.coordinator.start()
+
+        fixtures.thermal.simulateThermalChange(.serious)
+        // Let the main-actor observer task run.
+        for _ in 0 ..< 10 {
+            await Task.yield()
+        }
+
+        #expect(fixtures.coordinator.isQualityDegraded == true)
+    }
+
+    @Test
+    func thermalStateNominal_clearsDegradedFlag() async {
+        let fixtures = makeFixtures()
+        await fixtures.coordinator.start()
+        fixtures.thermal.simulateThermalChange(.serious)
+        for _ in 0 ..< 10 {
+            await Task.yield()
+        }
+
+        fixtures.thermal.simulateThermalChange(.nominal)
+        for _ in 0 ..< 10 {
+            await Task.yield()
+        }
+
+        #expect(fixtures.coordinator.isQualityDegraded == false)
     }
 }
