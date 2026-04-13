@@ -87,4 +87,51 @@ final class CameraCaptureCoordinator {
             state = .permissionDenied
         }
     }
+
+    // MARK: - Errors
+
+    enum CameraError: Error {
+        case photoDataUnavailable
+        case captureFailed(underlying: Error)
+    }
+
+    // MARK: - Capture
+
+    /// User tapped the shutter. Transitions `.running → .capturing` and fires
+    /// the capture; the delegate callback will invoke `handlePhoto(_:)` on us
+    /// via `CameraCaptureController`.
+    func capturePhoto() {
+        guard case .running = state else { return }
+        state = .capturing
+        let settings = AVCapturePhotoSettings()
+        // Delegate is owned by `CameraCaptureController`, which forwards the
+        // call back into `handlePhoto` — the coordinator does not conform to
+        // AVCapturePhotoCaptureDelegate directly, to keep this file free of
+        // AVFoundation-specific delegate boilerplate.
+        capturer.capture(with: settings, delegate: PhotoDelegateBridge.shared)
+    }
+
+    /// Called from the glue layer when `didFinishProcessingPhoto` fires.
+    /// This is where the byte-integrity invariant is enforced: the `Data`
+    /// that arrives here is the same `Data` that leaves via `onPhotoCaptured`
+    /// from the view, and the same `Data` that `DocumentBlobService` will
+    /// HMAC and encrypt.
+    func handlePhoto(_ photo: CapturedPhoto) {
+        guard let data = photo.fileData else {
+            state = .failed(CameraError.photoDataUnavailable)
+            return
+        }
+        state = .captured(data, photo.uniformType)
+    }
+}
+
+/// Placeholder delegate. Not actually invoked in tests because
+/// `FakePhotoCapturing.capture` never calls back. `CameraCaptureController`
+/// provides the real delegate in production.
+///
+/// The singleton is stateless — AVCapturePhotoCaptureDelegate methods are
+/// never called on this instance in the coordinator's own code path — so
+/// `@unchecked Sendable` is safe.
+private final class PhotoDelegateBridge: NSObject, AVCapturePhotoCaptureDelegate, @unchecked Sendable {
+    static let shared = PhotoDelegateBridge()
 }

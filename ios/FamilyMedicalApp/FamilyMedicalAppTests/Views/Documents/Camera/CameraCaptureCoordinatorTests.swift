@@ -147,4 +147,81 @@ struct CameraCaptureCoordinatorTests {
             Issue.record("Expected .permissionDenied")
         }
     }
+
+    // MARK: - handlePhoto — byte integrity
+
+    @Test
+    func handlePhoto_heicBytes_transitionsToCapturedWithExactBytes() async {
+        let fixtures = makeFixtures()
+        await fixtures.coordinator.start()
+
+        let heic = SyntheticPhotoFixtures.heicData()
+        let photo = FakeCapturedPhoto(fileData: heic, uniformType: .heic)
+
+        fixtures.coordinator.handlePhoto(photo)
+
+        guard case let .captured(data, type) = fixtures.coordinator.state else {
+            Issue.record("Expected .captured, got \(fixtures.coordinator.state)")
+            return
+        }
+        #expect(data == heic) // byte-for-byte equality — the invariant
+        #expect(data.count == heic.count)
+        #expect(type == .heic)
+    }
+
+    @Test
+    func handlePhoto_jpegBytes_transitionsToCapturedWithExactBytes() async {
+        let fixtures = makeFixtures()
+        await fixtures.coordinator.start()
+
+        let jpeg = SyntheticPhotoFixtures.jpegData()
+        let photo = FakeCapturedPhoto(fileData: jpeg, uniformType: .jpeg)
+
+        fixtures.coordinator.handlePhoto(photo)
+
+        guard case let .captured(data, type) = fixtures.coordinator.state else {
+            Issue.record("Expected .captured")
+            return
+        }
+        #expect(data == jpeg)
+        #expect(type == .jpeg)
+    }
+
+    @Test
+    func handlePhoto_nilData_transitionsToFailed() async {
+        let fixtures = makeFixtures()
+        await fixtures.coordinator.start()
+
+        let photo = FakeCapturedPhoto(fileData: nil, uniformType: .jpeg)
+        fixtures.coordinator.handlePhoto(photo)
+
+        if case .failed = fixtures.coordinator.state {} else {
+            Issue.record("Expected .failed when fileData is nil")
+        }
+    }
+
+    @Test
+    func capturePhoto_fromRunning_transitionsToCapturingAndCalls() async {
+        let fixtures = makeFixtures()
+        await fixtures.coordinator.start()
+
+        fixtures.coordinator.capturePhoto()
+
+        #expect(fixtures.capturer.captureCalls == 1)
+        if case .capturing = fixtures.coordinator.state {} else {
+            Issue.record("Expected .capturing")
+        }
+    }
+
+    @Test
+    func capturePhoto_fromNonRunning_isNoOp() {
+        let fixtures = makeFixtures(authStatus: .notDetermined)
+
+        fixtures.coordinator.capturePhoto()
+
+        #expect(fixtures.capturer.captureCalls == 0)
+        if case .notDetermined = fixtures.coordinator.state {} else {
+            Issue.record("Expected state unchanged")
+        }
+    }
 }
