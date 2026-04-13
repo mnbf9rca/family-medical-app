@@ -60,6 +60,10 @@ final class LaunchOrphanCleanupCoordinator: Sendable {
         }
 
         for person in persons {
+            guard !Task.isCancelled else {
+                logger.debug("Launch cleanup cancelled — aborting remaining persons")
+                break
+            }
             await cleanupOnePerson(person, primaryKey: primaryKey)
         }
 
@@ -89,9 +93,11 @@ final class LaunchOrphanCleanupCoordinator: Sendable {
 
     // MARK: - Private Helpers
 
-    /// Run cleanup for a single person, swallowing errors so siblings keep going.
-    /// Extracted to a helper to keep `runCleanup` flat and its cyclomatic
-    /// complexity low.
+    /// Run cleanup for a single person, swallowing errors so siblings can still be attempted.
+    ///
+    /// Extracted from `runCleanup`'s main loop to make the error-isolation boundary explicit:
+    /// any throw from `cleanOrphans` is logged and absorbed here, so the outer loop always
+    /// advances to the next person.
     private func cleanupOnePerson(_ person: Person, primaryKey: SymmetricKey) async {
         do {
             let result = try await cleanupService.cleanOrphans(
@@ -100,12 +106,13 @@ final class LaunchOrphanCleanupCoordinator: Sendable {
             )
             if result.orphanCount > 0 {
                 logger.info(
-                    "Launch cleanup removed \(result.orphanCount) orphan blobs, freed \(result.freedBytes) bytes"
+                    "Launch cleanup for person \(person.id): removed \(result.orphanCount)" +
+                        " orphan blobs, freed \(result.freedBytes) bytes"
                 )
             }
         } catch {
             // One person's failure must not block siblings or the UI.
-            logger.logError(error, context: "LaunchOrphanCleanupCoordinator.runCleanup.person")
+            logger.logError(error, context: "LaunchOrphanCleanupCoordinator.runCleanup.person[\(person.id)]")
         }
     }
 }

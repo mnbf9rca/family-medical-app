@@ -101,8 +101,8 @@ struct LaunchOrphanCleanupCoordinatorTests {
         #expect(fixture.personRepository.fetchAllCallCount == 1)
     }
 
-    @Test("runCleanup completes cleanly when cleanup reports orphans freed (info-log path)")
-    func runCleanup_logsSummaryOnSuccess() async throws {
+    @Test("runCleanup completes cleanly when a person has orphans freed")
+    func runCleanup_whenOrphansFreed_completesCleanly() async throws {
         let fixture = Self.makeFixture()
         try fixture.personRepository.addPerson(Person(name: "Alice"))
         fixture.cleanupService.cleanOrphansResult = CleanupResult(orphanCount: 3, freedBytes: 1_024)
@@ -111,5 +111,28 @@ struct LaunchOrphanCleanupCoordinatorTests {
 
         // The coordinator must exercise the info-log branch (orphanCount > 0) without crashing
         #expect(fixture.cleanupService.cleanOrphansCalls.count == 1)
+    }
+
+    // MARK: - Cancellation
+
+    @Test("runCleanup skips all persons when Task is already cancelled")
+    func runCleanup_alreadyCancelled_skipsAllPersons() async throws {
+        let fixture = Self.makeFixture()
+        try fixture.personRepository.addPerson(Person(name: "Alice"))
+        try fixture.personRepository.addPerson(Person(name: "Bob"))
+
+        // Create the task and immediately cancel it before awaiting.
+        // Swift's cooperative scheduler won't run the task body until this test
+        // task suspends at `await task.value`, so the task starts life with
+        // isCancelled == true — no timing dependency.
+        let task = Task {
+            await fixture.coordinator.runCleanup()
+        }
+        task.cancel()
+        await task.value
+
+        // The isCancelled guard fires before the first loop iteration, so
+        // cleanOrphans is never called.
+        #expect(fixture.cleanupService.cleanOrphansCalls.isEmpty)
     }
 }
