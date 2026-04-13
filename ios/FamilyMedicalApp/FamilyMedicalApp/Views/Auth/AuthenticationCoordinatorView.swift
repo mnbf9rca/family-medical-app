@@ -77,10 +77,16 @@ struct MainAppView: View {
     @State private var primaryKeyError: String?
 
     private let primaryKeyProvider: PrimaryKeyProviderProtocol
+    private let launchCleanup: LaunchOrphanCleanupCoordinator
 
-    init(viewModel: AuthenticationViewModel, primaryKeyProvider: PrimaryKeyProviderProtocol = PrimaryKeyProvider()) {
+    init(
+        viewModel: AuthenticationViewModel,
+        primaryKeyProvider: PrimaryKeyProviderProtocol = PrimaryKeyProvider(),
+        launchCleanup: LaunchOrphanCleanupCoordinator = LaunchOrphanCleanupCoordinator.makeDefault()
+    ) {
         self.viewModel = viewModel
         self.primaryKeyProvider = primaryKeyProvider
+        self.launchCleanup = launchCleanup
     }
 
     var body: some View {
@@ -138,6 +144,9 @@ struct MainAppView: View {
                     Task {
                         await viewModel.exitDemoMode()
                     }
+                }
+                .task {
+                    await launchCleanup.runCleanup()
                 }
         }
     }
