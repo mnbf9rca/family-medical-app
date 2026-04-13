@@ -21,7 +21,7 @@ final class CameraCaptureCoordinator {
         case running
         case capturing
         case captured(Data, UTType)
-        case interrupted
+        case interrupted(AVCaptureSession.InterruptionReason?)
         case failed(Error)
     }
 
@@ -155,10 +155,14 @@ final class CameraCaptureCoordinator {
     // `AVCaptureSession` notifications and forwards them here. Splitting it
     // this way keeps the coordinator testable without any real session.
 
-    func handleInterruption(began: Bool) {
+    func handleInterruption(began: Bool, reason: AVCaptureSession.InterruptionReason? = nil) {
         if began {
-            guard case .running = state else { return }
-            state = .interrupted
+            switch state {
+            case .capturing, .running:
+                state = .interrupted(reason)
+            default:
+                return // ignore interruption from other states
+            }
         } else {
             guard case .interrupted = state else { return }
             state = .running
@@ -173,10 +177,19 @@ final class CameraCaptureCoordinator {
     /// observer. Separate from `init` so that in unit tests we can construct
     /// the coordinator and then trigger thermal changes via the fake.
     func observeThermalState() {
+        guard thermalObserver == nil else { return }
         isQualityDegraded = thermal.thermalState.rawValue >= ProcessInfo.ThermalState.serious.rawValue
         thermalObserver = thermal.addObserver { [weak self] newState in
             Task { @MainActor [weak self] in
                 self?.isQualityDegraded = newState.rawValue >= ProcessInfo.ThermalState.serious.rawValue
+            }
+        }
+    }
+
+    deinit {
+        MainActor.assumeIsolated {
+            if let token = thermalObserver {
+                NotificationCenter.default.removeObserver(token)
             }
         }
     }

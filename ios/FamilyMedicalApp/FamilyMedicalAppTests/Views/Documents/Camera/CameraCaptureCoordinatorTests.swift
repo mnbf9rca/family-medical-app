@@ -361,6 +361,40 @@ struct CameraCaptureCoordinatorRuntimeTests {
     }
 
     @Test
+    func interruptionBegan_fromCapturing_transitionsToInterrupted() async {
+        let fixtures = CoordinatorTestFixtures.make()
+        await fixtures.coordinator.start()
+        fixtures.coordinator.capturePhoto()
+        // Now .capturing because capturePhoto transitioned to it
+
+        fixtures.coordinator.handleInterruption(began: true, reason: nil)
+
+        if case .interrupted = fixtures.coordinator.state {} else {
+            Issue.record("Expected .interrupted from .capturing")
+        }
+    }
+
+    @Test
+    func interruptionBegan_fromPermissionDenied_isNoOp() {
+        let fixtures = CoordinatorTestFixtures.make(authStatus: .denied)
+
+        fixtures.coordinator.handleInterruption(began: true, reason: nil)
+
+        if case .permissionDenied = fixtures.coordinator.state {} else {
+            Issue.record("Expected .permissionDenied to persist")
+        }
+    }
+
+    @Test
+    func observeThermalState_calledTwice_doesNotAddSecondObserver() {
+        let fixtures = CoordinatorTestFixtures.make()
+        // The fixture helper already called observeThermalState once.
+        fixtures.coordinator.observeThermalState()
+
+        #expect(fixtures.thermal.addObserverCallCount == 1)
+    }
+
+    @Test
     func handleInterruption_endedFromNonInterrupted_isNoOp() async {
         let fixtures = CoordinatorTestFixtures.make()
         await fixtures.coordinator.start()
