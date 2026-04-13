@@ -368,6 +368,9 @@ struct MedicalRecordListViewModelTests {
 
         // Blob deletion proceeds when prefetch succeeds
         #expect(mockBlobService.deleteCalls.count == 1)
-        #expect(mockBlobService.deleteCalls[0] == hmac)
+        let call = try #require(mockBlobService.deleteCalls.first)
+        #expect(call.contentHMAC == hmac)
+        #expect(call.personId == person.id)
+        #expect(call.isReferencedElsewhere == false)
     }
 }

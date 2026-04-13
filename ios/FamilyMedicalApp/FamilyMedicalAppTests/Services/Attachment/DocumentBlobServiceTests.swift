@@ -8,7 +8,7 @@ import UIKit
 struct DocumentBlobServiceTests {
     // MARK: - Fixtures
 
-    private struct Fixture {
+    struct Fixture {
         let service: DocumentBlobService
         let fileStorage: MockDocumentFileStorageService
         let imageProcessor: MockImageProcessingService
@@ -18,7 +18,7 @@ struct DocumentBlobServiceTests {
         let primaryKey: SymmetricKey
     }
 
-    private static func makeFixture() -> Fixture {
+    static func makeFixture() -> Fixture {
         let fileStorage = MockDocumentFileStorageService()
         let imageProcessor = MockImageProcessingService()
         let encryption = MockEncryptionService()
@@ -207,6 +207,46 @@ struct DocumentBlobServiceTests {
         #expect(first.contentHMAC == ctx.fileStorage.storeCalls.first?.contentHMAC)
     }
 
+    @Test("store marks the blob as in-flight atomically with the disk write")
+    func storeMarksBlobAsInFlightAtomically() async throws {
+        let ctx = Self.makeFixture()
+        let stored = try await ctx.service.store(
+            plaintext: Self.makeJPEG(),
+            personId: ctx.personId,
+            primaryKey: ctx.primaryKey
+        )
+        // Immediately after `store` returns, the HMAC MUST already be in-flight.
+        // This pins the race-closing contract: no interleaving window exists where
+        // an orphan scan could observe the on-disk blob without also observing the
+        // in-flight bit, because both mutations are serialized on the same actor.
+        let inFlight = await ctx.service.isInFlight(contentHMAC: stored.contentHMAC)
+        #expect(inFlight)
+    }
+
+    @Test("store marks HMAC in-flight even when the blob already exists (dedup path)")
+    func storeMarksInFlightOnDedup() async throws {
+        let ctx = Self.makeFixture()
+        let first = try await ctx.service.store(
+            plaintext: Self.makePDF(),
+            personId: ctx.personId,
+            primaryKey: ctx.primaryKey
+        )
+        // Clear the in-flight flag so we can observe the second store re-marking it.
+        await ctx.service.clearInFlight(contentHMAC: first.contentHMAC)
+        #expect(await !ctx.service.isInFlight(contentHMAC: first.contentHMAC))
+
+        // Second store of identical bytes hits the dedup branch (no new disk write).
+        let second = try await ctx.service.store(
+            plaintext: Self.makePDF(),
+            personId: ctx.personId,
+            primaryKey: ctx.primaryKey
+        )
+        #expect(first.contentHMAC == second.contentHMAC)
+        // Even on the dedup path, the HMAC must be re-marked in-flight so an
+        // in-progress second save can't be reaped before its own record lands.
+        #expect(await ctx.service.isInFlight(contentHMAC: second.contentHMAC))
+    }
+
     @Test("store validates image via CGImageSource and reports the detected MIME")
     func storeValidatesImageViaCGImageSource() async throws {
         let ctx = Self.makeFixture()
@@ -238,7 +278,7 @@ struct DocumentBlobServiceTests {
         )
         #expect(ctx.encryption.decryptCalls.count == 1)
         #expect(ctx.fileStorage.retrieveCalls.count == 1)
-        #expect(ctx.fileStorage.retrieveCalls.first == stored.contentHMAC)
+        #expect(ctx.fileStorage.retrieveCalls.first?.contentHMAC == stored.contentHMAC)
         // Original bytes are stored unchanged, so round-trip equals the original.
         #expect(decrypted == original)
     }
@@ -259,7 +299,7 @@ struct DocumentBlobServiceTests {
     func retrieveCorruptedBlob() async throws {
         let ctx = Self.makeFixture()
         // Seed storage with arbitrary "encrypted" bytes the mock encryption does not know
-        ctx.fileStorage.addTestData(Data([0x01, 0x02, 0x03]), forHMAC: Data([0xBE, 0xEF]))
+        ctx.fileStorage.addTestData(Data([0x01, 0x02, 0x03]), forHMAC: Data([0xBE, 0xEF]), personId: ctx.personId)
         await #expect(throws: ModelError.self) {
             _ = try await ctx.service.retrieve(
                 contentHMAC: Data([0xBE, 0xEF]),
@@ -276,10 +316,16 @@ struct DocumentBlobServiceTests {
         let ctx = Self.makeFixture()
         try await ctx.service.deleteIfUnreferenced(
             contentHMAC: Data([0xAB, 0xCD]),
+            personId: ctx.personId,
             isReferencedElsewhere: false
         )
         #expect(ctx.fileStorage.deleteCalls.count == 1)
-        #expect(ctx.fileStorage.deleteCalls.first == Data([0xAB, 0xCD]))
+        let call = try #require(ctx.fileStorage.deleteCalls.first)
+        #expect(call.contentHMAC == Data([0xAB, 0xCD]))
+        // personId must be threaded through to the file-storage layer; the service
+        // must never fall back to a random UUID (which would silently miss the
+        // real per-person subdirectory and orphan the blob).
+        #expect(call.personId == ctx.personId)
     }
 
     @Test("deleteIfUnreferenced keeps blob when other records reference it")
@@ -287,8 +333,150 @@ struct DocumentBlobServiceTests {
         let ctx = Self.makeFixture()
         try await ctx.service.deleteIfUnreferenced(
             contentHMAC: Data([0xAB, 0xCD]),
+            personId: ctx.personId,
             isReferencedElsewhere: true
         )
         #expect(ctx.fileStorage.deleteCalls.isEmpty)
+    }
+}
+
+// MARK: - In-Flight Tracking
+
+@Suite("DocumentBlobService In-Flight Tracking")
+private struct DocumentBlobServiceInFlightTests {
+    @Test("markInFlight registers HMAC, clearInFlight unregisters it, isInFlight reflects state")
+    func inFlightRoundTrip() async {
+        let ctx = DocumentBlobServiceTests.makeFixture()
+        let hmac = Data([0x01, 0x02, 0x03])
+
+        let beforeMark = await ctx.service.isInFlight(contentHMAC: hmac)
+        #expect(!beforeMark)
+
+        await ctx.service.markInFlight(contentHMAC: hmac)
+        let afterMark = await ctx.service.isInFlight(contentHMAC: hmac)
+        #expect(afterMark)
+
+        await ctx.service.clearInFlight(contentHMAC: hmac)
+        let afterClear = await ctx.service.isInFlight(contentHMAC: hmac)
+        #expect(!afterClear)
+    }
+
+    @Test("inFlight state is per-HMAC and independent")
+    func inFlightMultipleHMACs() async {
+        let ctx = DocumentBlobServiceTests.makeFixture()
+        let hmacAlpha = Data([0x01])
+        let hmacBeta = Data([0x02])
+
+        await ctx.service.markInFlight(contentHMAC: hmacAlpha)
+        await ctx.service.markInFlight(contentHMAC: hmacBeta)
+        #expect(await ctx.service.isInFlight(contentHMAC: hmacAlpha))
+        #expect(await ctx.service.isInFlight(contentHMAC: hmacBeta))
+
+        await ctx.service.clearInFlight(contentHMAC: hmacAlpha)
+        #expect(await !(ctx.service.isInFlight(contentHMAC: hmacAlpha)))
+        #expect(await ctx.service.isInFlight(contentHMAC: hmacBeta))
+    }
+
+    @Test("markInFlight on an already-in-flight HMAC is idempotent")
+    func inFlightReMarkIsIdempotent() async {
+        let ctx = DocumentBlobServiceTests.makeFixture()
+        let hmac = Data([0x42])
+
+        await ctx.service.markInFlight(contentHMAC: hmac)
+        await ctx.service.markInFlight(contentHMAC: hmac)
+        let present = await ctx.service.isInFlight(contentHMAC: hmac)
+        #expect(present)
+
+        await ctx.service.clearInFlight(contentHMAC: hmac)
+        let absent = await ctx.service.isInFlight(contentHMAC: hmac)
+        #expect(!absent)
+    }
+
+    @Test("In-flight set is race-safe under concurrent mark/query")
+    func inFlightConcurrentStress() async {
+        let ctx = DocumentBlobServiceTests.makeFixture()
+        let hmacs = (0 ..< 50).map { Data([UInt8($0)]) }
+
+        await withTaskGroup(of: Void.self) { group in
+            for hmac in hmacs {
+                group.addTask {
+                    await ctx.service.markInFlight(contentHMAC: hmac)
+                }
+            }
+        }
+
+        for hmac in hmacs {
+            let present = await ctx.service.isInFlight(contentHMAC: hmac)
+            #expect(present, "HMAC should be in flight after concurrent marks")
+        }
+
+        await withTaskGroup(of: Void.self) { group in
+            for hmac in hmacs {
+                group.addTask {
+                    await ctx.service.clearInFlight(contentHMAC: hmac)
+                }
+            }
+        }
+
+        for hmac in hmacs {
+            let present = await ctx.service.isInFlight(contentHMAC: hmac)
+            #expect(!present, "HMAC should be cleared after concurrent clears")
+        }
+    }
+}
+
+// MARK: - Cleanup Pass-Throughs
+
+@Suite("DocumentBlobService Cleanup Pass-Throughs")
+private struct DocumentBlobServiceCleanupTests {
+    @Test("listBlobs delegates to file storage")
+    func listBlobsDelegates() async throws {
+        let ctx = DocumentBlobServiceTests.makeFixture()
+        let hmac1 = Data([0x01])
+        let hmac2 = Data([0x02])
+        ctx.fileStorage.addTestData(Data("a".utf8), forHMAC: hmac1, personId: ctx.personId)
+        ctx.fileStorage.addTestData(Data("b".utf8), forHMAC: hmac2, personId: ctx.personId)
+
+        let blobs = try await ctx.service.listBlobs(personId: ctx.personId)
+        #expect(blobs == [hmac1, hmac2])
+        #expect(ctx.fileStorage.listBlobsCalls == [ctx.personId])
+    }
+
+    @Test("blobSize delegates to file storage")
+    func blobSizeDelegates() async throws {
+        let ctx = DocumentBlobServiceTests.makeFixture()
+        let hmac = Data([0x01])
+        let data = Data(repeating: 0, count: 42)
+        ctx.fileStorage.addTestData(data, forHMAC: hmac, personId: ctx.personId)
+
+        let size = try await ctx.service.blobSize(contentHMAC: hmac, personId: ctx.personId)
+        #expect(size == 42)
+        #expect(ctx.fileStorage.blobSizeCalls.count == 1)
+        #expect(ctx.fileStorage.blobSizeCalls.first?.contentHMAC == hmac)
+        #expect(ctx.fileStorage.blobSizeCalls.first?.personId == ctx.personId)
+    }
+
+    @Test("deleteDirect removes the blob unconditionally")
+    func deleteDirectRemovesBlob() async throws {
+        let ctx = DocumentBlobServiceTests.makeFixture()
+        let hmac = Data([0x01])
+        ctx.fileStorage.addTestData(Data("x".utf8), forHMAC: hmac, personId: ctx.personId)
+
+        try await ctx.service.deleteDirect(contentHMAC: hmac, personId: ctx.personId)
+
+        #expect(!ctx.fileStorage.exists(contentHMAC: hmac, personId: ctx.personId))
+        #expect(ctx.fileStorage.deleteCalls.count == 1)
+    }
+
+    @Test("deleteDirect surfaces file storage errors")
+    func deleteDirectSurfacesErrors() async throws {
+        let ctx = DocumentBlobServiceTests.makeFixture()
+        ctx.fileStorage.shouldFailDelete = true
+        await #expect(throws: ModelError.self) {
+            try await ctx.service.deleteDirect(
+                contentHMAC: Data([0xAA]),
+                personId: ctx.personId
+            )
+        }
     }
 }

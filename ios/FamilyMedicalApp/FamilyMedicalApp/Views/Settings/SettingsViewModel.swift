@@ -14,6 +14,8 @@ final class SettingsViewModel {
     private let passwordValidationService: PasswordValidationServiceProtocol
     private let demoModeService: DemoModeServiceProtocol
     private let logExportService: LogExportServiceProtocol
+    private let cleanupService: OrphanBlobCleanupServiceProtocol
+    private let personRepository: PersonRepositoryProtocol
     private let logger: CategoryLoggerProtocol
 
     // MARK: - Export State
@@ -53,6 +55,15 @@ final class SettingsViewModel {
     var logExportState: LogExportState = .idle
     var exportedLogURL: URL?
     var showingLogShareSheet = false
+
+    // MARK: - Storage Cleanup State
+
+    var isCheckingStorage = false
+    var isCleaningStorage = false
+    var showingCleanupConfirmation = false
+    var showingCleanupResult = false
+    var cleanupDryRunResult: CleanupResult?
+    var cleanupResult: CleanupResult?
 
     enum LogExportState: Equatable {
         case idle
@@ -96,6 +107,8 @@ final class SettingsViewModel {
         passwordValidationService: PasswordValidationServiceProtocol = PasswordValidationService(),
         demoModeService: DemoModeServiceProtocol = DemoModeService(),
         logExportService: LogExportServiceProtocol? = nil,
+        cleanupService: OrphanBlobCleanupServiceProtocol? = nil,
+        personRepository: PersonRepositoryProtocol? = nil,
         logger: CategoryLoggerProtocol? = nil
     ) {
         self.exportService = exportService
@@ -104,6 +117,8 @@ final class SettingsViewModel {
         self.passwordValidationService = passwordValidationService
         self.demoModeService = demoModeService
         self.logExportService = logExportService ?? LogExportService()
+        self.cleanupService = cleanupService ?? OrphanBlobCleanupService.makeDefault()
+        self.personRepository = personRepository ?? DefaultDependencies().personRepository
         self.logger = logger ?? LoggingService.shared.logger(category: .storage)
     }
 
@@ -113,7 +128,8 @@ final class SettingsViewModel {
         return SettingsViewModel(
             exportService: deps.exportService,
             importService: deps.importService,
-            backupFileService: deps.backupFileService
+            backupFileService: deps.backupFileService,
+            personRepository: deps.personRepository
         )
     }
 }
@@ -125,6 +141,7 @@ private struct DefaultDependencies {
     let exportService: ExportServiceProtocol
     let importService: ImportServiceProtocol
     let backupFileService: BackupFileServiceProtocol
+    let personRepository: PersonRepositoryProtocol
 
     init() {
         let coreDataStack = CoreDataStack.shared
@@ -136,6 +153,7 @@ private struct DefaultDependencies {
             encryptionService: encryptionService,
             fmkService: fmkService
         )
+        self.personRepository = personRepository
         let recordRepository = MedicalRecordRepository(coreDataStack: coreDataStack)
         let recordContentService = RecordContentService(encryptionService: encryptionService)
         let providerRepository = ProviderRepository(
@@ -418,6 +436,79 @@ extension SettingsViewModel {
             logger.logError(error, context: "SettingsViewModel.exportDiagnosticLogs")
             logExportState = .error(error.localizedDescription)
         }
+    }
+}
+
+// MARK: - Storage Cleanup
+
+extension SettingsViewModel {
+    /// Run a dry-run orphan scan across all persons. If any orphans are found, surface
+    /// the confirmation dialog; otherwise show a result alert immediately.
+    func checkStorage(primaryKey: SymmetricKey) async {
+        isCheckingStorage = true
+        cleanupDryRunResult = nil
+        cleanupResult = nil
+        errorMessage = nil
+
+        do {
+            let persons = try await personRepository.fetchAll(primaryKey: primaryKey)
+            var totalOrphans = 0
+            var totalBytes: UInt64 = 0
+            for person in persons {
+                let result = try await cleanupService.countOrphans(
+                    personId: person.id,
+                    primaryKey: primaryKey
+                )
+                totalOrphans += result.orphanCount
+                totalBytes += result.freedBytes
+            }
+            let aggregate = CleanupResult(orphanCount: totalOrphans, freedBytes: totalBytes)
+            cleanupDryRunResult = aggregate
+
+            if aggregate.orphanCount > 0 {
+                showingCleanupConfirmation = true
+            } else {
+                cleanupResult = aggregate
+                showingCleanupResult = true
+            }
+        } catch {
+            logger.logError(error, context: "SettingsViewModel.checkStorage")
+            errorMessage = "Unable to check storage. Please try again."
+        }
+
+        isCheckingStorage = false
+    }
+
+    /// Actually delete orphaned blobs for every person. Aggregates counts across persons
+    /// and surfaces the total in the result alert.
+    func performCleanup(primaryKey: SymmetricKey) async {
+        isCleaningStorage = true
+        errorMessage = nil
+        showingCleanupConfirmation = false
+        // Drop the stale dry-run so a future alert body that reads cleanupDryRunResult
+        // after cleanup cannot display a pre-cleanup number next to a post-cleanup one.
+        cleanupDryRunResult = nil
+
+        do {
+            let persons = try await personRepository.fetchAll(primaryKey: primaryKey)
+            var totalOrphans = 0
+            var totalBytes: UInt64 = 0
+            for person in persons {
+                let result = try await cleanupService.cleanOrphans(
+                    personId: person.id,
+                    primaryKey: primaryKey
+                )
+                totalOrphans += result.orphanCount
+                totalBytes += result.freedBytes
+            }
+            cleanupResult = CleanupResult(orphanCount: totalOrphans, freedBytes: totalBytes)
+            showingCleanupResult = true
+        } catch {
+            logger.logError(error, context: "SettingsViewModel.performCleanup")
+            errorMessage = "Some files could not be cleaned up."
+        }
+
+        isCleaningStorage = false
     }
 }
 

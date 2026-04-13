@@ -2,7 +2,7 @@ import CryptoKit
 import Foundation
 
 /// Protocol for Family Member Key (FMK) operations
-protocol FamilyMemberKeyServiceProtocol {
+protocol FamilyMemberKeyServiceProtocol: Sendable {
     /// Generate a new random 256-bit Family Member Key
     /// - Returns: Fresh 256-bit SymmetricKey
     func generateFMK() -> SymmetricKey

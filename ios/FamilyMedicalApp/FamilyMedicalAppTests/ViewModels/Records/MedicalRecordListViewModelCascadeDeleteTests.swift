@@ -160,7 +160,10 @@ struct MedicalRecordListViewModelCascadeDeleteTests {
         #expect(viewModel.records.isEmpty)
         #expect(deps.repo.deleteCallCount == 2)
         #expect(deps.blobService.deleteCalls.count == 1)
-        #expect(deps.blobService.deleteCalls.first == hmac)
+        let call = try #require(deps.blobService.deleteCalls.first)
+        #expect(call.contentHMAC == hmac)
+        #expect(call.personId == person.id)
+        #expect(call.isReferencedElsewhere == false)
     }
 
     // MARK: - DeletionStrategy.keepStandalone

@@ -6,62 +6,6 @@ import UIKit
 
 @MainActor
 struct DocumentPickerViewModelTests {
-    // MARK: - Test Fixtures
-
-    struct TestFixtures {
-        let viewModel: DocumentPickerViewModel
-        let blobService: MockDocumentBlobService
-        let personId: UUID
-        let sourceRecordId: UUID?
-        let primaryKey: SymmetricKey
-    }
-
-    func makeFixtures(
-        sourceRecordId: UUID? = UUID(),
-        existing: [DocumentReferenceRecord] = []
-    ) -> TestFixtures {
-        let blobService = MockDocumentBlobService()
-        let primaryKey = SymmetricKey(size: .bits256)
-        let personId = UUID()
-
-        let viewModel = DocumentPickerViewModel(
-            personId: personId,
-            sourceRecordId: sourceRecordId,
-            primaryKey: primaryKey,
-            existing: existing,
-            blobService: blobService
-        )
-
-        return TestFixtures(
-            viewModel: viewModel,
-            blobService: blobService,
-            personId: personId,
-            sourceRecordId: sourceRecordId,
-            primaryKey: primaryKey
-        )
-    }
-
-    func makeTestImage(size: CGSize = CGSize(width: 100, height: 100)) -> UIImage {
-        let renderer = UIGraphicsImageRenderer(size: size)
-        return renderer.image { ctx in
-            UIColor.blue.setFill()
-            ctx.fill(CGRect(origin: .zero, size: size))
-        }
-    }
-
-    func makeDocumentReference(
-        title: String = "existing.jpg",
-        mimeType: String = "image/jpeg",
-        hmacByte: UInt8 = 0x01
-    ) -> DocumentReferenceRecord {
-        DocumentReferenceRecord(
-            title: title,
-            mimeType: mimeType,
-            fileSize: 1_024,
-            contentHMAC: Data(repeating: hmacByte, count: 32)
-        )
-    }
-
     // MARK: - Initialization Tests
 
     @Test
@@ -239,6 +183,23 @@ struct DocumentPickerViewModelTests {
     }
 
     @Test
+    func addFromCamera_leavesHMACInFlightAfterStore() async throws {
+        let fixtures = makeFixtures()
+        let image = makeTestImage()
+
+        await fixtures.viewModel.addFromCamera(image)
+
+        // `store` atomically marks the HMAC in-flight inside the blob actor, so the
+        // picker VM no longer needs to make an explicit markInFlight call. Assert the
+        // invariant that matters — state — rather than the mechanism — call count.
+        let draftHMAC = try #require(fixtures.viewModel.drafts.first?.content.contentHMAC)
+        #expect(fixtures.blobService.inFlightHMACs.contains(draftHMAC))
+        // The public markInFlight entry point should NOT have been called: `store`
+        // is responsible for the common path and uses direct set insertion.
+        #expect(fixtures.blobService.markInFlightCalls.isEmpty)
+    }
+
+    @Test
     func addFromCamera_populatesDocumentMetadata() async throws {
         let fixtures = makeFixtures()
         let image = makeTestImage()
@@ -278,6 +239,50 @@ struct DocumentPickerViewModelTests {
         fixtures.viewModel.removeDraft(id: UUID())
 
         #expect(fixtures.viewModel.drafts.count == 1)
+    }
+
+    @Test
+    func removeDraft_clearsInFlightForRemovedHMAC() async throws {
+        let fixtures = makeFixtures()
+        let image = makeTestImage()
+        await fixtures.viewModel.addFromCamera(image)
+
+        let draftId = try #require(fixtures.viewModel.drafts.first?.id)
+        let draftHMAC = try #require(fixtures.viewModel.drafts.first?.content.contentHMAC)
+        // Precondition: the blob is in-flight — established by the atomic `store`
+        // contract rather than by an explicit markInFlight call.
+        #expect(fixtures.blobService.inFlightHMACs.contains(draftHMAC))
+
+        fixtures.viewModel.removeDraft(id: draftId)
+
+        // removeDraft fires its clearInFlight in a detached Task. Deterministic wait:
+        // yield up to 20 event-loop turns for the clear to land. This fails fast if
+        // the clear never happens and avoids the timing flakiness of Task.sleep.
+        for _ in 0 ..< 20 {
+            await Task.yield()
+            if !fixtures.blobService.inFlightHMACs.contains(draftHMAC) { break }
+        }
+
+        #expect(fixtures.viewModel.drafts.isEmpty)
+        #expect(fixtures.blobService.clearInFlightCalls.contains(draftHMAC))
+        #expect(!fixtures.blobService.inFlightHMACs.contains(draftHMAC))
+    }
+
+    @Test
+    func removeDraft_unknownId_doesNotClearInFlight() async {
+        let fixtures = makeFixtures()
+        let image = makeTestImage()
+        await fixtures.viewModel.addFromCamera(image)
+
+        fixtures.viewModel.removeDraft(id: UUID())
+
+        // Yield a bounded number of turns to give any stray background Task a chance
+        // to run. Nothing should have been cleared — the blob is still pending save.
+        for _ in 0 ..< 20 {
+            await Task.yield()
+        }
+
+        #expect(fixtures.blobService.clearInFlightCalls.isEmpty)
     }
 
     // MARK: - Set Title Tests
@@ -351,5 +356,67 @@ struct DocumentPickerViewModelTests {
     func showingDocumentPicker_initiallyFalse() {
         let fixtures = makeFixtures()
         #expect(!fixtures.viewModel.showingDocumentPicker)
+    }
+}
+
+// MARK: - Fixtures and Helpers
+//
+// Lifted into an extension so they don't contribute to the primary type's
+// body-length budget (SwiftLint `type_body_length`).
+
+@MainActor
+extension DocumentPickerViewModelTests {
+    struct TestFixtures {
+        let viewModel: DocumentPickerViewModel
+        let blobService: MockDocumentBlobService
+        let personId: UUID
+        let sourceRecordId: UUID?
+        let primaryKey: SymmetricKey
+    }
+
+    func makeFixtures(
+        sourceRecordId: UUID? = UUID(),
+        existing: [DocumentReferenceRecord] = []
+    ) -> TestFixtures {
+        let blobService = MockDocumentBlobService()
+        let primaryKey = SymmetricKey(size: .bits256)
+        let personId = UUID()
+
+        let viewModel = DocumentPickerViewModel(
+            personId: personId,
+            sourceRecordId: sourceRecordId,
+            primaryKey: primaryKey,
+            existing: existing,
+            blobService: blobService
+        )
+
+        return TestFixtures(
+            viewModel: viewModel,
+            blobService: blobService,
+            personId: personId,
+            sourceRecordId: sourceRecordId,
+            primaryKey: primaryKey
+        )
+    }
+
+    func makeTestImage(size: CGSize = CGSize(width: 100, height: 100)) -> UIImage {
+        let renderer = UIGraphicsImageRenderer(size: size)
+        return renderer.image { ctx in
+            UIColor.blue.setFill()
+            ctx.fill(CGRect(origin: .zero, size: size))
+        }
+    }
+
+    func makeDocumentReference(
+        title: String = "existing.jpg",
+        mimeType: String = "image/jpeg",
+        hmacByte: UInt8 = 0x01
+    ) -> DocumentReferenceRecord {
+        DocumentReferenceRecord(
+            title: title,
+            mimeType: mimeType,
+            fileSize: 1_024,
+            contentHMAC: Data(repeating: hmacByte, count: 32)
+        )
     }
 }

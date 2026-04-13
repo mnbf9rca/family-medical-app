@@ -40,6 +40,13 @@ protocol DocumentReferenceQueryServiceProtocol: Sendable {
         personId: UUID,
         primaryKey: SymmetricKey
     ) async throws -> Bool
+
+    /// Returns the set of all contentHMAC values referenced by DocumentReferenceRecords for the person.
+    /// Used by orphan cleanup to compute the set of blobs that are still referenced.
+    func allReferencedHMACs(
+        personId: UUID,
+        primaryKey: SymmetricKey
+    ) async throws -> Set<Data>
 }
 
 final class DocumentReferenceQueryService: DocumentReferenceQueryServiceProtocol, @unchecked Sendable {
@@ -88,6 +95,14 @@ final class DocumentReferenceQueryService: DocumentReferenceQueryServiceProtocol
     ) async throws -> Bool {
         let all = try await fetchAllDocumentReferences(personId: personId, primaryKey: primaryKey)
         return all.contains { $0.recordId != excludingRecordId && $0.content.contentHMAC == contentHMAC }
+    }
+
+    func allReferencedHMACs(
+        personId: UUID,
+        primaryKey: SymmetricKey
+    ) async throws -> Set<Data> {
+        let docs = try await fetchAllDocumentReferences(personId: personId, primaryKey: primaryKey)
+        return Set(docs.map(\.content.contentHMAC))
     }
 
     // MARK: - Private

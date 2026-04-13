@@ -178,9 +178,37 @@ final class DocumentPickerViewModel {
         isLoading = false
     }
 
-    /// Remove a draft. Blob orphan cleanup happens via the delete flow later.
+    /// Remove a draft. Clears in-flight tracking so the orphan cleanup scan can
+    /// reclaim the speculative blob on its next pass. Blob deletion for already-
+    /// saved attachments happens via the delete flow instead.
+    ///
+    /// The clearInFlight call is dispatched asynchronously from a fire-and-forget
+    /// Task, so a cleanup scan that runs between `removeDraft` and the clear landing
+    /// will still skip the blob on that pass. This is self-healing: the very next
+    /// scan will see the HMAC is no longer in-flight and reclaim it.
     func removeDraft(id: UUID) {
-        drafts.removeAll { $0.id == id }
+        guard let index = drafts.firstIndex(where: { $0.id == id }) else { return }
+        let hmac = drafts[index].content.contentHMAC
+        drafts.remove(at: index)
+        // Fire-and-forget: removeDraft is called from the UI and shouldn't become
+        // async just for this side effect. Tests await briefly to observe the clear.
+        Task {
+            await blobService.clearInFlight(contentHMAC: hmac)
+        }
+    }
+
+    /// Clear in-flight tracking for a draft's blob after its record has been saved.
+    /// Exposed so `GenericRecordFormViewModel` can release in-flight state after
+    /// persisting each attachment record, without reaching into the blob service
+    /// directly.
+    ///
+    /// Do NOT call this on form cancellation or save failure — use `removeDraft`
+    /// instead, which preserves retry semantics by keeping the blob on disk for a
+    /// subsequent save attempt. Calling `clearInFlightForDraft` without having
+    /// persisted the referencing record leaves the blob unprotected against the
+    /// next cleanup scan.
+    func clearInFlightForDraft(contentHMAC: Data) async {
+        await blobService.clearInFlight(contentHMAC: contentHMAC)
     }
 
     /// Update a draft's title.
@@ -227,6 +255,10 @@ final class DocumentPickerViewModel {
     }
 
     private func storeAndAppend(plaintext: Data, title: TitleStrategy) async throws {
+        // `store` atomically marks the resulting HMAC as in-flight on the blob actor,
+        // so the orphan cleanup scanner cannot observe the on-disk blob without also
+        // observing the in-flight bit. The in-flight state is released on successful
+        // record save (via `clearInFlightForDraft`) or on draft removal.
         let stored = try await blobService.store(
             plaintext: plaintext,
             personId: personId,
