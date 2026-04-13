@@ -355,8 +355,16 @@ final class GenericRecordFormViewModel {
                 // Record saved successfully — the blob is no longer speculative, so the
                 // orphan cleanup scan can treat it as a normal reference. A failed save
                 // intentionally leaves the HMAC in-flight so a retry still finds its blob.
+                //
+                // Edge case: if the user abandons the form after a partial-failure save
+                // (some attachments cleared, others still in-flight), the leftover
+                // in-flight entries persist until process exit. That's a process-local
+                // leak, not a disk leak — the next launch's cleanup scan reclaims the
+                // blob once the in-flight set is re-initialized empty. Acceptable for
+                // the sake of preserving retry semantics on the common path.
                 await pickerVM.clearInFlightForDraft(contentHMAC: docRef.contentHMAC)
             } catch {
+                // Intentionally do NOT clearInFlight here — see success branch comment.
                 errorMessage = "Record saved, but some attachments could not be saved."
                 logger.logError(error, context: "GenericRecordFormViewModel.saveAttachmentDrafts")
             }

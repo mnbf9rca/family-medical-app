@@ -176,20 +176,34 @@ struct GenericRecordFormViewModelAttachmentTests {
 
         await vm.createDocumentPickerIfNeeded()
         let pickerVM = try #require(vm.documentPickerViewModel)
-        await pickerVM.addFromDocumentPicker([makeTempPDFURL()])
+        // Two distinct PDFs so their SHA256-based synthetic HMACs don't collide.
+        // The mock's synthetic HMAC is computed from the raw bytes, so different
+        // payloads guarantee two separate in-flight entries and two clearInFlight
+        // calls on save — the "for each" part of the test's promise.
+        await pickerVM.addFromDocumentPicker([
+            makeTempPDFURL(payload: "content-one"),
+            makeTempPDFURL(payload: "content-two")
+        ])
 
-        // storeAndAppend should have marked the blob in-flight.
-        #expect(blobService.markInFlightCalls.count == 1)
-        let draftHMAC = try #require(pickerVM.drafts.first?.content.contentHMAC)
-        #expect(blobService.inFlightHMACs.contains(draftHMAC))
+        #expect(pickerVM.drafts.count == 2)
+        // Atomic `store` contract: both drafts are in-flight immediately after append,
+        // without any explicit markInFlight call from the picker VM.
+        let firstHMAC = try #require(pickerVM.drafts.first?.content.contentHMAC)
+        let secondHMAC = try #require(pickerVM.drafts.last?.content.contentHMAC)
+        #expect(firstHMAC != secondHMAC)
+        #expect(blobService.inFlightHMACs.contains(firstHMAC))
+        #expect(blobService.inFlightHMACs.contains(secondHMAC))
 
         let ok = await vm.save()
 
         #expect(ok == true)
         // After the attachment record save, the form VM should have proxied
-        // clearInFlightForDraft through the picker to the blob service.
-        #expect(blobService.clearInFlightCalls.contains(draftHMAC))
-        #expect(!blobService.inFlightHMACs.contains(draftHMAC))
+        // clearInFlightForDraft through the picker to the blob service for EACH
+        // saved attachment — not just the first.
+        #expect(blobService.clearInFlightCalls.contains(firstHMAC))
+        #expect(blobService.clearInFlightCalls.contains(secondHMAC))
+        #expect(!blobService.inFlightHMACs.contains(firstHMAC))
+        #expect(!blobService.inFlightHMACs.contains(secondHMAC))
     }
 
     @Test
@@ -363,11 +377,13 @@ struct GenericRecordFormViewModelAttachmentTests {
         return DecryptedRecord(record: record, envelope: envelope)
     }
 
-    private func makeTempPDFURL() -> URL {
+    private func makeTempPDFURL(payload: String = "test content") -> URL {
         let tempDir = FileManager.default.temporaryDirectory
         let fileURL = tempDir.appendingPathComponent("test_\(UUID().uuidString).pdf")
-        // PDF magic bytes
-        let pdfData = Data("%PDF-1.4 test content".utf8)
+        // PDF magic bytes plus caller-chosen payload so distinct calls produce
+        // distinct byte sequences (and therefore distinct SHA256-based HMACs in
+        // the mock blob service — important for multi-attachment tests).
+        let pdfData = Data("%PDF-1.4 \(payload)".utf8)
         try? pdfData.write(to: fileURL)
         return fileURL
     }

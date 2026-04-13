@@ -207,6 +207,46 @@ struct DocumentBlobServiceTests {
         #expect(first.contentHMAC == ctx.fileStorage.storeCalls.first?.contentHMAC)
     }
 
+    @Test("store marks the blob as in-flight atomically with the disk write")
+    func storeMarksBlobAsInFlightAtomically() async throws {
+        let ctx = Self.makeFixture()
+        let stored = try await ctx.service.store(
+            plaintext: Self.makeJPEG(),
+            personId: ctx.personId,
+            primaryKey: ctx.primaryKey
+        )
+        // Immediately after `store` returns, the HMAC MUST already be in-flight.
+        // This pins the race-closing contract: no interleaving window exists where
+        // an orphan scan could observe the on-disk blob without also observing the
+        // in-flight bit, because both mutations are serialized on the same actor.
+        let inFlight = await ctx.service.isInFlight(contentHMAC: stored.contentHMAC)
+        #expect(inFlight)
+    }
+
+    @Test("store marks HMAC in-flight even when the blob already exists (dedup path)")
+    func storeMarksInFlightOnDedup() async throws {
+        let ctx = Self.makeFixture()
+        let first = try await ctx.service.store(
+            plaintext: Self.makePDF(),
+            personId: ctx.personId,
+            primaryKey: ctx.primaryKey
+        )
+        // Clear the in-flight flag so we can observe the second store re-marking it.
+        await ctx.service.clearInFlight(contentHMAC: first.contentHMAC)
+        #expect(await !ctx.service.isInFlight(contentHMAC: first.contentHMAC))
+
+        // Second store of identical bytes hits the dedup branch (no new disk write).
+        let second = try await ctx.service.store(
+            plaintext: Self.makePDF(),
+            personId: ctx.personId,
+            primaryKey: ctx.primaryKey
+        )
+        #expect(first.contentHMAC == second.contentHMAC)
+        // Even on the dedup path, the HMAC must be re-marked in-flight so an
+        // in-progress second save can't be reaped before its own record lands.
+        #expect(await ctx.service.isInFlight(contentHMAC: second.contentHMAC))
+    }
+
     @Test("store validates image via CGImageSource and reports the detected MIME")
     func storeValidatesImageViaCGImageSource() async throws {
         let ctx = Self.makeFixture()

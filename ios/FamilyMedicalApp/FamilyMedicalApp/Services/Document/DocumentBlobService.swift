@@ -11,6 +11,13 @@ protocol DocumentBlobServiceProtocol: Sendable {
     /// Encrypt, store, and return storage metadata for a plaintext blob. The content type
     /// is detected from the bytes themselves (PDF via `%PDF-` magic bytes, images via
     /// CGImageSource); callers do not pass a MIME hint.
+    ///
+    /// Stored blobs are automatically marked in-flight as part of the same actor-isolated
+    /// body that writes the blob to disk — no interleaving window exists where the orphan
+    /// cleanup scanner could observe the on-disk blob without also observing the in-flight
+    /// bit. Callers must `clearInFlight` after the referencing record is saved, or
+    /// `clearInFlight` (typically via `removeDraft`) when the draft is discarded, otherwise
+    /// the cleanup scanner will perpetually skip the blob for the process lifetime.
     func store(
         plaintext: Data,
         personId: UUID,
@@ -54,6 +61,12 @@ protocol DocumentBlobServiceProtocol: Sendable {
     /// Mark a content HMAC as "currently being written" so the cleanup scanner
     /// does not delete it as an orphan during the gap between blob storage
     /// and Core Data commit.
+    ///
+    /// The common `store`-then-save flow does NOT need to call this: `store` marks
+    /// its output HMAC in-flight as part of the same actor-serialized body that
+    /// writes the blob. This entry point is retained for external callers (mocks,
+    /// import flows, future features) that want to mark an HMAC without first
+    /// calling `store`.
     func markInFlight(contentHMAC: Data) async
 
     /// Clear a previously marked in-flight HMAC (on commit or rollback).
@@ -149,6 +162,13 @@ actor DocumentBlobService: DocumentBlobServiceProtocol {
                 _ = try fileStorage.store(encryptedData: encrypted, contentHMAC: hmac, personId: personId)
                 encryptedSize = encrypted.count
             }
+            // Atomically mark the HMAC in-flight inside this same actor-isolated method
+            // body, before returning. Because the insert and the file-storage write are
+            // both serialized on this actor, no cleanup scanner can observe the on-disk
+            // blob without also observing the in-flight bit — closing the race where a
+            // scan would otherwise delete a just-stored blob before the caller's record
+            // save could reference it.
+            inFlightHMACs.insert(hmac)
             logger.exit("store", duration: ContinuousClock.now - start)
             return StoredBlob(
                 contentHMAC: hmac,

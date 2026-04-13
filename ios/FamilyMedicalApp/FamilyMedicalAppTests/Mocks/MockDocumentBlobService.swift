@@ -86,11 +86,16 @@ final class MockDocumentBlobService: DocumentBlobServiceProtocol, @unchecked Sen
         if let storeError {
             throw storeError
         }
+        // Mirror the real DocumentBlobService contract: `store` marks its HMAC in-flight
+        // atomically as part of the same call, so viewmodel tests running against the
+        // mock observe the same in-flight state they would against the real actor.
         if let storeResult {
+            inFlightHMACs.insert(storeResult.contentHMAC)
             return storeResult
         }
         let hmac = Data(SHA256.hash(data: plaintext))
         let thumbnail: Data? = detectedMimeStub.lowercased().hasPrefix("image/") ? Data([0xAA, 0xBB]) : nil
+        inFlightHMACs.insert(hmac)
         return DocumentBlobService.StoredBlob(
             contentHMAC: hmac,
             encryptedSize: plaintext.count,
