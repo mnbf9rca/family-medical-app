@@ -485,6 +485,9 @@ extension SettingsViewModel {
         isCleaningStorage = true
         errorMessage = nil
         showingCleanupConfirmation = false
+        // Drop the stale dry-run so a future alert body that reads cleanupDryRunResult
+        // after cleanup cannot display a pre-cleanup number next to a post-cleanup one.
+        cleanupDryRunResult = nil
 
         do {
             let persons = try await personRepository.fetchAll(primaryKey: primaryKey)

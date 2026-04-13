@@ -39,6 +39,11 @@ final class LaunchOrphanCleanupCoordinator: Sendable {
     /// fails, the method logs and returns silently. If any individual person's
     /// cleanup throws, the error is logged and the sweep continues with the
     /// next person.
+    ///
+    /// Safe to call multiple times per process — SwiftUI's `.task` modifier
+    /// re-fires on every `MainAppView` appearance (cold launch, lock → unlock,
+    /// reauth), and the scan is idempotent: already-referenced blobs are
+    /// skipped, already-deleted blobs are no-ops.
     func runCleanup() async {
         let start = ContinuousClock.now
         logger.entry("runCleanup")

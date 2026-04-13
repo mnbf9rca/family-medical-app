@@ -62,9 +62,10 @@ final class OrphanBlobCleanupService: OrphanBlobCleanupServiceProtocol, Sendable
         logger.entry("cleanOrphans", "personId=\(personId)")
         do {
             let orphans = try await computeOrphans(personId: personId, primaryKey: primaryKey)
+            // `sumOrphanSizes` enforces size-first ordering and per-HMAC error isolation;
+            // this closure only has to issue the delete. A thrown deleteDirect is logged
+            // and the sweep continues with the next orphan.
             let (count, bytes) = await sumOrphanSizes(orphans, personId: personId) { hmac in
-                // Size first, delete second. If size fails, skip this HMAC and move on —
-                // one bad file shouldn't abort the sweep. Same for a delete failure.
                 try await self.blobService.deleteDirect(contentHMAC: hmac, personId: personId)
             }
             logger.debug("cleanOrphans deleted=\(count), freedBytes=\(bytes)")
