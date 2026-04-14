@@ -98,7 +98,7 @@ struct DocumentPickerView: View {
 
     private var addButton: some View {
         Menu {
-            if CameraRepresentable.isCameraAvailable {
+            if CameraCaptureController.hasAnyCamera {
                 Button {
                     viewModel.showingCamera = true
                 } label: {
