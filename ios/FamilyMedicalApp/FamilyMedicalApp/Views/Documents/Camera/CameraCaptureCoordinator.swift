@@ -31,7 +31,7 @@ final class CameraCaptureCoordinator {
     /// above. Observable by the view so it can show a discreet warning.
     private(set) var isQualityDegraded: Bool = false
 
-    @ObservationIgnored private var thermalObserver: NSObjectProtocol?
+    @ObservationIgnored private var thermalObserverBox: ThermalObserverBox?
 
     // MARK: - Dependencies
 
@@ -173,22 +173,21 @@ final class CameraCaptureCoordinator {
     /// Called by `CameraCaptureController` once — registers the thermal
     /// observer. Separate from `init` so that in unit tests we can construct
     /// the coordinator and then trigger thermal changes via the fake.
+    ///
+    /// The token is wrapped in a `ThermalObserverBox` whose own `deinit`
+    /// unregisters from `NotificationCenter`. This pattern avoids needing a
+    /// `MainActor.assumeIsolated` call in the coordinator's `deinit`, which
+    /// would trap when ARC releases the coordinator from a non-main thread
+    /// (causing hangs in unit-test teardown).
     func observeThermalState() {
-        guard thermalObserver == nil else { return }
+        guard thermalObserverBox == nil else { return }
         isQualityDegraded = thermal.thermalState.rawValue >= ProcessInfo.ThermalState.serious.rawValue
-        thermalObserver = thermal.addObserver { [weak self] newState in
+        let token = thermal.addObserver { [weak self] newState in
             Task { @MainActor [weak self] in
                 self?.isQualityDegraded = newState.rawValue >= ProcessInfo.ThermalState.serious.rawValue
             }
         }
-    }
-
-    deinit {
-        MainActor.assumeIsolated {
-            if let token = thermalObserver {
-                NotificationCenter.default.removeObserver(token)
-            }
-        }
+        thermalObserverBox = ThermalObserverBox(token: token)
     }
 
     // MARK: - Focus
@@ -215,5 +214,23 @@ final class CameraCaptureCoordinator {
         // is backgrounded, so this is a real path, not a belt-and-braces
         // check.
         await start()
+    }
+}
+
+// MARK: - ThermalObserverBox
+
+/// RAII wrapper for a `NotificationCenter` observer token. Its `deinit`
+/// unregisters the observer, so releasing the box is enough to clean up
+/// the subscription. `NotificationCenter.removeObserver` is documented
+/// as thread-safe, so no actor isolation is required in `deinit`.
+private final class ThermalObserverBox: @unchecked Sendable {
+    private let token: NSObjectProtocol
+
+    init(token: NSObjectProtocol) {
+        self.token = token
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(token)
     }
 }
