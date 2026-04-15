@@ -72,12 +72,10 @@ struct DocumentPickerView: View {
             )
         }
         .fullScreenCover(isPresented: $viewModel.showingCamera) {
-            CameraRepresentable(
-                onImageCaptured: { image in
+            CameraCaptureView(
+                onPhotoCaptured: { data, type in
                     viewModel.showingCamera = false
-                    Task {
-                        await viewModel.addFromCamera(image)
-                    }
+                    Task { await viewModel.addFromCameraData(data, type: type) }
                 },
                 onCancel: {
                     viewModel.showingCamera = false
@@ -100,7 +98,7 @@ struct DocumentPickerView: View {
 
     private var addButton: some View {
         Menu {
-            if CameraRepresentable.isCameraAvailable {
+            if CameraCaptureController.hasAnyCamera {
                 Button {
                     viewModel.showingCamera = true
                 } label: {

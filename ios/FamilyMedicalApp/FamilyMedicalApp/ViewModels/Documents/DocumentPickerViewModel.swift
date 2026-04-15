@@ -3,7 +3,7 @@ import Foundation
 import Observation
 import PhotosUI
 import SwiftUI
-import UIKit
+import UniformTypeIdentifiers
 
 /// ViewModel for selecting and managing DocumentReferenceRecord drafts in a medical record form.
 ///
@@ -123,8 +123,13 @@ final class DocumentPickerViewModel {
 
     // MARK: - Actions
 
-    /// Add a draft from a camera-captured image.
-    func addFromCamera(_ image: UIImage) async {
+    /// Add a draft from raw camera bytes.
+    ///
+    /// The bytes flow untouched through `storeAndAppend` to `DocumentBlobService`, which
+    /// detects the MIME from content. The `type` parameter is accepted for API
+    /// self-description and future extensibility but is not consulted here — the blob
+    /// service is the single source of truth for MIME detection.
+    func addFromCameraData(_ data: Data, type _: UTType) async {
         guard canAddMore else {
             errorMessage = ModelError.documentLimitExceeded(max: Self.maxPerRecord).userFacingMessage
             return
@@ -132,20 +137,14 @@ final class DocumentPickerViewModel {
         isLoading = true
         errorMessage = nil
         do {
-            // UIImagePickerController hands us an already-decoded UIImage, so the camera's
-            // original encoded bytes are not recoverable here; we re-encode to JPEG.
-            // See Issue #160 for the AVCapturePhotoOutput rework that would lift this.
-            guard let imageData = image.jpegData(compressionQuality: 0.9) else {
-                throw ModelError.imageProcessingFailed(reason: "Could not convert image to JPEG")
-            }
             let baseName = "Photo_\(Self.formatTimestamp(dateProvider()))"
-            try await storeAndAppend(plaintext: imageData, title: .derived(baseName: baseName))
+            try await storeAndAppend(plaintext: data, title: .derived(baseName: baseName))
         } catch let error as ModelError {
             errorMessage = error.userFacingMessage
-            logger.logError(error, context: "DocumentPickerViewModel.addFromCamera")
+            logger.logError(error, context: "DocumentPickerViewModel.addFromCameraData")
         } catch {
             errorMessage = "Unable to add photo. Please try again."
-            logger.logError(error, context: "DocumentPickerViewModel.addFromCamera")
+            logger.logError(error, context: "DocumentPickerViewModel.addFromCameraData")
         }
         isLoading = false
     }

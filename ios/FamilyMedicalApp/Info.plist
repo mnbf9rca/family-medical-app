@@ -49,5 +49,7 @@
 	<true/>
 	<key>UIFileSharingEnabled</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Family Medical App uses the camera to photograph documents, prescription labels, and other records you want to attach to a family member's medical history. Photos are encrypted on your device and only synced or shared when you choose to.</string>
 </dict>
 </plist>

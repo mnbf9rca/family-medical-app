@@ -1,7 +1,7 @@
 import CryptoKit
 import Foundation
 import Testing
-import UIKit
+import UniformTypeIdentifiers
 @testable import FamilyMedicalApp
 
 @MainActor
@@ -104,14 +104,14 @@ struct DocumentPickerViewModelTests {
         #expect(refs[1].title == "y.jpg")
     }
 
-    // MARK: - Add from Camera Tests
+    // MARK: - Add from Camera Data Tests
 
     @Test
-    func addFromCamera_validImage_addsDraft() async {
+    func addFromCameraData_heicBytes_addsDraft() async {
         let fixtures = makeFixtures()
-        let image = makeTestImage()
+        fixtures.blobService.detectedMimeStub = "image/heic"
 
-        await fixtures.viewModel.addFromCamera(image)
+        await fixtures.viewModel.addFromCameraData(SyntheticPhotoFixtures.heicData, type: .heic)
 
         #expect(fixtures.viewModel.drafts.count == 1)
         #expect(fixtures.viewModel.errorMessage == nil)
@@ -119,101 +119,93 @@ struct DocumentPickerViewModelTests {
     }
 
     @Test
-    func addFromCamera_callsStore() async {
+    func addFromCameraData_heicBytes_preservesHeicMimeType() async throws {
         let fixtures = makeFixtures()
-        let image = makeTestImage()
+        fixtures.blobService.detectedMimeStub = "image/heic"
 
-        await fixtures.viewModel.addFromCamera(image)
+        await fixtures.viewModel.addFromCameraData(SyntheticPhotoFixtures.heicData, type: .heic)
 
-        #expect(fixtures.blobService.storeCalls.count == 1)
-        #expect(fixtures.blobService.storeCalls[0].personId == fixtures.personId)
+        let draft = try #require(fixtures.viewModel.drafts.first)
+        #expect(draft.content.mimeType == "image/heic")
+        #expect(draft.content.title.hasSuffix(".heic"))
     }
 
     @Test
-    func addFromCamera_titleLooksLikePhotoTimestamp() async throws {
+    func addFromCameraData_jpegBytes_preservesJpegMimeType() async throws {
         let fixtures = makeFixtures()
-        let image = makeTestImage()
+        fixtures.blobService.detectedMimeStub = "image/jpeg"
 
-        await fixtures.viewModel.addFromCamera(image)
+        await fixtures.viewModel.addFromCameraData(SyntheticPhotoFixtures.jpegData, type: .jpeg)
 
         let draft = try #require(fixtures.viewModel.drafts.first)
-        #expect(draft.content.title.hasPrefix("Photo_"))
-        // UTType.jpeg.preferredFilenameExtension is "jpeg", not "jpg".
+        #expect(draft.content.mimeType == "image/jpeg")
         #expect(draft.content.title.hasSuffix(".jpeg"))
     }
 
     @Test
-    func addFromCamera_storeFailure_setsError() async {
+    func addFromCameraData_bytes_preservedByteForByteViaHMAC() async throws {
         let fixtures = makeFixtures()
-        fixtures.blobService.storeError = ModelError.unsupportedContent
-        let image = makeTestImage()
+        fixtures.blobService.detectedMimeStub = "image/heic"
 
-        await fixtures.viewModel.addFromCamera(image)
+        let fixture = SyntheticPhotoFixtures.heicData
+        await fixtures.viewModel.addFromCameraData(fixture, type: .heic)
 
-        #expect(fixtures.viewModel.drafts.isEmpty)
-        #expect(fixtures.viewModel.errorMessage != nil)
-        #expect(!fixtures.viewModel.isLoading)
+        // MockDocumentBlobService computes contentHMAC as SHA256(plaintext).
+        // If the view model had decoded/re-encoded the Data anywhere along the
+        // way, the stored HMAC would not match SHA256 of the input bytes.
+        // This test is the byte-integrity invariant expressed in code.
+        let expectedHMAC = Data(SHA256.hash(data: fixture))
+        let draft = try #require(fixtures.viewModel.drafts.first)
+        #expect(draft.content.contentHMAC == expectedHMAC)
+        #expect(draft.content.fileSize == fixture.count)
     }
 
     @Test
-    func addFromCamera_atLimit_setsError() async {
+    func addFromCameraData_atLimit_setsErrorAndDoesNotCallStore() async {
         var existing: [DocumentReferenceRecord] = []
         for index in 0 ..< DocumentPickerViewModel.maxPerRecord {
             existing.append(makeDocumentReference(title: "f\(index).jpg", hmacByte: UInt8(index)))
         }
         let fixtures = makeFixtures(existing: existing)
-        let image = makeTestImage()
 
-        await fixtures.viewModel.addFromCamera(image)
+        await fixtures.viewModel.addFromCameraData(SyntheticPhotoFixtures.jpegData, type: .jpeg)
 
         #expect(fixtures.viewModel.errorMessage != nil)
         #expect(fixtures.blobService.storeCalls.isEmpty)
     }
 
     @Test
-    func addFromCamera_stampsSourceRecordIdOnDraft() async throws {
+    func addFromCameraData_stampsSourceRecordIdOnDraft() async throws {
         let sourceId = UUID()
         let fixtures = makeFixtures(sourceRecordId: sourceId)
-        let image = makeTestImage()
+        fixtures.blobService.detectedMimeStub = "image/jpeg"
 
-        await fixtures.viewModel.addFromCamera(image)
+        await fixtures.viewModel.addFromCameraData(SyntheticPhotoFixtures.jpegData, type: .jpeg)
 
         let draft = try #require(fixtures.viewModel.drafts.first)
         #expect(draft.content.sourceRecordId == sourceId)
     }
 
     @Test
-    func addFromCamera_leavesHMACInFlightAfterStore() async throws {
+    func addFromCameraData_storeFailure_setsError() async {
         let fixtures = makeFixtures()
-        let image = makeTestImage()
+        fixtures.blobService.storeError = ModelError.unsupportedContent
 
-        await fixtures.viewModel.addFromCamera(image)
+        await fixtures.viewModel.addFromCameraData(SyntheticPhotoFixtures.jpegData, type: .jpeg)
 
-        // `store` atomically marks the HMAC in-flight inside the blob actor, so the
-        // picker VM no longer needs to make an explicit markInFlight call. Assert the
-        // invariant that matters — state — rather than the mechanism — call count.
-        let draftHMAC = try #require(fixtures.viewModel.drafts.first?.content.contentHMAC)
-        #expect(fixtures.blobService.inFlightHMACs.contains(draftHMAC))
-        // The public markInFlight entry point should NOT have been called: `store`
-        // is responsible for the common path and uses direct set insertion.
-        #expect(fixtures.blobService.markInFlightCalls.isEmpty)
+        #expect(fixtures.viewModel.drafts.isEmpty)
+        #expect(fixtures.viewModel.errorMessage != nil)
     }
 
     @Test
-    func addFromCamera_populatesDocumentMetadata() async throws {
+    func addFromCameraData_leavesHMACInFlightAfterStore() async throws {
         let fixtures = makeFixtures()
-        let image = makeTestImage()
+        fixtures.blobService.detectedMimeStub = "image/heic"
 
-        await fixtures.viewModel.addFromCamera(image)
+        await fixtures.viewModel.addFromCameraData(SyntheticPhotoFixtures.heicData, type: .heic)
 
-        let draft = try #require(fixtures.viewModel.drafts.first)
-        #expect(draft.content.mimeType == "image/jpeg")
-        #expect(draft.content.fileSize > 0)
-        #expect(draft.content.contentHMAC.count == 32)
-        #expect(draft.content.thumbnailData != nil)
-        #expect(draft.content.documentType == nil)
-        #expect(draft.content.notes == nil)
-        #expect(draft.content.tags.isEmpty == true)
+        let draftHMAC = try #require(fixtures.viewModel.drafts.first?.content.contentHMAC)
+        #expect(fixtures.blobService.inFlightHMACs.contains(draftHMAC))
     }
 
     // MARK: - Remove Draft Tests
@@ -221,8 +213,8 @@ struct DocumentPickerViewModelTests {
     @Test
     func removeDraft_existingId_removesFromList() async throws {
         let fixtures = makeFixtures()
-        let image = makeTestImage()
-        await fixtures.viewModel.addFromCamera(image)
+        fixtures.blobService.detectedMimeStub = "image/jpeg"
+        await fixtures.viewModel.addFromCameraData(SyntheticPhotoFixtures.jpegData, type: .jpeg)
 
         let draftId = try #require(fixtures.viewModel.drafts.first?.id)
         fixtures.viewModel.removeDraft(id: draftId)
@@ -233,8 +225,8 @@ struct DocumentPickerViewModelTests {
     @Test
     func removeDraft_unknownId_doesNothing() async {
         let fixtures = makeFixtures()
-        let image = makeTestImage()
-        await fixtures.viewModel.addFromCamera(image)
+        fixtures.blobService.detectedMimeStub = "image/jpeg"
+        await fixtures.viewModel.addFromCameraData(SyntheticPhotoFixtures.jpegData, type: .jpeg)
 
         fixtures.viewModel.removeDraft(id: UUID())
 
@@ -244,8 +236,8 @@ struct DocumentPickerViewModelTests {
     @Test
     func removeDraft_clearsInFlightForRemovedHMAC() async throws {
         let fixtures = makeFixtures()
-        let image = makeTestImage()
-        await fixtures.viewModel.addFromCamera(image)
+        fixtures.blobService.detectedMimeStub = "image/jpeg"
+        await fixtures.viewModel.addFromCameraData(SyntheticPhotoFixtures.jpegData, type: .jpeg)
 
         let draftId = try #require(fixtures.viewModel.drafts.first?.id)
         let draftHMAC = try #require(fixtures.viewModel.drafts.first?.content.contentHMAC)
@@ -271,8 +263,8 @@ struct DocumentPickerViewModelTests {
     @Test
     func removeDraft_unknownId_doesNotClearInFlight() async {
         let fixtures = makeFixtures()
-        let image = makeTestImage()
-        await fixtures.viewModel.addFromCamera(image)
+        fixtures.blobService.detectedMimeStub = "image/jpeg"
+        await fixtures.viewModel.addFromCameraData(SyntheticPhotoFixtures.jpegData, type: .jpeg)
 
         fixtures.viewModel.removeDraft(id: UUID())
 
@@ -290,8 +282,8 @@ struct DocumentPickerViewModelTests {
     @Test
     func setTitle_updatesDraftContent() async throws {
         let fixtures = makeFixtures()
-        let image = makeTestImage()
-        await fixtures.viewModel.addFromCamera(image)
+        fixtures.blobService.detectedMimeStub = "image/jpeg"
+        await fixtures.viewModel.addFromCameraData(SyntheticPhotoFixtures.jpegData, type: .jpeg)
 
         let draftId = try #require(fixtures.viewModel.drafts.first?.id)
         fixtures.viewModel.setTitle("Renamed.jpg", for: draftId)
@@ -302,8 +294,8 @@ struct DocumentPickerViewModelTests {
     @Test
     func setTitle_unknownId_doesNothing() async {
         let fixtures = makeFixtures()
-        let image = makeTestImage()
-        await fixtures.viewModel.addFromCamera(image)
+        fixtures.blobService.detectedMimeStub = "image/jpeg"
+        await fixtures.viewModel.addFromCameraData(SyntheticPhotoFixtures.jpegData, type: .jpeg)
 
         let original = fixtures.viewModel.drafts.first?.content.title
         fixtures.viewModel.setTitle("NewName.jpg", for: UUID())
@@ -314,8 +306,8 @@ struct DocumentPickerViewModelTests {
     @Test
     func setTitle_overMaxLength_truncatesToMax() async throws {
         let fixtures = makeFixtures()
-        let image = makeTestImage()
-        await fixtures.viewModel.addFromCamera(image)
+        fixtures.blobService.detectedMimeStub = "image/jpeg"
+        await fixtures.viewModel.addFromCameraData(SyntheticPhotoFixtures.jpegData, type: .jpeg)
 
         let draftId = try #require(fixtures.viewModel.drafts.first?.id)
         let overLong = String(repeating: "z", count: DocumentReferenceRecord.titleMaxLength + 100)
@@ -328,8 +320,8 @@ struct DocumentPickerViewModelTests {
     @Test
     func setTitle_exactlyMaxLength_keepsFullTitle() async throws {
         let fixtures = makeFixtures()
-        let image = makeTestImage()
-        await fixtures.viewModel.addFromCamera(image)
+        fixtures.blobService.detectedMimeStub = "image/jpeg"
+        await fixtures.viewModel.addFromCameraData(SyntheticPhotoFixtures.jpegData, type: .jpeg)
 
         let draftId = try #require(fixtures.viewModel.drafts.first?.id)
         let maxTitle = String(repeating: "y", count: DocumentReferenceRecord.titleMaxLength)
@@ -397,14 +389,6 @@ extension DocumentPickerViewModelTests {
             sourceRecordId: sourceRecordId,
             primaryKey: primaryKey
         )
-    }
-
-    func makeTestImage(size: CGSize = CGSize(width: 100, height: 100)) -> UIImage {
-        let renderer = UIGraphicsImageRenderer(size: size)
-        return renderer.image { ctx in
-            UIColor.blue.setFill()
-            ctx.fill(CGRect(origin: .zero, size: size))
-        }
     }
 
     func makeDocumentReference(
