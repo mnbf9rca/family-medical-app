@@ -231,6 +231,7 @@ struct CameraCaptureCoordinatorCaptureTests {
         fixtures.coordinator.capturePhoto()
 
         #expect(fixtures.capturer.captureCalls == 1)
+        #expect(fixtures.capturer.settingsRequested == 1)
         if case .capturing = fixtures.coordinator.state {} else {
             Issue.record("Expected .capturing")
         }
@@ -447,6 +448,49 @@ struct CameraCaptureCoordinatorRuntimeTests {
         }
 
         #expect(fixtures.coordinator.isQualityDegraded == false)
+    }
+
+    @Test
+    func thermalStateSerious_downgradesQualityOnSession() async {
+        let fixtures = CoordinatorTestFixtures.make()
+        await fixtures.coordinator.start()
+
+        fixtures.thermal.simulateThermalChange(.serious)
+        for _ in 0 ..< 10 {
+            await Task.yield()
+        }
+
+        #expect(fixtures.session.qualityPrioritizationCalls.last == .balanced)
+    }
+
+    @Test
+    func thermalStateNominal_restoresQualityOnSession() async {
+        let fixtures = CoordinatorTestFixtures.make()
+        await fixtures.coordinator.start()
+        fixtures.thermal.simulateThermalChange(.serious)
+        for _ in 0 ..< 10 {
+            await Task.yield()
+        }
+
+        fixtures.thermal.simulateThermalChange(.nominal)
+        for _ in 0 ..< 10 {
+            await Task.yield()
+        }
+
+        #expect(fixtures.session.qualityPrioritizationCalls.last == .quality)
+    }
+
+    @Test
+    func resetFocus_clearsLastFocusPoint() async {
+        let fixtures = CoordinatorTestFixtures.make()
+        await fixtures.coordinator.start()
+        fixtures.coordinator.focus(at: CGPoint(x: 0.3, y: 0.7))
+        #expect(fixtures.coordinator.lastFocusPoint != nil)
+
+        fixtures.coordinator.resetFocus()
+
+        #expect(fixtures.coordinator.lastFocusPoint == nil)
+        #expect(fixtures.session.setFocusPointCalls.last == CGPoint(x: 0.5, y: 0.5))
     }
 
     @Test

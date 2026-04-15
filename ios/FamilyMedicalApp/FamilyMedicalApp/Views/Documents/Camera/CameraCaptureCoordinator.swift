@@ -107,10 +107,15 @@ final class CameraCaptureCoordinator {
     /// the capture. The concrete `PhotoCapturing` implementation owns the
     /// delegate relationship and forwards the resulting photo back into
     /// `handlePhoto(_:)` on the main actor.
+    ///
+    /// Settings are built by the capturer so the coordinator does not need
+    /// to reach into `AVCapturePhotoOutput.availablePhotoCodecTypes` — the
+    /// live implementation negotiates HEVC when supported, the fake returns
+    /// a stub.
     func capturePhoto() {
         guard case .running = state else { return }
         state = .capturing
-        let settings = AVCapturePhotoSettings()
+        let settings = capturer.makeCaptureSettings()
         capturer.capture(with: settings)
     }
 
@@ -181,13 +186,23 @@ final class CameraCaptureCoordinator {
     /// (causing hangs in unit-test teardown).
     func observeThermalState() {
         guard thermalObserverBox == nil else { return }
-        isQualityDegraded = thermal.thermalState.rawValue >= ProcessInfo.ThermalState.serious.rawValue
+        applyThermalState(thermal.thermalState)
         let token = thermal.addObserver { [weak self] newState in
             Task { @MainActor [weak self] in
-                self?.isQualityDegraded = newState.rawValue >= ProcessInfo.ThermalState.serious.rawValue
+                self?.applyThermalState(newState)
             }
         }
         thermalObserverBox = ThermalObserverBox(token: token)
+    }
+
+    /// Flip the `isQualityDegraded` hint and push the new
+    /// `maxPhotoQualityPrioritization` down to the session so the next
+    /// capture actually respects the thermal budget. Called synchronously
+    /// on the initial observe and again from the observer handler.
+    private func applyThermalState(_ state: ProcessInfo.ThermalState) {
+        let degraded = state.rawValue >= ProcessInfo.ThermalState.serious.rawValue
+        isQualityDegraded = degraded
+        session.setQualityPrioritization(degraded ? .balanced : .quality)
     }
 
     // MARK: - Focus
@@ -200,6 +215,14 @@ final class CameraCaptureCoordinator {
     func focus(at point: CGPoint) {
         lastFocusPoint = point
         session.setFocusPoint(point)
+    }
+
+    /// Reset the focus point back to the center of the frame and clear the
+    /// last-focus hint so the view removes the yellow focus square. Invoked
+    /// by a double-tap gesture in `CameraCaptureView`.
+    func resetFocus() {
+        lastFocusPoint = nil
+        session.setFocusPoint(CGPoint(x: 0.5, y: 0.5))
     }
 
     // MARK: - App lifecycle
@@ -221,8 +244,13 @@ final class CameraCaptureCoordinator {
 
 /// RAII wrapper for a `NotificationCenter` observer token. Its `deinit`
 /// unregisters the observer, so releasing the box is enough to clean up
-/// the subscription. `NotificationCenter.removeObserver` is documented
-/// as thread-safe, so no actor isolation is required in `deinit`.
+/// the subscription.
+///
+/// `@unchecked Sendable` is safe here because the wrapped token is an
+/// immutable `NSObjectProtocol` reference, `NotificationCenter.removeObserver`
+/// is documented thread-safe, and the box is never mutated after init.
+/// This pattern replaces a main-actor-isolated `deinit` that would trap
+/// when ARC released the coordinator off-main (see commit dea92aa).
 private final class ThermalObserverBox: @unchecked Sendable {
     private let token: NSObjectProtocol
 

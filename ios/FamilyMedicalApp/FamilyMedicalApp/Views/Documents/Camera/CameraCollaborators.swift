@@ -35,6 +35,12 @@ struct LiveAuthorizationStatusProvider: AuthorizationStatusProviding {
 /// from a main-actor context).
 @MainActor
 protocol PhotoCapturing: AnyObject {
+    /// Build a settings object for the next capture. The production
+    /// implementation consults `AVCapturePhotoOutput.availablePhotoCodecTypes`
+    /// and explicitly asks for HEVC when the device supports it; the fake
+    /// returns a default-init stub. Called once per shutter press just
+    /// before `capture(with:)`.
+    func makeCaptureSettings() -> AVCapturePhotoSettings
     func capture(with settings: AVCapturePhotoSettings)
 }
 
@@ -71,7 +77,8 @@ final class LiveThermalStateProvider: ThermalStateProviding {
 
 /// Wraps the subset of `AVCaptureSession` the coordinator actually drives.
 /// Tests use a fake to observe `start()`/`stop()`/`swapCameraPosition()`/
-/// `setFocusPoint(_:)` calls without running a real session.
+/// `setFocusPoint(_:)`/`setQualityPrioritization(_:)` calls without running
+/// a real session.
 protocol SessionController: AnyObject {
     var isRunning: Bool { get }
     func start()
@@ -82,6 +89,10 @@ protocol SessionController: AnyObject {
     /// Set the focus + exposure point of interest in normalized device
     /// coordinates (0,0 is top-left, 1,1 is bottom-right).
     func setFocusPoint(_ point: CGPoint)
+    /// Update the photo output's `maxPhotoQualityPrioritization`. Called
+    /// when thermal state changes: `.quality` when nominal, `.balanced`
+    /// when the device is hot. Dispatched onto the session queue.
+    func setQualityPrioritization(_ prioritization: AVCapturePhotoOutput.QualityPrioritization)
 }
 
 // MARK: - LiveSessionController
@@ -142,6 +153,12 @@ final class LiveSessionController: SessionController, @unchecked Sendable {
             }
             installInput(for: newPosition)
             currentPosition = newPosition
+        }
+    }
+
+    func setQualityPrioritization(_ prioritization: AVCapturePhotoOutput.QualityPrioritization) {
+        sessionQueue.async { [photoOutput] in
+            photoOutput.maxPhotoQualityPrioritization = prioritization
         }
     }
 

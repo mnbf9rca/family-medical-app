@@ -21,6 +21,11 @@ final class CameraCaptureController: NSObject {
     private let photoOutput: AVCapturePhotoOutput
     private let sessionQueue: DispatchQueue
     private let liveSession: LiveSessionController
+    /// Drives `AVCaptureConnection.videoRotationAngle` at capture time so
+    /// the HEIC/JPEG pixels match the UI orientation. iOS 17+ replacement
+    /// for the deprecated `videoOrientation`. Optional because simulators
+    /// and devices without a camera have no `AVCaptureDevice` to bind to.
+    private let rotationCoordinator: AVCaptureDevice.RotationCoordinator?
 
     override init() {
         let session = AVCaptureSession()
@@ -42,6 +47,18 @@ final class CameraCaptureController: NSObject {
         self.liveSession = liveSession
         previewLayer = AVCaptureVideoPreviewLayer(session: session)
         previewLayer.videoGravity = .resizeAspectFill
+
+        // The rotation coordinator needs the physical `AVCaptureDevice`
+        // plus the preview layer. `LiveSessionController.installInput`
+        // discovers the device asynchronously on the session queue, so we
+        // resolve it here instead for the coordinator binding. This is
+        // only observed from the main actor.
+        if let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back)
+            ?? AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front) {
+            rotationCoordinator = AVCaptureDevice.RotationCoordinator(device: device, previewLayer: previewLayer)
+        } else {
+            rotationCoordinator = nil
+        }
 
         // `forwarder` breaks the chicken-and-egg: the coordinator needs a
         // `PhotoCapturing` at init, and the capturer needs `self`. The
@@ -74,7 +91,23 @@ final class CameraCaptureController: NSObject {
     }
 
     fileprivate func performCapture(with settings: AVCapturePhotoSettings) {
+        if let angle = rotationCoordinator?.videoRotationAngleForHorizonLevelCapture,
+           let connection = photoOutput.connection(with: .video),
+           connection.isVideoRotationAngleSupported(angle) {
+            connection.videoRotationAngle = angle
+        }
         photoOutput.capturePhoto(with: settings, delegate: self)
+    }
+
+    /// Build `AVCapturePhotoSettings` that explicitly request HEVC when the
+    /// `AVCapturePhotoOutput` advertises it (all iPhone 7+ devices). Falls
+    /// back to the default JPEG settings otherwise. Called from
+    /// `PhotoCaptureForwarder.makeCaptureSettings()`.
+    fileprivate func makeCaptureSettingsFromOutput() -> AVCapturePhotoSettings {
+        if photoOutput.availablePhotoCodecTypes.contains(.hevc) {
+            return AVCapturePhotoSettings(format: [AVVideoCodecKey: AVVideoCodecType.hevc.rawValue])
+        }
+        return AVCapturePhotoSettings()
     }
 
     private func subscribeToSessionNotifications() {
@@ -161,9 +194,18 @@ private struct ExtractedCapturedPhoto: CapturedPhoto {
 /// `PhotoCapturing` is `@MainActor`; the forwarder's call runs synchronously
 /// on the main actor and reaches the controller's `performCapture(with:)`
 /// directly — no `Task` hop.
+///
+/// Ownership: `CameraCaptureController` → `CameraCaptureCoordinator` →
+/// (strong) `PhotoCaptureForwarder` → (weak) `CameraCaptureController`.
+/// The weak back-reference is load-bearing — do not make it strong, or the
+/// controller will never deallocate.
 @MainActor
 private final class PhotoCaptureForwarder: PhotoCapturing {
     weak var controller: CameraCaptureController?
+
+    func makeCaptureSettings() -> AVCapturePhotoSettings {
+        controller?.makeCaptureSettingsFromOutput() ?? AVCapturePhotoSettings()
+    }
 
     func capture(with settings: AVCapturePhotoSettings) {
         controller?.performCapture(with: settings)

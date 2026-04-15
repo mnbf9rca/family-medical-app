@@ -8,6 +8,12 @@ import Foundation
 @MainActor
 final class FakePhotoCapturing: PhotoCapturing {
     private(set) var captureCalls: Int = 0
+    private(set) var settingsRequested: Int = 0
+
+    func makeCaptureSettings() -> AVCapturePhotoSettings {
+        settingsRequested += 1
+        return AVCapturePhotoSettings()
+    }
 
     func capture(with _: AVCapturePhotoSettings) {
         captureCalls += 1

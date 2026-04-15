@@ -25,6 +25,31 @@ struct CameraCaptureView: View {
     // never touch AVFoundation.
     @State private var controller: CameraCaptureController?
     @State private var focusSquareLocation: CGPoint?
+    /// Tracks the previous coordinator state's case-kind so the `.onChange`
+    /// handler can recognise specific transitions (running→capturing,
+    /// capturing→captured) for VoiceOver announcements without needing
+    /// `CameraCaptureCoordinator.State` to be `Equatable` (its associated
+    /// values include `Error`, which isn't).
+    @State private var lastAnnouncedStateKind: StateKind?
+
+    /// Coarse-grained tag for `CameraCaptureCoordinator.State` used only
+    /// to drive VoiceOver-announcement edge detection.
+    private enum StateKind {
+        case notDetermined, running, capturing, captured, interrupted, denied, unavailable, failed
+    }
+
+    private func kind(of state: CameraCaptureCoordinator.State) -> StateKind {
+        switch state {
+        case .notDetermined: .notDetermined
+        case .running: .running
+        case .capturing: .capturing
+        case .captured: .captured
+        case .interrupted: .interrupted
+        case .permissionDenied: .denied
+        case .cameraUnavailable: .unavailable
+        case .failed: .failed
+        }
+    }
 
     @Environment(\.scenePhase)
     private var scenePhase
@@ -40,8 +65,15 @@ struct CameraCaptureView: View {
             Color.black.ignoresSafeArea()
             if let controller {
                 content(controller: controller)
+                    .onChange(of: kind(of: controller.coordinator.state)) { _, newKind in
+                        announceIfNeeded(newKind: newKind)
+                    }
             }
         }
+        // Deliberate lazy init. `CameraCaptureController()` creates a real
+        // `AVCaptureSession`; constructing it at struct-init time wedges
+        // Swift Testing on the simulator's flaky HEVC encoder. See commit
+        // 704d8aa and docs/superpowers/specs/2026-04-15-camera-test-hang-research.md.
         .task {
             let active: CameraCaptureController
             if let existing = controller {
@@ -54,6 +86,22 @@ struct CameraCaptureView: View {
         }
         .onChange(of: scenePhase) { _, newPhase in
             handleScenePhase(newPhase)
+        }
+    }
+
+    /// Emit a VoiceOver announcement for shutter-press and capture-complete
+    /// transitions. Accessibility announcements are not suppressed under
+    /// reduce-motion: they are an accessibility feature, not a motion effect.
+    private func announceIfNeeded(newKind: StateKind) {
+        defer { lastAnnouncedStateKind = newKind }
+        guard let previous = lastAnnouncedStateKind else { return }
+        if previous == .running, newKind == .capturing {
+            UIAccessibility.post(notification: .announcement, argument: "Capturing")
+        } else if previous == .capturing, newKind == .captured {
+            UIAccessibility.post(
+                notification: .announcement,
+                argument: "Photo captured, ready to use or retake"
+            )
         }
     }
 
@@ -83,7 +131,12 @@ struct CameraCaptureView: View {
         case let .captured(data, type):
             confirmSheet(controller: controller, data: data, type: type)
         case .interrupted:
-            messageScreen(icon: "pause.circle", title: "Camera paused", subtitle: "Resuming when available")
+            messageScreen(
+                icon: "pause.circle",
+                title: "Camera paused",
+                subtitle: "Resuming when available",
+                dismissAction: onCancel
+            )
         case .permissionDenied:
             deniedScreen
         case .cameraUnavailable:
@@ -103,6 +156,12 @@ struct CameraCaptureView: View {
                     SpatialTapGesture()
                         .onEnded { value in
                             handleFocusTap(controller: controller, at: value.location)
+                        }
+                )
+                .simultaneousGesture(
+                    TapGesture(count: 2)
+                        .onEnded {
+                            handleDoubleTapReset(controller: controller)
                         }
                 )
             if let point = focusSquareLocation {
@@ -167,6 +226,15 @@ struct CameraCaptureView: View {
         withAnimation(.easeOut(duration: 0.25)) { focusSquareLocation = location }
         Task { @MainActor in
             try? await Task.sleep(nanoseconds: 600_000_000)
+            withAnimation(.easeIn(duration: 0.15)) { focusSquareLocation = nil }
+        }
+    }
+
+    private func handleDoubleTapReset(controller: CameraCaptureController) {
+        controller.coordinator.resetFocus()
+        if reduceMotion {
+            focusSquareLocation = nil
+        } else {
             withAnimation(.easeIn(duration: 0.15)) { focusSquareLocation = nil }
         }
     }
