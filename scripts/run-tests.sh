@@ -148,11 +148,32 @@ rm -rf test-results* DerivedData/TestResults.xcresult
 # Disable hardware keyboard to prevent password autofill prompts from blocking XCUITest automation
 echo "Configuring simulator for UI testing..."
 
-# Extract device name from destination (e.g., "iPhone 17 Pro" from "platform=iOS Simulator,name=iPhone 17 Pro")
-DEVICE_NAME=$(echo "$DESTINATION" | sed -n 's/.*name=\([^,]*\).*/\1/p')
+# Parse destination as comma-separated key=value pairs.
+# xcodebuild accepts either name=... or id=... to identify a simulator; we require exactly one.
+DEVICE_NAME=""
+DEVICE_ID=""
+IFS=',' read -ra DEST_PARTS <<< "$DESTINATION"
+for part in "${DEST_PARTS[@]}"; do
+  case "$part" in
+    name=*) DEVICE_NAME="${part#name=}" ;;
+    id=*)   DEVICE_ID="${part#id=}" ;;
+  esac
+done
 
-# Find UDID for the device from simctl list
-if [ -n "$DEVICE_NAME" ]; then
+if [ -z "$DEVICE_NAME" ] && [ -z "$DEVICE_ID" ]; then
+  echo "Error: --destination must include either name=... or id=..."
+  exit 1
+fi
+if [ -n "$DEVICE_NAME" ] && [ -n "$DEVICE_ID" ]; then
+  echo "Error: --destination cannot include both name=... and id=..."
+  exit 1
+fi
+
+# Resolve UDID for simulator preference tweaks
+UDID=""
+if [ -n "$DEVICE_ID" ]; then
+  UDID="$DEVICE_ID"
+else
   # Match exact device name with " (" suffix to avoid "iPhone 17 Pro" matching "iPhone 17 Pro Max"
   # Uses last match since devices are listed oldest iOS first, newest last
   UDID=$(xcrun simctl list devices available 2>/dev/null | grep -F "$DEVICE_NAME (" | tail -1 | sed 's/.*(\([A-F0-9-]*\)).*/\1/' || echo "")
@@ -168,7 +189,11 @@ if [ -n "$UDID" ]; then
     ~/Library/Preferences/com.apple.iphonesimulator.plist 2>/dev/null || \
   /usr/libexec/PlistBuddy -c "Add :DevicePreferences:$UDID:ConnectHardwareKeyboard bool false" \
     ~/Library/Preferences/com.apple.iphonesimulator.plist
-  echo "  ✓ Hardware keyboard disabled for simulator $UDID ($DEVICE_NAME)"
+  if [ -n "$DEVICE_NAME" ]; then
+    echo "  ✓ Hardware keyboard disabled for simulator $UDID ($DEVICE_NAME)"
+  else
+    echo "  ✓ Hardware keyboard disabled for simulator $UDID"
+  fi
 else
   echo "  ⚠ Could not determine simulator UDID, hardware keyboard setting not changed"
 fi
