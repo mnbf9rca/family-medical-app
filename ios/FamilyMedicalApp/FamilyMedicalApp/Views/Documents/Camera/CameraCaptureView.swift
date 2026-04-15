@@ -152,6 +152,20 @@ struct CameraCaptureView: View {
         ZStack {
             CameraPreviewView(previewLayer: controller.previewLayer)
                 .ignoresSafeArea()
+                // Gesture composition trade-off (PR #165, Sourcery comment #1):
+                // `SpatialTapGesture` + simultaneous `TapGesture(count: 2)` means
+                // the single-tap handler fires on BOTH taps of a double-tap
+                // sequence — briefly kicking the lens toward the tap point
+                // before `resetFocus()` recenters it. The alternative,
+                // `ExclusiveGesture(TapGesture(count: 2), SpatialTapGesture())`,
+                // eliminates the flicker but forces a ~300ms delay on EVERY
+                // single tap while SwiftUI waits for the double-tap window to
+                // expire. Tap-to-focus is the dominant, frequent action and
+                // must feel instant; double-tap reset is rare. We accept the
+                // brief transient flicker because `coordinator.resetFocus()`
+                // is idempotent and last-call-wins, so the final state
+                // (centered focus, cleared square) converges correctly after
+                // tap 2 of the double-tap sequence.
                 .gesture(
                     SpatialTapGesture()
                         .onEnded { value in
