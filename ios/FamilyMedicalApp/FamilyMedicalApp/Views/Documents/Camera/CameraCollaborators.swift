@@ -126,8 +126,9 @@ final class LiveSessionController: SessionController, @unchecked Sendable {
             if session.canAddOutput(photoOutput) {
                 session.addOutput(photoOutput)
             }
-            installInput(for: position)
-            currentPosition = position
+            if let installed = installInput(for: position) {
+                currentPosition = installed
+            }
         }
     }
 
@@ -151,8 +152,11 @@ final class LiveSessionController: SessionController, @unchecked Sendable {
             for input in session.inputs {
                 session.removeInput(input)
             }
-            installInput(for: newPosition)
-            currentPosition = newPosition
+            if let installed = installInput(for: newPosition) {
+                currentPosition = installed
+            }
+            // Else: install failed entirely; leave currentPosition unchanged so the
+            // next swap attempt computes from the last known-good position.
         }
     }
 
@@ -183,14 +187,23 @@ final class LiveSessionController: SessionController, @unchecked Sendable {
         }
     }
 
-    private func installInput(for position: AVCaptureDevice.Position) {
-        guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: position)
-            ?? AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back)
-            ?? AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front)
-        else { return }
-        configureDeviceDefaults(device)
-        guard let input = try? AVCaptureDeviceInput(device: device), session.canAddInput(input) else { return }
-        session.addInput(input)
+    @discardableResult
+    private func installInput(for position: AVCaptureDevice.Position) -> AVCaptureDevice.Position? {
+        let fallbackChain: [AVCaptureDevice.Position] = [position, .back, .front]
+        var installedPosition: AVCaptureDevice.Position?
+        for candidate in fallbackChain {
+            guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: candidate) else {
+                continue
+            }
+            configureDeviceDefaults(device)
+            guard let input = try? AVCaptureDeviceInput(device: device), session.canAddInput(input) else {
+                continue
+            }
+            session.addInput(input)
+            installedPosition = candidate
+            break
+        }
+        return installedPosition
     }
 
     private func configureDeviceDefaults(_ device: AVCaptureDevice) {
