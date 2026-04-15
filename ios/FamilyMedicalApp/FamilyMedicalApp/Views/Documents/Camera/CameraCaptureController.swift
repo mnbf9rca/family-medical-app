@@ -26,6 +26,14 @@ final class CameraCaptureController: NSObject {
     /// for the deprecated `videoOrientation`. Optional because simulators
     /// and devices without a camera have no `AVCaptureDevice` to bind to.
     private let rotationCoordinator: AVCaptureDevice.RotationCoordinator?
+    /// RAII box holding the `NotificationCenter` observer tokens registered
+    /// in `subscribeToSessionNotifications()`. Releasing the box unregisters
+    /// every token — block-based observers are retained by the center and
+    /// leak if not explicitly removed. Parallels the `ThermalObserverBox`
+    /// pattern in `CameraCaptureCoordinator`: wrapping the tokens in an
+    /// `@unchecked Sendable` class lets ARC clean them up off-main without
+    /// forcing `MainActor.assumeIsolated` in `deinit`.
+    private var notificationObserverBox: SessionNotificationObserverBox?
 
     override init() {
         let session = AVCaptureSession()
@@ -112,7 +120,8 @@ final class CameraCaptureController: NSObject {
 
     private func subscribeToSessionNotifications() {
         let center = NotificationCenter.default
-        center.addObserver(
+        var tokens: [NSObjectProtocol] = []
+        tokens.append(center.addObserver(
             forName: AVCaptureSession.wasInterruptedNotification,
             object: session,
             queue: .main
@@ -122,8 +131,8 @@ final class CameraCaptureController: NSObject {
             Task { @MainActor [weak self] in
                 self?.coordinator.handleInterruption(began: true, reason: reason)
             }
-        }
-        center.addObserver(
+        })
+        tokens.append(center.addObserver(
             forName: AVCaptureSession.interruptionEndedNotification,
             object: session,
             queue: .main
@@ -131,8 +140,8 @@ final class CameraCaptureController: NSObject {
             Task { @MainActor [weak self] in
                 self?.coordinator.handleInterruption(began: false)
             }
-        }
-        center.addObserver(
+        })
+        tokens.append(center.addObserver(
             forName: AVCaptureSession.runtimeErrorNotification,
             object: session,
             queue: .main
@@ -142,6 +151,36 @@ final class CameraCaptureController: NSObject {
             Task { @MainActor [weak self] in
                 self?.coordinator.handleRuntimeError(error)
             }
+        })
+        notificationObserverBox = SessionNotificationObserverBox(tokens: tokens)
+    }
+}
+
+// MARK: - SessionNotificationObserverBox
+
+/// RAII wrapper for the `CameraCaptureController`'s AVCaptureSession
+/// notification tokens. Its `deinit` removes every observer from
+/// `NotificationCenter.default`, so dropping the box is enough to clean up
+/// the subscriptions when the controller deallocates.
+///
+/// `@unchecked Sendable` is safe here because the wrapped tokens are
+/// immutable `NSObjectProtocol` references after init, the array is never
+/// mutated, and `NotificationCenter.removeObserver` is documented
+/// thread-safe. This lets ARC release the controller (and therefore the
+/// box) off-main without forcing `MainActor.assumeIsolated` in the
+/// controller's own `deinit`. Mirrors `ThermalObserverBox` in
+/// `CameraCaptureCoordinator.swift`.
+private final class SessionNotificationObserverBox: @unchecked Sendable {
+    private let tokens: [NSObjectProtocol]
+
+    init(tokens: [NSObjectProtocol]) {
+        self.tokens = tokens
+    }
+
+    deinit {
+        let center = NotificationCenter.default
+        for token in tokens {
+            center.removeObserver(token)
         }
     }
 }
