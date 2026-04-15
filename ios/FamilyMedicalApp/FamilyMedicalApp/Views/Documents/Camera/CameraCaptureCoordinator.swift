@@ -74,12 +74,16 @@ final class CameraCaptureCoordinator {
         switch auth.currentStatus() {
         case .notDetermined:
             let granted = await auth.requestAccess()
-            if granted, cameraAvailable() {
-                session.start()
-                state = .running
-            } else {
+            guard granted else {
                 state = .permissionDenied
+                return
             }
+            guard cameraAvailable() else {
+                state = .cameraUnavailable
+                return
+            }
+            session.start()
+            state = .running
         case .denied, .restricted:
             state = .permissionDenied
         case .authorized:

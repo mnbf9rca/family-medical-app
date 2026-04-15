@@ -128,6 +128,23 @@ struct CameraCaptureCoordinatorInitialStateTests {
     }
 
     @Test
+    func start_fromNotDetermined_grantedButNoCamera_isCameraUnavailable() async {
+        let fixtures = CoordinatorTestFixtures.make(
+            authStatus: .notDetermined,
+            accessGranted: true,
+            cameraAvailable: false
+        )
+
+        await fixtures.coordinator.start()
+
+        #expect(fixtures.auth.requestAccessCalls == 1)
+        #expect(fixtures.session.startCalls == 0)
+        if case .cameraUnavailable = fixtures.coordinator.state {} else {
+            Issue.record("Expected .cameraUnavailable, got \(fixtures.coordinator.state)")
+        }
+    }
+
+    @Test
     func start_fromAuthorizedWithCamera_startsSessionImmediately() async {
         let fixtures = CoordinatorTestFixtures.make(
             authStatus: .authorized,
