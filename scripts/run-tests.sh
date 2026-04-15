@@ -154,6 +154,8 @@ DEVICE_NAME=""
 DEVICE_ID=""
 IFS=',' read -ra DEST_PARTS <<< "$DESTINATION"
 for part in "${DEST_PARTS[@]}"; do
+  # Strip leading whitespace so "platform=iOS Simulator, name=..." is tolerated
+  part="${part#"${part%%[![:space:]]*}"}"
   case "$part" in
     name=*) DEVICE_NAME="${part#name=}" ;;
     id=*)   DEVICE_ID="${part#id=}" ;;
