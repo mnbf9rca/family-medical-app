@@ -154,13 +154,11 @@ extension CameraCaptureController: AVCapturePhotoCaptureDelegate {
         didFinishProcessingPhoto photo: AVCapturePhoto,
         error: Error?
     ) {
-        // Extract the `Sendable` pieces (Data + UTType + Error) here, before
-        // hopping to the main actor. `AVCapturePhoto` itself is not Sendable
-        // and must not cross actor boundaries. The bytes from
-        // `fileDataRepresentation()` ARE the on-disk file — this is the
-        // point where the byte-integrity invariant starts.
-        let data = photo.fileData
-        let type = photo.uniformType
+        // Extract the on-disk bytes ONCE. AVCapturePhoto does not cache
+        // fileDataRepresentation(), so touching `photo.fileData` and
+        // `photo.uniformType` separately would materialize the buffer twice.
+        let data = photo.fileDataRepresentation()
+        let type = Self.sniffType(data: data)
         let capturedError = error
         Task { @MainActor [weak self] in
             if let capturedError {
@@ -169,6 +167,16 @@ extension CameraCaptureController: AVCapturePhotoCaptureDelegate {
                 self?.coordinator.handlePhoto(ExtractedCapturedPhoto(fileData: data, uniformType: type))
             }
         }
+    }
+
+    /// Detect HEIC vs JPEG from the magic bytes of an already-cached buffer.
+    /// Kept `nonisolated static` so the delegate callback (which is itself
+    /// nonisolated) can call it without actor hops.
+    nonisolated static func sniffType(data: Data?) -> UTType {
+        guard let data, data.count >= 12 else { return .jpeg }
+        if data[0] == 0xFF, data[1] == 0xD8, data[2] == 0xFF { return .jpeg }
+        if data[4] == 0x66, data[5] == 0x74, data[6] == 0x79, data[7] == 0x70 { return .heic }
+        return .jpeg
     }
 }
 
