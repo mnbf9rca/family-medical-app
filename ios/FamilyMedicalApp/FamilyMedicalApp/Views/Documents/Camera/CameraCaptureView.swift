@@ -12,7 +12,18 @@ import UniformTypeIdentifiers
 /// `onPhotoCaptured` callback fires exactly once with the encoded `Data`
 /// + `UTType` when the user taps "Use Photo".
 struct CameraCaptureView: View {
-    @State private var controller = CameraCaptureController()
+    // Stored lazily: SwiftUI evaluates `@State` default expressions at
+    // struct-construction time, so a non-optional `CameraCaptureController()`
+    // default would stand up a live `AVCaptureSession` every time the view
+    // struct is initialised — including from any test that constructs a
+    // `CameraCaptureView(...)` or, transitively, any code path that builds
+    // the view before it is mounted. On the iOS simulator, spinning up a
+    // real session triggers `FigCaptureSourceSimulator` signalling that
+    // deadlocks the `@MainActor` Swift Testing runner and hangs the test
+    // suite indefinitely. Constructing inside `.task` defers session
+    // creation to actual view mount, so inspection and unit-test paths
+    // never touch AVFoundation.
+    @State private var controller: CameraCaptureController?
     @State private var focusSquareLocation: CGPoint?
 
     @Environment(\.scenePhase)
@@ -27,15 +38,27 @@ struct CameraCaptureView: View {
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
-            content
+            if let controller {
+                content(controller: controller)
+            }
         }
-        .task { await controller.coordinator.start() }
+        .task {
+            let active: CameraCaptureController
+            if let existing = controller {
+                active = existing
+            } else {
+                active = CameraCaptureController()
+                controller = active
+            }
+            await active.coordinator.start()
+        }
         .onChange(of: scenePhase) { _, newPhase in
             handleScenePhase(newPhase)
         }
     }
 
     private func handleScenePhase(_ phase: ScenePhase) {
+        guard let controller else { return }
         switch phase {
         case .background:
             controller.coordinator.applicationDidEnterBackground()
@@ -50,14 +73,15 @@ struct CameraCaptureView: View {
 
     // MARK: - Content switch
 
-    @ViewBuilder private var content: some View {
+    @ViewBuilder
+    private func content(controller: CameraCaptureController) -> some View {
         switch controller.coordinator.state {
         case .notDetermined:
             Color.black.ignoresSafeArea()
         case .capturing, .running:
-            liveCapture
+            liveCapture(controller: controller)
         case let .captured(data, type):
-            confirmSheet(data: data, type: type)
+            confirmSheet(controller: controller, data: data, type: type)
         case .interrupted:
             messageScreen(icon: "pause.circle", title: "Camera paused", subtitle: "Resuming when available")
         case .permissionDenied:
@@ -65,20 +89,20 @@ struct CameraCaptureView: View {
         case .cameraUnavailable:
             messageScreen(icon: "camera.slash", title: "Camera not available on this device", dismissAction: onCancel)
         case let .failed(error):
-            failedScreen(error)
+            failedScreen(controller: controller, error: error)
         }
     }
 
     // MARK: - Live capture
 
-    private var liveCapture: some View {
+    private func liveCapture(controller: CameraCaptureController) -> some View {
         ZStack {
             CameraPreviewView(previewLayer: controller.previewLayer)
                 .ignoresSafeArea()
                 .gesture(
                     SpatialTapGesture()
                         .onEnded { value in
-                            handleFocusTap(at: value.location)
+                            handleFocusTap(controller: controller, at: value.location)
                         }
                 )
             if let point = focusSquareLocation {
@@ -88,11 +112,11 @@ struct CameraCaptureView: View {
                     .position(point)
                     .allowsHitTesting(false)
             }
-            captureChrome
+            captureChrome(controller: controller)
         }
     }
 
-    private var captureChrome: some View {
+    private func captureChrome(controller: CameraCaptureController) -> some View {
         VStack {
             HStack {
                 Button("Cancel", action: onCancel)
@@ -104,7 +128,7 @@ struct CameraCaptureView: View {
             Spacer()
             HStack(spacing: 40) {
                 Spacer()
-                shutterButton
+                shutterButton(controller: controller)
                 Spacer()
                 Button {
                     controller.coordinator.flipCamera()
@@ -120,7 +144,7 @@ struct CameraCaptureView: View {
         }
     }
 
-    private var shutterButton: some View {
+    private func shutterButton(controller: CameraCaptureController) -> some View {
         Button {
             if !reduceMotion {
                 UIImpactFeedbackGenerator(style: .medium).impactOccurred()
@@ -136,7 +160,7 @@ struct CameraCaptureView: View {
         .accessibilityLabel("Take photo")
     }
 
-    private func handleFocusTap(at location: CGPoint) {
+    private func handleFocusTap(controller: CameraCaptureController, at location: CGPoint) {
         let devicePoint = controller.previewLayer.captureDevicePointConverted(fromLayerPoint: location)
         controller.coordinator.focus(at: devicePoint)
         guard !reduceMotion else { return }
@@ -149,7 +173,11 @@ struct CameraCaptureView: View {
 
     // MARK: - Confirm sheet
 
-    private func confirmSheet(data: Data, type: UTType) -> some View {
+    private func confirmSheet(
+        controller: CameraCaptureController,
+        data: Data,
+        type _: UTType
+    ) -> some View {
         ZStack {
             Color.black.ignoresSafeArea()
             // Display-only decode. The original `data` is authoritative and
@@ -215,7 +243,7 @@ struct CameraCaptureView: View {
         }
     }
 
-    private func failedScreen(_ error: Error) -> some View {
+    private func failedScreen(controller: CameraCaptureController, error: Error) -> some View {
         VStack(spacing: 16) {
             Image(systemName: "exclamationmark.triangle")
                 .font(.system(size: 64))
