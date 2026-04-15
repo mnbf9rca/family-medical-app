@@ -178,7 +178,7 @@ struct CameraCaptureCoordinatorCaptureTests {
         let fixtures = CoordinatorTestFixtures.make()
         await fixtures.coordinator.start()
 
-        let heic = SyntheticPhotoFixtures.heicData()
+        let heic = SyntheticPhotoFixtures.heicData
         let photo = FakeCapturedPhoto(fileData: heic, uniformType: .heic)
 
         fixtures.coordinator.handlePhoto(photo)
@@ -197,7 +197,7 @@ struct CameraCaptureCoordinatorCaptureTests {
         let fixtures = CoordinatorTestFixtures.make()
         await fixtures.coordinator.start()
 
-        let jpeg = SyntheticPhotoFixtures.jpegData()
+        let jpeg = SyntheticPhotoFixtures.jpegData
         let photo = FakeCapturedPhoto(fileData: jpeg, uniformType: .jpeg)
 
         fixtures.coordinator.handlePhoto(photo)
@@ -253,7 +253,7 @@ struct CameraCaptureCoordinatorCaptureTests {
         let fixtures = CoordinatorTestFixtures.make()
         await fixtures.coordinator.start()
         fixtures.coordinator.handlePhoto(
-            FakeCapturedPhoto(fileData: SyntheticPhotoFixtures.jpegData(), uniformType: .jpeg)
+            FakeCapturedPhoto(fileData: SyntheticPhotoFixtures.jpegData, uniformType: .jpeg)
         )
 
         fixtures.coordinator.retake()
@@ -279,7 +279,7 @@ struct CameraCaptureCoordinatorCaptureTests {
     func confirm_fromCaptured_yieldsDataAndType() async throws {
         let fixtures = CoordinatorTestFixtures.make()
         await fixtures.coordinator.start()
-        let heic = SyntheticPhotoFixtures.heicData()
+        let heic = SyntheticPhotoFixtures.heicData
         fixtures.coordinator.handlePhoto(FakeCapturedPhoto(fileData: heic, uniformType: .heic))
 
         let confirmed = try #require(fixtures.coordinator.confirm())
@@ -311,7 +311,7 @@ struct CameraCaptureCoordinatorCaptureTests {
         let fixtures = CoordinatorTestFixtures.make()
         await fixtures.coordinator.start()
         fixtures.coordinator.handlePhoto(
-            FakeCapturedPhoto(fileData: SyntheticPhotoFixtures.jpegData(), uniformType: .jpeg)
+            FakeCapturedPhoto(fileData: SyntheticPhotoFixtures.jpegData, uniformType: .jpeg)
         )
 
         fixtures.coordinator.flipCamera()

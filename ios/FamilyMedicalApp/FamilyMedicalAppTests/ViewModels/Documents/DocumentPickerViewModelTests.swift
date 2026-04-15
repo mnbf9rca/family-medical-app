@@ -111,7 +111,7 @@ struct DocumentPickerViewModelTests {
         let fixtures = makeFixtures()
         fixtures.blobService.detectedMimeStub = "image/heic"
 
-        await fixtures.viewModel.addFromCameraData(SyntheticPhotoFixtures.heicData(), type: .heic)
+        await fixtures.viewModel.addFromCameraData(SyntheticPhotoFixtures.heicData, type: .heic)
 
         #expect(fixtures.viewModel.drafts.count == 1)
         #expect(fixtures.viewModel.errorMessage == nil)
@@ -123,7 +123,7 @@ struct DocumentPickerViewModelTests {
         let fixtures = makeFixtures()
         fixtures.blobService.detectedMimeStub = "image/heic"
 
-        await fixtures.viewModel.addFromCameraData(SyntheticPhotoFixtures.heicData(), type: .heic)
+        await fixtures.viewModel.addFromCameraData(SyntheticPhotoFixtures.heicData, type: .heic)
 
         let draft = try #require(fixtures.viewModel.drafts.first)
         #expect(draft.content.mimeType == "image/heic")
@@ -135,7 +135,7 @@ struct DocumentPickerViewModelTests {
         let fixtures = makeFixtures()
         fixtures.blobService.detectedMimeStub = "image/jpeg"
 
-        await fixtures.viewModel.addFromCameraData(SyntheticPhotoFixtures.jpegData(), type: .jpeg)
+        await fixtures.viewModel.addFromCameraData(SyntheticPhotoFixtures.jpegData, type: .jpeg)
 
         let draft = try #require(fixtures.viewModel.drafts.first)
         #expect(draft.content.mimeType == "image/jpeg")
@@ -147,7 +147,7 @@ struct DocumentPickerViewModelTests {
         let fixtures = makeFixtures()
         fixtures.blobService.detectedMimeStub = "image/heic"
 
-        let fixture = SyntheticPhotoFixtures.heicData()
+        let fixture = SyntheticPhotoFixtures.heicData
         await fixtures.viewModel.addFromCameraData(fixture, type: .heic)
 
         // MockDocumentBlobService computes contentHMAC as SHA256(plaintext).
@@ -168,7 +168,7 @@ struct DocumentPickerViewModelTests {
         }
         let fixtures = makeFixtures(existing: existing)
 
-        await fixtures.viewModel.addFromCameraData(SyntheticPhotoFixtures.jpegData(), type: .jpeg)
+        await fixtures.viewModel.addFromCameraData(SyntheticPhotoFixtures.jpegData, type: .jpeg)
 
         #expect(fixtures.viewModel.errorMessage != nil)
         #expect(fixtures.blobService.storeCalls.isEmpty)
@@ -180,7 +180,7 @@ struct DocumentPickerViewModelTests {
         let fixtures = makeFixtures(sourceRecordId: sourceId)
         fixtures.blobService.detectedMimeStub = "image/jpeg"
 
-        await fixtures.viewModel.addFromCameraData(SyntheticPhotoFixtures.jpegData(), type: .jpeg)
+        await fixtures.viewModel.addFromCameraData(SyntheticPhotoFixtures.jpegData, type: .jpeg)
 
         let draft = try #require(fixtures.viewModel.drafts.first)
         #expect(draft.content.sourceRecordId == sourceId)
@@ -191,7 +191,7 @@ struct DocumentPickerViewModelTests {
         let fixtures = makeFixtures()
         fixtures.blobService.storeError = ModelError.unsupportedContent
 
-        await fixtures.viewModel.addFromCameraData(SyntheticPhotoFixtures.jpegData(), type: .jpeg)
+        await fixtures.viewModel.addFromCameraData(SyntheticPhotoFixtures.jpegData, type: .jpeg)
 
         #expect(fixtures.viewModel.drafts.isEmpty)
         #expect(fixtures.viewModel.errorMessage != nil)
@@ -202,7 +202,7 @@ struct DocumentPickerViewModelTests {
         let fixtures = makeFixtures()
         fixtures.blobService.detectedMimeStub = "image/heic"
 
-        await fixtures.viewModel.addFromCameraData(SyntheticPhotoFixtures.heicData(), type: .heic)
+        await fixtures.viewModel.addFromCameraData(SyntheticPhotoFixtures.heicData, type: .heic)
 
         let draftHMAC = try #require(fixtures.viewModel.drafts.first?.content.contentHMAC)
         #expect(fixtures.blobService.inFlightHMACs.contains(draftHMAC))
@@ -214,7 +214,7 @@ struct DocumentPickerViewModelTests {
     func removeDraft_existingId_removesFromList() async throws {
         let fixtures = makeFixtures()
         fixtures.blobService.detectedMimeStub = "image/jpeg"
-        await fixtures.viewModel.addFromCameraData(SyntheticPhotoFixtures.jpegData(), type: .jpeg)
+        await fixtures.viewModel.addFromCameraData(SyntheticPhotoFixtures.jpegData, type: .jpeg)
 
         let draftId = try #require(fixtures.viewModel.drafts.first?.id)
         fixtures.viewModel.removeDraft(id: draftId)
@@ -226,7 +226,7 @@ struct DocumentPickerViewModelTests {
     func removeDraft_unknownId_doesNothing() async {
         let fixtures = makeFixtures()
         fixtures.blobService.detectedMimeStub = "image/jpeg"
-        await fixtures.viewModel.addFromCameraData(SyntheticPhotoFixtures.jpegData(), type: .jpeg)
+        await fixtures.viewModel.addFromCameraData(SyntheticPhotoFixtures.jpegData, type: .jpeg)
 
         fixtures.viewModel.removeDraft(id: UUID())
 
@@ -237,7 +237,7 @@ struct DocumentPickerViewModelTests {
     func removeDraft_clearsInFlightForRemovedHMAC() async throws {
         let fixtures = makeFixtures()
         fixtures.blobService.detectedMimeStub = "image/jpeg"
-        await fixtures.viewModel.addFromCameraData(SyntheticPhotoFixtures.jpegData(), type: .jpeg)
+        await fixtures.viewModel.addFromCameraData(SyntheticPhotoFixtures.jpegData, type: .jpeg)
 
         let draftId = try #require(fixtures.viewModel.drafts.first?.id)
         let draftHMAC = try #require(fixtures.viewModel.drafts.first?.content.contentHMAC)
@@ -264,7 +264,7 @@ struct DocumentPickerViewModelTests {
     func removeDraft_unknownId_doesNotClearInFlight() async {
         let fixtures = makeFixtures()
         fixtures.blobService.detectedMimeStub = "image/jpeg"
-        await fixtures.viewModel.addFromCameraData(SyntheticPhotoFixtures.jpegData(), type: .jpeg)
+        await fixtures.viewModel.addFromCameraData(SyntheticPhotoFixtures.jpegData, type: .jpeg)
 
         fixtures.viewModel.removeDraft(id: UUID())
 
@@ -283,7 +283,7 @@ struct DocumentPickerViewModelTests {
     func setTitle_updatesDraftContent() async throws {
         let fixtures = makeFixtures()
         fixtures.blobService.detectedMimeStub = "image/jpeg"
-        await fixtures.viewModel.addFromCameraData(SyntheticPhotoFixtures.jpegData(), type: .jpeg)
+        await fixtures.viewModel.addFromCameraData(SyntheticPhotoFixtures.jpegData, type: .jpeg)
 
         let draftId = try #require(fixtures.viewModel.drafts.first?.id)
         fixtures.viewModel.setTitle("Renamed.jpg", for: draftId)
@@ -295,7 +295,7 @@ struct DocumentPickerViewModelTests {
     func setTitle_unknownId_doesNothing() async {
         let fixtures = makeFixtures()
         fixtures.blobService.detectedMimeStub = "image/jpeg"
-        await fixtures.viewModel.addFromCameraData(SyntheticPhotoFixtures.jpegData(), type: .jpeg)
+        await fixtures.viewModel.addFromCameraData(SyntheticPhotoFixtures.jpegData, type: .jpeg)
 
         let original = fixtures.viewModel.drafts.first?.content.title
         fixtures.viewModel.setTitle("NewName.jpg", for: UUID())
@@ -307,7 +307,7 @@ struct DocumentPickerViewModelTests {
     func setTitle_overMaxLength_truncatesToMax() async throws {
         let fixtures = makeFixtures()
         fixtures.blobService.detectedMimeStub = "image/jpeg"
-        await fixtures.viewModel.addFromCameraData(SyntheticPhotoFixtures.jpegData(), type: .jpeg)
+        await fixtures.viewModel.addFromCameraData(SyntheticPhotoFixtures.jpegData, type: .jpeg)
 
         let draftId = try #require(fixtures.viewModel.drafts.first?.id)
         let overLong = String(repeating: "z", count: DocumentReferenceRecord.titleMaxLength + 100)
@@ -321,7 +321,7 @@ struct DocumentPickerViewModelTests {
     func setTitle_exactlyMaxLength_keepsFullTitle() async throws {
         let fixtures = makeFixtures()
         fixtures.blobService.detectedMimeStub = "image/jpeg"
-        await fixtures.viewModel.addFromCameraData(SyntheticPhotoFixtures.jpegData(), type: .jpeg)
+        await fixtures.viewModel.addFromCameraData(SyntheticPhotoFixtures.jpegData, type: .jpeg)
 
         let draftId = try #require(fixtures.viewModel.drafts.first?.id)
         let maxTitle = String(repeating: "y", count: DocumentReferenceRecord.titleMaxLength)

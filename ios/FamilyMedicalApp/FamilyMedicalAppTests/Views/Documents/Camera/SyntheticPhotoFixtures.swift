@@ -1,46 +1,34 @@
-import CoreGraphics
 import Foundation
-import ImageIO
-import UIKit
-import UniformTypeIdentifiers
+@testable import FamilyMedicalApp
 
-/// Generates tiny valid HEIC and JPEG byte blobs at test-run time.
+/// Tiny HEIC and JPEG byte blobs loaded from committed binary fixtures under
+/// `FamilyMedicalAppTests/Fixtures/camera/`. Both files are metadata-scrubbed
+/// with `exiftool -all=` — no GPS/EXIF/camera-identity data lands in git.
 ///
-/// We deliberately do NOT commit binary fixtures:
-/// 1. No EXIF/GPS/camera-identity leak risk.
-/// 2. No git-LFS pressure on a privacy-conscious repo.
-/// 3. The HMAC-equality test holds regardless of whether the bytes come
-///    from a committed file or a generator — the invariant is
-///    "input bytes == stored bytes", not "input bytes match a golden file".
+/// Previously generated at test-run time via `CGImageDestinationCreateWithData`.
+/// That path hit the iOS simulator's flaky HEIC encoder
+/// (`CMPhotoCompressionSession` / `hvc1`) and deadlocked Swift Testing when
+/// multiple `@MainActor struct` suites called it in parallel. Committed
+/// fixtures eliminate the entire class of problems. See
+/// `docs/superpowers/specs/2026-04-15-camera-test-hang-research.md`.
 enum SyntheticPhotoFixtures {
-    /// 50×50 solid-color HEIC encoded by ImageIO.
-    static func heicData(color: UIColor = .systemBlue) -> Data {
-        encode(color: color, type: UTType.heic.identifier as CFString)
-    }
+    static let heicData: Data = loadFixture(name: "sample", extension: "heic")
+    static let jpegData: Data = loadFixture(name: "sample", extension: "jpeg")
 
-    /// 50×50 solid-color JPEG encoded by ImageIO.
-    static func jpegData(color: UIColor = .systemGreen) -> Data {
-        encode(color: color, type: UTType.jpeg.identifier as CFString)
-    }
-
-    private static func encode(color: UIColor, type: CFString) -> Data {
-        let size = CGSize(width: 50, height: 50)
-        let renderer = UIGraphicsImageRenderer(size: size)
-        let uiImage = renderer.image { ctx in
-            color.setFill()
-            ctx.fill(CGRect(origin: .zero, size: size))
+    private static func loadFixture(name: String, extension ext: String) -> Data {
+        let bundle = Bundle(for: FixtureLocator.self)
+        guard let url = bundle.url(forResource: name, withExtension: ext) else {
+            fatalError("SyntheticPhotoFixtures: \(name).\(ext) not found in test bundle")
         }
-        guard let cgImage = uiImage.cgImage else {
-            fatalError("SyntheticPhotoFixtures: could not produce CGImage")
+        do {
+            return try Data(contentsOf: url)
+        } catch {
+            fatalError("SyntheticPhotoFixtures: failed to load \(name).\(ext): \(error)")
         }
-        let output = NSMutableData()
-        guard let destination = CGImageDestinationCreateWithData(output, type, 1, nil) else {
-            fatalError("SyntheticPhotoFixtures: CGImageDestinationCreateWithData failed for \(type)")
-        }
-        CGImageDestinationAddImage(destination, cgImage, nil)
-        guard CGImageDestinationFinalize(destination) else {
-            fatalError("SyntheticPhotoFixtures: CGImageDestinationFinalize failed for \(type)")
-        }
-        return output as Data
     }
 }
+
+/// Empty class solely used as a bundle-locator token for
+/// `Bundle(for:)` — it must live in the same test target as the
+/// fixtures so `Bundle(for:)` returns the right bundle URL.
+private final class FixtureLocator {}
