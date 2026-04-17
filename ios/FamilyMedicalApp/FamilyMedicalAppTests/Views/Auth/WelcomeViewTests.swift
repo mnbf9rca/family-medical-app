@@ -11,10 +11,12 @@ struct WelcomeViewTests {
         let viewModel = AuthenticationViewModel()
         let view = WelcomeView(viewModel: viewModel)
 
-        let sut = try view.inspect()
+        try HostedInspection.inspect(view) { view in
+            let sut = try view.inspect()
 
-        // find() throws if not found
-        _ = try sut.find(viewWithAccessibilityLabel: "Family Medical App icon")
+            // find() throws if not found
+            _ = try sut.find(viewWithAccessibilityLabel: "Family Medical App icon")
+        }
     }
 
     @Test
@@ -22,9 +24,11 @@ struct WelcomeViewTests {
         let viewModel = AuthenticationViewModel()
         let view = WelcomeView(viewModel: viewModel)
 
-        let sut = try view.inspect()
-        // find() throws if not found
-        _ = try sut.find(viewWithAccessibilityIdentifier: "createAccountButton")
+        try HostedInspection.inspect(view) { view in
+            let sut = try view.inspect()
+            // find() throws if not found
+            _ = try sut.find(viewWithAccessibilityIdentifier: "createAccountButton")
+        }
     }
 
     @Test
@@ -32,8 +36,10 @@ struct WelcomeViewTests {
         let viewModel = AuthenticationViewModel()
         let view = WelcomeView(viewModel: viewModel)
 
-        let sut = try view.inspect()
-        // find() throws if not found
-        _ = try sut.find(viewWithAccessibilityIdentifier: "signInButton")
+        try HostedInspection.inspect(view) { view in
+            let sut = try view.inspect()
+            // find() throws if not found
+            _ = try sut.find(viewWithAccessibilityIdentifier: "signInButton")
+        }
     }
 }

@@ -22,9 +22,11 @@ struct PersonRowViewTests {
         let person = try createTestPerson(name: "Alice Smith")
         let view = PersonRowView(person: person)
 
-        let vStack = try view.inspect().vStack()
-        let nameText = try vStack.text(0)
-        #expect(try nameText.string() == "Alice Smith")
+        try HostedInspection.inspect(view) { view in
+            let vStack = try view.inspect().vStack()
+            let nameText = try vStack.text(0)
+            #expect(try nameText.string() == "Alice Smith")
+        }
     }
 
     @Test
@@ -32,9 +34,11 @@ struct PersonRowViewTests {
         let person = try createTestPerson(labels: ["Self", "Parent"])
         let view = PersonRowView(person: person)
 
-        let vStack = try view.inspect().vStack()
-        let labelsText = try vStack.text(1)
-        #expect(try labelsText.string() == "Self, Parent")
+        try HostedInspection.inspect(view) { view in
+            let vStack = try view.inspect().vStack()
+            let labelsText = try vStack.text(1)
+            #expect(try labelsText.string() == "Self, Parent")
+        }
     }
 
     @Test
@@ -43,8 +47,10 @@ struct PersonRowViewTests {
         let person = try createTestPerson(dateOfBirth: dob)
         let view = PersonRowView(person: person)
 
-        _ = try view.inspect().vStack()
-        // DOB is displayed, verification that view renders without error
+        try HostedInspection.inspect(view) { view in
+            _ = try view.inspect().vStack()
+            // DOB is displayed, verification that view renders without error
+        }
     }
 
     @Test
@@ -52,8 +58,10 @@ struct PersonRowViewTests {
         let person = try createTestPerson(dateOfBirth: nil)
         let view = PersonRowView(person: person)
 
-        _ = try view.inspect().vStack()
-        // View should render without crashing with nil DOB
+        try HostedInspection.inspect(view) { view in
+            _ = try view.inspect().vStack()
+            // View should render without crashing with nil DOB
+        }
     }
 
     @Test
@@ -61,8 +69,10 @@ struct PersonRowViewTests {
         let person = try createTestPerson(labels: [])
         let view = PersonRowView(person: person)
 
-        _ = try view.inspect().vStack()
-        // View should render without crashing even with no labels
+        try HostedInspection.inspect(view) { view in
+            _ = try view.inspect().vStack()
+            // View should render without crashing even with no labels
+        }
     }
 
     // MARK: - Style Tests
@@ -72,9 +82,11 @@ struct PersonRowViewTests {
         let person = try createTestPerson()
         let view = PersonRowView(person: person)
 
-        let vStack = try view.inspect().vStack()
-        let nameText = try vStack.text(0)
-        #expect(try nameText.attributes().font() == .headline)
+        try HostedInspection.inspect(view) { view in
+            let vStack = try view.inspect().vStack()
+            let nameText = try vStack.text(0)
+            #expect(try nameText.attributes().font() == .headline)
+        }
     }
 
     @Test
@@ -83,6 +95,8 @@ struct PersonRowViewTests {
         let view = PersonRowView(person: person)
 
         // Just verify the view structure can be inspected
-        _ = try view.inspect()
+        try HostedInspection.inspect(view) { view in
+            _ = try view.inspect()
+        }
     }
 }

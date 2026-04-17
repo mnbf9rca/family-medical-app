@@ -13,10 +13,12 @@ struct AccountExistsConfirmationViewTests {
         let viewModel = AuthenticationViewModel(authService: MockAuthenticationService())
         let view = AccountExistsConfirmationView(viewModel: viewModel, username: "testuser")
 
-        let sut = try view.inspect()
+        try HostedInspection.inspect(view) { view in
+            let sut = try view.inspect()
 
-        // find() throws if not found
-        _ = try sut.find(text: "Account Found")
+            // find() throws if not found
+            _ = try sut.find(text: "Account Found")
+        }
     }
 
     @Test
@@ -24,12 +26,14 @@ struct AccountExistsConfirmationViewTests {
         let viewModel = AuthenticationViewModel(authService: MockAuthenticationService())
         let view = AccountExistsConfirmationView(viewModel: viewModel, username: "myusername")
 
-        let sut = try view.inspect()
+        try HostedInspection.inspect(view) { view in
+            let sut = try view.inspect()
 
-        // find() throws if not found
-        _ = try sut.find(ViewType.Text.self) { text in
-            let string = try? text.string()
-            return string?.contains("myusername") == true
+            // find() throws if not found
+            _ = try sut.find(ViewType.Text.self) { text in
+                let string = try? text.string()
+                return string?.contains("myusername") == true
+            }
         }
     }
 
@@ -38,10 +42,12 @@ struct AccountExistsConfirmationViewTests {
         let viewModel = AuthenticationViewModel(authService: MockAuthenticationService())
         let view = AccountExistsConfirmationView(viewModel: viewModel, username: "testuser")
 
-        let sut = try view.inspect()
+        try HostedInspection.inspect(view) { view in
+            let sut = try view.inspect()
 
-        // find() throws if not found
-        _ = try sut.find(viewWithAccessibilityIdentifier: "confirmLoginButton")
+            // find() throws if not found
+            _ = try sut.find(viewWithAccessibilityIdentifier: "confirmLoginButton")
+        }
     }
 
     @Test
@@ -49,9 +55,11 @@ struct AccountExistsConfirmationViewTests {
         let viewModel = AuthenticationViewModel(authService: MockAuthenticationService())
         let view = AccountExistsConfirmationView(viewModel: viewModel, username: "testuser")
 
-        let sut = try view.inspect()
+        try HostedInspection.inspect(view) { view in
+            let sut = try view.inspect()
 
-        // find() throws if not found
-        _ = try sut.find(viewWithAccessibilityIdentifier: "cancelButton")
+            // find() throws if not found
+            _ = try sut.find(viewWithAccessibilityIdentifier: "cancelButton")
+        }
     }
 }

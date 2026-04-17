@@ -44,8 +44,10 @@ struct DocumentThumbnailViewTests {
             onRemove: nil
         )
 
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.ZStack.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.ZStack.self)
+        }
     }
 
     @Test
@@ -59,9 +61,11 @@ struct DocumentThumbnailViewTests {
             onRemove: nil
         )
 
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.ZStack.self)
-        _ = try inspected.find(ViewType.Image.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.ZStack.self)
+            _ = try inspected.find(ViewType.Image.self)
+        }
     }
 
     @Test
@@ -74,8 +78,10 @@ struct DocumentThumbnailViewTests {
             size: 100
         )
 
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.ZStack.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.ZStack.self)
+        }
     }
 
     // MARK: - MIME Type Icon Tests
@@ -89,9 +95,11 @@ struct DocumentThumbnailViewTests {
             onRemove: nil
         )
 
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.Image.self)
-        _ = try inspected.find(text: "JPG")
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.Image.self)
+            _ = try inspected.find(text: "JPG")
+        }
     }
 
     @Test
@@ -103,9 +111,11 @@ struct DocumentThumbnailViewTests {
             onRemove: nil
         )
 
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.Image.self)
-        _ = try inspected.find(text: "PNG")
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.Image.self)
+            _ = try inspected.find(text: "PNG")
+        }
     }
 
     @Test
@@ -117,9 +127,11 @@ struct DocumentThumbnailViewTests {
             onRemove: nil
         )
 
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.Image.self)
-        _ = try inspected.find(text: "PDF")
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.Image.self)
+            _ = try inspected.find(text: "PDF")
+        }
     }
 
     // MARK: - Callback Tests
@@ -135,8 +147,10 @@ struct DocumentThumbnailViewTests {
             onRemove: nil
         )
 
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.ZStack.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.ZStack.self)
+        }
         #expect(!tapped)
     }
 
@@ -151,9 +165,11 @@ struct DocumentThumbnailViewTests {
             onRemove: { removed = true }
         )
 
-        let inspected = try view.inspect()
-        let buttons = inspected.findAll(ViewType.Button.self)
-        #expect(buttons.count == 1)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            let buttons = inspected.findAll(ViewType.Button.self)
+            #expect(buttons.count == 1)
+        }
         #expect(!removed)
     }
 
@@ -169,9 +185,11 @@ struct DocumentThumbnailViewTests {
             onRemove: { removed = true }
         )
 
-        let inspected = try view.inspect()
-        let buttons = inspected.findAll(ViewType.Button.self)
-        #expect(buttons.count == 1)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            let buttons = inspected.findAll(ViewType.Button.self)
+            #expect(buttons.count == 1)
+        }
         #expect(!tapped)
         #expect(!removed)
     }
@@ -187,9 +205,11 @@ struct DocumentThumbnailViewTests {
             onRemove: {}
         )
 
-        let inspected = try view.inspect()
-        let buttons = inspected.findAll(ViewType.Button.self)
-        #expect(buttons.count == 1)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            let buttons = inspected.findAll(ViewType.Button.self)
+            #expect(buttons.count == 1)
+        }
     }
 
     @Test
@@ -201,9 +221,11 @@ struct DocumentThumbnailViewTests {
             onRemove: nil
         )
 
-        let inspected = try view.inspect()
-        let buttons = inspected.findAll(ViewType.Button.self)
-        #expect(buttons.isEmpty)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            let buttons = inspected.findAll(ViewType.Button.self)
+            #expect(buttons.isEmpty)
+        }
     }
 
     // MARK: - Thumbnail Content Tests
@@ -223,8 +245,10 @@ struct DocumentThumbnailViewTests {
             onRemove: nil
         )
 
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.Image.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.Image.self)
+        }
     }
 
     @Test
@@ -241,9 +265,11 @@ struct DocumentThumbnailViewTests {
             onRemove: nil
         )
 
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.Image.self)
-        _ = try inspected.find(text: "JPG")
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.Image.self)
+            _ = try inspected.find(text: "JPG")
+        }
     }
 
     @Test
@@ -260,8 +286,10 @@ struct DocumentThumbnailViewTests {
             onRemove: nil
         )
 
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.Image.self)
-        _ = try inspected.find(text: "PDF")
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.Image.self)
+            _ = try inspected.find(text: "PDF")
+        }
     }
 }

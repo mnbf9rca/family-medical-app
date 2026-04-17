@@ -39,8 +39,10 @@ struct DocumentPickerViewTests {
         let viewModel = makeViewModel()
         let view = DocumentPickerView(viewModel: viewModel)
 
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.VStack.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.VStack.self)
+        }
     }
 
     @Test
@@ -49,8 +51,10 @@ struct DocumentPickerViewTests {
         let viewModel = makeViewModel(existing: [document])
         let view = DocumentPickerView(viewModel: viewModel)
 
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.LazyVGrid.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.LazyVGrid.self)
+        }
     }
 
     @Test
@@ -58,8 +62,10 @@ struct DocumentPickerViewTests {
         let viewModel = makeViewModel()
         let view = DocumentPickerView(viewModel: viewModel)
 
-        let text = try view.inspect().find(text: viewModel.countSummary)
-        #expect(try text.string() == viewModel.countSummary)
+        try HostedInspection.inspect(view) { view in
+            let text = try view.inspect().find(text: viewModel.countSummary)
+            #expect(try text.string() == viewModel.countSummary)
+        }
     }
 
     @Test
@@ -68,8 +74,10 @@ struct DocumentPickerViewTests {
         let view = DocumentPickerView(viewModel: viewModel)
 
         #expect(viewModel.canAddMore)
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.Menu.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.Menu.self)
+        }
     }
 
     @Test
@@ -82,9 +90,11 @@ struct DocumentPickerViewTests {
         let view = DocumentPickerView(viewModel: viewModel)
 
         #expect(!viewModel.canAddMore)
-        let inspected = try view.inspect()
-        #expect(throws: (any Error).self) {
-            _ = try inspected.find(ViewType.Menu.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            #expect(throws: (any Error).self) {
+                _ = try inspected.find(ViewType.Menu.self)
+            }
         }
     }
 
@@ -96,9 +106,11 @@ struct DocumentPickerViewTests {
         viewModel.errorMessage = "Test error message"
 
         let view = DocumentPickerView(viewModel: viewModel)
-        let inspected = try view.inspect()
-        let errorText = try inspected.find(text: "Test error message")
-        #expect(try errorText.string() == "Test error message")
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            let errorText = try inspected.find(text: "Test error message")
+            #expect(try errorText.string() == "Test error message")
+        }
     }
 
     @Test
@@ -107,10 +119,12 @@ struct DocumentPickerViewTests {
         viewModel.errorMessage = nil
         let view = DocumentPickerView(viewModel: viewModel)
 
-        let inspected = try view.inspect()
-        #expect(throws: (any Error).self) {
-            _ = try inspected.find(ViewType.Text.self) { text in
-                try text.string().contains("error")
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            #expect(throws: (any Error).self) {
+                _ = try inspected.find(ViewType.Text.self) { text in
+                    try text.string().contains("error")
+                }
             }
         }
     }
@@ -123,8 +137,10 @@ struct DocumentPickerViewTests {
         viewModel.isLoading = true
 
         let view = DocumentPickerView(viewModel: viewModel)
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.ProgressView.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.ProgressView.self)
+        }
     }
 
     @Test
@@ -133,9 +149,11 @@ struct DocumentPickerViewTests {
         viewModel.isLoading = false
 
         let view = DocumentPickerView(viewModel: viewModel)
-        let inspected = try view.inspect()
-        #expect(throws: (any Error).self) {
-            _ = try inspected.find(ViewType.ProgressView.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            #expect(throws: (any Error).self) {
+                _ = try inspected.find(ViewType.ProgressView.self)
+            }
         }
     }
 
@@ -150,8 +168,10 @@ struct DocumentPickerViewTests {
         ])
         let view = DocumentPickerView(viewModel: viewModel)
 
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.LazyVGrid.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.LazyVGrid.self)
+        }
         #expect(viewModel.drafts.count == 3)
     }
 
@@ -162,8 +182,10 @@ struct DocumentPickerViewTests {
         let viewModel = makeViewModel()
         let view = DocumentPickerView(viewModel: viewModel)
 
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.Menu.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.Menu.self)
+        }
     }
 
     @Test
@@ -175,9 +197,11 @@ struct DocumentPickerViewTests {
         let viewModel = makeViewModel(existing: documents)
         let view = DocumentPickerView(viewModel: viewModel)
 
-        let inspected = try view.inspect()
-        #expect(throws: (any Error).self) {
-            _ = try inspected.find(ViewType.Menu.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            #expect(throws: (any Error).self) {
+                _ = try inspected.find(ViewType.Menu.self)
+            }
         }
     }
 
@@ -190,8 +214,10 @@ struct DocumentPickerViewTests {
         ])
         let view = DocumentPickerView(viewModel: viewModel)
 
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.LazyVGrid.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.LazyVGrid.self)
+        }
     }
 
     @Test
@@ -199,8 +225,10 @@ struct DocumentPickerViewTests {
         let viewModel = makeViewModel(existing: [])
         let view = DocumentPickerView(viewModel: viewModel)
 
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.LazyVGrid.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.LazyVGrid.self)
+        }
         #expect(viewModel.drafts.isEmpty)
     }
 
@@ -237,10 +265,12 @@ struct DocumentPickerViewTests {
         let viewModel = makeViewModel()
         let view = DocumentPickerView(viewModel: viewModel)
 
-        let inspected = try view.inspect()
-        let menu = try inspected.find(ViewType.Menu.self)
-        let buttons = menu.findAll(ViewType.Button.self)
-        #expect(buttons.count >= 2)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            let menu = try inspected.find(ViewType.Menu.self)
+            let buttons = menu.findAll(ViewType.Button.self)
+            #expect(buttons.count >= 2)
+        }
     }
 
     @Test
@@ -248,11 +278,13 @@ struct DocumentPickerViewTests {
         let viewModel = makeViewModel()
         let view = DocumentPickerView(viewModel: viewModel)
 
-        let inspected = try view.inspect()
-        let menu = try inspected.find(ViewType.Menu.self)
-        _ = try menu.find(ViewType.Label.self) { label in
-            let systemImage = try? label.find(ViewType.Image.self)
-            return systemImage != nil
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            let menu = try inspected.find(ViewType.Menu.self)
+            _ = try menu.find(ViewType.Label.self) { label in
+                let systemImage = try? label.find(ViewType.Image.self)
+                return systemImage != nil
+            }
         }
     }
 
@@ -264,10 +296,12 @@ struct DocumentPickerViewTests {
         ])
         let view = DocumentPickerView(viewModel: viewModel)
 
-        let inspected = try view.inspect()
-        let grid = try inspected.find(ViewType.LazyVGrid.self)
-        let thumbnails = grid.findAll(DocumentThumbnailView.self)
-        #expect(thumbnails.count == 2)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            let grid = try inspected.find(ViewType.LazyVGrid.self)
+            let thumbnails = grid.findAll(DocumentThumbnailView.self)
+            #expect(thumbnails.count == 2)
+        }
     }
 
     @Test
@@ -275,10 +309,12 @@ struct DocumentPickerViewTests {
         let viewModel = makeViewModel()
         let view = DocumentPickerView(viewModel: viewModel)
 
-        let inspected = try view.inspect()
-        let vstack = try inspected.find(ViewType.VStack.self)
-        let label = try vstack.accessibilityLabel().string()
-        #expect(label == "Attachments")
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            let vstack = try inspected.find(ViewType.VStack.self)
+            let label = try vstack.accessibilityLabel().string()
+            #expect(label == "Attachments")
+        }
     }
 
     @Test
@@ -286,10 +322,12 @@ struct DocumentPickerViewTests {
         let viewModel = makeViewModel()
         let view = DocumentPickerView(viewModel: viewModel)
 
-        let inspected = try view.inspect()
-        let grid = try inspected.find(ViewType.LazyVGrid.self)
-        #expect(throws: Never.self) {
-            _ = try grid.find(ViewType.Menu.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            let grid = try inspected.find(ViewType.LazyVGrid.self)
+            #expect(throws: Never.self) {
+                _ = try grid.find(ViewType.Menu.self)
+            }
         }
     }
 }

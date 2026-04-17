@@ -14,9 +14,11 @@ struct BiometricSetupViewTests {
         let viewModel = AuthenticationViewModel()
         let view = BiometricSetupView(viewModel: viewModel, username: testUsername, passphrase: testPassphrase)
 
-        let sut = try view.inspect()
-        // find() throws if not found
-        _ = try sut.find(viewWithAccessibilityIdentifier: "enableBiometricButton")
+        try HostedInspection.inspect(view) { view in
+            let sut = try view.inspect()
+            // find() throws if not found
+            _ = try sut.find(viewWithAccessibilityIdentifier: "enableBiometricButton")
+        }
     }
 
     @Test
@@ -24,9 +26,11 @@ struct BiometricSetupViewTests {
         let viewModel = AuthenticationViewModel()
         let view = BiometricSetupView(viewModel: viewModel, username: testUsername, passphrase: testPassphrase)
 
-        let sut = try view.inspect()
-        // find() throws if not found
-        _ = try sut.find(viewWithAccessibilityIdentifier: "skipButton")
+        try HostedInspection.inspect(view) { view in
+            let sut = try view.inspect()
+            // find() throws if not found
+            _ = try sut.find(viewWithAccessibilityIdentifier: "skipButton")
+        }
     }
 
     @Test
@@ -34,9 +38,11 @@ struct BiometricSetupViewTests {
         let viewModel = AuthenticationViewModel()
         let view = BiometricSetupView(viewModel: viewModel, username: testUsername, passphrase: testPassphrase)
 
-        let sut = try view.inspect()
-        // find() throws if not found
-        _ = try sut.find(viewWithAccessibilityIdentifier: "backButton")
+        try HostedInspection.inspect(view) { view in
+            let sut = try view.inspect()
+            // find() throws if not found
+            _ = try sut.find(viewWithAccessibilityIdentifier: "backButton")
+        }
     }
 
     // MARK: - Button State Tests
@@ -47,10 +53,12 @@ struct BiometricSetupViewTests {
         viewModel.isLoading = false
         let view = BiometricSetupView(viewModel: viewModel, username: testUsername, passphrase: testPassphrase)
 
-        let sut = try view.inspect()
-        let button = try sut.find(viewWithAccessibilityIdentifier: "skipButton").button()
+        try HostedInspection.inspect(view) { view in
+            let sut = try view.inspect()
+            let button = try sut.find(viewWithAccessibilityIdentifier: "skipButton").button()
 
-        #expect(try button.isDisabled() == false)
+            #expect(try button.isDisabled() == false)
+        }
     }
 
     @Test
@@ -59,10 +67,12 @@ struct BiometricSetupViewTests {
         viewModel.isLoading = true
         let view = BiometricSetupView(viewModel: viewModel, username: testUsername, passphrase: testPassphrase)
 
-        let sut = try view.inspect()
-        let button = try sut.find(viewWithAccessibilityIdentifier: "skipButton").button()
+        try HostedInspection.inspect(view) { view in
+            let sut = try view.inspect()
+            let button = try sut.find(viewWithAccessibilityIdentifier: "skipButton").button()
 
-        #expect(try button.isDisabled() == true)
+            #expect(try button.isDisabled() == true)
+        }
     }
 
     // MARK: - Error Display Tests
@@ -73,9 +83,11 @@ struct BiometricSetupViewTests {
         viewModel.errorMessage = "Biometric setup failed"
         let view = BiometricSetupView(viewModel: viewModel, username: testUsername, passphrase: testPassphrase)
 
-        let sut = try view.inspect()
-        // find() throws if not found
-        _ = try sut.find(viewWithAccessibilityIdentifier: "errorLabel")
+        try HostedInspection.inspect(view) { view in
+            let sut = try view.inspect()
+            // find() throws if not found
+            _ = try sut.find(viewWithAccessibilityIdentifier: "errorLabel")
+        }
     }
 
     @Test
@@ -84,10 +96,12 @@ struct BiometricSetupViewTests {
         viewModel.errorMessage = nil
         let view = BiometricSetupView(viewModel: viewModel, username: testUsername, passphrase: testPassphrase)
 
-        let sut = try view.inspect()
+        try HostedInspection.inspect(view) { view in
+            let sut = try view.inspect()
 
-        #expect(throws: InspectionError.self) {
-            try sut.find(viewWithAccessibilityIdentifier: "errorLabel")
+            #expect(throws: InspectionError.self) {
+                try sut.find(viewWithAccessibilityIdentifier: "errorLabel")
+            }
         }
     }
 }

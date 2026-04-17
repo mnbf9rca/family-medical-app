@@ -9,6 +9,7 @@ struct SettingsViewHelperTests {
     // MARK: - InfoRow Tests
 
     @Test("InfoRow displays label and value")
+    @MainActor
     func infoRowDisplays() {
         let row = InfoRow(label: "Test Label", value: "Test Value")
 
