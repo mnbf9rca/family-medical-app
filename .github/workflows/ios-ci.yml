@@ -42,13 +42,17 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v6
-      - run: brew install swiftformat
-      - name: Verify SwiftFormat version matches pre-commit
+      - name: Install pinned SwiftFormat
+        env:
+          # Keep in sync with .pre-commit-config.yaml SwiftFormat rev
+          SWIFTFORMAT_VERSION: 0.60.1
         run: |
+          curl -fsSL "https://github.com/nicklockwood/SwiftFormat/releases/download/${SWIFTFORMAT_VERSION}/swiftformat.zip" -o /tmp/swiftformat.zip
+          unzip -j -o /tmp/swiftformat.zip swiftformat -d /usr/local/bin
+          chmod +x /usr/local/bin/swiftformat
           INSTALLED=$(swiftformat --version)
-          EXPECTED="0.60.1"
-          if [ "$INSTALLED" != "$EXPECTED" ]; then
-            echo "::error::SwiftFormat version mismatch: installed $INSTALLED, expected $EXPECTED (update .pre-commit-config.yaml and ios-ci.yml together)"
+          if [ "$INSTALLED" != "$SWIFTFORMAT_VERSION" ]; then
+            echo "::error::Downloaded SwiftFormat reports version $INSTALLED, expected $SWIFTFORMAT_VERSION"
             exit 1
           fi
       - run: swiftformat --config .swiftformat --lint ios/FamilyMedicalApp/FamilyMedicalApp
