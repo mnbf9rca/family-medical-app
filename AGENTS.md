@@ -4,6 +4,18 @@
 
 **Subagents frequently violate these rules. Read carefully.**
 
+### Day-1 Correctness
+
+- ⚠️ **ALWAYS** write code as if it were correct from day 1
+  - The final diff must look like the feature was designed this way from the start
+  - No hacks, no shims, no compatibility layers, no migration scaffolding left behind
+  - No `_deprecated` suffixes, no dual code paths, no "TODO: remove after X" markers
+  - No feature flags or conditional wiring guarding the new path against the old one
+  - When replacing code, **delete the old code** — do not leave it alongside the new
+  - When renaming, rename everywhere — do not re-export the old name for compatibility
+  - This is a pre-release project with no external consumers; there is nothing to be backwards-compatible with
+  - If a refactor is too large to land cleanly, split it into smaller PRs that are each day-1 clean — not one PR with a shim
+
 ### Environment & Execution
 
 - ⚠️ **NEVER** start processes detached
