@@ -47,14 +47,17 @@ jobs:
           # Keep in sync with .pre-commit-config.yaml SwiftFormat rev
           SWIFTFORMAT_VERSION: 0.60.1
         run: |
+          BIN_DIR="$RUNNER_TEMP/swiftformat-bin"
+          mkdir -p "$BIN_DIR"
           curl -fsSL "https://github.com/nicklockwood/SwiftFormat/releases/download/${SWIFTFORMAT_VERSION}/swiftformat.zip" -o /tmp/swiftformat.zip
-          unzip -j -o /tmp/swiftformat.zip swiftformat -d /usr/local/bin
-          chmod +x /usr/local/bin/swiftformat
-          INSTALLED=$(swiftformat --version)
+          unzip -j -o /tmp/swiftformat.zip swiftformat -d "$BIN_DIR"
+          chmod +x "$BIN_DIR/swiftformat"
+          INSTALLED=$("$BIN_DIR/swiftformat" --version)
           if [ "$INSTALLED" != "$SWIFTFORMAT_VERSION" ]; then
             echo "::error::Downloaded SwiftFormat reports version $INSTALLED, expected $SWIFTFORMAT_VERSION"
             exit 1
           fi
+          echo "$BIN_DIR" >> "$GITHUB_PATH"
       - run: swiftformat --config .swiftformat --lint ios/FamilyMedicalApp/FamilyMedicalApp
 
   xcframework:
