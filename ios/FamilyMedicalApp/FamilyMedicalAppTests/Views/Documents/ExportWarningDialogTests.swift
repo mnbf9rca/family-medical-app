@@ -24,8 +24,10 @@ struct ExportWarningDialogTests {
             )
 
         // Use find() for deterministic coverage
-        let inspected = try content.inspect()
-        _ = try inspected.find(text: "Test Content")
+        try HostedInspection.inspect(content) { content in
+            let inspected = try content.inspect()
+            _ = try inspected.find(text: "Test Content")
+        }
 
         #expect(!wasConfirmed)
         #expect(!wasCancelled)
@@ -46,8 +48,10 @@ struct ExportWarningDialogTests {
             )
 
         // Use find() for deterministic coverage
-        let inspected = try content.inspect()
-        _ = try inspected.find(text: "Main Content")
+        try HostedInspection.inspect(content) { content in
+            let inspected = try content.inspect()
+            _ = try inspected.find(text: "Main Content")
+        }
     }
 
     @Test
@@ -65,8 +69,10 @@ struct ExportWarningDialogTests {
             )
 
         // Use find() for deterministic coverage
-        let inspected = try content.inspect()
-        _ = try inspected.find(text: "Main Content")
+        try HostedInspection.inspect(content) { content in
+            let inspected = try content.inspect()
+            _ = try inspected.find(text: "Main Content")
+        }
     }
 
     // MARK: - Default Cancel Callback Tests
@@ -85,8 +91,10 @@ struct ExportWarningDialogTests {
             ) {}
 
         // Use find() for deterministic coverage
-        let inspected = try content.inspect()
-        _ = try inspected.find(text: "Content")
+        try HostedInspection.inspect(content) { content in
+            let inspected = try content.inspect()
+            _ = try inspected.find(text: "Content")
+        }
     }
 
     // MARK: - Callback Invocation Tests
@@ -101,8 +109,10 @@ struct ExportWarningDialogTests {
             ) { wasConfirmed = true }
 
         // Use find() for deterministic coverage
-        let inspected = try content.inspect()
-        _ = try inspected.find(text: "Content")
+        try HostedInspection.inspect(content) { content in
+            let inspected = try content.inspect()
+            _ = try inspected.find(text: "Content")
+        }
         // Callback is stored but not invoked until user taps Export
         #expect(!wasConfirmed)
     }
@@ -119,8 +129,10 @@ struct ExportWarningDialogTests {
             )
 
         // Use find() for deterministic coverage
-        let inspected = try content.inspect()
-        _ = try inspected.find(text: "Content")
+        try HostedInspection.inspect(content) { content in
+            let inspected = try content.inspect()
+            _ = try inspected.find(text: "Content")
+        }
         // Callback is stored but not invoked until user taps Cancel
         #expect(!wasCancelled)
     }
@@ -142,8 +154,10 @@ struct ExportWarningDialogTests {
         ) {}
 
         // Use find() for deterministic coverage
-        let inspected = try content.inspect()
-        _ = try inspected.find(ViewType.Button.self)
+        try HostedInspection.inspect(content) { content in
+            let inspected = try content.inspect()
+            _ = try inspected.find(ViewType.Button.self)
+        }
     }
 
     @Test
@@ -154,8 +168,10 @@ struct ExportWarningDialogTests {
             ) {}
 
         // Use find() for deterministic coverage
-        let inspected = try content.inspect()
-        _ = try inspected.find(ViewType.Image.self)
+        try HostedInspection.inspect(content) { content in
+            let inspected = try content.inspect()
+            _ = try inspected.find(ViewType.Image.self)
+        }
     }
 
     @Test
@@ -169,9 +185,11 @@ struct ExportWarningDialogTests {
         ) {}
 
         // Use find() for deterministic coverage
-        let inspected = try content.inspect()
-        _ = try inspected.find(text: "Header")
-        _ = try inspected.find(text: "Body")
+        try HostedInspection.inspect(content) { content in
+            let inspected = try content.inspect()
+            _ = try inspected.find(text: "Header")
+            _ = try inspected.find(text: "Body")
+        }
     }
 
     // MARK: - State Management Tests
@@ -191,8 +209,10 @@ struct ExportWarningDialogTests {
             ) {}
 
         // Use find() for deterministic coverage
-        let inspected = try content.inspect()
-        _ = try inspected.find(text: "Content")
+        try HostedInspection.inspect(content) { content in
+            let inspected = try content.inspect()
+            _ = try inspected.find(text: "Content")
+        }
 
         // Simulate showing dialog
         isPresented = true
