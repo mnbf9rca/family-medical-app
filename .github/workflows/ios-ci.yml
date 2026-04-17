@@ -43,10 +43,13 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Install pinned SwiftFormat
-        env:
-          # Keep in sync with .pre-commit-config.yaml SwiftFormat rev
-          SWIFTFORMAT_VERSION: 0.60.1
         run: |
+          # Single source of truth for the version: .pre-commit-config.yaml
+          SWIFTFORMAT_VERSION=$(awk '/nicklockwood\/SwiftFormat/{f=1; next} f && /rev:/{print $2; exit}' .pre-commit-config.yaml)
+          if [ -z "$SWIFTFORMAT_VERSION" ]; then
+            echo "::error::Could not extract SwiftFormat rev from .pre-commit-config.yaml"
+            exit 1
+          fi
           BIN_DIR="$RUNNER_TEMP/swiftformat-bin"
           mkdir -p "$BIN_DIR"
           curl -fsSL "https://github.com/nicklockwood/SwiftFormat/releases/download/${SWIFTFORMAT_VERSION}/swiftformat.zip" -o /tmp/swiftformat.zip
