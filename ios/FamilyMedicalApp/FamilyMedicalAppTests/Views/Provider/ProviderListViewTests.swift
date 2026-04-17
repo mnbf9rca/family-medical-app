@@ -10,10 +10,6 @@ struct ProviderListViewTests {
 
     let testPrimaryKey = SymmetricKey(size: .bits256)
 
-    func makeTestPerson(name: String = "Test Person") throws -> Person {
-        try PersonTestHelper.makeTestPerson(name: name)
-    }
-
     func makeViewModel(
         person: Person,
         repository: MockProviderRepository = MockProviderRepository(),
@@ -32,7 +28,7 @@ struct ProviderListViewTests {
 
     @Test
     func viewRendersSuccessfully() throws {
-        let person = try makeTestPerson()
+        let person = try PersonTestHelper.makeTestPerson()
         let viewModel = makeViewModel(person: person)
         let view = ProviderListView(person: person, viewModel: viewModel)
 
@@ -44,7 +40,7 @@ struct ProviderListViewTests {
 
     @Test
     func viewRendersEmptyState() throws {
-        let person = try makeTestPerson()
+        let person = try PersonTestHelper.makeTestPerson()
         let viewModel = makeViewModel(person: person)
         // No providers, not loading -> ContentUnavailableView
         let view = ProviderListView(person: person, viewModel: viewModel)
@@ -57,7 +53,7 @@ struct ProviderListViewTests {
 
     @Test
     func viewRendersLoadingState() throws {
-        let person = try makeTestPerson()
+        let person = try PersonTestHelper.makeTestPerson()
         let viewModel = makeViewModel(person: person)
         viewModel.isLoading = true
         let view = ProviderListView(person: person, viewModel: viewModel)
@@ -70,7 +66,7 @@ struct ProviderListViewTests {
 
     @Test
     func viewRendersProviderListWithData() async throws {
-        let person = try makeTestPerson()
+        let person = try PersonTestHelper.makeTestPerson()
         let mockRepo = MockProviderRepository()
         let provider1 = Provider(name: "Dr. Smith", specialty: "Cardiology")
         let provider2 = Provider(organization: "City Hospital")
@@ -89,7 +85,7 @@ struct ProviderListViewTests {
 
     @Test
     func viewRendersProviderRows() async throws {
-        let person = try makeTestPerson()
+        let person = try PersonTestHelper.makeTestPerson()
         let mockRepo = MockProviderRepository()
         let provider = Provider(name: "Dr. Jones", specialty: "Pediatrics")
         mockRepo.addProvider(provider, personId: person.id)
@@ -109,7 +105,7 @@ struct ProviderListViewTests {
 
     @Test
     func viewDisplaysSearchable() throws {
-        let person = try makeTestPerson()
+        let person = try PersonTestHelper.makeTestPerson()
         let viewModel = makeViewModel(person: person)
         let view = ProviderListView(person: person, viewModel: viewModel)
 
@@ -123,7 +119,7 @@ struct ProviderListViewTests {
 
     @Test
     func viewHasAddButtonInToolbar() throws {
-        let person = try makeTestPerson()
+        let person = try PersonTestHelper.makeTestPerson()
         let viewModel = makeViewModel(person: person)
         let view = ProviderListView(person: person, viewModel: viewModel)
 
@@ -138,7 +134,7 @@ struct ProviderListViewTests {
 
     @Test
     func viewHandlesErrorState() throws {
-        let person = try makeTestPerson()
+        let person = try PersonTestHelper.makeTestPerson()
         let viewModel = makeViewModel(person: person)
         viewModel.errorMessage = "Unable to load providers."
 
@@ -153,7 +149,7 @@ struct ProviderListViewTests {
 
     @Test
     func viewRendersWithErrorFromRepository() async throws {
-        let person = try makeTestPerson()
+        let person = try PersonTestHelper.makeTestPerson()
         let mockRepo = MockProviderRepository()
         mockRepo.shouldFailFetchAll = true
 
@@ -170,7 +166,7 @@ struct ProviderListViewTests {
 
     @Test
     func providerRowDisplaysDisplayString() async throws {
-        let person = try makeTestPerson()
+        let person = try PersonTestHelper.makeTestPerson()
         let mockRepo = MockProviderRepository()
         let provider = Provider(name: "Dr. Adams", organization: "Health Clinic", specialty: "Dermatology")
         mockRepo.addProvider(provider, personId: person.id)
@@ -188,7 +184,7 @@ struct ProviderListViewTests {
 
     @Test
     func providerRowDisplaysSpecialty() async throws {
-        let person = try makeTestPerson()
+        let person = try PersonTestHelper.makeTestPerson()
         let mockRepo = MockProviderRepository()
         let provider = Provider(name: "Dr. Adams", specialty: "Dermatology")
         mockRepo.addProvider(provider, personId: person.id)
@@ -205,7 +201,7 @@ struct ProviderListViewTests {
 
     @Test
     func deleteConfirmationDialogExists() throws {
-        let person = try makeTestPerson()
+        let person = try PersonTestHelper.makeTestPerson()
         let viewModel = makeViewModel(person: person)
         let view = ProviderListView(person: person, viewModel: viewModel)
 
@@ -218,7 +214,7 @@ struct ProviderListViewTests {
 
     @Test
     func viewInitializesWithDefaultViewModel() throws {
-        let person = try makeTestPerson()
+        let person = try PersonTestHelper.makeTestPerson()
         // Initialize without providing viewModel to test default initialization
         let view = ProviderListView(person: person)
         try HostedInspection.inspect(view) { view in
@@ -229,7 +225,7 @@ struct ProviderListViewTests {
 
     @Test
     func viewRendersMultipleProviders() async throws {
-        let person = try makeTestPerson()
+        let person = try PersonTestHelper.makeTestPerson()
         let mockRepo = MockProviderRepository()
 
         let providers = [
@@ -258,7 +254,7 @@ struct ProviderListViewTests {
 
     @Test
     func viewRendersProviderWithOrganizationOnly() async throws {
-        let person = try makeTestPerson()
+        let person = try PersonTestHelper.makeTestPerson()
         let mockRepo = MockProviderRepository()
         let provider = Provider(organization: "Sunrise Medical Center")
         mockRepo.addProvider(provider, personId: person.id)
@@ -275,7 +271,7 @@ struct ProviderListViewTests {
 
     @Test
     func viewShowsListStyleWhenProvidersExist() async throws {
-        let person = try makeTestPerson()
+        let person = try PersonTestHelper.makeTestPerson()
         let mockRepo = MockProviderRepository()
         mockRepo.addProvider(Provider(name: "Dr. Test"), personId: person.id)
 
@@ -292,7 +288,7 @@ struct ProviderListViewTests {
 
     @Test
     func viewRendersNavigationTitle() throws {
-        let person = try makeTestPerson(name: "Alice")
+        let person = try PersonTestHelper.makeTestPerson(name: "Alice")
         let viewModel = makeViewModel(person: person)
         let view = ProviderListView(person: person, viewModel: viewModel)
 
@@ -304,7 +300,7 @@ struct ProviderListViewTests {
 
     @Test
     func emptyStateShowsCorrectMessage() throws {
-        let person = try makeTestPerson()
+        let person = try PersonTestHelper.makeTestPerson()
         let viewModel = makeViewModel(person: person)
         let view = ProviderListView(person: person, viewModel: viewModel)
 
@@ -317,7 +313,7 @@ struct ProviderListViewTests {
 
     @Test
     func loadingStateOverlaysOnEmptyView() throws {
-        let person = try makeTestPerson()
+        let person = try PersonTestHelper.makeTestPerson()
         let viewModel = makeViewModel(person: person)
         viewModel.isLoading = true
         // When loading with no providers, both ContentUnavailableView

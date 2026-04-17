@@ -8,35 +8,11 @@ import ViewInspector
 /// Field presence and pre-fill tests live in ProviderDetailViewFieldTests.
 @MainActor
 struct ProviderDetailViewTests {
-    // MARK: - Test Data
-
-    func makeTestPerson(name: String = "Test Person") throws -> Person {
-        try PersonTestHelper.makeTestPerson(name: name)
-    }
-
-    func makeProvider(
-        name: String? = "Dr. Smith",
-        organization: String? = nil,
-        specialty: String? = "Cardiology",
-        phone: String? = "555-0100",
-        address: String? = "123 Main St",
-        notes: String? = "Great doctor"
-    ) -> Provider {
-        Provider(
-            name: name,
-            organization: organization,
-            specialty: specialty,
-            phone: phone,
-            address: address,
-            notes: notes
-        )
-    }
-
     // MARK: - Create Mode Tests
 
     @Test
     func viewRendersInCreateMode() throws {
-        let person = try makeTestPerson()
+        let person = try PersonTestHelper.makeTestPerson()
         let view = ProviderDetailView(person: person) { _ in true }
 
         try HostedInspection.inspect(view) { view in
@@ -47,7 +23,7 @@ struct ProviderDetailViewTests {
 
     @Test
     func viewRendersFormInCreateMode() throws {
-        let person = try makeTestPerson()
+        let person = try PersonTestHelper.makeTestPerson()
         let view = ProviderDetailView(person: person) { _ in true }
 
         try HostedInspection.inspect(view) { view in
@@ -58,7 +34,7 @@ struct ProviderDetailViewTests {
 
     @Test
     func viewShowsUXHintInCreateMode() throws {
-        let person = try makeTestPerson()
+        let person = try PersonTestHelper.makeTestPerson()
         let view = ProviderDetailView(person: person) { _ in true }
 
         try HostedInspection.inspect(view) { view in
@@ -69,8 +45,8 @@ struct ProviderDetailViewTests {
 
     @Test
     func viewDoesNotShowUXHintInEditMode() throws {
-        let person = try makeTestPerson()
-        let existingProvider = makeProvider()
+        let person = try PersonTestHelper.makeTestPerson()
+        let existingProvider = ProviderTestHelper.makeProvider()
         let view = ProviderDetailView(person: person, existingProvider: existingProvider) { _ in true }
 
         try HostedInspection.inspect(view) { view in
@@ -86,8 +62,8 @@ struct ProviderDetailViewTests {
 
     @Test
     func viewRendersInEditMode() throws {
-        let person = try makeTestPerson()
-        let existingProvider = makeProvider()
+        let person = try PersonTestHelper.makeTestPerson()
+        let existingProvider = ProviderTestHelper.makeProvider()
         let view = ProviderDetailView(person: person, existingProvider: existingProvider) { _ in true }
 
         try HostedInspection.inspect(view) { view in
@@ -98,8 +74,8 @@ struct ProviderDetailViewTests {
 
     @Test
     func viewRendersFormInEditMode() throws {
-        let person = try makeTestPerson()
-        let existingProvider = makeProvider()
+        let person = try PersonTestHelper.makeTestPerson()
+        let existingProvider = ProviderTestHelper.makeProvider()
         let view = ProviderDetailView(person: person, existingProvider: existingProvider) { _ in true }
 
         try HostedInspection.inspect(view) { view in
@@ -112,7 +88,7 @@ struct ProviderDetailViewTests {
 
     @Test
     func saveButtonExists() throws {
-        let person = try makeTestPerson()
+        let person = try PersonTestHelper.makeTestPerson()
         let view = ProviderDetailView(person: person) { _ in true }
 
         try HostedInspection.inspect(view) { view in
@@ -123,7 +99,7 @@ struct ProviderDetailViewTests {
 
     @Test
     func cancelButtonExists() throws {
-        let person = try makeTestPerson()
+        let person = try PersonTestHelper.makeTestPerson()
         let view = ProviderDetailView(person: person) { _ in true }
 
         try HostedInspection.inspect(view) { view in
@@ -136,7 +112,7 @@ struct ProviderDetailViewTests {
 
     @Test
     func formHasProviderInformationSection() throws {
-        let person = try makeTestPerson()
+        let person = try PersonTestHelper.makeTestPerson()
         let view = ProviderDetailView(person: person) { _ in true }
 
         try HostedInspection.inspect(view) { view in
@@ -150,7 +126,7 @@ struct ProviderDetailViewTests {
 
     @Test
     func formHasContactSection() throws {
-        let person = try makeTestPerson()
+        let person = try PersonTestHelper.makeTestPerson()
         let view = ProviderDetailView(person: person) { _ in true }
 
         try HostedInspection.inspect(view) { view in
@@ -163,7 +139,7 @@ struct ProviderDetailViewTests {
 
     @Test
     func formHasNotesSection() throws {
-        let person = try makeTestPerson()
+        let person = try PersonTestHelper.makeTestPerson()
         let view = ProviderDetailView(person: person) { _ in true }
 
         try HostedInspection.inspect(view) { view in
@@ -176,8 +152,8 @@ struct ProviderDetailViewTests {
 
     @Test
     func editModeFormHasExpectedSections() throws {
-        let person = try makeTestPerson()
-        let existingProvider = makeProvider()
+        let person = try PersonTestHelper.makeTestPerson()
+        let existingProvider = ProviderTestHelper.makeProvider()
         let view = ProviderDetailView(person: person, existingProvider: existingProvider) { _ in true }
 
         try HostedInspection.inspect(view) { view in
@@ -195,7 +171,7 @@ struct ProviderDetailViewTests {
 
     @Test
     func createModeFieldsStartEmpty() throws {
-        let person = try makeTestPerson()
+        let person = try PersonTestHelper.makeTestPerson()
         let view = ProviderDetailView(person: person) { _ in true }
 
         try HostedInspection.inspect(view) { view in
@@ -210,7 +186,7 @@ struct ProviderDetailViewTests {
 
     @Test
     func viewRendersWithAllProviderFields() throws {
-        let person = try makeTestPerson()
+        let person = try PersonTestHelper.makeTestPerson()
         let existingProvider = Provider(
             name: "Dr. Full",
             organization: "Full Org",

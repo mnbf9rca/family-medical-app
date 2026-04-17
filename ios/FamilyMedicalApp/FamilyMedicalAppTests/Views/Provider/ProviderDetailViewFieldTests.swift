@@ -8,35 +8,11 @@ import ViewInspector
 /// Split from ProviderDetailViewTests to stay within type_body_length limits.
 @MainActor
 struct ProviderDetailViewFieldTests {
-    // MARK: - Test Data
-
-    func makeTestPerson(name: String = "Test Person") throws -> Person {
-        try PersonTestHelper.makeTestPerson(name: name)
-    }
-
-    func makeProvider(
-        name: String? = "Dr. Smith",
-        organization: String? = nil,
-        specialty: String? = "Cardiology",
-        phone: String? = "555-0100",
-        address: String? = "123 Main St",
-        notes: String? = "Great doctor"
-    ) -> Provider {
-        Provider(
-            name: name,
-            organization: organization,
-            specialty: specialty,
-            phone: phone,
-            address: address,
-            notes: notes
-        )
-    }
-
     // MARK: - Form Field Tests
 
     @Test
     func formHasNameField() throws {
-        let person = try makeTestPerson()
+        let person = try PersonTestHelper.makeTestPerson()
         let view = ProviderDetailView(person: person) { _ in true }
 
         try HostedInspection.inspect(view) { view in
@@ -51,7 +27,7 @@ struct ProviderDetailViewFieldTests {
 
     @Test
     func formHasOrganizationField() throws {
-        let person = try makeTestPerson()
+        let person = try PersonTestHelper.makeTestPerson()
         let view = ProviderDetailView(person: person) { _ in true }
 
         try HostedInspection.inspect(view) { view in
@@ -65,7 +41,7 @@ struct ProviderDetailViewFieldTests {
 
     @Test
     func formHasSpecialtyField() throws {
-        let person = try makeTestPerson()
+        let person = try PersonTestHelper.makeTestPerson()
         let view = ProviderDetailView(person: person) { _ in true }
 
         try HostedInspection.inspect(view) { view in
@@ -79,7 +55,7 @@ struct ProviderDetailViewFieldTests {
 
     @Test
     func formHasPhoneField() throws {
-        let person = try makeTestPerson()
+        let person = try PersonTestHelper.makeTestPerson()
         let view = ProviderDetailView(person: person) { _ in true }
 
         try HostedInspection.inspect(view) { view in
@@ -93,7 +69,7 @@ struct ProviderDetailViewFieldTests {
 
     @Test
     func formHasAddressField() throws {
-        let person = try makeTestPerson()
+        let person = try PersonTestHelper.makeTestPerson()
         let view = ProviderDetailView(person: person) { _ in true }
 
         try HostedInspection.inspect(view) { view in
@@ -107,7 +83,7 @@ struct ProviderDetailViewFieldTests {
 
     @Test
     func formHasNotesField() throws {
-        let person = try makeTestPerson()
+        let person = try PersonTestHelper.makeTestPerson()
         let view = ProviderDetailView(person: person) { _ in true }
 
         try HostedInspection.inspect(view) { view in
@@ -121,8 +97,8 @@ struct ProviderDetailViewFieldTests {
 
     @Test
     func formPreFillsNameFromExistingProvider() throws {
-        let person = try makeTestPerson()
-        let existingProvider = makeProvider(name: "Dr. Jane Doe")
+        let person = try PersonTestHelper.makeTestPerson()
+        let existingProvider = ProviderTestHelper.makeProvider(name: "Dr. Jane Doe")
         let view = ProviderDetailView(person: person, existingProvider: existingProvider) { _ in true }
 
         try HostedInspection.inspect(view) { view in
@@ -137,8 +113,8 @@ struct ProviderDetailViewFieldTests {
 
     @Test
     func formPreFillsOrganizationFromExistingProvider() throws {
-        let person = try makeTestPerson()
-        let existingProvider = makeProvider(name: "Dr. Smith", organization: "City Hospital")
+        let person = try PersonTestHelper.makeTestPerson()
+        let existingProvider = ProviderTestHelper.makeProvider(name: "Dr. Smith", organization: "City Hospital")
         let view = ProviderDetailView(person: person, existingProvider: existingProvider) { _ in true }
 
         try HostedInspection.inspect(view) { view in
@@ -153,8 +129,8 @@ struct ProviderDetailViewFieldTests {
 
     @Test
     func formPreFillsSpecialtyFromExistingProvider() throws {
-        let person = try makeTestPerson()
-        let existingProvider = makeProvider(specialty: "Neurology")
+        let person = try PersonTestHelper.makeTestPerson()
+        let existingProvider = ProviderTestHelper.makeProvider(specialty: "Neurology")
         let view = ProviderDetailView(person: person, existingProvider: existingProvider) { _ in true }
 
         try HostedInspection.inspect(view) { view in
@@ -169,8 +145,8 @@ struct ProviderDetailViewFieldTests {
 
     @Test
     func formPreFillsPhoneFromExistingProvider() throws {
-        let person = try makeTestPerson()
-        let existingProvider = makeProvider(phone: "555-1234")
+        let person = try PersonTestHelper.makeTestPerson()
+        let existingProvider = ProviderTestHelper.makeProvider(phone: "555-1234")
         let view = ProviderDetailView(person: person, existingProvider: existingProvider) { _ in true }
 
         try HostedInspection.inspect(view) { view in
@@ -185,8 +161,8 @@ struct ProviderDetailViewFieldTests {
 
     @Test
     func formPreFillsAddressFromExistingProvider() throws {
-        let person = try makeTestPerson()
-        let existingProvider = makeProvider(address: "456 Oak Ave")
+        let person = try PersonTestHelper.makeTestPerson()
+        let existingProvider = ProviderTestHelper.makeProvider(address: "456 Oak Ave")
         let view = ProviderDetailView(person: person, existingProvider: existingProvider) { _ in true }
 
         try HostedInspection.inspect(view) { view in
@@ -201,8 +177,8 @@ struct ProviderDetailViewFieldTests {
 
     @Test
     func formPreFillsNotesFromExistingProvider() throws {
-        let person = try makeTestPerson()
-        let existingProvider = makeProvider(notes: "Very helpful")
+        let person = try PersonTestHelper.makeTestPerson()
+        let existingProvider = ProviderTestHelper.makeProvider(notes: "Very helpful")
         let view = ProviderDetailView(person: person, existingProvider: existingProvider) { _ in true }
 
         try HostedInspection.inspect(view) { view in
