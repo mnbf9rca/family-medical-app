@@ -85,19 +85,19 @@ actor DocumentBlobService: DocumentBlobServiceProtocol {
     /// surfaces to callers (and ultimately the UI) as
     /// `ModelError.documentTooLarge(maxSizeMB:)`.
     ///
-    /// Rationale: keeps Core Data blob encryption within the device's
-    /// per-record memory budget and keeps the eventual sync-payload size
-    /// tractable. No ADR pins this value; it is a pragmatic cap that should
-    /// be revisited when sync lands and real-world payload distributions are
-    /// known.
+    /// Rationale: bounds the in-memory cost of encrypting blobs and generating
+    /// thumbnails, and keeps the on-disk footprint and eventual sync-payload size
+    /// tractable. No ADR pins this value; it is a pragmatic cap that should be
+    /// revisited when sync lands and real-world payload distributions are known.
     static let maxFileSizeBytes = 10 * 1_024 * 1_024
 
-    /// Target edge length of generated thumbnails: 200 **pt**.
+    /// Target maximum edge length of generated thumbnails: 200 px.
     ///
-    /// Unit is SwiftUI points, not pixels — the renderer multiplies by the
-    /// display scale (@2x / @3x), so on current iPhones the actual bitmap is
-    /// 400 px or 600 px. Sized for list-row thumbnails where a low decode
-    /// cost matters more than full-fidelity rendering.
+    /// This value is passed to image resizing as a pixel dimension. The thumbnail
+    /// renderer uses a fixed scale of 1.0 (see ImageProcessingService.resizeIfNeeded),
+    /// so the stored bitmap's maximum edge length matches this value rather than
+    /// being multiplied by the device display scale. Sized for list-row thumbnails
+    /// where low decode cost matters more than full-fidelity rendering.
     static let thumbnailDimension = 200
 
     // MARK: - Types

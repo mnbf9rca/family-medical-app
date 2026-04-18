@@ -15,8 +15,8 @@ use worker::*;
 
 /// POST `/auth/opaque/register/start` request body.
 ///
-/// - `client_identifier`: 64 hex chars = SHA-256(username), 32 bytes.
-/// - `registration_request`: base64-encoded opaque-ke `RegistrationRequest` blob.
+/// - `clientIdentifier` (Rust: `client_identifier`): 64 hex chars = SHA-256(username), 32 bytes.
+/// - `registrationRequest` (Rust: `registration_request`): base64-encoded opaque-ke `RegistrationRequest` blob.
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RegisterStartRequest {
@@ -26,7 +26,7 @@ pub struct RegisterStartRequest {
 
 /// POST `/auth/opaque/register/start` response body.
 ///
-/// - `registration_response`: base64-encoded opaque-ke `RegistrationResponse`
+/// - `registrationResponse` (Rust: `registration_response`): base64-encoded opaque-ke `RegistrationResponse`
 ///   blob the client feeds into `ClientRegistration::finish`.
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -36,10 +36,10 @@ pub struct RegisterStartResponse {
 
 /// POST `/auth/opaque/register/finish` request body.
 ///
-/// - `client_identifier`: 64 hex chars (same as register/start).
-/// - `registration_record`: base64-encoded opaque-ke `RegistrationUpload`
+/// - `clientIdentifier` (Rust: `client_identifier`): 64 hex chars (same as register/start).
+/// - `registrationRecord` (Rust: `registration_record`): base64-encoded opaque-ke `RegistrationUpload`
 ///   (the password file) that the server persists as the credential.
-/// - `encrypted_bundle`: optional base64-encoded initial encrypted backup
+/// - `encryptedBundle` (Rust: `encrypted_bundle`): optional base64-encoded initial encrypted backup
 ///   bundle; when present it is stored under `bundle:<clientIdentifier>`.
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -50,6 +50,9 @@ pub struct RegisterFinishRequest {
 }
 
 /// Generic `{ "success": true }` response used by the register/finish path.
+///
+/// - `success` (Rust: `success`): always `true` on the success path; identical
+///   wire name in both languages (no camelCase rename needed).
 #[derive(Serialize)]
 pub struct SuccessResponse {
     pub success: bool,
@@ -57,8 +60,8 @@ pub struct SuccessResponse {
 
 /// POST `/auth/opaque/login/start` request body.
 ///
-/// - `client_identifier`: 64 hex chars (same as register).
-/// - `start_login_request`: base64-encoded opaque-ke `CredentialRequest` blob.
+/// - `clientIdentifier` (Rust: `client_identifier`): 64 hex chars (same as register).
+/// - `startLoginRequest` (Rust: `start_login_request`): base64-encoded opaque-ke `CredentialRequest` blob.
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LoginStartRequest {
@@ -68,8 +71,8 @@ pub struct LoginStartRequest {
 
 /// POST `/auth/opaque/login/start` response body.
 ///
-/// - `login_response`: base64-encoded opaque-ke `CredentialResponse` blob.
-/// - `state_key`: opaque server-state handle (plain string, no base64) the
+/// - `loginResponse` (Rust: `login_response`): base64-encoded opaque-ke `CredentialResponse` blob.
+/// - `stateKey` (Rust: `state_key`): opaque server-state handle (plain string, no base64) the
 ///   client must echo back on login/finish. Encodes a fake-vs-real record
 ///   discriminator per RFC 9807 §10.9; server-managed, TTL 60s.
 #[derive(Serialize)]
@@ -81,9 +84,9 @@ pub struct LoginStartResponse {
 
 /// POST `/auth/opaque/login/finish` request body.
 ///
-/// - `client_identifier`: 64 hex chars (same as register/login start).
-/// - `state_key`: exact value returned by the prior login/start response.
-/// - `finish_login_request`: base64-encoded opaque-ke `CredentialFinalization`
+/// - `clientIdentifier` (Rust: `client_identifier`): 64 hex chars (same as register/login start).
+/// - `stateKey` (Rust: `state_key`): exact value returned by the prior login/start response.
+/// - `finishLoginRequest` (Rust: `finish_login_request`): base64-encoded opaque-ke `CredentialFinalization`
 ///   blob.
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -95,9 +98,9 @@ pub struct LoginFinishRequest {
 
 /// POST `/auth/opaque/login/finish` response body.
 ///
-/// - `success`: always `true` on this success path.
-/// - `session_key`: base64-encoded opaque-ke session key derived by the server.
-/// - `encrypted_bundle`: optional base64-encoded encrypted backup bundle
+/// - `success` (Rust: `success`): always `true` on this success path.
+/// - `sessionKey` (Rust: `session_key`): base64-encoded opaque-ke session key derived by the server.
+/// - `encryptedBundle` (Rust: `encrypted_bundle`): optional base64-encoded encrypted backup bundle
 ///   associated with this account (whatever the client uploaded at
 ///   register/finish or via a subsequent update).
 #[derive(Serialize)]
@@ -108,10 +111,31 @@ pub struct LoginFinishResponse {
     pub encrypted_bundle: Option<String>,
 }
 
-/// Uniform error body returned on any 4xx/5xx from the OPAQUE endpoints.
-/// Intentionally opaque to callers — specific failure modes are intentionally
-/// not distinguished in the wire representation (defense in depth against
-/// account-enumeration oracles).
+/// Error body returned on 4xx/5xx from the OPAQUE endpoints.
+///
+/// - `error` (Rust: `error`): human-readable string. The level of detail
+///   depends on which code path produced the error:
+///
+/// **Validation and transport errors DO distinguish conditions** to aid
+/// client-side debugging. Callers see specific strings such as `"Invalid
+/// JSON: ..."`, `"Invalid clientIdentifier"`, `"Invalid registration record
+/// format"`, `"Invalid base64 in registrationRequest"`, `"Session expired"`,
+/// and `"Too many requests"` (accompanied by a `Retry-After` header).
+/// These paths leak nothing about account existence; they only describe the
+/// shape of the client's request or the state of a transient server-side
+/// session.
+///
+/// **Auth-outcome paths deliberately return uniform strings** so that the
+/// wire response does not reveal whether an account exists. Register start
+/// and register finish collapse all credential-bearing failures to
+/// `"Registration failed"`; login start and login finish collapse them to
+/// `"Authentication failed"` (or `"Invalid credential request"` for
+/// malformed OPAQUE messages, which applies equally to known and unknown
+/// users). Combined with RFC 9807 §10.9 fake-record generation in
+/// login/start, this prevents the endpoint from acting as an
+/// account-enumeration oracle per RFC 9807 §6.4.
+///
+/// See ADR-0011 for the full OPAQUE protocol flow and threat model.
 #[derive(Serialize)]
 pub struct ErrorResponse {
     pub error: String,

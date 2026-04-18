@@ -241,7 +241,10 @@ final class ProviderRepository: ProviderRepositoryProtocol, @unchecked Sendable 
         do {
             return try fmkService.retrieveFMK(familyMemberID: personID, primaryKey: primaryKey)
         } catch {
-            logger.logError(error, context: "ProviderRepository.ensureFMK")
+            logger.logError(
+                error,
+                context: "ProviderRepository.ensureFMK personID=\(personID)"
+            )
             throw RepositoryError.keyNotAvailable("Failed to retrieve FMK: \(error.localizedDescription)")
         }
     }
