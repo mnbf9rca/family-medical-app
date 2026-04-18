@@ -6,10 +6,10 @@ Guide for setting up iOS development environment on macOS (M4 Mac).
 
 ### Required
 
-- **macOS**: Sonoma (14.0) or later
-- **Xcode**: 15.0+ (free from App Store)
+- **macOS**: Sequoia (15.0) or later
+- **Xcode**: 26.2+ (free from App Store)
   - Includes Swift compiler, iOS Simulator, and all iOS SDKs
-  - Large download (~7-15 GB), takes time to install
+  - Large download, takes time to install
 - **Apple ID**: Free (required for Xcode and running on simulator)
 
 ### Optional but Recommended
@@ -42,7 +42,7 @@ xcode-select -p
 # Should output: /Applications/Xcode.app/Contents/Developer
 
 swift --version
-# Should show Swift 5.9+
+# Should show Swift 6.2+
 ```
 
 ### 2. Install Homebrew (Optional)
@@ -88,15 +88,6 @@ fi
 1. Drag the SwiftLint phase to run **before** "Compile Sources"
 
 This shows linting violations as Xcode warnings/errors in real-time as you code.
-
-## Project Setup
-
-Once environment is ready, create the Xcode project:
-
-```bash
-# Create Xcode project (will be done in issue #3)
-# For now, this repo just has planning documents
-```
 
 ## iOS Development Crash Course (for Python/React developers)
 
@@ -285,11 +276,11 @@ Check your setup:
 ```bash
 # Xcode installed and licensed
 xcodebuild -version
-# Should show: Xcode 15.x
+# Should show: Xcode 26.2+
 
 # Swift compiler works
 swift --version
-# Should show: Swift 5.9+
+# Should show: Swift 6.2+
 
 # Optional tools
 swiftlint version
@@ -322,8 +313,8 @@ rm -rf ~/Library/Developer/Xcode/DerivedData
 
 1. Complete Xcode installation
 2. Review Swift/SwiftUI basics (1-2 hours recommended)
-3. Start with Issue #3 (Set up iOS project)
-4. Follow along with issues #4-12 for Phase 1 implementation
+3. Open `ios/FamilyMedicalApp/FamilyMedicalApp.xcodeproj`, build (`⌘B`) and run (`⌘R`) in the simulator
+4. See [AGENTS.md](AGENTS.md) for coding conventions and test-running scripts
 
 ## Python Background Notes
 
