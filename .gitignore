@@ -30,7 +30,6 @@ secrets/
 
 # Node (tooling / Wrangler)
 node_modules/
-backend/dist/
 .wrangler/
 
 # Rust
