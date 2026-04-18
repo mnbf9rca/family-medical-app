@@ -147,14 +147,13 @@ struct LoggingServiceTests {
     @Test
     func logCategoryHasAllCases() {
         let categories = LogCategory.allCases
-        #expect(categories.count == 7)
+        #expect(categories.count == 6)
         #expect(categories.contains(.auth))
         #expect(categories.contains(.crypto))
         #expect(categories.contains(.storage))
         #expect(categories.contains(.sync))
         #expect(categories.contains(.ui))
         #expect(categories.contains(.backup))
-        #expect(categories.contains(.migration))
     }
 
     // MARK: - Real CategoryLogger Tests

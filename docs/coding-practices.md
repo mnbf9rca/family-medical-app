@@ -88,7 +88,6 @@ See [ADR-0013](adr/adr-0013-logging-privacy-and-export.md) for full specificatio
 | `.crypto` | Cryptography | Key derivation, encryption, decryption, key management |
 | `.storage` | Data persistence | Core Data operations, record content, schema, attachments |
 | `.backup` | Backup & restore | Export, import, file serialization, schema validation |
-| `.migration` | Schema migration | Migration execution, checkpoints, rollback |
 | `.sync` | Synchronization | Cross-device sync (future) |
 | `.ui` | User interface | View operations, user actions |
 

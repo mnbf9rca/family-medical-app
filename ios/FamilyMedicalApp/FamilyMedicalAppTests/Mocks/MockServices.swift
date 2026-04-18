@@ -111,10 +111,6 @@ final class MockAuthenticationService: AuthenticationServiceProtocol {
         }
     }
 
-    func lock() {
-        // No-op for mock
-    }
-
     func enableBiometric() async throws {
         if let biometricService {
             try await biometricService.authenticate(reason: "Enable biometric")

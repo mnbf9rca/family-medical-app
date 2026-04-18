@@ -1,5 +1,4 @@
 import Foundation
-import SwiftUI
 
 /// Helper for detecting if the app is running in UI testing mode
 enum UITestingHelpers {
@@ -22,22 +21,5 @@ enum UITestingHelpers {
     /// - Note: When enabled, tests can use demo mode instead of full account creation
     static var shouldUseDemoMode: Bool {
         isUITesting && CommandLine.arguments.contains("--use-demo-mode")
-    }
-}
-
-// MARK: - View Extension
-
-extension View {
-    /// Conditionally applies textContentType only when NOT in UI testing mode
-    /// This prevents password autofill prompts from blocking XCUITest automation
-    @ViewBuilder
-    func textContentTypeIfNotTesting(_ contentType: UITextContentType?) -> some View {
-        if UITestingHelpers.isUITesting {
-            // In UI testing mode: don't apply textContentType to avoid autofill prompts
-            self
-        } else {
-            // In production: apply textContentType for proper password manager support
-            self.textContentType(contentType)
-        }
     }
 }

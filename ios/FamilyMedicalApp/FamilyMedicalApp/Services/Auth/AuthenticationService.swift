@@ -56,9 +56,6 @@ protocol AuthenticationServiceProtocol {
     /// - Throws: AuthenticationError if authentication fails
     func unlockWithBiometric() async throws
 
-    /// Lock the account
-    func lock()
-
     /// Logout and clear all authentication data
     func logout()
 
@@ -295,12 +292,6 @@ final class AuthenticationService: AuthenticationServiceProtocol {
         userDefaults.removeObject(forKey: Self.lockoutEndTimeKey)
 
         logger.logOperation("unlockWithBiometric", state: "success")
-    }
-
-    func lock() {
-        // No-op: Lock state is managed by AuthenticationViewModel.isAuthenticated
-        // This service only manages persistent authentication state (Keychain),
-        // not transient lock state which is handled at the UI layer
     }
 
     func logout() {
