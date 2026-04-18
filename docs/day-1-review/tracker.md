@@ -77,10 +77,13 @@ Phase 3 surfaced four rejected candidates (TracingCategoryLogger pass-throughs, 
 
 - **#17** — Preview-helpers file is load-bearing for SwiftLint `file_length`; see tracker row for PR #1.
 
-## Follow-ups discovered during execution (file as separate issues)
+## Follow-ups discovered during execution (filed as separate issues)
 
-- **Cloudflare external cleanup (PR #3):** `backend/` directory deleted, but the `recordwell-api` Cloudflare Worker still exists with a `api.recordwell.app/*` catch-all route via Custom Hostnames. iOS traffic is unaffected because the Rust Worker has explicit `/auth/opaque/*` and `/health/*` routes that take precedence. Needs manual dashboard action: delete the `recordwell-api` Worker and/or narrow the catch-all route.
 - **Smoke-test cold-start flake (PR #2 CI):** `scripts/run-tests.sh` is fine; the issue is in `backend-rust/tests/smoke_test.sh` (preview-deployment smoke test). `OPTIONS /auth/opaque/register/start` returned 500 transiently on PR #169 CI; live curl returned 200 immediately after. Suggested mitigation: add one retry with ~2s backoff on 5xx to absorb cold-start flakiness. Root-cause investigation (whether the preview Worker has a first-request panic-hook race during module init) is separate.
+
+## Decisions taken
+
+- **Cloudflare `recordwell-api` Worker left in place (PR #3):** After deleting `backend/`, the `recordwell-api` Worker on Cloudflare and its `api.recordwell.app/*` Custom Hostname route are now orphaned from the repo. Decided to leave them running — the handler is a pure 410/404 responder, iOS traffic goes through the Rust Worker's explicit `/auth/opaque/*` and `/health/*` routes, and the operational debt is lower-cost than the dashboard cleanup. No follow-up issue.
 
 ## AGENTS.md rules subagents MUST follow
 
