@@ -106,8 +106,8 @@ final class TracingCategoryLogger: CategoryLoggerProtocol, @unchecked Sendable {
         inner.logOperation(operation, state: state)
     }
 
-    func logUserID(_ userID: String) {
-        inner.logUserID(userID)
+    func logUserId(_ userId: String) {
+        inner.logUserId(userId)
     }
 
     func logRecordCount(_ count: Int) {

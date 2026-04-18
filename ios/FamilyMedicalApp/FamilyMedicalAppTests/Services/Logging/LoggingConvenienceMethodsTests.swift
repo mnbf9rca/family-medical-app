@@ -20,11 +20,11 @@ struct LoggingConvenienceMethodsTests {
     }
 
     @Test
-    func logUserIDIsPublic() {
+    func logUserIdIsPublic() {
         let mockLogger = MockCategoryLogger(category: .auth)
         let uuid = "550e8400-e29b-41d4-a716-446655440000"
 
-        mockLogger.logUserID(uuid)
+        mockLogger.logUserId(uuid)
 
         let entries = mockLogger.entriesContaining(uuid)
         #expect(entries.count == 1)

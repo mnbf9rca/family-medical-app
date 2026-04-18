@@ -26,18 +26,18 @@ protocol FamilyMemberKeyServiceProtocol: Sendable {
     /// Store an FMK in Keychain (wrapped with primary key internally)
     /// - Parameters:
     ///   - fmk: Family Member Key to store
-    ///   - familyMemberID: Unique identifier for the family member
+    ///   - personId: Unique identifier for the person this FMK belongs to
     ///   - primaryKey: User's primary key for wrapping
     /// - Throws: CryptoError or KeychainError on failure
-    func storeFMK(_ fmk: SymmetricKey, familyMemberID: String, primaryKey: SymmetricKey) throws
+    func storeFMK(_ fmk: SymmetricKey, personId: String, primaryKey: SymmetricKey) throws
 
     /// Retrieve an FMK from Keychain
     /// - Parameters:
-    ///   - familyMemberID: Unique identifier for the family member
+    ///   - personId: Unique identifier for the person this FMK belongs to
     ///   - primaryKey: User's primary key for unwrapping
     /// - Returns: Unwrapped FMK
     /// - Throws: KeychainError or CryptoError on failure
-    func retrieveFMK(familyMemberID: String, primaryKey: SymmetricKey) throws -> SymmetricKey
+    func retrieveFMK(personId: String, primaryKey: SymmetricKey) throws -> SymmetricKey
 }
 
 /// Family Member Key management service
@@ -74,14 +74,14 @@ final class FamilyMemberKeyService: FamilyMemberKeyServiceProtocol {
     /// Store an FMK in Keychain (wrapped with primary key internally)
     /// - Parameters:
     ///   - fmk: Family Member Key to store
-    ///   - familyMemberID: Unique identifier for the family member
+    ///   - personId: Unique identifier for the person this FMK belongs to
     ///   - primaryKey: User's primary key for wrapping
     /// - Throws: CryptoError or KeychainError on failure
-    func storeFMK(_ fmk: SymmetricKey, familyMemberID: String, primaryKey: SymmetricKey) throws {
+    func storeFMK(_ fmk: SymmetricKey, personId: String, primaryKey: SymmetricKey) throws {
         let wrappedFMK = try wrapFMK(fmk, with: primaryKey)
         let wrappedKey = SymmetricKey(data: wrappedFMK)
 
-        let identifier = "fmk.\(familyMemberID)"
+        let identifier = "fmk.\(personId)"
         try keychainService.storeKey(
             wrappedKey,
             identifier: identifier,
@@ -91,12 +91,12 @@ final class FamilyMemberKeyService: FamilyMemberKeyServiceProtocol {
 
     /// Retrieve an FMK from Keychain
     /// - Parameters:
-    ///   - familyMemberID: Unique identifier for the family member
+    ///   - personId: Unique identifier for the person this FMK belongs to
     ///   - primaryKey: User's primary key for unwrapping
     /// - Returns: Unwrapped FMK
     /// - Throws: KeychainError or CryptoError on failure
-    func retrieveFMK(familyMemberID: String, primaryKey: SymmetricKey) throws -> SymmetricKey {
-        let identifier = "fmk.\(familyMemberID)"
+    func retrieveFMK(personId: String, primaryKey: SymmetricKey) throws -> SymmetricKey {
+        let identifier = "fmk.\(personId)"
         let wrappedKey = try keychainService.retrieveKey(identifier: identifier)
 
         let wrappedFMK = wrappedKey.withUnsafeBytes { Data($0) }

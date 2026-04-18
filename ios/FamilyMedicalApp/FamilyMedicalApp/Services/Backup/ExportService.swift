@@ -100,7 +100,7 @@ final class ExportService: ExportServiceProtocol, @unchecked Sendable {
 
     private func retrieveFMK(for person: Person, primaryKey: SymmetricKey) throws -> SymmetricKey {
         do {
-            return try fmkService.retrieveFMK(familyMemberID: person.id.uuidString, primaryKey: primaryKey)
+            return try fmkService.retrieveFMK(personId: person.id.uuidString, primaryKey: primaryKey)
         } catch {
             logger.logError(error, context: "ExportService.retrieveFMK")
             throw BackupError.exportFailed("Failed to retrieve encryption key for person")

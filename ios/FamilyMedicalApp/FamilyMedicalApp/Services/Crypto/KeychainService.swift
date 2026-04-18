@@ -25,7 +25,7 @@ protocol KeychainServiceProtocol: Sendable {
     /// Store a symmetric key in Keychain
     /// - Parameters:
     ///   - key: SymmetricKey to store
-    ///   - identifier: Unique identifier (e.g., "primary-key.userID")
+    ///   - identifier: Unique identifier (e.g., "primary-key.userId")
     ///   - accessControl: Keychain access level
     /// - Throws: KeychainError on failure
     func storeKey(_ key: SymmetricKey, identifier: String, accessControl: KeychainAccessControl) throws

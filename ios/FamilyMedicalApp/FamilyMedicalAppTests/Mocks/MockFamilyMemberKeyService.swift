@@ -15,7 +15,7 @@ final class MockFamilyMemberKeyService: FamilyMemberKeyServiceProtocol, @uncheck
 
     // MARK: - Storage
 
-    /// In-memory FMK storage (keyed by family member ID)
+    /// In-memory FMK storage (keyed by person ID)
     var storedFMKs: [String: SymmetricKey] = [:]
 
     // MARK: - Tracking
@@ -63,7 +63,7 @@ final class MockFamilyMemberKeyService: FamilyMemberKeyServiceProtocol, @uncheck
         return SymmetricKey(size: .bits256)
     }
 
-    func storeFMK(_ fmk: SymmetricKey, familyMemberID: String, primaryKey: SymmetricKey) throws {
+    func storeFMK(_ fmk: SymmetricKey, personId: String, primaryKey: SymmetricKey) throws {
         storeCallsCount += 1
 
         if shouldFailStore {
@@ -71,18 +71,18 @@ final class MockFamilyMemberKeyService: FamilyMemberKeyServiceProtocol, @uncheck
         }
 
         // Store in memory
-        storedFMKs[familyMemberID] = fmk
+        storedFMKs[personId] = fmk
     }
 
-    func retrieveFMK(familyMemberID: String, primaryKey: SymmetricKey) throws -> SymmetricKey {
-        retrieveCalls.append((familyMemberID, primaryKey))
+    func retrieveFMK(personId: String, primaryKey: SymmetricKey) throws -> SymmetricKey {
+        retrieveCalls.append((personId, primaryKey))
 
         if shouldFailRetrieve {
             throw KeychainError.retrieveFailed(-1)
         }
 
-        guard let fmk = storedFMKs[familyMemberID] else {
-            throw KeychainError.keyNotFound(familyMemberID)
+        guard let fmk = storedFMKs[personId] else {
+            throw KeychainError.keyNotFound(personId)
         }
 
         return fmk
@@ -105,8 +105,8 @@ final class MockFamilyMemberKeyService: FamilyMemberKeyServiceProtocol, @uncheck
         shouldFailRetrieve = false
     }
 
-    /// Pre-populate an FMK for a family member (for testing retrieval)
-    func setFMK(_ fmk: SymmetricKey, for familyMemberID: String) {
-        storedFMKs[familyMemberID] = fmk
+    /// Pre-populate an FMK for a person (for testing retrieval)
+    func setFMK(_ fmk: SymmetricKey, for personId: String) {
+        storedFMKs[personId] = fmk
     }
 }
