@@ -1,13 +1,5 @@
 import Foundation
 
-/// Protocol for record type metadata access
-protocol RecordTypeRegistryProtocol: Sendable {
-    func displayName(for recordType: RecordType) -> String
-    func iconSystemName(for recordType: RecordType) -> String
-    func fieldMetadata(for recordType: RecordType) -> [FieldMetadata]
-    var allRecordTypes: [RecordType] { get }
-}
-
 /// Simple registry that returns static metadata from record type structs.
 /// Replaces the old SchemaService which fetched per-person encrypted schemas.
 ///
@@ -15,7 +7,7 @@ protocol RecordTypeRegistryProtocol: Sendable {
 /// the `RecordType` extension, and `fieldMetadata` switches on `RecordType`
 /// directly. Adding a new `RecordType` case is a compile error until every
 /// switch is updated, so there are no silent-fallback or runtime-crash paths.
-final class RecordTypeRegistry: RecordTypeRegistryProtocol, Sendable {
+final class RecordTypeRegistry: Sendable {
     var allRecordTypes: [RecordType] {
         RecordType.allCases
     }
