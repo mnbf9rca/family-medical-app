@@ -44,7 +44,7 @@ All details are in `2026-04-18-ready-to-fix.md`. The finding number there is the
 - **#27** — Remove Carthage/Accio/fastlane/iOSInjectionProject rules from `ios/.gitignore:67,70-71,80-83,95`
 - **#28** — Remove Xcode 3/4/8 compatibility patterns from both `.gitignore`s
 - **#29** — Consolidate: delete `ios/.gitignore`, fold unique rules into root
-- **#30** — Update `docs/adr/README.md:71` ADR-0006 summary to match current 80% threshold (+ Issue #78 reference)
+- **#30** — Update `docs/adr/README.md:71` ADR-0006 summary to match current 80% threshold (+ Issue #78 and Issue #160 references)
 
 ### PR 2 findings
 
