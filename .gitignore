@@ -8,8 +8,6 @@ build/
 *.ipa
 *.dSYM.zip
 *.dSYM
-timeline.xctimeline
-playground.xcworkspace
 .swiftpm
 .build/
 
@@ -35,11 +33,6 @@ node_modules/
 # Rust
 target/
 Cargo.lock
-*.rlib
-*.rmeta
-*.so
-*.dylib
-*.dll
 backend-rust/build/
 
 # Test output (iOS and others)
@@ -50,12 +43,6 @@ test-results*/
 # Logs
 *.log
 logs/
-
-
-ralph-loop.local.md
-
-# Debug/repro folders
-workers-rs-secret-store-repro/
 
 docs/plans/
 docs/superpowers/

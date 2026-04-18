@@ -8,12 +8,9 @@
 
 /* Begin PBXBuildFile section */
 		D40AC5A42F0332AD00564AAD /* ViewInspector in Frameworks */ = {isa = PBXBuildFile; productRef = D40AC5A32F0332AD00564AAD /* ViewInspector */; };
-		D40AC5B32F03500000564AAD /* Dependencies in Frameworks */ = {isa = PBXBuildFile; productRef = D40AC5B12F03500000564AAD /* Dependencies */; };
-		D40AC5B42F03500000564AAD /* Dependencies in Frameworks */ = {isa = PBXBuildFile; productRef = D40AC5B22F03500000564AAD /* Dependencies */; };
 		D445F7DE2EFB435900E07F78 /* Clibsodium in Frameworks */ = {isa = PBXBuildFile; productRef = D445F7DD2EFB435900E07F78 /* Clibsodium */; };
 		D445F7E02EFB435900E07F78 /* Sodium in Frameworks */ = {isa = PBXBuildFile; productRef = D445F7DF2EFB435900E07F78 /* Sodium */; };
 		D49F98D32F2A9E5B00E436A0 /* OpaqueSwift in Frameworks */ = {isa = PBXBuildFile; productRef = D49F98D22F2A9E5B00E436A0 /* OpaqueSwift */; };
-		D4ISSRPT022F4007070003CC /* IssueReporting in Frameworks */ = {isa = PBXBuildFile; productRef = D4ISSRPT012F4007070002BB /* IssueReporting */; };
 		D4SCHEMA012F3000000099999 /* JSONSchema in Frameworks */ = {isa = PBXBuildFile; productRef = D4SCHEMA002F3000000099999 /* JSONSchema */; };
 /* End PBXBuildFile section */
 
@@ -64,12 +61,10 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D40AC5B32F03500000564AAD /* Dependencies in Frameworks */,
 				D445F7DE2EFB435900E07F78 /* Clibsodium in Frameworks */,
 				D445F7E02EFB435900E07F78 /* Sodium in Frameworks */,
 				D49F98D32F2A9E5B00E436A0 /* OpaqueSwift in Frameworks */,
 				D4SCHEMA012F3000000099999 /* JSONSchema in Frameworks */,
-				D4ISSRPT022F4007070003CC /* IssueReporting in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -77,7 +72,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D40AC5B42F03500000564AAD /* Dependencies in Frameworks */,
 				D40AC5A42F0332AD00564AAD /* ViewInspector in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -134,12 +128,10 @@
 			);
 			name = FamilyMedicalApp;
 			packageProductDependencies = (
-				D40AC5B12F03500000564AAD /* Dependencies */,
 				D445F7DD2EFB435900E07F78 /* Clibsodium */,
 				D445F7DF2EFB435900E07F78 /* Sodium */,
 				D49F98D22F2A9E5B00E436A0 /* OpaqueSwift */,
 				D4SCHEMA002F3000000099999 /* JSONSchema */,
-				D4ISSRPT012F4007070002BB /* IssueReporting */,
 			);
 			productName = FamilyMedicalApp;
 			productReference = D445F79A2EF7E93C00E07F78 /* FamilyMedicalApp.app */;
@@ -163,7 +155,6 @@
 			);
 			name = FamilyMedicalAppTests;
 			packageProductDependencies = (
-				D40AC5B22F03500000564AAD /* Dependencies */,
 				D40AC5A32F0332AD00564AAD /* ViewInspector */,
 			);
 			productName = FamilyMedicalAppTests;
@@ -226,12 +217,10 @@
 			mainGroup = D445F7912EF7E93C00E07F78;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				D40AC5B02F03500000564AAD /* XCRemoteSwiftPackageReference "swift-dependencies" */,
 				D445F7DC2EFB435900E07F78 /* XCRemoteSwiftPackageReference "swift-sodium" */,
 				D40AC5A22F0332AD00564AAD /* XCRemoteSwiftPackageReference "ViewInspector" */,
 				D49F98D12F2A9E5B00E436A0 /* XCLocalSwiftPackageReference "../../opaque-swift" */,
 				D4SCHEMA032F3000000099999 /* XCRemoteSwiftPackageReference "swift-json-schema" */,
-				D4XCTDYN002F4007070001AA /* XCRemoteSwiftPackageReference "xctest-dynamic-overlay" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = D445F79B2EF7E93C00E07F78 /* Products */;
@@ -694,14 +683,6 @@
 				minimumVersion = 0.10.3;
 			};
 		};
-		D40AC5B02F03500000564AAD /* XCRemoteSwiftPackageReference "swift-dependencies" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/pointfreeco/swift-dependencies";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.0.0;
-			};
-		};
 		D445F7DC2EFB435900E07F78 /* XCRemoteSwiftPackageReference "swift-sodium" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/jedisct1/swift-sodium.git";
@@ -718,14 +699,6 @@
 				minimumVersion = 0.2.1;
 			};
 		};
-		D4XCTDYN002F4007070001AA /* XCRemoteSwiftPackageReference "xctest-dynamic-overlay" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/pointfreeco/xctest-dynamic-overlay";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.8.1;
-			};
-		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -733,16 +706,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = D40AC5A22F0332AD00564AAD /* XCRemoteSwiftPackageReference "ViewInspector" */;
 			productName = ViewInspector;
-		};
-		D40AC5B12F03500000564AAD /* Dependencies */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = D40AC5B02F03500000564AAD /* XCRemoteSwiftPackageReference "swift-dependencies" */;
-			productName = Dependencies;
-		};
-		D40AC5B22F03500000564AAD /* Dependencies */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = D40AC5B02F03500000564AAD /* XCRemoteSwiftPackageReference "swift-dependencies" */;
-			productName = Dependencies;
 		};
 		D445F7DD2EFB435900E07F78 /* Clibsodium */ = {
 			isa = XCSwiftPackageProductDependency;
@@ -757,11 +720,6 @@
 		D49F98D22F2A9E5B00E436A0 /* OpaqueSwift */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = OpaqueSwift;
-		};
-		D4ISSRPT012F4007070002BB /* IssueReporting */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = D4XCTDYN002F4007070001AA /* XCRemoteSwiftPackageReference "xctest-dynamic-overlay" */;
-			productName = IssueReporting;
 		};
 		D4SCHEMA002F3000000099999 /* JSONSchema */ = {
 			isa = XCSwiftPackageProductDependency;

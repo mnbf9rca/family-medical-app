@@ -10,7 +10,6 @@ excluded:
   - ios/FamilyMedicalApp/FamilyMedicalApp.xcodeproj
   - ios/FamilyMedicalApp/FamilyMedicalAppUITests
   - docs/research  # POC examples - intentionally use print(), force unwrap, etc.
-  - Pods
   - .build
 
 # Enabled rules
@@ -81,7 +80,7 @@ disabled_rules:
 
 # Rule configurations
 
-# Attributes rule: @Dependency has arguments but should stay on same line as variable
+# Attributes rule: keep argument-carrying attributes inline with the declaration
 attributes:
   always_on_same_line:
     - "@IBAction"
@@ -91,7 +90,6 @@ attributes:
     - "@GKInspectable"
     - "@IBSegueAction"
     - "@NSManaged"
-    - "@Dependency"
     - "@ObservationIgnored"
 
 line_length:

@@ -113,4 +113,3 @@ When creating new test helpers:
 ## Related Documentation
 
 - [Testing Patterns](../../../docs/testing-patterns.md) - Comprehensive testing guide
-- [ADR-0010](../../../docs/adr/adr-0010-deterministic-testing-architecture.md) - Deterministic testing architecture
