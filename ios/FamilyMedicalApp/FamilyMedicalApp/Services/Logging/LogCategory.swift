@@ -22,7 +22,4 @@ enum LogCategory: String, CaseIterable {
 
     /// Backup export/import operations
     case backup
-
-    /// Schema migration operations
-    case migration
 }
