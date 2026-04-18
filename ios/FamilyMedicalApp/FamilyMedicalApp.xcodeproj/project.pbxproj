@@ -11,7 +11,6 @@
 		D445F7DE2EFB435900E07F78 /* Clibsodium in Frameworks */ = {isa = PBXBuildFile; productRef = D445F7DD2EFB435900E07F78 /* Clibsodium */; };
 		D445F7E02EFB435900E07F78 /* Sodium in Frameworks */ = {isa = PBXBuildFile; productRef = D445F7DF2EFB435900E07F78 /* Sodium */; };
 		D49F98D32F2A9E5B00E436A0 /* OpaqueSwift in Frameworks */ = {isa = PBXBuildFile; productRef = D49F98D22F2A9E5B00E436A0 /* OpaqueSwift */; };
-		D4ISSRPT022F4007070003CC /* IssueReporting in Frameworks */ = {isa = PBXBuildFile; productRef = D4ISSRPT012F4007070002BB /* IssueReporting */; };
 		D4SCHEMA012F3000000099999 /* JSONSchema in Frameworks */ = {isa = PBXBuildFile; productRef = D4SCHEMA002F3000000099999 /* JSONSchema */; };
 /* End PBXBuildFile section */
 
@@ -66,7 +65,6 @@
 				D445F7E02EFB435900E07F78 /* Sodium in Frameworks */,
 				D49F98D32F2A9E5B00E436A0 /* OpaqueSwift in Frameworks */,
 				D4SCHEMA012F3000000099999 /* JSONSchema in Frameworks */,
-				D4ISSRPT022F4007070003CC /* IssueReporting in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -134,7 +132,6 @@
 				D445F7DF2EFB435900E07F78 /* Sodium */,
 				D49F98D22F2A9E5B00E436A0 /* OpaqueSwift */,
 				D4SCHEMA002F3000000099999 /* JSONSchema */,
-				D4ISSRPT012F4007070002BB /* IssueReporting */,
 			);
 			productName = FamilyMedicalApp;
 			productReference = D445F79A2EF7E93C00E07F78 /* FamilyMedicalApp.app */;
@@ -224,7 +221,6 @@
 				D40AC5A22F0332AD00564AAD /* XCRemoteSwiftPackageReference "ViewInspector" */,
 				D49F98D12F2A9E5B00E436A0 /* XCLocalSwiftPackageReference "../../opaque-swift" */,
 				D4SCHEMA032F3000000099999 /* XCRemoteSwiftPackageReference "swift-json-schema" */,
-				D4XCTDYN002F4007070001AA /* XCRemoteSwiftPackageReference "xctest-dynamic-overlay" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = D445F79B2EF7E93C00E07F78 /* Products */;
@@ -703,14 +699,7 @@
 				minimumVersion = 0.2.1;
 			};
 		};
-		D4XCTDYN002F4007070001AA /* XCRemoteSwiftPackageReference "xctest-dynamic-overlay" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/pointfreeco/xctest-dynamic-overlay";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.8.1;
-			};
-		};
+
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -732,11 +721,6 @@
 		D49F98D22F2A9E5B00E436A0 /* OpaqueSwift */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = OpaqueSwift;
-		};
-		D4ISSRPT012F4007070002BB /* IssueReporting */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = D4XCTDYN002F4007070001AA /* XCRemoteSwiftPackageReference "xctest-dynamic-overlay" */;
-			productName = IssueReporting;
 		};
 		D4SCHEMA002F3000000099999 /* JSONSchema */ = {
 			isa = XCSwiftPackageProductDependency;
