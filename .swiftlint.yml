@@ -10,7 +10,6 @@ excluded:
   - ios/FamilyMedicalApp/FamilyMedicalApp.xcodeproj
   - ios/FamilyMedicalApp/FamilyMedicalAppUITests
   - docs/research  # POC examples - intentionally use print(), force unwrap, etc.
-  - Pods
   - .build
 
 # Enabled rules

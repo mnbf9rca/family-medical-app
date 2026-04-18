@@ -2,7 +2,7 @@
 # Code formatting rules for consistent Swift style
 
 # File options
---exclude ios/FamilyMedicalApp/FamilyMedicalApp.xcodeproj,Pods,.build,ios/FamilyMedicalApp/FamilyMedicalAppUITests,docs/research,docs/adr/examples,ios/FamilyMedicalApp/DerivedData,ios/FamilyMedicalApp/SourcePackages,.swiftpm
+--exclude ios/FamilyMedicalApp/FamilyMedicalApp.xcodeproj,.build,ios/FamilyMedicalApp/FamilyMedicalAppUITests,docs/research,docs/adr/examples,ios/FamilyMedicalApp/DerivedData,ios/FamilyMedicalApp/SourcePackages,.swiftpm
 
 # Format options
 --swiftversion 6.2
