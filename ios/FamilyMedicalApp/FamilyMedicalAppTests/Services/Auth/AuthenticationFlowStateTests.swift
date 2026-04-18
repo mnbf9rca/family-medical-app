@@ -74,7 +74,7 @@ struct AuthenticationFlowStateTests {
     func allExpectedStatesExist() {
         // Verify all states can be instantiated (compile-time check via usage)
         let loginResult = OpaqueLoginResult(
-            exportKey: Data(repeating: 0x42, count: 32),
+            exportKey: Data(repeating: 0x42, count: 64),
             sessionKey: Data(repeating: 0x43, count: 32),
             encryptedBundle: nil
         )
@@ -101,7 +101,7 @@ struct AuthenticationFlowStateTests {
     @Test
     func accountExistsConfirmationStatesWithSameValuesAreEqual() {
         let loginResult = OpaqueLoginResult(
-            exportKey: Data(repeating: 0x42, count: 32),
+            exportKey: Data(repeating: 0x42, count: 64),
             sessionKey: Data(repeating: 0x43, count: 32),
             encryptedBundle: nil
         )
@@ -121,7 +121,7 @@ struct AuthenticationFlowStateTests {
     @Test
     func accountExistsConfirmationStatesWithDifferentUsernamesAreNotEqual() {
         let loginResult = OpaqueLoginResult(
-            exportKey: Data(repeating: 0x42, count: 32),
+            exportKey: Data(repeating: 0x42, count: 64),
             sessionKey: Data(repeating: 0x43, count: 32),
             encryptedBundle: nil
         )
@@ -141,7 +141,7 @@ struct AuthenticationFlowStateTests {
     @Test
     func accountExistsConfirmationStatesWithDifferentBiometricAreNotEqual() {
         let loginResult = OpaqueLoginResult(
-            exportKey: Data(repeating: 0x42, count: 32),
+            exportKey: Data(repeating: 0x42, count: 64),
             sessionKey: Data(repeating: 0x43, count: 32),
             encryptedBundle: nil
         )

@@ -25,7 +25,7 @@ struct AuthenticationServiceLoginAndSetupTests {
         #expect(service.isSetUp == true)
         #expect(opaqueAuthService.loginCallCount == 1)
         #expect(opaqueAuthService.lastLoginUsername == "testuser")
-        #expect(userDefaults.bool(forKey: "com.family-medical-app.use-opaque") == true)
+        #expect(userDefaults.bool(forKey: "com.family-medical-app.account-setup-complete") == true)
         #expect(keychainService.keyExists(identifier: "com.family-medical-app.primary-key"))
         #expect(keychainService.dataExists(identifier: "com.family-medical-app.identity-private-key"))
         #expect(keychainService.dataExists(identifier: "com.family-medical-app.verification-token"))

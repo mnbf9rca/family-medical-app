@@ -1,6 +1,5 @@
 import AVFoundation
 import Foundation
-import UIKit
 
 /// Owns the real `AVCaptureSession`, its input/output, and the live
 /// collaborator implementations. Constructs a `CameraCaptureCoordinator`

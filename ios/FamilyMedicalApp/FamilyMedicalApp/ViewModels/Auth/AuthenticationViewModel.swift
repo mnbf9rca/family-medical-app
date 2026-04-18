@@ -20,22 +20,7 @@ final class AuthenticationViewModel {
     var passphrase = ""
     var confirmPassphrase = ""
 
-    // MARK: - Password Setup State (legacy, kept for backward compatibility)
-
-    var password = ""
-    var confirmPassword = ""
-    var hasAttemptedSetup = false // Track if user has tried to submit
-    var hasConfirmFieldLostFocus = false // Track if confirm field has lost focus for validation
-
-    var passwordStrength: PasswordStrength {
-        passwordValidator.passwordStrength(password)
-    }
-
-    var passwordValidationErrors: [AuthenticationError] {
-        passwordValidator.validate(password)
-    }
-
-    // MARK: - Passphrase Validation (for new flow)
+    // MARK: - Passphrase Validation
 
     var passphraseStrength: PasswordStrength {
         passwordValidator.passwordStrength(passphrase)
@@ -43,18 +28,6 @@ final class AuthenticationViewModel {
 
     var passphraseValidationErrors: [AuthenticationError] {
         passwordValidator.validate(passphrase)
-    }
-
-    /// Only show validation errors after user attempts setup
-    var displayedValidationErrors: [AuthenticationError] {
-        hasAttemptedSetup ? passwordValidationErrors : []
-    }
-
-    /// Show password mismatch only after confirm field loses focus or has content
-    var shouldShowPasswordMismatch: Bool {
-        (hasConfirmFieldLostFocus || !confirmPassword.isEmpty) &&
-            !password.isEmpty &&
-            password != confirmPassword
     }
 
     /// Username validation (basic check for non-empty)
@@ -158,55 +131,6 @@ final class AuthenticationViewModel {
         showBiometricPrompt = self.authService.isSetUp && self.authService.isBiometricEnabled
     }
 
-    // MARK: - Setup Actions (legacy - kept for tests)
-
-    @MainActor
-    func setUp() async {
-        hasAttemptedSetup = true
-
-        let trimmedUsername = username.trimmingCharacters(in: .whitespaces)
-        guard !trimmedUsername.isEmpty else {
-            errorMessage = "Please enter a username"
-            return
-        }
-        guard isUsernameValid else {
-            errorMessage = "Username must be at least 3 characters"
-            return
-        }
-
-        if !passwordValidationErrors.isEmpty {
-            errorMessage = passwordValidationErrors.first?.errorDescription
-            return
-        }
-
-        guard password == confirmPassword else {
-            errorMessage = AuthenticationError.passwordMismatch.errorDescription
-            return
-        }
-
-        isLoading = true
-        errorMessage = nil
-
-        do {
-            var passwordBytes = passwordToBytes(password)
-            defer { clearSensitiveFields() }
-            try await authService.setUp(
-                passwordBytes: &passwordBytes,
-                username: trimmedUsername,
-                enableBiometric: enableBiometric
-            )
-            isSetUp = true
-            isAuthenticated = true
-
-            hasAttemptedSetup = false
-            hasConfirmFieldLostFocus = false
-        } catch {
-            errorMessage = error.localizedDescription
-        }
-
-        isLoading = false
-    }
-
     // MARK: - Unlock Actions
 
     @MainActor
@@ -293,8 +217,6 @@ final class AuthenticationViewModel {
         lockStateService.unlock()
         errorMessage = nil
 
-        password = ""
-        confirmPassword = ""
         unlockPassword = ""
         username = ""
         passphrase = ""
@@ -369,8 +291,6 @@ final class AuthenticationViewModel {
         username = ""
         passphrase = ""
         confirmPassphrase = ""
-        password = ""
-        confirmPassword = ""
     }
 
     // MARK: - Factory Methods

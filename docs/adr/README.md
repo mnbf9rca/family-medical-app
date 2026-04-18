@@ -68,7 +68,7 @@ ADRs document significant architectural decisions, their context, and consequenc
 ### Build & Test Infrastructure
 
 - [ADR-0006: Test Coverage Requirements and Dual Threshold System](adr-0006-test-coverage-requirements.md) - **Accepted** (2025-12-28)
-  - 90% overall project coverage minimum, 85% per-file minimum
+  - 80% overall project coverage (temporarily reduced from 90% for OPAQUE auth, see Issue #78), 85% per-file minimum
   - Per-file exceptions for crypto code with unreachable defensive paths
   - Detailed mode (`--detailed`) for function-level coverage analysis
   - Security-critical code requires unit tests, failure cases, and edge case coverage

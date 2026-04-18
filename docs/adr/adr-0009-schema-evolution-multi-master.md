@@ -64,8 +64,6 @@ Each app installation has a unique, persistent device ID (Keychain-stored). Fiel
 
 ---
 
-See: `docs/technical/schema-evolution-design.md` for implementation details.
-
 ## Consequences
 
 ### Positive

@@ -1,5 +1,7 @@
 # Test Coverage Requirements and Dual Threshold System
 
+> **Status update (2026-04-18):** The overall-project threshold has been temporarily reduced from 90% to 80% while OPAQUE authentication work (Issue #78) lands — `OpaqueAuthService` requires a live backend for full integration coverage and is tested through `MockOpaqueAuthService` in unit tests. The 85% per-file threshold is unchanged. The overall threshold returns to 90% when Issue #78 resolves. See `scripts/check-coverage.sh` for the current enforced values and the full history of adjustments.
+
 ## Status
 
 **Status**: accepted

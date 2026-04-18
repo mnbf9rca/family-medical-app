@@ -102,9 +102,6 @@ final class MedicalRecordListViewModel {
                 }
             }
 
-            // TODO(#127): sort by clinical event date (occurrenceDate, onsetDate, etc.)
-            // instead of creation timestamp. Needs per-type date extraction from
-            // envelope.decodeAny(). Users may see oldest-entered records first.
             records = decryptedRecords.sorted { $0.record.createdAt > $1.record.createdAt }
         } catch {
             errorMessage = "Unable to load records. Please try again."

@@ -1,4 +1,4 @@
-import UIKit
+import Foundation
 
 /// Determines how a document thumbnail should be displayed
 ///

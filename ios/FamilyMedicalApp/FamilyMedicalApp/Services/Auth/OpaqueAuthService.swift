@@ -390,26 +390,24 @@ final class OpaqueAuthService: OpaqueAuthServiceProtocol, @unchecked Sendable {
 // MARK: - Static Utilities
 
 extension OpaqueAuthService {
-    /// Check if test username bypass should be used
+    /// Check if test username bypass should be used.
+    ///
+    /// The bypass only fires when the username matches the test pattern AND
+    /// the process was launched under UI testing. This keeps DEBUG and Release
+    /// behaviour symmetrical: a developer running the app manually with a
+    /// "test_" username still goes through the real OPAQUE flow.
     static func shouldBypassForTestUsername(_ username: String) -> Bool {
         let normalized = username.lowercased()
         let isTestUsername = normalized == "testuser" || normalized.hasPrefix("test_")
-
-        guard isTestUsername else { return false }
-
-        #if DEBUG
-        return true
-        #else
-        return UITestingHelpers.isUITesting
-        #endif
+        return isTestUsername && UITestingHelpers.isUITesting
     }
 
-    /// Derive a deterministic test export key from password bytes
-    /// This ensures wrong passwords produce different keys and fail verification
+    /// Derive a deterministic test export key from password bytes.
+    /// Produces 64 bytes to match production OPAQUE (opaque-ke with Sha512),
+    /// so the test-bypass path and the real path are interchangeable at the
+    /// boundary that consumes the export key.
     static func deriveTestExportKey(from passwordBytes: [UInt8]) -> Data {
-        // Use SHA256 to deterministically map password to a 32-byte key
-        // This simulates OPAQUE's behavior where different passwords produce different export keys
-        var hasher = CryptoKit.SHA256()
+        var hasher = CryptoKit.SHA512()
         hasher.update(data: Data("test-opaque-salt".utf8))
         hasher.update(data: Data(passwordBytes))
         return Data(hasher.finalize())

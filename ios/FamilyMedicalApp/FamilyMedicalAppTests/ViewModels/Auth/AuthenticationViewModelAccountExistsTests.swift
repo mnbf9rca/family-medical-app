@@ -42,7 +42,7 @@ struct AuthenticationViewModelAccountExistsTests {
         let authService = MockAuthenticationService(isSetUp: false)
         let viewModel = AuthenticationViewModel(authService: authService)
         let loginResult = OpaqueLoginResult(
-            exportKey: Data(repeating: 0x42, count: 32),
+            exportKey: Data(repeating: 0x42, count: 64),
             sessionKey: Data(repeating: 0x43, count: 32),
             encryptedBundle: nil
         )
@@ -64,7 +64,7 @@ struct AuthenticationViewModelAccountExistsTests {
         let authService = MockAuthenticationService(isSetUp: false)
         let viewModel = AuthenticationViewModel(authService: authService)
         let loginResult = OpaqueLoginResult(
-            exportKey: Data(repeating: 0x42, count: 32),
+            exportKey: Data(repeating: 0x42, count: 64),
             sessionKey: Data(repeating: 0x43, count: 32),
             encryptedBundle: nil
         )
@@ -92,7 +92,7 @@ struct AuthenticationViewModelAccountExistsTests {
             biometricService: biometricService
         )
         let loginResult = OpaqueLoginResult(
-            exportKey: Data(repeating: 0x42, count: 32),
+            exportKey: Data(repeating: 0x42, count: 64),
             sessionKey: Data(repeating: 0x43, count: 32),
             encryptedBundle: nil
         )
