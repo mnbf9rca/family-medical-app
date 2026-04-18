@@ -1,5 +1,4 @@
 import Foundation
-import SwiftUI
 
 /// Helper for detecting if the app is running in UI testing mode
 enum UITestingHelpers {
