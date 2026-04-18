@@ -216,7 +216,7 @@ final class MockOpaqueAuthService: OpaqueAuthServiceProtocol, @unchecked Sendabl
     var lastLoginUsername: String?
     var lastUploadedBundle: Data?
 
-    // Configurable export key for testing (default: 64 bytes — opaque-ke with Sha512 spec)
+    // Configurable export key for testing (default: 64 bytes — opaque-ke with SHA-512 spec)
     var testExportKey = Data(repeating: 0x42, count: 64)
     let testSessionKey = Data(repeating: 0x43, count: 32)
 

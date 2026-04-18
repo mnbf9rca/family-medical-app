@@ -241,9 +241,9 @@
 ### Finding 30: Align coverage-threshold docs — update ADR-0006 README summary
 
 - **Files:** `docs/adr/README.md:71`, potentially `docs/adr/adr-0006-test-coverage-requirements.md`
-- **Evidence:** AGENTS.md: "Overall project coverage: 85% minimum (temporarily reduced from 90% for OPAQUE auth, see Issue #78)". README.md:71: "90% overall project coverage minimum, 85% per-file minimum".
-- **Fix:** Update README.md:71 to reflect the current temporary threshold (85%) with a reference to Issue #78 and a note that it returns to 90% when #78 resolves. Read ADR-0006 body; if it too says 90%, add a postscript or status note rather than editing the historical decision text (same ADR-immutability convention applied to ADR-0009).
-- **Verification:** Both surfaces report consistent numbers.
+- **Evidence:** Coverage-threshold documentation is out of sync with the repository's enforcement. The source of truth is `scripts/check-coverage.sh` (see line 51 for the enforced overall threshold, currently 80%), but README/ADR summary text still cites older numbers.
+- **Fix:** Update `docs/adr/README.md` to reflect the thresholds currently enforced by `scripts/check-coverage.sh`, and explicitly treat that script as the source of truth. If `adr-0006-test-coverage-requirements.md` contains stale threshold text in the historical decision body, preserve the decision record and add a postscript/status note that points readers to the script for the currently enforced thresholds instead of hard-coding superseded values.
+- **Verification:** `docs/adr/README.md` and any ADR status note match `scripts/check-coverage.sh` (including the current 80% overall threshold), and the docs identify the coverage script as the source of truth.
 
 ---
 

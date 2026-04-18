@@ -80,7 +80,7 @@ final class KeyDerivationService: KeyDerivationServiceProtocol, @unchecked Senda
     }
 
     func derivePrimaryKey(fromExportKey exportKey: Data) throws -> SymmetricKey {
-        // opaque-ke with Sha512 produces 64-byte export keys
+        // opaque-ke with SHA-512 produces 64-byte export keys
         guard exportKey.count == 64 else {
             throw CryptoError.keyDerivationFailed("Export key must be 64 bytes, got \(exportKey.count)")
         }
