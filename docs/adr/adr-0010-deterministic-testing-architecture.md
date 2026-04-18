@@ -2,7 +2,11 @@
 
 ## Status
 
-**Accepted** (2026-01-08)
+**Superseded** (2026-04-18)
+
+> **Tombstone (2026-04-18):** The `swift-dependencies` library this ADR adopted was removed in PR 6 of the day-1 review. A codebase audit found zero adopters — no `import Dependencies`, no `@Dependency` property wrappers, and no `withDependencies` calls anywhere in `ios/`. The package was wired into the Xcode project but never used. Per AGENTS.md's KISS/YAGNI principle, we removed the dependency rather than leave half-finished infrastructure.
+>
+> The underlying concern — non-determinism from `Date()`, `UUID()`, and `Task.sleep` in tests — remains valid. Future callers needing deterministic tests should use manual dependency injection per [ADR-0008](adr-0008-swift-6-concurrency.md)'s optional-parameter pattern, injecting `any Clock` or `() -> Date` directly through initializers.
 
 ## Context
 
@@ -32,5 +36,4 @@ This coexists with ADR-0008's optional parameter pattern:
 ## References
 
 - [swift-dependencies](https://github.com/pointfreeco/swift-dependencies)
-- [Implementation patterns](../testing-patterns.md#deterministic-testing-with-swift-dependencies)
 - GitHub Issue #81
