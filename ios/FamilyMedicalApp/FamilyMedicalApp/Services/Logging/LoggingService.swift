@@ -56,8 +56,8 @@ protocol CategoryLoggerProtocol: Sendable {
     func logOperation(_ operation: String, state: String)
 
     /// Log a user ID (UUID) - pseudonymous, safe to log publicly
-    /// - Parameter userID: The user's UUID
-    func logUserID(_ userID: String)
+    /// - Parameter userId: The user's UUID
+    func logUserId(_ userId: String)
 
     /// Log a record count - safe metadata
     /// - Parameter count: Number of records
@@ -227,8 +227,8 @@ final class CategoryLogger: CategoryLoggerProtocol, @unchecked Sendable {
             .info("[\(category, privacy: .public)] \(operation, privacy: .public): \(state, privacy: .public)")
     }
 
-    func logUserID(_ userID: String) {
-        osLogger.debug("userID: \(userID, privacy: .public)")
+    func logUserId(_ userId: String) {
+        osLogger.debug("userId: \(userId, privacy: .public)")
     }
 
     func logRecordCount(_ count: Int) {

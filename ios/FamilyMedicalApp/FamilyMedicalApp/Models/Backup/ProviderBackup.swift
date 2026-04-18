@@ -62,8 +62,8 @@ struct ProviderBackup: Codable, Equatable {
 
     /// Convert back to Provider model
     func toProvider() throws -> Provider {
-        let trimmedName = trimmedNonEmpty(name)
-        let trimmedOrganization = trimmedNonEmpty(organization)
+        let trimmedName = name.trimmedNonEmpty()
+        let trimmedOrganization = organization.trimmedNonEmpty()
 
         guard trimmedName != nil || trimmedOrganization != nil else {
             throw BackupError.corruptedFile
@@ -72,22 +72,14 @@ struct ProviderBackup: Codable, Equatable {
             id: id,
             name: trimmedName,
             organization: trimmedOrganization,
-            specialty: trimmedNonEmpty(specialty),
-            phone: trimmedNonEmpty(phone),
-            address: trimmedNonEmpty(address),
-            notes: trimmedNonEmpty(notes),
+            specialty: specialty.trimmedNonEmpty(),
+            phone: phone.trimmedNonEmpty(),
+            address: address.trimmedNonEmpty(),
+            notes: notes.trimmedNonEmpty(),
             createdAt: createdAt,
             updatedAt: updatedAt,
             version: version,
             previousVersionId: previousVersionId
         )
-    }
-
-    private func trimmedNonEmpty(_ value: String?) -> String? {
-        guard let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines),
-              !trimmed.isEmpty else {
-            return nil
-        }
-        return trimmed
     }
 }

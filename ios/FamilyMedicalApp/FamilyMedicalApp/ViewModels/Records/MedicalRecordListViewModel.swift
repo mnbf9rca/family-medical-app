@@ -84,7 +84,7 @@ final class MedicalRecordListViewModel {
         do {
             let primaryKey = try primaryKeyProvider.getPrimaryKey()
             let fmk = try fmkService.retrieveFMK(
-                familyMemberID: person.id.uuidString,
+                personId: person.id.uuidString,
                 primaryKey: primaryKey
             )
 
@@ -210,7 +210,7 @@ final class MedicalRecordListViewModel {
         do {
             let primaryKey = try primaryKeyProvider.getPrimaryKey()
             let fmk = try fmkService.retrieveFMK(
-                familyMemberID: person.id.uuidString,
+                personId: person.id.uuidString,
                 primaryKey: primaryKey
             )
             for attachment in attachments {

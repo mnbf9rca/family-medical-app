@@ -237,13 +237,13 @@ final class ProviderRepository: ProviderRepositoryProtocol, @unchecked Sendable 
     /// cannot meaningfully act on keychain-internal failure types). The
     /// original error is logged before wrapping so the underlying failure
     /// mode is preserved in diagnostics.
-    private func ensureFMK(for personID: String, primaryKey: SymmetricKey) throws -> SymmetricKey {
+    private func ensureFMK(for personId: String, primaryKey: SymmetricKey) throws -> SymmetricKey {
         do {
-            return try fmkService.retrieveFMK(familyMemberID: personID, primaryKey: primaryKey)
+            return try fmkService.retrieveFMK(personId: personId, primaryKey: primaryKey)
         } catch {
             logger.logError(
                 error,
-                context: "ProviderRepository.ensureFMK personID=\(personID)"
+                context: "ProviderRepository.ensureFMK personId=\(personId)"
             )
             throw RepositoryError.keyNotAvailable("Failed to retrieve FMK: \(error.localizedDescription)")
         }

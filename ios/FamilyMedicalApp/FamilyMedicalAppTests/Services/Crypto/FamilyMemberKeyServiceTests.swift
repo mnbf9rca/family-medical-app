@@ -66,13 +66,13 @@ struct FamilyMemberKeyServiceTests {
     func storeFMK_persistsToKeychain() throws {
         let fmk = service.generateFMK()
         let primaryKey = SymmetricKey(size: .bits256)
-        let familyMemberID = "test-member-\(UUID().uuidString)"
+        let personId = "test-member-\(UUID().uuidString)"
 
         // Store FMK
-        try service.storeFMK(fmk, familyMemberID: familyMemberID, primaryKey: primaryKey)
+        try service.storeFMK(fmk, personId: personId, primaryKey: primaryKey)
 
         // Verify it exists in Keychain
-        let identifier = "fmk.\(familyMemberID)"
+        let identifier = "fmk.\(personId)"
         #expect(keychainService.keyExists(identifier: identifier))
 
         // Cleanup
@@ -84,13 +84,13 @@ struct FamilyMemberKeyServiceTests {
     func retrieveFMK_withCorrectPrimaryKey() throws {
         let fmk = service.generateFMK()
         let primaryKey = SymmetricKey(size: .bits256)
-        let familyMemberID = "test-retrieve-\(UUID().uuidString)"
+        let personId = "test-retrieve-\(UUID().uuidString)"
 
         // Store FMK
-        try service.storeFMK(fmk, familyMemberID: familyMemberID, primaryKey: primaryKey)
+        try service.storeFMK(fmk, personId: personId, primaryKey: primaryKey)
 
         // Retrieve FMK
-        let retrieved = try service.retrieveFMK(familyMemberID: familyMemberID, primaryKey: primaryKey)
+        let retrieved = try service.retrieveFMK(personId: personId, primaryKey: primaryKey)
 
         // Compare keys
         let originalData = fmk.withUnsafeBytes { Data($0) }
@@ -98,7 +98,7 @@ struct FamilyMemberKeyServiceTests {
         #expect(originalData == retrievedData)
 
         // Cleanup
-        let identifier = "fmk.\(familyMemberID)"
+        let identifier = "fmk.\(personId)"
         try keychainService.deleteKey(identifier: identifier)
     }
 
@@ -108,18 +108,18 @@ struct FamilyMemberKeyServiceTests {
         let fmk = service.generateFMK()
         let correctPrimaryKey = SymmetricKey(size: .bits256)
         let wrongPrimaryKey = SymmetricKey(size: .bits256)
-        let familyMemberID = "test-wrong-key-\(UUID().uuidString)"
+        let personId = "test-wrong-key-\(UUID().uuidString)"
 
         // Store with correct key
-        try service.storeFMK(fmk, familyMemberID: familyMemberID, primaryKey: correctPrimaryKey)
+        try service.storeFMK(fmk, personId: personId, primaryKey: correctPrimaryKey)
 
         // Try to retrieve with wrong key
         #expect(throws: CryptoError.self) {
-            _ = try service.retrieveFMK(familyMemberID: familyMemberID, primaryKey: wrongPrimaryKey)
+            _ = try service.retrieveFMK(personId: personId, primaryKey: wrongPrimaryKey)
         }
 
         // Cleanup
-        let identifier = "fmk.\(familyMemberID)"
+        let identifier = "fmk.\(personId)"
         try keychainService.deleteKey(identifier: identifier)
     }
 
@@ -127,10 +127,10 @@ struct FamilyMemberKeyServiceTests {
     @Test
     func retrieveFMK_nonExistent() throws {
         let primaryKey = SymmetricKey(size: .bits256)
-        let familyMemberID = "non-existent-\(UUID().uuidString)"
+        let personId = "non-existent-\(UUID().uuidString)"
 
         #expect(throws: KeychainError.self) {
-            _ = try service.retrieveFMK(familyMemberID: familyMemberID, primaryKey: primaryKey)
+            _ = try service.retrieveFMK(personId: personId, primaryKey: primaryKey)
         }
     }
 

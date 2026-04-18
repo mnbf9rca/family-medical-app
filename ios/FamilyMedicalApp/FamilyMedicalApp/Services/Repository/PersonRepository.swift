@@ -154,15 +154,15 @@ final class PersonRepository: PersonRepositoryProtocol, @unchecked Sendable {
     // MARK: - Private Helpers
 
     /// Ensure FMK exists for a person (creates if needed)
-    private func ensureFMK(for personID: String, primaryKey: SymmetricKey) throws -> SymmetricKey {
+    private func ensureFMK(for personId: String, primaryKey: SymmetricKey) throws -> SymmetricKey {
         do {
             // Try to retrieve existing FMK
-            return try fmkService.retrieveFMK(familyMemberID: personID, primaryKey: primaryKey)
+            return try fmkService.retrieveFMK(personId: personId, primaryKey: primaryKey)
         } catch KeychainError.keyNotFound {
             // Generate new FMK for this person
             let fmk = fmkService.generateFMK()
             do {
-                try fmkService.storeFMK(fmk, familyMemberID: personID, primaryKey: primaryKey)
+                try fmkService.storeFMK(fmk, personId: personId, primaryKey: primaryKey)
                 return fmk
             } catch {
                 throw RepositoryError.keyNotAvailable("Failed to store FMK: \(error.localizedDescription)")
@@ -219,7 +219,7 @@ final class PersonRepository: PersonRepositoryProtocol, @unchecked Sendable {
         // Retrieve FMK
         let fmk: SymmetricKey
         do {
-            fmk = try fmkService.retrieveFMK(familyMemberID: id.uuidString, primaryKey: primaryKey)
+            fmk = try fmkService.retrieveFMK(personId: id.uuidString, primaryKey: primaryKey)
         } catch {
             throw RepositoryError
                 .keyNotAvailable("Failed to retrieve FMK for person \(id): \(error.localizedDescription)")

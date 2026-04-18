@@ -276,12 +276,12 @@ struct LoggingServiceTests {
     }
 
     @Test
-    func realLoggerLogUserID() {
+    func realLoggerLogUserId() {
         let service = LoggingService()
         let logger = service.logger(category: .storage)
 
         // Exercise the real implementation
-        logger.logUserID("user-123")
+        logger.logUserId("user-123")
     }
 
     @Test

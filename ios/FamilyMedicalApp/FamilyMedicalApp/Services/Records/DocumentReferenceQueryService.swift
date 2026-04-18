@@ -114,7 +114,7 @@ final class DocumentReferenceQueryService: DocumentReferenceQueryServiceProtocol
         let start = ContinuousClock.now
         logger.entry("fetchAllDocumentReferences")
         do {
-            let fmk = try fmkService.retrieveFMK(familyMemberID: personId.uuidString, primaryKey: primaryKey)
+            let fmk = try fmkService.retrieveFMK(personId: personId.uuidString, primaryKey: primaryKey)
             let records = try await recordRepository.fetchForPerson(personId: personId)
             var results: [PersistedDocumentReference] = []
             for record in records {

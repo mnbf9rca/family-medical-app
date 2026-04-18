@@ -144,10 +144,10 @@ final class MockCategoryLogger: CategoryLoggerProtocol, @unchecked Sendable {
         ))
     }
 
-    func logUserID(_ userID: String) {
+    func logUserId(_ userId: String) {
         capturedEntries.append(CapturedLogEntry(
             level: .debug,
-            message: "userID: \(userID)",
+            message: "userId: \(userId)",
             privacy: .public,
             category: category,
             timestamp: Date()

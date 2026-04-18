@@ -58,7 +58,7 @@ final class PersonDetailViewModel {
         do {
             let primaryKey = try primaryKeyProvider.getPrimaryKey()
             let fmk = try fmkService.retrieveFMK(
-                familyMemberID: person.id.uuidString,
+                personId: person.id.uuidString,
                 primaryKey: primaryKey
             )
 

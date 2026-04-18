@@ -165,7 +165,7 @@ actor DocumentBlobService: DocumentBlobServiceProtocol {
         // processed size) are logged later via a regular debug line.
         logger.entry("store", "personId=\(personId), plaintextSize=\(plaintext.count)")
         do {
-            let fmk = try fmkService.retrieveFMK(familyMemberID: personId.uuidString, primaryKey: primaryKey)
+            let fmk = try fmkService.retrieveFMK(personId: personId.uuidString, primaryKey: primaryKey)
             let processed = try process(plaintext: plaintext)
             logger.debug("store detectedMime=\(processed.detectedMimeType), processedSize=\(processed.data.count)")
             let hmac = Data(HMAC<SHA256>.authenticationCode(for: processed.data, using: fmk))
@@ -208,7 +208,7 @@ actor DocumentBlobService: DocumentBlobServiceProtocol {
         let start = ContinuousClock.now
         logger.entry("retrieve", "personId=\(personId)")
         do {
-            let fmk = try fmkService.retrieveFMK(familyMemberID: personId.uuidString, primaryKey: primaryKey)
+            let fmk = try fmkService.retrieveFMK(personId: personId.uuidString, primaryKey: primaryKey)
             let encrypted = try fileStorage.retrieve(contentHMAC: contentHMAC, personId: personId)
             let plaintext: Data
             do {

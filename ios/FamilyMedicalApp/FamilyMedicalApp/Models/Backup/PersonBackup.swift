@@ -55,19 +55,11 @@ struct PersonBackup: Codable, Equatable {
             name: name,
             dateOfBirth: dateOfBirth,
             labels: labels,
-            notes: trimmedNonEmpty(notes),
-            gender: trimmedNonEmpty(gender),
-            bloodType: trimmedNonEmpty(bloodType),
+            notes: notes.trimmedNonEmpty(),
+            gender: gender.trimmedNonEmpty(),
+            bloodType: bloodType.trimmedNonEmpty(),
             createdAt: createdAt,
             updatedAt: updatedAt
         )
-    }
-
-    private func trimmedNonEmpty(_ value: String?) -> String? {
-        guard let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines),
-              !trimmed.isEmpty else {
-            return nil
-        }
-        return trimmed
     }
 }

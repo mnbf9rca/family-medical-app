@@ -74,7 +74,7 @@ final class ImportService: ImportServiceProtocol, @unchecked Sendable {
 
         let fmk = fmkService.generateFMK()
         do {
-            try fmkService.storeFMK(fmk, familyMemberID: person.id.uuidString, primaryKey: primaryKey)
+            try fmkService.storeFMK(fmk, personId: person.id.uuidString, primaryKey: primaryKey)
         } catch {
             logger.logError(error, context: "ImportService.importPerson")
             throw BackupError.importFailed("Failed to create encryption key for person")

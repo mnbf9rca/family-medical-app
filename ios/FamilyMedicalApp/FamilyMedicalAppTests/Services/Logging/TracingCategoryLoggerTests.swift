@@ -98,7 +98,7 @@ struct TracingCategoryLoggerTests {
         let tracer = TracingCategoryLogger(wrapping: mock)
 
         tracer.logOperation("save", state: "started")
-        tracer.logUserID("user-123")
+        tracer.logUserId("user-123")
         tracer.logRecordCount(5)
         tracer.logTimestamp(Date())
         tracer.logError(NSError(domain: "test", code: 1), context: "TestContext")

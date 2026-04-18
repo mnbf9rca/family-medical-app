@@ -42,7 +42,7 @@ struct LoggingPrivacyTests {
     func hashedPrivacyLevel() {
         let mockLogger = MockCategoryLogger(category: .storage)
 
-        mockLogger.debug("recordID: abc123", privacy: .hashed)
+        mockLogger.debug("recordId: abc123", privacy: .hashed)
 
         let entries = mockLogger.entriesWithPrivacy(.hashed)
         #expect(entries.count == 1)
