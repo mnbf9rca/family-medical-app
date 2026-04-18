@@ -217,11 +217,34 @@ final class ProviderRepository: ProviderRepositoryProtocol, @unchecked Sendable 
 
     // MARK: - Private Helpers
 
-    /// Ensure FMK exists for a person (must already exist — providers are always under an existing person)
+    /// Retrieve the Family Member Key for the Person that owns this Provider.
+    ///
+    /// Invariant: Providers always belong to an existing Person, so the FMK
+    /// must pre-exist at the time this is called. Any failure here therefore
+    /// indicates either an upstream bug (e.g. a Person-deletion race that
+    /// left Provider rows referencing a vanished owner) or keychain
+    /// corruption — **not** a legitimate "this key hasn't been generated
+    /// yet" condition. Generating a new FMK here would silently re-key the
+    /// Person's data and break decryption of every other record under that
+    /// Person.
+    ///
+    /// Contrast with `PersonRepository.ensureFMK(for:primaryKey:)`, which is
+    /// the correct home for the "generate on first use" branch — it runs at
+    /// Person-creation time.
+    ///
+    /// All underlying errors are flattened into
+    /// `RepositoryError.keyNotAvailable` for the public surface (callers
+    /// cannot meaningfully act on keychain-internal failure types). The
+    /// original error is logged before wrapping so the underlying failure
+    /// mode is preserved in diagnostics.
     private func ensureFMK(for personID: String, primaryKey: SymmetricKey) throws -> SymmetricKey {
         do {
             return try fmkService.retrieveFMK(familyMemberID: personID, primaryKey: primaryKey)
         } catch {
+            logger.logError(
+                error,
+                context: "ProviderRepository.ensureFMK personID=\(personID)"
+            )
             throw RepositoryError.keyNotAvailable("Failed to retrieve FMK: \(error.localizedDescription)")
         }
     }

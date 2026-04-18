@@ -79,7 +79,25 @@ protocol DocumentBlobServiceProtocol: Sendable {
 actor DocumentBlobService: DocumentBlobServiceProtocol {
     // MARK: - Constants
 
+    /// Maximum accepted plaintext size for a single document blob: 10 MB.
+    ///
+    /// Enforced at `store(plaintext:personId:primaryKey:)`; exceeding this
+    /// surfaces to callers (and ultimately the UI) as
+    /// `ModelError.documentTooLarge(maxSizeMB:)`.
+    ///
+    /// Rationale: bounds the in-memory cost of encrypting blobs and generating
+    /// thumbnails, and keeps the on-disk footprint and eventual sync-payload size
+    /// tractable. No ADR pins this value; it is a pragmatic cap that should be
+    /// revisited when sync lands and real-world payload distributions are known.
     static let maxFileSizeBytes = 10 * 1_024 * 1_024
+
+    /// Target maximum edge length of generated thumbnails: 200 px.
+    ///
+    /// This value is passed to image resizing as a pixel dimension. The thumbnail
+    /// renderer uses a fixed scale of 1.0 (see ImageProcessingService.resizeIfNeeded),
+    /// so the stored bitmap's maximum edge length matches this value rather than
+    /// being multiplied by the device display scale. Sized for list-row thumbnails
+    /// where low decode cost matters more than full-fidelity rendering.
     static let thumbnailDimension = 200
 
     // MARK: - Types

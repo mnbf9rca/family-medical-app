@@ -2,19 +2,35 @@ import CryptoKit
 import Foundation
 import Sodium
 
-/// Protocol for password-based key derivation using Argon2id
+/// Key derivation primitives used by the encrypted-backup import/export path.
+///
+/// Account authentication derives its key material via OPAQUE (see
+/// `OpaqueAuthService` / `derivePrimaryKey(fromExportKey:)`); that path does
+/// **not** use this Argon2id primitive. The only remaining production caller
+/// of `derivePrimaryKey(from:salt:)` is `BackupFileService`, which derives a
+/// wrapping key from the user's backup passphrase to encrypt/decrypt the
+/// backup envelope. See ADR-0002 for the wider key hierarchy.
 protocol KeyDerivationServiceProtocol: Sendable {
-    /// Derive a primary key from password using Argon2id
+    /// Derive a backup-envelope wrapping key from a passphrase using Argon2id.
+    ///
+    /// Used by `BackupFileService` on backup export (with a freshly-generated
+    /// salt stored in the backup envelope) and on backup import (with the salt
+    /// read back from the envelope the user is restoring).
+    ///
+    /// `passwordBytes` is taken by value so the caller retains ownership and
+    /// can securely zero the buffer once the derivation returns (per RFC 9807
+    /// handling of password material); this service does not zero on the
+    /// caller's behalf.
+    ///
     /// - Parameters:
-    ///   - password: User's password
-    ///   - salt: 16-byte salt (generate new for new users, retrieve for existing)
-    /// - Returns: 256-bit SymmetricKey
-    /// - Throws: CryptoError on derivation failure
-    /// Derives primary key from password bytes - enables secure zeroing per RFC 9807
-    /// - Parameters:
-    ///   - passwordBytes: Password as bytes (caller responsible for zeroing after)
-    ///   - salt: Cryptographic salt
-    /// - Returns: Derived symmetric key
+    ///   - passwordBytes: Backup passphrase as bytes. Caller is responsible
+    ///     for zeroing the buffer after the call (use `secureZero`).
+    ///   - salt: 16-byte Argon2id salt. On export: generated via
+    ///     `generateSalt()` and stored alongside the ciphertext in the backup
+    ///     envelope. On import: read back from the envelope being restored.
+    /// - Returns: 256-bit `SymmetricKey` suitable as the backup-envelope
+    ///   wrapping key.
+    /// - Throws: `CryptoError` on invalid salt length or Argon2id failure.
     func derivePrimaryKey(from passwordBytes: [UInt8], salt: Data) throws -> SymmetricKey
 
     /// Derive a primary key from OPAQUE export key using HKDF
