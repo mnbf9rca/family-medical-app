@@ -22,7 +22,7 @@ Companion to:
 
 | # | Branch | Findings | Status | Notes |
 |---|---|---|---|---|
-| 1 | `chore/phase-1-cleanup` | trivial hygiene: **#1, 2, 3, 9** (done — `6ab0957` + `7f08a73`), then **#7, 15, 16, 17, 18, 20, 25, 26, 27, 28, 29, 30** | in-progress | Extends existing branch. Zero-risk deletions + tiny docs. |
+| 1 | `chore/phase-1-cleanup` | **#1, 2, 3, 9** (done — `6ab0957` + `7f08a73`); batch-2 **#7, 15, 16, 18, 20, 25-30** (pending commit); **#17 rejected** | in-progress | Finding #17 rejected on implementation — `SettingsViewPreviewHelpers.swift` is load-bearing: merging into `SettingsView.swift` pushes it past SwiftLint `file_length` warning which `--strict` treats as error. Original two-file split is the correct design. |
 | 2 | `docs/auth-rationale` | doc-only: **#4, 5, 6, 8, 10, 13, 19, 24** | pending | Pure `///` additions across auth, backend wire DTOs, repositories. Can't regress anything. |
 | 3 | `chore/delete-placeholder-backend` | structural deletes: **#11, 12, 14** | pending | Removes `backend/` directory entirely + `serialize_server_setup` + `hex` crate. Check Cloudflare routing before deploy. |
 | 4 | `refactor/id-naming` | wide rename: **#21, 22, 23** | pending | `trimmedNonEmpty` consolidation; `personID→personId`, `familyMemberID→personId`. Repo-wide — isolate for diff clarity. |
@@ -36,7 +36,7 @@ All details are in `2026-04-18-ready-to-fix.md`. The finding number there is the
 - **#7** — Consolidate DEBUG + Release OPAQUE test-bypass on `isUITesting` (`OpaqueAuthService.swift:394-405`)
 - **#15** — Remove spurious `import UIKit` in `CameraCaptureController.swift:3`
 - **#16** — Remove spurious `import UIKit` in `ThumbnailDisplayMode.swift:1`
-- **#17** — Merge `SettingsViewPreviewHelpers.swift` into `SettingsView.swift`, drop coverage exception
+- **#17** — ~~Merge `SettingsViewPreviewHelpers.swift` into `SettingsView.swift`, drop coverage exception~~ **Rejected:** merging pushes `SettingsView.swift` past SwiftLint's 500-line warning, and pre-commit runs `swiftlint --strict` which treats warnings as errors. The separation is load-bearing, not gratuitous.
 - **#18** — Delete stale `TODO(#127)` in `MedicalRecordListViewModel.swift:105`
 - **#20** — Name CameraCaptureView focus-indicator timing constants (`CameraCaptureView.swift:240,242,243,252`)
 - **#25** — Delete `docs/adr/examples/key-hierarchy-poc.swift` (contradicts ADR-0002)
@@ -73,6 +73,10 @@ All details are in `2026-04-18-ready-to-fix.md`. The finding number there is the
 
 Phase 3 surfaced four rejected candidates (TracingCategoryLogger pass-throughs, docs/research POCs, ADR-0009 orphan refs, UITest XCTest split) — no action, see detailed report §Rejected Candidates.
 
+**Rejected on implementation (discovered during PR #1 execution):**
+
+- **#17** — Preview-helpers file is load-bearing for SwiftLint `file_length`; see tracker row for PR #1.
+
 ## AGENTS.md rules subagents MUST follow
 
 Copy into each subagent brief:
@@ -84,5 +88,5 @@ Copy into each subagent brief:
 - Use `TracingCategoryLogger` for service entry/exit logging
 - ≥80% overall, ≥85% per-file coverage
 - Unit tests use Swift Testing (`import Testing`); UI tests use XCTest
-- Run `scripts/run-tests.sh` + `scripts/check-coverage.sh` + `pre-commit run --all-files`
+- **Verification order (fail-fast):** `mcp__xcode__BuildProject` → `pre-commit run --all-files` → `scripts/run-tests.sh` → `scripts/check-coverage.sh`. Lint runs in seconds; tests take 8-15 min. Never run tests before pre-commit — saves up to 15 min per failed run.
 - Use `mcp__xcode__BuildProject` with `tabIdentifier: windowtab1` for fast build check

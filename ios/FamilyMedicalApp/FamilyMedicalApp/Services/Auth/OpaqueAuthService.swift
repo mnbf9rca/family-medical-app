@@ -390,18 +390,16 @@ final class OpaqueAuthService: OpaqueAuthServiceProtocol, @unchecked Sendable {
 // MARK: - Static Utilities
 
 extension OpaqueAuthService {
-    /// Check if test username bypass should be used
+    /// Check if test username bypass should be used.
+    ///
+    /// The bypass only fires when the username matches the test pattern AND
+    /// the process was launched under UI testing. This keeps DEBUG and Release
+    /// behaviour symmetrical: a developer running the app manually with a
+    /// "test_" username still goes through the real OPAQUE flow.
     static func shouldBypassForTestUsername(_ username: String) -> Bool {
         let normalized = username.lowercased()
         let isTestUsername = normalized == "testuser" || normalized.hasPrefix("test_")
-
-        guard isTestUsername else { return false }
-
-        #if DEBUG
-        return true
-        #else
-        return UITestingHelpers.isUITesting
-        #endif
+        return isTestUsername && UITestingHelpers.isUITesting
     }
 
     /// Derive a deterministic test export key from password bytes.

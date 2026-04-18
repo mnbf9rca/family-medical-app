@@ -57,6 +57,15 @@ struct CameraCaptureView: View {
     @Environment(\.accessibilityReduceMotion)
     private var reduceMotion
 
+    // MARK: - Focus indicator timing
+
+    /// How long the focus-tap indicator stays fully visible before fading out.
+    private static let focusIndicatorVisibleDuration: Duration = .milliseconds(600)
+    /// Animation duration for the focus indicator fading in after a tap.
+    private static let focusFadeInDuration: TimeInterval = 0.25
+    /// Animation duration for the focus indicator fading out on dismiss or reset.
+    private static let focusFadeOutDuration: TimeInterval = 0.15
+
     let onPhotoCaptured: (Data, UTType) -> Void
     let onCancel: () -> Void
 
@@ -237,10 +246,10 @@ struct CameraCaptureView: View {
         let devicePoint = controller.previewLayer.captureDevicePointConverted(fromLayerPoint: location)
         controller.coordinator.focus(at: devicePoint)
         guard !reduceMotion else { return }
-        withAnimation(.easeOut(duration: 0.25)) { focusSquareLocation = location }
+        withAnimation(.easeOut(duration: Self.focusFadeInDuration)) { focusSquareLocation = location }
         Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 600_000_000)
-            withAnimation(.easeIn(duration: 0.15)) { focusSquareLocation = nil }
+            try? await Task.sleep(for: Self.focusIndicatorVisibleDuration)
+            withAnimation(.easeIn(duration: Self.focusFadeOutDuration)) { focusSquareLocation = nil }
         }
     }
 
@@ -249,7 +258,7 @@ struct CameraCaptureView: View {
         if reduceMotion {
             focusSquareLocation = nil
         } else {
-            withAnimation(.easeIn(duration: 0.15)) { focusSquareLocation = nil }
+            withAnimation(.easeIn(duration: Self.focusFadeOutDuration)) { focusSquareLocation = nil }
         }
     }
 
