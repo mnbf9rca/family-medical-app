@@ -22,7 +22,15 @@ final class OpaqueAuthService: OpaqueAuthServiceProtocol, @unchecked Sendable {
     let session: URLSession
     let logger: CategoryLoggerProtocol
 
-    /// Default API base URL
+    /// Production OPAQUE API endpoint.
+    ///
+    /// This is the only base URL used by release builds. Tests and staging
+    /// harnesses override it via `init(baseURL:)` (dependency injection).
+    ///
+    /// There is no xcconfig- or environment-based override mechanism today;
+    /// one should be introduced before any staging deployment exists so that
+    /// release-configured binaries can be pointed at a non-production endpoint
+    /// without a code change. For now the override path is DI-only.
     private static let defaultBaseURL =
         URL(string: "https://api.recordwell.app/auth/opaque")! // swiftlint:disable:this force_unwrapping
 

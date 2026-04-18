@@ -79,7 +79,25 @@ protocol DocumentBlobServiceProtocol: Sendable {
 actor DocumentBlobService: DocumentBlobServiceProtocol {
     // MARK: - Constants
 
+    /// Maximum accepted plaintext size for a single document blob: 10 MB.
+    ///
+    /// Enforced at `store(plaintext:personId:primaryKey:)`; exceeding this
+    /// surfaces to callers (and ultimately the UI) as
+    /// `ModelError.documentTooLarge(maxSizeMB:)`.
+    ///
+    /// Rationale: keeps Core Data blob encryption within the device's
+    /// per-record memory budget and keeps the eventual sync-payload size
+    /// tractable. No ADR pins this value; it is a pragmatic cap that should
+    /// be revisited when sync lands and real-world payload distributions are
+    /// known.
     static let maxFileSizeBytes = 10 * 1_024 * 1_024
+
+    /// Target edge length of generated thumbnails: 200 **pt**.
+    ///
+    /// Unit is SwiftUI points, not pixels — the renderer multiplies by the
+    /// display scale (@2x / @3x), so on current iPhones the actual bitmap is
+    /// 400 px or 600 px. Sized for list-row thumbnails where a low decode
+    /// cost matters more than full-fidelity rendering.
     static let thumbnailDimension = 200
 
     // MARK: - Types

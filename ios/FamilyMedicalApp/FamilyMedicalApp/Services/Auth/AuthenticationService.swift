@@ -86,7 +86,20 @@ final class AuthenticationService: AuthenticationServiceProtocol {
     private static let verificationPlaintext = "family-medical-app-verification"
     private static let setupCompleteKey = "com.family-medical-app.account-setup-complete"
 
-    /// Rate limiting thresholds
+    /// Client-side lockout ladder applied after consecutive wrong-passphrase attempts on this install.
+    ///
+    /// This is a **local** throttle — it runs entirely on-device against
+    /// `failedAttemptsKey` / `lockoutEndTimeKey` in `UserDefaults`. It is
+    /// **not** the server-side rate limiter: the OPAQUE Worker enforces its
+    /// own per-endpoint, per-client-identifier limits in Cloudflare KV (see
+    /// `backend-rust/src/rate_limit.rs`). The two layers are independent and
+    /// intentionally so — the local ladder defends against a stranger with
+    /// the physical device, the server ladder defends against a remote
+    /// attacker burning credentials against the API.
+    ///
+    /// Ladder shape: escalating lockout windows after 3 / 4 / 5 / 6+
+    /// consecutive failures. See ADR-0011 for OPAQUE protocol context and
+    /// the server-side limits it pairs with.
     private static let rateLimitThresholds: [(attempts: Int, lockoutSeconds: Int)] = [
         (3, 30), // 3 fails = 30 seconds
         (4, 60), // 4 fails = 1 minute

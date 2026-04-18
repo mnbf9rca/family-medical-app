@@ -5,6 +5,18 @@ use serde::{Deserialize, Serialize};
 use worker::*;
 
 // Request/Response types
+//
+// These DTOs define the HTTP wire contract between the iOS
+// `OpaqueAuthService` client and this Worker. All JSON fields use
+// `camelCase` so they line up with the Swift-side DTOs. Opaque-ke protocol
+// blobs are always base64-encoded (STANDARD, with padding); `clientIdentifier`
+// is always the 64-character lowercase-hex SHA-256 of the username
+// (32 bytes → 64 hex chars). See ADR-0011 for the full OPAQUE protocol flow.
+
+/// POST `/auth/opaque/register/start` request body.
+///
+/// - `client_identifier`: 64 hex chars = SHA-256(username), 32 bytes.
+/// - `registration_request`: base64-encoded opaque-ke `RegistrationRequest` blob.
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RegisterStartRequest {
@@ -12,12 +24,23 @@ pub struct RegisterStartRequest {
     pub registration_request: String, // base64
 }
 
+/// POST `/auth/opaque/register/start` response body.
+///
+/// - `registration_response`: base64-encoded opaque-ke `RegistrationResponse`
+///   blob the client feeds into `ClientRegistration::finish`.
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RegisterStartResponse {
     pub registration_response: String, // base64
 }
 
+/// POST `/auth/opaque/register/finish` request body.
+///
+/// - `client_identifier`: 64 hex chars (same as register/start).
+/// - `registration_record`: base64-encoded opaque-ke `RegistrationUpload`
+///   (the password file) that the server persists as the credential.
+/// - `encrypted_bundle`: optional base64-encoded initial encrypted backup
+///   bundle; when present it is stored under `bundle:<clientIdentifier>`.
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RegisterFinishRequest {
@@ -26,11 +49,16 @@ pub struct RegisterFinishRequest {
     pub encrypted_bundle: Option<String>,
 }
 
+/// Generic `{ "success": true }` response used by the register/finish path.
 #[derive(Serialize)]
 pub struct SuccessResponse {
     pub success: bool,
 }
 
+/// POST `/auth/opaque/login/start` request body.
+///
+/// - `client_identifier`: 64 hex chars (same as register).
+/// - `start_login_request`: base64-encoded opaque-ke `CredentialRequest` blob.
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LoginStartRequest {
@@ -38,6 +66,12 @@ pub struct LoginStartRequest {
     pub start_login_request: String, // base64
 }
 
+/// POST `/auth/opaque/login/start` response body.
+///
+/// - `login_response`: base64-encoded opaque-ke `CredentialResponse` blob.
+/// - `state_key`: opaque server-state handle (plain string, no base64) the
+///   client must echo back on login/finish. Encodes a fake-vs-real record
+///   discriminator per RFC 9807 §10.9; server-managed, TTL 60s.
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LoginStartResponse {
@@ -45,6 +79,12 @@ pub struct LoginStartResponse {
     pub state_key: String,
 }
 
+/// POST `/auth/opaque/login/finish` request body.
+///
+/// - `client_identifier`: 64 hex chars (same as register/login start).
+/// - `state_key`: exact value returned by the prior login/start response.
+/// - `finish_login_request`: base64-encoded opaque-ke `CredentialFinalization`
+///   blob.
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LoginFinishRequest {
@@ -53,6 +93,13 @@ pub struct LoginFinishRequest {
     pub finish_login_request: String, // base64
 }
 
+/// POST `/auth/opaque/login/finish` response body.
+///
+/// - `success`: always `true` on this success path.
+/// - `session_key`: base64-encoded opaque-ke session key derived by the server.
+/// - `encrypted_bundle`: optional base64-encoded encrypted backup bundle
+///   associated with this account (whatever the client uploaded at
+///   register/finish or via a subsequent update).
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LoginFinishResponse {
@@ -61,6 +108,10 @@ pub struct LoginFinishResponse {
     pub encrypted_bundle: Option<String>,
 }
 
+/// Uniform error body returned on any 4xx/5xx from the OPAQUE endpoints.
+/// Intentionally opaque to callers — specific failure modes are intentionally
+/// not distinguished in the wire representation (defense in depth against
+/// account-enumeration oracles).
 #[derive(Serialize)]
 pub struct ErrorResponse {
     pub error: String,
