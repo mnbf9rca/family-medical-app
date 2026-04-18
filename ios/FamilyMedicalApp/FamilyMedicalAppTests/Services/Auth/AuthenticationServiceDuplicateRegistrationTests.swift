@@ -62,7 +62,7 @@ struct AuthenticationServiceDuplicateRegistrationTests {
 
         #expect(service.isSetUp == true)
         #expect(service.storedUsername == "existinguser")
-        #expect(userDefaults.bool(forKey: "com.family-medical-app.use-opaque") == true)
+        #expect(userDefaults.bool(forKey: "com.family-medical-app.account-setup-complete") == true)
         #expect(keychainService.keyExists(identifier: "com.family-medical-app.primary-key"))
     }
 

@@ -79,13 +79,12 @@ final class AuthenticationService: AuthenticationServiceProtocol {
     private static let identityPrivateKeyIdentifier = "com.family-medical-app.identity-private-key"
     private static let identityPublicKeyIdentifier = "com.family-medical-app.identity-public-key"
     private static let verificationTokenIdentifier = "com.family-medical-app.verification-token"
-    private static let saltKey = "com.family-medical-app.salt"
     private static let usernameKey = "com.family-medical-app.username"
     private static let biometricEnabledKey = "com.family-medical-app.biometric-enabled"
     private static let failedAttemptsKey = "com.family-medical-app.failed-attempts"
     private static let lockoutEndTimeKey = "com.family-medical-app.lockout-end-time"
     private static let verificationPlaintext = "family-medical-app-verification"
-    private static let useOpaqueKey = "com.family-medical-app.use-opaque"
+    private static let setupCompleteKey = "com.family-medical-app.account-setup-complete"
 
     /// Rate limiting thresholds
     private static let rateLimitThresholds: [(attempts: Int, lockoutSeconds: Int)] = [
@@ -125,8 +124,7 @@ final class AuthenticationService: AuthenticationServiceProtocol {
     }
 
     var isSetUp: Bool {
-        // Check for OPAQUE setup (new) or legacy salt-based setup
-        userDefaults.bool(forKey: Self.useOpaqueKey) || userDefaults.data(forKey: Self.saltKey) != nil
+        userDefaults.bool(forKey: Self.setupCompleteKey)
     }
 
     var isBiometricEnabled: Bool {
@@ -135,11 +133,6 @@ final class AuthenticationService: AuthenticationServiceProtocol {
 
     var storedUsername: String? {
         userDefaults.string(forKey: Self.usernameKey)
-    }
-
-    /// Whether this account uses OPAQUE authentication (vs legacy password+salt)
-    var usesOpaque: Bool {
-        userDefaults.bool(forKey: Self.useOpaqueKey)
     }
 
     // MARK: - Initialization
@@ -262,7 +255,7 @@ final class AuthenticationService: AuthenticationServiceProtocol {
             throw AuthenticationError.notSetUp
         }
 
-        let candidateKey = try await deriveCandidateKey(passwordBytes: passwordBytes)
+        let candidateKey = try await deriveKeyViaOpaque(passwordBytes: passwordBytes)
         try verifyAndCompleteUnlock(candidateKey: candidateKey)
     }
 
@@ -306,9 +299,8 @@ final class AuthenticationService: AuthenticationServiceProtocol {
         try? keychainService.deleteData(identifier: Self.verificationTokenIdentifier)
 
         // Clear UserDefaults
-        userDefaults.removeObject(forKey: Self.saltKey)
         userDefaults.removeObject(forKey: Self.usernameKey)
-        userDefaults.removeObject(forKey: Self.useOpaqueKey)
+        userDefaults.removeObject(forKey: Self.setupCompleteKey)
         userDefaults.removeObject(forKey: Self.identityPublicKeyIdentifier)
         userDefaults.removeObject(forKey: Self.biometricEnabledKey)
         userDefaults.removeObject(forKey: Self.failedAttemptsKey)
@@ -335,16 +327,7 @@ final class AuthenticationService: AuthenticationServiceProtocol {
 
     // MARK: - Key Derivation
 
-    /// Derive candidate key using OPAQUE or legacy authentication
-    func deriveCandidateKey(passwordBytes: [UInt8]) async throws -> SymmetricKey {
-        if usesOpaque {
-            try await deriveKeyViaOpaque(passwordBytes: passwordBytes)
-        } else {
-            try deriveKeyViaLegacy(passwordBytes: passwordBytes)
-        }
-    }
-
-    /// Derive key via OPAQUE authentication with server
+    /// Derive primary key by performing OPAQUE login against the server.
     private func deriveKeyViaOpaque(passwordBytes: [UInt8]) async throws -> SymmetricKey {
         guard let username = storedUsername else {
             throw AuthenticationError.notSetUp
@@ -354,9 +337,7 @@ final class AuthenticationService: AuthenticationServiceProtocol {
             let loginResult = try await opaqueAuthService.login(username: username, passwordBytes: passwordBytes)
 
             // RFC 9807 §6.4.4: Validate export key before use
-            guard !loginResult.exportKey.isEmpty,
-                  loginResult.exportKey.count == 32 || loginResult.exportKey.count == 64
-            else {
+            guard loginResult.exportKey.count == 64 else {
                 logger.error("OPAQUE returned invalid export key length: \(loginResult.exportKey.count)")
                 throw AuthenticationError.verificationFailed
             }
@@ -367,14 +348,6 @@ final class AuthenticationService: AuthenticationServiceProtocol {
             try handleFailedAttempt()
             throw AuthenticationError.wrongPassword
         }
-    }
-
-    /// Derive key via legacy password + salt authentication (for pre-OPAQUE accounts)
-    func deriveKeyViaLegacy(passwordBytes: [UInt8]) throws -> SymmetricKey {
-        guard let salt = userDefaults.data(forKey: Self.saltKey) else {
-            throw AuthenticationError.notSetUp
-        }
-        return try keyDerivationService.derivePrimaryKey(from: passwordBytes, salt: salt)
     }
 
     /// Verify candidate key and complete unlock
@@ -417,9 +390,7 @@ final class AuthenticationService: AuthenticationServiceProtocol {
         enableBiometric: Bool
     ) async throws {
         // RFC 9807 §6.4.4: Validate export key before use
-        guard !exportKey.isEmpty,
-              exportKey.count == 32 || exportKey.count == 64
-        else {
+        guard exportKey.count == 64 else {
             logger.error("OPAQUE returned invalid export key length: \(exportKey.count)")
             throw AuthenticationError.setupFailed
         }
@@ -461,8 +432,8 @@ final class AuthenticationService: AuthenticationServiceProtocol {
         // Store public key in UserDefaults (not sensitive)
         userDefaults.set(publicKey.rawRepresentation, forKey: Self.identityPublicKeyIdentifier)
 
-        // Mark as using OPAQUE authentication
-        userDefaults.set(true, forKey: Self.useOpaqueKey)
+        // Mark account setup as complete
+        userDefaults.set(true, forKey: Self.setupCompleteKey)
 
         // Store username in UserDefaults
         userDefaults.set(username, forKey: Self.usernameKey)

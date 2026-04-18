@@ -30,7 +30,7 @@ struct AuthenticationServiceExportKeyTests {
     func setUpRejectsInvalidExportKeyLength() async throws {
         let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let opaqueAuthService = MockOpaqueAuthService()
-        opaqueAuthService.testExportKey = Data(repeating: 0x42, count: 16) // Wrong length (not 32 or 64)
+        opaqueAuthService.testExportKey = Data(repeating: 0x42, count: 32) // Wrong length (not 64)
 
         let service = AuthenticationService(
             keychainService: MockAuthKeychainService(),
@@ -42,23 +42,6 @@ struct AuthenticationServiceExportKeyTests {
         await #expect(throws: AuthenticationError.setupFailed) {
             try await service.setUp(passwordBytes: &passwordBytes, username: "testuser", enableBiometric: false)
         }
-    }
-
-    @Test
-    func setUpAccepts32ByteExportKey() async throws {
-        let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
-        let opaqueAuthService = MockOpaqueAuthService()
-        opaqueAuthService.testExportKey = Data(repeating: 0x42, count: 32)
-
-        let service = AuthenticationService(
-            keychainService: MockAuthKeychainService(),
-            opaqueAuthService: opaqueAuthService,
-            userDefaults: userDefaults
-        )
-
-        var passwordBytes = Array("MySecurePassword123!".utf8)
-        try await service.setUp(passwordBytes: &passwordBytes, username: "testuser", enableBiometric: false)
-        #expect(service.isSetUp == true)
     }
 
     @Test
@@ -87,7 +70,7 @@ struct AuthenticationServiceExportKeyTests {
         let keychainService = MockAuthKeychainService()
 
         // Set up with valid export key first
-        opaqueAuthService.testExportKey = Data(repeating: 0x42, count: 32)
+        opaqueAuthService.testExportKey = Data(repeating: 0x42, count: 64)
         let service = AuthenticationService(
             keychainService: keychainService,
             opaqueAuthService: opaqueAuthService,
@@ -113,7 +96,7 @@ struct AuthenticationServiceExportKeyTests {
         let keychainService = MockAuthKeychainService()
 
         // Set up with valid export key first
-        opaqueAuthService.testExportKey = Data(repeating: 0x42, count: 32)
+        opaqueAuthService.testExportKey = Data(repeating: 0x42, count: 64)
         let service = AuthenticationService(
             keychainService: keychainService,
             opaqueAuthService: opaqueAuthService,
@@ -124,7 +107,7 @@ struct AuthenticationServiceExportKeyTests {
         #expect(service.isSetUp == true)
 
         // Change mock to return invalid length export key during login (unlock path)
-        opaqueAuthService.testExportKey = Data(repeating: 0xAB, count: 16)
+        opaqueAuthService.testExportKey = Data(repeating: 0xAB, count: 32)
 
         var unlockPasswordBytes = Array("MySecurePassword123!".utf8)
         await #expect(throws: AuthenticationError.verificationFailed) {

@@ -6,9 +6,6 @@ import Testing
 struct AuthenticationViewModelStateTests {
     // MARK: - Test Constants
 
-    private let longTestCredential = "unique-very-strong-credential-with-many-characters-2024"
-    private let mediumTestCredential = "unique-good-credential-123"
-    private let shortTestCredential = "short"
     private let genericTestCredential = "credential"
 
     // MARK: - Biometric State Tests
@@ -62,33 +59,6 @@ struct AuthenticationViewModelStateTests {
         let viewModel = AuthenticationViewModel(authService: authService)
 
         #expect(viewModel.showBiometricPrompt == false)
-    }
-
-    // MARK: - Password Validation Tests
-
-    @Test
-    func passwordStrengthReflectsPassword() {
-        let viewModel = AuthenticationViewModel()
-
-        viewModel.password = longTestCredential
-        #expect(viewModel.passwordStrength >= .good)
-
-        viewModel.password = mediumTestCredential
-        #expect(viewModel.passwordStrength >= .fair)
-
-        viewModel.password = shortTestCredential
-        #expect(viewModel.passwordStrength == .weak)
-    }
-
-    @Test
-    func passwordValidationErrorsReflectPassword() {
-        let viewModel = AuthenticationViewModel()
-
-        viewModel.password = shortTestCredential
-        #expect(!viewModel.passwordValidationErrors.isEmpty)
-
-        viewModel.password = mediumTestCredential
-        #expect(viewModel.passwordValidationErrors.isEmpty)
     }
 
     // MARK: - Lock Tests
@@ -161,8 +131,9 @@ struct AuthenticationViewModelStateTests {
         let viewModel = AuthenticationViewModel(authService: authService)
 
         viewModel.isAuthenticated = true
-        viewModel.password = genericTestCredential
-        viewModel.confirmPassword = genericTestCredential
+        viewModel.username = genericTestCredential
+        viewModel.passphrase = genericTestCredential
+        viewModel.confirmPassphrase = genericTestCredential
         viewModel.unlockPassword = genericTestCredential
         viewModel.showBiometricPrompt = true
         viewModel.errorMessage = "error"
@@ -171,8 +142,9 @@ struct AuthenticationViewModelStateTests {
 
         #expect(viewModel.isSetUp == false)
         #expect(viewModel.isAuthenticated == false)
-        #expect(viewModel.password.isEmpty)
-        #expect(viewModel.confirmPassword.isEmpty)
+        #expect(viewModel.username.isEmpty)
+        #expect(viewModel.passphrase.isEmpty)
+        #expect(viewModel.confirmPassphrase.isEmpty)
         #expect(viewModel.unlockPassword.isEmpty)
         #expect(viewModel.showBiometricPrompt == false)
         #expect(viewModel.errorMessage == nil)

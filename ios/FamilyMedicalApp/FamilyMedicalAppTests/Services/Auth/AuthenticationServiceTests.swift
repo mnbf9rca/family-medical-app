@@ -24,8 +24,7 @@ struct AuthenticationServiceTests {
         try await service.setUp(passwordBytes: &passwordBytes, username: "testuser", enableBiometric: false)
 
         #expect(service.isSetUp == true)
-        // OPAQUE doesn't use salt - it uses export key from OPAQUE protocol
-        #expect(userDefaults.bool(forKey: "com.family-medical-app.use-opaque") == true)
+        #expect(userDefaults.bool(forKey: "com.family-medical-app.account-setup-complete") == true)
         #expect(keychainService.keyExists(identifier: "com.family-medical-app.primary-key"))
         #expect(keychainService.dataExists(identifier: "com.family-medical-app.identity-private-key"))
         #expect(keychainService.dataExists(identifier: "com.family-medical-app.verification-token"))
@@ -351,7 +350,7 @@ struct AuthenticationServiceTests {
         service.logout()
 
         #expect(service.isSetUp == false)
-        #expect(userDefaults.bool(forKey: "com.family-medical-app.use-opaque") == false)
+        #expect(userDefaults.bool(forKey: "com.family-medical-app.account-setup-complete") == false)
         #expect(!keychainService.keyExists(identifier: "com.family-medical-app.primary-key"))
     }
 }

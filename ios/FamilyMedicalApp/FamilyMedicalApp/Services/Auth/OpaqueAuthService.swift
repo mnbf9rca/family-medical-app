@@ -404,12 +404,12 @@ extension OpaqueAuthService {
         #endif
     }
 
-    /// Derive a deterministic test export key from password bytes
-    /// This ensures wrong passwords produce different keys and fail verification
+    /// Derive a deterministic test export key from password bytes.
+    /// Produces 64 bytes to match production OPAQUE (opaque-ke with Sha512),
+    /// so the test-bypass path and the real path are interchangeable at the
+    /// boundary that consumes the export key.
     static func deriveTestExportKey(from passwordBytes: [UInt8]) -> Data {
-        // Use SHA256 to deterministically map password to a 32-byte key
-        // This simulates OPAQUE's behavior where different passwords produce different export keys
-        var hasher = CryptoKit.SHA256()
+        var hasher = CryptoKit.SHA512()
         hasher.update(data: Data("test-opaque-salt".utf8))
         hasher.update(data: Data(passwordBytes))
         return Data(hasher.finalize())

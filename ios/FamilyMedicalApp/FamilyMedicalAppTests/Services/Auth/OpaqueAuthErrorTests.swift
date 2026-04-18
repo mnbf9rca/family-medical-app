@@ -79,7 +79,7 @@ struct OpaqueAuthErrorTests {
     @Test
     func accountExistsConfirmedHasDescription() {
         let loginResult = OpaqueLoginResult(
-            exportKey: Data(repeating: 0x42, count: 32),
+            exportKey: Data(repeating: 0x42, count: 64),
             sessionKey: Data(repeating: 0x43, count: 32),
             encryptedBundle: nil
         )
@@ -135,7 +135,7 @@ struct OpaqueAuthErrorTests {
     @Test
     func accountExistsConfirmedWithSameResultAreEqual() {
         let loginResult = OpaqueLoginResult(
-            exportKey: Data(repeating: 0x42, count: 32),
+            exportKey: Data(repeating: 0x42, count: 64),
             sessionKey: Data(repeating: 0x43, count: 32),
             encryptedBundle: nil
         )
@@ -147,12 +147,12 @@ struct OpaqueAuthErrorTests {
     @Test
     func accountExistsConfirmedWithDifferentResultsAreNotEqual() {
         let loginResult1 = OpaqueLoginResult(
-            exportKey: Data(repeating: 0x42, count: 32),
+            exportKey: Data(repeating: 0x42, count: 64),
             sessionKey: Data(repeating: 0x43, count: 32),
             encryptedBundle: nil
         )
         let loginResult2 = OpaqueLoginResult(
-            exportKey: Data(repeating: 0x99, count: 32),
+            exportKey: Data(repeating: 0x99, count: 64),
             sessionKey: Data(repeating: 0x43, count: 32),
             encryptedBundle: nil
         )
