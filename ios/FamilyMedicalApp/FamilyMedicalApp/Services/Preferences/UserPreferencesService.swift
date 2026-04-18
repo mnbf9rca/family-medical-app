@@ -1,39 +1,12 @@
 import CryptoKit
 import Foundation
 
-/// Protocol for loading, saving, and deleting encrypted user preferences.
-protocol UserPreferencesServiceProtocol: Sendable {
-    /// Load preferences from Keychain, decrypting with the given Primary Key.
-    ///
-    /// Returns default `UserPreferences()` if no stored preferences exist yet.
-    ///
-    /// - Parameter primaryKey: The user's Primary Key for decryption.
-    /// - Returns: Decrypted `UserPreferences`.
-    /// - Throws: `CryptoError` if decryption fails, or a JSON decoding error.
-    func load(primaryKey: SymmetricKey) throws -> UserPreferences
-
-    /// Encrypt and persist preferences to Keychain using the given Primary Key.
-    ///
-    /// - Parameters:
-    ///   - preferences: The preferences to save.
-    ///   - primaryKey: The user's Primary Key for encryption.
-    /// - Throws: `CryptoError` if encryption fails, or a JSON encoding / Keychain error.
-    func save(_ preferences: UserPreferences, primaryKey: SymmetricKey) throws
-
-    /// Remove stored preferences from Keychain.
-    ///
-    /// Safe to call even when no preferences are currently stored.
-    ///
-    /// - Throws: `KeychainError` on unexpected Keychain failure.
-    func delete() throws
-}
-
 /// Encrypts `UserPreferences` with the user's Primary Key and stores the
 /// result as a single combined blob in the Keychain.
 ///
 /// Key rotation is the caller's responsibility: re-save with the new Primary
 /// Key after rotation; this service only encrypts / decrypts.
-final class UserPreferencesService: UserPreferencesServiceProtocol, @unchecked Sendable {
+final class UserPreferencesService: @unchecked Sendable {
     // MARK: - Constants
 
     private static let keychainIdentifier = "user_preferences"
@@ -57,8 +30,6 @@ final class UserPreferencesService: UserPreferencesServiceProtocol, @unchecked S
             wrapping: logger ?? LoggingService.shared.logger(category: .storage)
         )
     }
-
-    // MARK: - UserPreferencesServiceProtocol
 
     func load(primaryKey: SymmetricKey) throws -> UserPreferences {
         let start = ContinuousClock.now
