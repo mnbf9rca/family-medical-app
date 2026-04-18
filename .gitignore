@@ -33,8 +33,6 @@ node_modules/
 # Rust
 target/
 Cargo.lock
-*.rlib
-*.rmeta
 backend-rust/build/
 
 # Test output (iOS and others)
