@@ -59,7 +59,7 @@ final class OpaqueAuthService: OpaqueAuthServiceProtocol, @unchecked Sendable {
         logger.logOperation("register", state: "started")
         logger.debug("Registering user with base URL: \(baseURL.absoluteString)")
 
-        // Bypass for test usernames in DEBUG builds
+        // Bypass for test usernames under UI testing
         if Self.shouldBypassForTestUsername(username) {
             return makeTestRegistrationResult(passwordBytes: passwordBytes)
         }
@@ -87,7 +87,7 @@ final class OpaqueAuthService: OpaqueAuthServiceProtocol, @unchecked Sendable {
         logger.logOperation("login", state: "started")
         logger.debug("Attempting OPAQUE login for user")
 
-        // Bypass for test usernames in DEBUG builds
+        // Bypass for test usernames under UI testing
         if Self.shouldBypassForTestUsername(username) {
             logger.debug("Using test username bypass for login")
             return makeTestLoginResult(passwordBytes: passwordBytes)
@@ -326,7 +326,7 @@ final class OpaqueAuthService: OpaqueAuthServiceProtocol, @unchecked Sendable {
     }
 
     func uploadBundle(username: String, bundle: Data) async throws {
-        // Bypass for test usernames in DEBUG builds
+        // Bypass for test usernames under UI testing
         if Self.shouldBypassForTestUsername(username) { return }
 
         let clientIdentifier = try generateClientIdentifier(username: username)
