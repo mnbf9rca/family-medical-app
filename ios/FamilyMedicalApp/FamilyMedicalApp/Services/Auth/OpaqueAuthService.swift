@@ -15,8 +15,17 @@ struct LoginStartResult {
 /// Uses OpaqueSwift (UniFFI-wrapped opaque-ke) for client-side cryptography.
 ///
 /// ## Test Username Bypass
-/// In DEBUG builds, usernames matching `testuser` or `test_*` patterns
-/// bypass actual API calls for testing purposes.
+///
+/// When `UITestingHelpers.isUITesting` is true (i.e. the process was
+/// launched with the `--uitesting` command-line argument),
+/// `shouldBypassForTestUsername` short-circuits API calls for usernames
+/// equal to `testuser` or prefixed `test_`. This supports deterministic
+/// XCUITest runs.
+///
+/// `UITestingHelpers.isUITesting` calls `assert(!isTesting, ...)` in
+/// non-DEBUG builds, but Swift assertions are elided under `-O` in
+/// release. See issue #177 for whether this should be hardened with an
+/// explicit `#if DEBUG` guard.
 final class OpaqueAuthService: OpaqueAuthServiceProtocol, @unchecked Sendable {
     let baseURL: URL
     let session: URLSession
