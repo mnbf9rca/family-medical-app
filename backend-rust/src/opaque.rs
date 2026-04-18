@@ -36,12 +36,6 @@ pub fn init_server_setup(stored: Option<&str>) -> Result<OpaqueServerSetup, Stri
     }
 }
 
-/// Serialize server setup for storage
-#[allow(dead_code)]
-pub fn serialize_server_setup(setup: &OpaqueServerSetup) -> String {
-    BASE64.encode(setup.serialize())
-}
-
 #[derive(Debug)]
 pub struct RegistrationStartResult {
     pub response: Vec<u8>,
