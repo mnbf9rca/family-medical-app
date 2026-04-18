@@ -171,7 +171,6 @@ private final class MockAuthenticationServiceWithAccountExists: AuthenticationSe
     }
 
     func unlockWithBiometric() async throws {}
-    func lock() {}
     func logout() {
         isSetUp = false
     }
