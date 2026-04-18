@@ -13,11 +13,13 @@ struct PasswordStrengthIndicatorTests {
         let view = PasswordStrengthIndicator(strength: .weak)
 
         // Verify structure and weak label
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.VStack.self)
-        _ = try inspected.find(ViewType.HStack.self)
-        let strengthText = try inspected.find(text: "Weak")
-        #expect(try strengthText.string() == "Weak")
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.VStack.self)
+            _ = try inspected.find(ViewType.HStack.self)
+            let strengthText = try inspected.find(text: "Weak")
+            #expect(try strengthText.string() == "Weak")
+        }
     }
 
     @Test
@@ -25,10 +27,12 @@ struct PasswordStrengthIndicatorTests {
         let view = PasswordStrengthIndicator(strength: .fair)
 
         // Verify structure and fair label
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.VStack.self)
-        let strengthText = try inspected.find(text: "Fair")
-        #expect(try strengthText.string() == "Fair")
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.VStack.self)
+            let strengthText = try inspected.find(text: "Fair")
+            #expect(try strengthText.string() == "Fair")
+        }
     }
 
     @Test
@@ -36,10 +40,12 @@ struct PasswordStrengthIndicatorTests {
         let view = PasswordStrengthIndicator(strength: .good)
 
         // Verify structure and good label
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.VStack.self)
-        let strengthText = try inspected.find(text: "Good")
-        #expect(try strengthText.string() == "Good")
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.VStack.self)
+            let strengthText = try inspected.find(text: "Good")
+            #expect(try strengthText.string() == "Good")
+        }
     }
 
     @Test
@@ -47,10 +53,12 @@ struct PasswordStrengthIndicatorTests {
         let view = PasswordStrengthIndicator(strength: .strong)
 
         // Verify structure and strong label
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.VStack.self)
-        let strengthText = try inspected.find(text: "Strong")
-        #expect(try strengthText.string() == "Strong")
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.VStack.self)
+            let strengthText = try inspected.find(text: "Strong")
+            #expect(try strengthText.string() == "Strong")
+        }
     }
 
     @Test
@@ -58,9 +66,11 @@ struct PasswordStrengthIndicatorTests {
         let view = PasswordStrengthIndicator(strength: .good)
 
         // Verify the strength indicator contains an HStack for the bar segments
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.HStack.self)
-        // Note: ViewInspector doesn't support inspecting Rectangle/Shape primitives
-        // The presence of HStack confirms the indicator bar structure exists
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.HStack.self)
+            // Note: ViewInspector doesn't support inspecting Rectangle/Shape primitives
+            // The presence of HStack confirms the indicator bar structure exists
+        }
     }
 }

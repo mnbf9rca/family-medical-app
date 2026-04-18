@@ -31,8 +31,10 @@ struct HomeViewTests {
         let view = HomeView(viewModel: viewModel)
 
         // Use find() for deterministic coverage - verify Group renders
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.Group.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.Group.self)
+        }
     }
 
     @Test
@@ -41,8 +43,10 @@ struct HomeViewTests {
         let view = HomeView(viewModel: viewModel)
 
         // Empty state shows EmptyMembersView
-        let inspected = try view.inspect()
-        _ = try inspected.find(EmptyMembersView.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(EmptyMembersView.self)
+        }
     }
 
     @Test
@@ -61,8 +65,10 @@ struct HomeViewTests {
 
         let view = HomeView(viewModel: viewModel)
         // With persons, should show List
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.List.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.List.self)
+        }
     }
 
     // MARK: - Error State Tests
@@ -80,8 +86,10 @@ struct HomeViewTests {
 
         let view = HomeView(viewModel: viewModel)
         // Error state still renders the Group (alert is separate)
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.Group.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.Group.self)
+        }
     }
 
     // MARK: - Loading State Tests
@@ -93,8 +101,10 @@ struct HomeViewTests {
 
         let view = HomeView(viewModel: viewModel)
         // Loading state shows ProgressView overlay
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.ProgressView.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.ProgressView.self)
+        }
     }
 
     // MARK: - Delete Tests

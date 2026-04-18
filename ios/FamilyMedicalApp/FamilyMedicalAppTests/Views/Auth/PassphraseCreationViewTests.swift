@@ -13,9 +13,11 @@ struct PassphraseCreationViewTests {
         let viewModel = AuthenticationViewModel()
         let view = PassphraseCreationView(viewModel: viewModel, username: testUsername)
 
-        let sut = try view.inspect()
-        // find() throws if not found
-        _ = try sut.find(viewWithAccessibilityIdentifier: "passphraseField")
+        try HostedInspection.inspect(view) { view in
+            let sut = try view.inspect()
+            // find() throws if not found
+            _ = try sut.find(viewWithAccessibilityIdentifier: "passphraseField")
+        }
     }
 
     @Test
@@ -23,9 +25,11 @@ struct PassphraseCreationViewTests {
         let viewModel = AuthenticationViewModel()
         let view = PassphraseCreationView(viewModel: viewModel, username: testUsername)
 
-        let sut = try view.inspect()
-        // find() throws if not found
-        _ = try sut.find(viewWithAccessibilityIdentifier: "strengthIndicator")
+        try HostedInspection.inspect(view) { view in
+            let sut = try view.inspect()
+            // find() throws if not found
+            _ = try sut.find(viewWithAccessibilityIdentifier: "strengthIndicator")
+        }
     }
 
     @Test
@@ -33,9 +37,11 @@ struct PassphraseCreationViewTests {
         let viewModel = AuthenticationViewModel()
         let view = PassphraseCreationView(viewModel: viewModel, username: testUsername)
 
-        let sut = try view.inspect()
-        // find() throws if not found
-        _ = try sut.find(viewWithAccessibilityIdentifier: "continueButton")
+        try HostedInspection.inspect(view) { view in
+            let sut = try view.inspect()
+            // find() throws if not found
+            _ = try sut.find(viewWithAccessibilityIdentifier: "continueButton")
+        }
     }
 
     @Test
@@ -43,9 +49,11 @@ struct PassphraseCreationViewTests {
         let viewModel = AuthenticationViewModel()
         let view = PassphraseCreationView(viewModel: viewModel, username: testUsername)
 
-        let sut = try view.inspect()
-        // find() throws if not found
-        _ = try sut.find(viewWithAccessibilityIdentifier: "backButton")
+        try HostedInspection.inspect(view) { view in
+            let sut = try view.inspect()
+            // find() throws if not found
+            _ = try sut.find(viewWithAccessibilityIdentifier: "backButton")
+        }
     }
 
     // MARK: - Button State Tests
@@ -56,10 +64,12 @@ struct PassphraseCreationViewTests {
         viewModel.passphrase = ""
         let view = PassphraseCreationView(viewModel: viewModel, username: testUsername)
 
-        let sut = try view.inspect()
-        let button = try sut.find(viewWithAccessibilityIdentifier: "continueButton").button()
+        try HostedInspection.inspect(view) { view in
+            let sut = try view.inspect()
+            let button = try sut.find(viewWithAccessibilityIdentifier: "continueButton").button()
 
-        #expect(try button.isDisabled() == true)
+            #expect(try button.isDisabled() == true)
+        }
     }
 
     @Test
@@ -68,10 +78,12 @@ struct PassphraseCreationViewTests {
         viewModel.passphrase = "short"
         let view = PassphraseCreationView(viewModel: viewModel, username: testUsername)
 
-        let sut = try view.inspect()
-        let button = try sut.find(viewWithAccessibilityIdentifier: "continueButton").button()
+        try HostedInspection.inspect(view) { view in
+            let sut = try view.inspect()
+            let button = try sut.find(viewWithAccessibilityIdentifier: "continueButton").button()
 
-        #expect(try button.isDisabled() == true)
+            #expect(try button.isDisabled() == true)
+        }
     }
 
     @Test
@@ -80,10 +92,12 @@ struct PassphraseCreationViewTests {
         viewModel.passphrase = "valid-test-passphrase-123"
         let view = PassphraseCreationView(viewModel: viewModel, username: testUsername)
 
-        let sut = try view.inspect()
-        let button = try sut.find(viewWithAccessibilityIdentifier: "continueButton").button()
+        try HostedInspection.inspect(view) { view in
+            let sut = try view.inspect()
+            let button = try sut.find(viewWithAccessibilityIdentifier: "continueButton").button()
 
-        #expect(try button.isDisabled() == false)
+            #expect(try button.isDisabled() == false)
+        }
     }
 
     // MARK: - Validation Hints Tests
@@ -94,9 +108,11 @@ struct PassphraseCreationViewTests {
         viewModel.passphrase = "weak"
         let view = PassphraseCreationView(viewModel: viewModel, username: testUsername)
 
-        let sut = try view.inspect()
-        // find() throws if not found
-        _ = try sut.find(viewWithAccessibilityIdentifier: "validationHints")
+        try HostedInspection.inspect(view) { view in
+            let sut = try view.inspect()
+            // find() throws if not found
+            _ = try sut.find(viewWithAccessibilityIdentifier: "validationHints")
+        }
         // Verify validation errors exist for weak passphrase
         #expect(!viewModel.passphraseValidationErrors.isEmpty)
     }
@@ -107,10 +123,12 @@ struct PassphraseCreationViewTests {
         viewModel.passphrase = ""
         let view = PassphraseCreationView(viewModel: viewModel, username: testUsername)
 
-        let sut = try view.inspect()
+        try HostedInspection.inspect(view) { view in
+            let sut = try view.inspect()
 
-        #expect(throws: InspectionError.self) {
-            try sut.find(viewWithAccessibilityIdentifier: "validationHints")
+            #expect(throws: InspectionError.self) {
+                try sut.find(viewWithAccessibilityIdentifier: "validationHints")
+            }
         }
     }
 }

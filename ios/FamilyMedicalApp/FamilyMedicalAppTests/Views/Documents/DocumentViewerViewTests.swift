@@ -45,8 +45,10 @@ struct DocumentViewerViewTests {
         let viewModel = makeViewModel()
         let view = DocumentViewerView(viewModel: viewModel)
 
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.NavigationStack.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.NavigationStack.self)
+        }
     }
 
     @Test
@@ -54,8 +56,10 @@ struct DocumentViewerViewTests {
         let viewModel = makeViewModel(mimeType: "image/jpeg")
         let view = DocumentViewerView(viewModel: viewModel)
 
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.NavigationStack.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.NavigationStack.self)
+        }
         #expect(viewModel.isImage)
     }
 
@@ -64,8 +68,10 @@ struct DocumentViewerViewTests {
         let viewModel = makeViewModel(title: "document.pdf", mimeType: "application/pdf")
         let view = DocumentViewerView(viewModel: viewModel)
 
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.NavigationStack.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.NavigationStack.self)
+        }
         #expect(viewModel.isPDF)
     }
 
@@ -77,8 +83,10 @@ struct DocumentViewerViewTests {
         viewModel.isLoading = true
 
         let view = DocumentViewerView(viewModel: viewModel)
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.ProgressView.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.ProgressView.self)
+        }
     }
 
     @Test
@@ -87,8 +95,10 @@ struct DocumentViewerViewTests {
         viewModel.errorMessage = "Failed to load content"
 
         let view = DocumentViewerView(viewModel: viewModel)
-        let inspected = try view.inspect()
-        _ = try inspected.find(text: "Failed to load content")
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(text: "Failed to load content")
+        }
     }
 
     // MARK: - Content Display Tests
@@ -99,8 +109,10 @@ struct DocumentViewerViewTests {
         await viewModel.loadContent()
 
         let view = DocumentViewerView(viewModel: viewModel)
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.NavigationStack.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.NavigationStack.self)
+        }
         #expect(viewModel.hasContent)
     }
 
@@ -109,8 +121,10 @@ struct DocumentViewerViewTests {
         let viewModel = makeViewModel(title: "medical_report.jpg")
         let view = DocumentViewerView(viewModel: viewModel)
 
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.NavigationStack.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.NavigationStack.self)
+        }
         #expect(viewModel.displayFileName == "medical_report.jpg")
     }
 
@@ -119,8 +133,10 @@ struct DocumentViewerViewTests {
         let viewModel = makeViewModel()
         let view = DocumentViewerView(viewModel: viewModel)
 
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.NavigationStack.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.NavigationStack.self)
+        }
         #expect(!viewModel.displayFileSize.isEmpty)
     }
 
@@ -131,8 +147,10 @@ struct DocumentViewerViewTests {
         let viewModel = makeViewModel(mimeType: "image/jpeg")
         let view = DocumentViewerView(viewModel: viewModel)
 
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.NavigationStack.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.NavigationStack.self)
+        }
         #expect(viewModel.isImage)
     }
 
@@ -143,8 +161,10 @@ struct DocumentViewerViewTests {
         let viewModel = makeViewModel(title: "doc.pdf", mimeType: "application/pdf")
         let view = DocumentViewerView(viewModel: viewModel)
 
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.NavigationStack.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.NavigationStack.self)
+        }
         #expect(viewModel.isPDF)
         #expect(!viewModel.isImage)
     }
@@ -157,8 +177,10 @@ struct DocumentViewerViewTests {
         viewModel.showingExportWarning = true
 
         let view = DocumentViewerView(viewModel: viewModel)
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.NavigationStack.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.NavigationStack.self)
+        }
     }
 
     // MARK: - Share Sheet Tests
@@ -169,7 +191,9 @@ struct DocumentViewerViewTests {
         viewModel.showingShareSheet = true
 
         let view = DocumentViewerView(viewModel: viewModel)
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.NavigationStack.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.NavigationStack.self)
+        }
     }
 }

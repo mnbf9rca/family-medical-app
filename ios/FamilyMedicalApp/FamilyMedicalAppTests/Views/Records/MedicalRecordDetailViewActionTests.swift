@@ -66,11 +66,11 @@ struct MedicalRecordDetailViewActionTests {
         // which sets showingDeleteConfirmation = true. The confirmationDialog
         // content closures are lazily evaluated by SwiftUI and cannot be reached
         // through ViewInspector.
-        ViewHosting.host(view: view)
-        let inspected = try view.inspect()
-        let deleteButton = try inspected.find(button: "Delete")
-        try deleteButton.tap()
-        ViewHosting.expel()
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            let deleteButton = try inspected.find(button: "Delete")
+            try deleteButton.tap()
+        }
     }
 
     @Test
@@ -85,11 +85,11 @@ struct MedicalRecordDetailViewActionTests {
             onDelete: nil
         )
 
-        ViewHosting.host(view: view)
-        let inspected = try view.inspect()
-        let deleteButton = try inspected.find(button: "Delete")
-        try deleteButton.tap()
-        ViewHosting.expel()
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            let deleteButton = try inspected.find(button: "Delete")
+            try deleteButton.tap()
+        }
     }
 
     // MARK: - Edit Sheet Tests
@@ -107,17 +107,15 @@ struct MedicalRecordDetailViewActionTests {
             recordUpdated = true
         }
 
-        ViewHosting.host(view: view)
+        try HostedInspection.inspect(view) { view in
+            // Tap Edit button to present the edit sheet (exercises line 65)
+            let inspected = try view.inspect()
+            let editButton = try inspected.find(button: "Edit")
+            try editButton.tap()
 
-        // Tap Edit button to present the edit sheet (exercises line 65)
-        let inspected = try view.inspect()
-        let editButton = try inspected.find(button: "Edit")
-        try editButton.tap()
-
-        // Confirm the sheet modifier is exercised; verify record not yet updated
-        #expect(recordUpdated == false)
-
-        ViewHosting.expel()
+            // Confirm the sheet modifier is exercised; verify record not yet updated
+            #expect(recordUpdated == false)
+        }
     }
 
     // MARK: - Attachment Thumbnail Tap Tests
@@ -162,17 +160,15 @@ struct MedicalRecordDetailViewActionTests {
             detailViewModel: detailVM
         )
 
-        ViewHosting.host(view: view)
-
-        // Verify the attachment section renders with the thumbnail.
-        // DocumentThumbnailView uses .onTapGesture (not a Button) so we verify
-        // the view renders correctly; the tap action is tested at the ViewModel level.
-        let inspected = try view.inspect()
-        _ = try inspected.find(text: "Attachments")
-        let thumbnail = try inspected.find(DocumentThumbnailView.self)
-        _ = try thumbnail.find(ViewType.ZStack.self)
-
-        ViewHosting.expel()
+        try HostedInspection.inspect(view) { view in
+            // Verify the attachment section renders with the thumbnail.
+            // DocumentThumbnailView uses .onTapGesture (not a Button) so we verify
+            // the view renders correctly; the tap action is tested at the ViewModel level.
+            let inspected = try view.inspect()
+            _ = try inspected.find(text: "Attachments")
+            let thumbnail = try inspected.find(DocumentThumbnailView.self)
+            _ = try thumbnail.find(ViewType.ZStack.self)
+        }
     }
 
     // MARK: - Task and Sheet Item Tests

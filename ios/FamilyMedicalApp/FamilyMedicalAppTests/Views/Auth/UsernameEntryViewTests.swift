@@ -11,9 +11,11 @@ struct UsernameEntryViewTests {
         let viewModel = AuthenticationViewModel()
         let view = UsernameEntryView(viewModel: viewModel, isNewUser: true)
 
-        let sut = try view.inspect()
-        // find() throws if not found
-        _ = try sut.find(viewWithAccessibilityIdentifier: "usernameField")
+        try HostedInspection.inspect(view) { view in
+            let sut = try view.inspect()
+            // find() throws if not found
+            _ = try sut.find(viewWithAccessibilityIdentifier: "usernameField")
+        }
     }
 
     @Test
@@ -21,9 +23,11 @@ struct UsernameEntryViewTests {
         let viewModel = AuthenticationViewModel()
         let view = UsernameEntryView(viewModel: viewModel, isNewUser: true)
 
-        let sut = try view.inspect()
-        // find() throws if not found
-        _ = try sut.find(viewWithAccessibilityIdentifier: "continueButton")
+        try HostedInspection.inspect(view) { view in
+            let sut = try view.inspect()
+            // find() throws if not found
+            _ = try sut.find(viewWithAccessibilityIdentifier: "continueButton")
+        }
     }
 
     @Test
@@ -31,9 +35,11 @@ struct UsernameEntryViewTests {
         let viewModel = AuthenticationViewModel()
         let view = UsernameEntryView(viewModel: viewModel, isNewUser: true)
 
-        let sut = try view.inspect()
-        // find() throws if not found
-        _ = try sut.find(viewWithAccessibilityIdentifier: "backButton")
+        try HostedInspection.inspect(view) { view in
+            let sut = try view.inspect()
+            // find() throws if not found
+            _ = try sut.find(viewWithAccessibilityIdentifier: "backButton")
+        }
     }
 
     // MARK: - Button State Tests
@@ -44,10 +50,12 @@ struct UsernameEntryViewTests {
         viewModel.username = "ab" // Too short
         let view = UsernameEntryView(viewModel: viewModel, isNewUser: true)
 
-        let sut = try view.inspect()
-        let button = try sut.find(viewWithAccessibilityIdentifier: "continueButton").button()
+        try HostedInspection.inspect(view) { view in
+            let sut = try view.inspect()
+            let button = try sut.find(viewWithAccessibilityIdentifier: "continueButton").button()
 
-        #expect(try button.isDisabled() == true)
+            #expect(try button.isDisabled() == true)
+        }
     }
 
     @Test
@@ -56,10 +64,12 @@ struct UsernameEntryViewTests {
         viewModel.username = "testuser"
         let view = UsernameEntryView(viewModel: viewModel, isNewUser: true)
 
-        let sut = try view.inspect()
-        let button = try sut.find(viewWithAccessibilityIdentifier: "continueButton").button()
+        try HostedInspection.inspect(view) { view in
+            let sut = try view.inspect()
+            let button = try sut.find(viewWithAccessibilityIdentifier: "continueButton").button()
 
-        #expect(try button.isDisabled() == false)
+            #expect(try button.isDisabled() == false)
+        }
     }
 
     // MARK: - Error Display Tests
@@ -70,9 +80,11 @@ struct UsernameEntryViewTests {
         viewModel.errorMessage = "Test error"
         let view = UsernameEntryView(viewModel: viewModel, isNewUser: true)
 
-        let sut = try view.inspect()
-        // find() throws if not found
-        _ = try sut.find(viewWithAccessibilityIdentifier: "errorLabel")
+        try HostedInspection.inspect(view) { view in
+            let sut = try view.inspect()
+            // find() throws if not found
+            _ = try sut.find(viewWithAccessibilityIdentifier: "errorLabel")
+        }
     }
 
     @Test
@@ -81,10 +93,12 @@ struct UsernameEntryViewTests {
         viewModel.errorMessage = nil
         let view = UsernameEntryView(viewModel: viewModel, isNewUser: true)
 
-        let sut = try view.inspect()
+        try HostedInspection.inspect(view) { view in
+            let sut = try view.inspect()
 
-        #expect(throws: InspectionError.self) {
-            try sut.find(viewWithAccessibilityIdentifier: "errorLabel")
+            #expect(throws: InspectionError.self) {
+                try sut.find(viewWithAccessibilityIdentifier: "errorLabel")
+            }
         }
     }
 }

@@ -36,8 +36,10 @@ struct AddPersonViewTests {
         let view = AddPersonView(viewModel: viewModel)
 
         // Use find() for deterministic coverage
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.NavigationStack.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.NavigationStack.self)
+        }
     }
 
     @Test
@@ -45,9 +47,11 @@ struct AddPersonViewTests {
         let viewModel = createViewModel()
         let view = AddPersonView(viewModel: viewModel)
 
-        let navStack = try view.inspect().navigationStack()
-        let form = try navStack.form(0)
-        _ = form
+        try HostedInspection.inspect(view) { view in
+            let navStack = try view.inspect().navigationStack()
+            let form = try navStack.form(0)
+            _ = form
+        }
     }
 
     @Test
@@ -55,10 +59,12 @@ struct AddPersonViewTests {
         let viewModel = createViewModel()
         let view = AddPersonView(viewModel: viewModel)
 
-        let navStack = try view.inspect().navigationStack()
-        let form = try navStack.form(0)
-        // Verify form has sections
-        _ = try form.section(0)
+        try HostedInspection.inspect(view) { view in
+            let navStack = try view.inspect().navigationStack()
+            let form = try navStack.form(0)
+            // Verify form has sections
+            _ = try form.section(0)
+        }
     }
 
     @Test
@@ -74,8 +80,10 @@ struct AddPersonViewTests {
 
         let view = AddPersonView(viewModel: viewModel)
         // Error state still renders the Form structure
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.Form.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.Form.self)
+        }
     }
 
     @Test
@@ -85,7 +93,9 @@ struct AddPersonViewTests {
 
         let view = AddPersonView(viewModel: viewModel)
         // Loading state still renders the Form structure
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.Form.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.Form.self)
+        }
     }
 }

@@ -40,9 +40,11 @@ struct PersonDetailViewTests {
         let viewModel = createViewModel(person: person)
         let view = PersonDetailView(person: person, viewModel: viewModel)
 
-        let inspectedView = try view.inspect()
-        // Verify the root Group exists
-        _ = try inspectedView.group()
+        try HostedInspection.inspect(view) { view in
+            let inspectedView = try view.inspect()
+            // Verify the root Group exists
+            _ = try inspectedView.group()
+        }
     }
 
     @Test
@@ -52,8 +54,10 @@ struct PersonDetailViewTests {
         let view = PersonDetailView(person: person, viewModel: viewModel)
 
         // Use find() for deterministic coverage
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.Group.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.Group.self)
+        }
     }
 
     @Test
@@ -80,9 +84,11 @@ struct PersonDetailViewTests {
 
         let view = PersonDetailView(person: person, viewModel: viewModel)
 
-        let inspectedView = try view.inspect()
-        // Find ProgressView within the view hierarchy
-        _ = try inspectedView.find(ViewType.ProgressView.self)
+        try HostedInspection.inspect(view) { view in
+            let inspectedView = try view.inspect()
+            // Find ProgressView within the view hierarchy
+            _ = try inspectedView.find(ViewType.ProgressView.self)
+        }
     }
 
     @Test
@@ -107,8 +113,10 @@ struct PersonDetailViewTests {
 
         let view = PersonDetailView(person: person, viewModel: viewModel)
         // Error state still renders the Group structure
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.Group.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.Group.self)
+        }
     }
 
     @Test
@@ -145,12 +153,14 @@ struct PersonDetailViewTests {
         await viewModel.loadRecordCounts()
 
         let view = PersonDetailView(person: person, viewModel: viewModel)
-        let inspectedView = try view.inspect()
-        // Find List within the view hierarchy
-        let list = try inspectedView.find(ViewType.List.self)
-        // Record types are in section 1 (section 0 is "My Providers")
-        let recordTypesSection = try list.section(1)
-        _ = try recordTypesSection.forEach(0)
+        try HostedInspection.inspect(view) { view in
+            let inspectedView = try view.inspect()
+            // Find List within the view hierarchy
+            let list = try inspectedView.find(ViewType.List.self)
+            // Record types are in section 1 (section 0 is "My Providers")
+            let recordTypesSection = try list.section(1)
+            _ = try recordTypesSection.forEach(0)
+        }
     }
 
     @Test
@@ -161,14 +171,16 @@ struct PersonDetailViewTests {
         await viewModel.loadRecordCounts()
 
         let view = PersonDetailView(person: person, viewModel: viewModel)
-        let inspectedView = try view.inspect()
-        // Find List within the view hierarchy
-        let list = try inspectedView.find(ViewType.List.self)
-        // Record types are in section 1 (section 0 is "My Providers")
-        let forEach = try list.section(1).forEach(0)
+        try HostedInspection.inspect(view) { view in
+            let inspectedView = try view.inspect()
+            // Find List within the view hierarchy
+            let list = try inspectedView.find(ViewType.List.self)
+            // Record types are in section 1 (section 0 is "My Providers")
+            let forEach = try list.section(1).forEach(0)
 
-        // Verify NavigationLink exists for first item
-        _ = try forEach.navigationLink(0)
+            // Verify NavigationLink exists for first item
+            _ = try forEach.navigationLink(0)
+        }
     }
 
     @Test
@@ -177,10 +189,12 @@ struct PersonDetailViewTests {
 
         // Initialize without providing viewModel to test default initialization
         let view = PersonDetailView(person: person)
-        let inspectedView = try view.inspect()
+        try HostedInspection.inspect(view) { view in
+            let inspectedView = try view.inspect()
 
-        // Verify view renders successfully with default viewModel
-        _ = try inspectedView.group()
+            // Verify view renders successfully with default viewModel
+            _ = try inspectedView.group()
+        }
     }
 
     @Test
@@ -193,8 +207,10 @@ struct PersonDetailViewTests {
 
         let view = PersonDetailView(person: person, viewModel: viewModel)
         // View should still render when error is present
-        let inspected = try view.inspect()
-        _ = try inspected.find(ViewType.Group.self)
+        try HostedInspection.inspect(view) { view in
+            let inspected = try view.inspect()
+            _ = try inspected.find(ViewType.Group.self)
+        }
 
         // Verify error message is set
         #expect(viewModel.errorMessage == "Test error")
@@ -239,16 +255,18 @@ struct PersonDetailViewTests {
         await viewModel.loadRecordCounts()
 
         let view = PersonDetailView(person: person, viewModel: viewModel)
-        let inspectedView = try view.inspect()
-        // Find List within the view hierarchy
-        let list = try inspectedView.find(ViewType.List.self)
-        // Record types are in section 1 (section 0 is "My Providers")
-        let forEach = try list.section(1).forEach(0)
+        try HostedInspection.inspect(view) { view in
+            let inspectedView = try view.inspect()
+            // Find List within the view hierarchy
+            let list = try inspectedView.find(ViewType.List.self)
+            // Record types are in section 1 (section 0 is "My Providers")
+            let forEach = try list.section(1).forEach(0)
 
-        // Verify each record type appears in the list
-        // There should be entries for all RecordType cases
-        for index in 0 ..< RecordType.allCases.count {
-            _ = try forEach.navigationLink(index)
+            // Verify each record type appears in the list
+            // There should be entries for all RecordType cases
+            for index in 0 ..< RecordType.allCases.count {
+                _ = try forEach.navigationLink(index)
+            }
         }
     }
 }

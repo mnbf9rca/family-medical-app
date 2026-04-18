@@ -14,9 +14,11 @@ struct PassphraseConfirmViewTests {
         let viewModel = AuthenticationViewModel()
         let view = PassphraseConfirmView(viewModel: viewModel, username: testUsername, passphrase: testPassphrase)
 
-        let sut = try view.inspect()
-        // find() throws if not found
-        _ = try sut.find(viewWithAccessibilityIdentifier: "confirmPassphraseField")
+        try HostedInspection.inspect(view) { view in
+            let sut = try view.inspect()
+            // find() throws if not found
+            _ = try sut.find(viewWithAccessibilityIdentifier: "confirmPassphraseField")
+        }
     }
 
     @Test
@@ -24,9 +26,11 @@ struct PassphraseConfirmViewTests {
         let viewModel = AuthenticationViewModel()
         let view = PassphraseConfirmView(viewModel: viewModel, username: testUsername, passphrase: testPassphrase)
 
-        let sut = try view.inspect()
-        // find() throws if not found
-        _ = try sut.find(viewWithAccessibilityIdentifier: "continueButton")
+        try HostedInspection.inspect(view) { view in
+            let sut = try view.inspect()
+            // find() throws if not found
+            _ = try sut.find(viewWithAccessibilityIdentifier: "continueButton")
+        }
     }
 
     @Test
@@ -34,9 +38,11 @@ struct PassphraseConfirmViewTests {
         let viewModel = AuthenticationViewModel()
         let view = PassphraseConfirmView(viewModel: viewModel, username: testUsername, passphrase: testPassphrase)
 
-        let sut = try view.inspect()
-        // find() throws if not found
-        _ = try sut.find(viewWithAccessibilityIdentifier: "backButton")
+        try HostedInspection.inspect(view) { view in
+            let sut = try view.inspect()
+            // find() throws if not found
+            _ = try sut.find(viewWithAccessibilityIdentifier: "backButton")
+        }
     }
 
     // MARK: - Button State Tests
@@ -47,10 +53,12 @@ struct PassphraseConfirmViewTests {
         viewModel.confirmPassphrase = ""
         let view = PassphraseConfirmView(viewModel: viewModel, username: testUsername, passphrase: testPassphrase)
 
-        let sut = try view.inspect()
-        let button = try sut.find(viewWithAccessibilityIdentifier: "continueButton").button()
+        try HostedInspection.inspect(view) { view in
+            let sut = try view.inspect()
+            let button = try sut.find(viewWithAccessibilityIdentifier: "continueButton").button()
 
-        #expect(try button.isDisabled() == true)
+            #expect(try button.isDisabled() == true)
+        }
     }
 
     @Test
@@ -59,10 +67,12 @@ struct PassphraseConfirmViewTests {
         viewModel.confirmPassphrase = "wrong-passphrase"
         let view = PassphraseConfirmView(viewModel: viewModel, username: testUsername, passphrase: testPassphrase)
 
-        let sut = try view.inspect()
-        let button = try sut.find(viewWithAccessibilityIdentifier: "continueButton").button()
+        try HostedInspection.inspect(view) { view in
+            let sut = try view.inspect()
+            let button = try sut.find(viewWithAccessibilityIdentifier: "continueButton").button()
 
-        #expect(try button.isDisabled() == true)
+            #expect(try button.isDisabled() == true)
+        }
     }
 
     @Test
@@ -71,10 +81,12 @@ struct PassphraseConfirmViewTests {
         viewModel.confirmPassphrase = testPassphrase
         let view = PassphraseConfirmView(viewModel: viewModel, username: testUsername, passphrase: testPassphrase)
 
-        let sut = try view.inspect()
-        let button = try sut.find(viewWithAccessibilityIdentifier: "continueButton").button()
+        try HostedInspection.inspect(view) { view in
+            let sut = try view.inspect()
+            let button = try sut.find(viewWithAccessibilityIdentifier: "continueButton").button()
 
-        #expect(try button.isDisabled() == false)
+            #expect(try button.isDisabled() == false)
+        }
     }
 
     // MARK: - Match/Mismatch Indicator Tests
@@ -85,9 +97,11 @@ struct PassphraseConfirmViewTests {
         viewModel.confirmPassphrase = "wrong"
         let view = PassphraseConfirmView(viewModel: viewModel, username: testUsername, passphrase: testPassphrase)
 
-        let sut = try view.inspect()
-        // find() throws if not found
-        _ = try sut.find(viewWithAccessibilityIdentifier: "mismatchLabel")
+        try HostedInspection.inspect(view) { view in
+            let sut = try view.inspect()
+            // find() throws if not found
+            _ = try sut.find(viewWithAccessibilityIdentifier: "mismatchLabel")
+        }
     }
 
     @Test
@@ -96,9 +110,11 @@ struct PassphraseConfirmViewTests {
         viewModel.confirmPassphrase = testPassphrase
         let view = PassphraseConfirmView(viewModel: viewModel, username: testUsername, passphrase: testPassphrase)
 
-        let sut = try view.inspect()
-        // find() throws if not found
-        _ = try sut.find(viewWithAccessibilityIdentifier: "matchLabel")
+        try HostedInspection.inspect(view) { view in
+            let sut = try view.inspect()
+            // find() throws if not found
+            _ = try sut.find(viewWithAccessibilityIdentifier: "matchLabel")
+        }
     }
 
     @Test
@@ -107,13 +123,15 @@ struct PassphraseConfirmViewTests {
         viewModel.confirmPassphrase = ""
         let view = PassphraseConfirmView(viewModel: viewModel, username: testUsername, passphrase: testPassphrase)
 
-        let sut = try view.inspect()
+        try HostedInspection.inspect(view) { view in
+            let sut = try view.inspect()
 
-        #expect(throws: InspectionError.self) {
-            try sut.find(viewWithAccessibilityIdentifier: "mismatchLabel")
-        }
-        #expect(throws: InspectionError.self) {
-            try sut.find(viewWithAccessibilityIdentifier: "matchLabel")
+            #expect(throws: InspectionError.self) {
+                try sut.find(viewWithAccessibilityIdentifier: "mismatchLabel")
+            }
+            #expect(throws: InspectionError.self) {
+                try sut.find(viewWithAccessibilityIdentifier: "matchLabel")
+            }
         }
     }
 }

@@ -42,15 +42,25 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v6
-      - run: brew install swiftformat
-      - name: Verify SwiftFormat version matches pre-commit
+      - name: Install pinned SwiftFormat
         run: |
-          INSTALLED=$(swiftformat --version)
-          EXPECTED="0.60.1"
-          if [ "$INSTALLED" != "$EXPECTED" ]; then
-            echo "::error::SwiftFormat version mismatch: installed $INSTALLED, expected $EXPECTED (update .pre-commit-config.yaml and ios-ci.yml together)"
+          # Single source of truth for the version: .pre-commit-config.yaml
+          SWIFTFORMAT_VERSION=$(awk '/nicklockwood\/SwiftFormat/{f=1; next} f && /rev:/{print $2; exit}' .pre-commit-config.yaml)
+          if [ -z "$SWIFTFORMAT_VERSION" ]; then
+            echo "::error::Could not extract SwiftFormat rev from .pre-commit-config.yaml"
             exit 1
           fi
+          BIN_DIR="$RUNNER_TEMP/swiftformat-bin"
+          mkdir -p "$BIN_DIR"
+          curl -fsSL "https://github.com/nicklockwood/SwiftFormat/releases/download/${SWIFTFORMAT_VERSION}/swiftformat.zip" -o /tmp/swiftformat.zip
+          unzip -j -o /tmp/swiftformat.zip swiftformat -d "$BIN_DIR"
+          chmod +x "$BIN_DIR/swiftformat"
+          INSTALLED=$("$BIN_DIR/swiftformat" --version)
+          if [ "$INSTALLED" != "$SWIFTFORMAT_VERSION" ]; then
+            echo "::error::Downloaded SwiftFormat reports version $INSTALLED, expected $SWIFTFORMAT_VERSION"
+            exit 1
+          fi
+          echo "$BIN_DIR" >> "$GITHUB_PATH"
       - run: swiftformat --config .swiftformat --lint ios/FamilyMedicalApp/FamilyMedicalApp
 
   xcframework:

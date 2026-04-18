@@ -15,7 +15,9 @@ struct EmptyMembersViewTests {
         }
 
         // View should render without crashing
-        _ = try view.inspect()
+        try HostedInspection.inspect(view) { view in
+            _ = try view.inspect()
+        }
         #expect(tapped == false) // Not tapped yet
     }
 
@@ -28,9 +30,11 @@ struct EmptyMembersViewTests {
             tapped = true
         }
 
-        let contentView = try view.inspect().contentUnavailableView()
-        let button = try contentView.find(button: "Add Member")
-        try button.tap()
+        try HostedInspection.inspect(view) { view in
+            let contentView = try view.inspect().contentUnavailableView()
+            let button = try contentView.find(button: "Add Member")
+            try button.tap()
+        }
 
         #expect(tapped == true)
     }
@@ -38,9 +42,11 @@ struct EmptyMembersViewTests {
     @Test
     func buttonIsRendered() throws {
         let view = EmptyMembersView {}
-        let contentView = try view.inspect().contentUnavailableView()
-        let button = try contentView.find(button: "Add Member")
-        let buttonText = try button.labelView().text().string()
-        #expect(buttonText == "Add Member")
+        try HostedInspection.inspect(view) { view in
+            let contentView = try view.inspect().contentUnavailableView()
+            let button = try contentView.find(button: "Add Member")
+            let buttonText = try button.labelView().text().string()
+            #expect(buttonText == "Add Member")
+        }
     }
 }
