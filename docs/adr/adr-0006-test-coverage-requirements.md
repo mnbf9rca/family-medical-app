@@ -1,6 +1,11 @@
 # Test Coverage Requirements and Dual Threshold System
 
-> **Status update (2026-04-18):** The overall-project threshold is temporarily reduced to 80%. Current integration-testing constraints include OPAQUE authentication work (Issue #78): `OpaqueAuthService` requires a live backend for full integration coverage and is tested through `MockOpaqueAuthService` in unit tests. The 85% per-file threshold is unchanged. See `scripts/check-coverage.sh` for the current enforced values and the rationale/history of threshold adjustments.
+> **Status update (2026-04-18):** The overall-project threshold is temporarily reduced to 80%.
+> The current enforced overall threshold and its rationale are tracked in `scripts/check-coverage.sh`,
+> most recently lowered in Issue #160 (AVFoundation camera rewrite). Current integration-testing
+> constraints also include OPAQUE authentication work (Issue #78): `OpaqueAuthService` requires a
+> live backend for full integration coverage and is tested through `MockOpaqueAuthService` in unit
+> tests. The 85% per-file threshold is unchanged.
 
 ## Status
 

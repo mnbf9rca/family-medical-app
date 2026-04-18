@@ -22,7 +22,7 @@ Companion to:
 
 | # | Branch | Findings | Status | Notes |
 |---|---|---|---|---|
-| 1 | `chore/phase-1-cleanup` | **#1, 2, 3, 9** (done — `6ab0957` + `7f08a73`); batch-2 **#7, 15, 16, 18, 20, 25-30** (done — `d82b809`); **#17 rejected** | awaiting merge (PR #167) | Finding #17 rejected on implementation — `SettingsViewPreviewHelpers.swift` is load-bearing: merging into `SettingsView.swift` pushes it past SwiftLint `file_length` warning which `--strict` treats as error. Original two-file split is the correct design. |
+| 1 | `chore/phase-1-cleanup` | **#1, 2, 3, 9** + batch-2 **#7, 15, 16, 18, 20, 25-30**; **#17 rejected** | merged (PR #167) | Squash-merged as `9bd8862` on 2026-04-18. Finding #17 rejected on implementation — `SettingsViewPreviewHelpers.swift` is load-bearing: merging into `SettingsView.swift` pushes it past SwiftLint `file_length` warning which `--strict` treats as error. Original two-file split is the correct design. |
 | 2 | `docs/auth-rationale` | doc-only: **#4, 5, 6, 8, 10, 13, 19, 24** | pending | Pure `///` additions across auth, backend wire DTOs, repositories. Can't regress anything. |
 | 3 | `chore/delete-placeholder-backend` | structural deletes: **#11, 12, 14** | pending | Removes `backend/` directory entirely + `serialize_server_setup` + `hex` crate. Check Cloudflare routing before deploy. |
 | 4 | `refactor/id-naming` | wide rename: **#21, 22, 23** | pending | `trimmedNonEmpty` consolidation; `personID→personId`, `familyMemberID→personId`. Repo-wide — isolate for diff clarity. |
