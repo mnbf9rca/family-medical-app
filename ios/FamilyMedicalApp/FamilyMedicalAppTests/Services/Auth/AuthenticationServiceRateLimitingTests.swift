@@ -48,7 +48,7 @@ struct AuthenticationServiceRateLimitingTests {
     }
 
     @Test
-    func lockoutPreventsUnlockEvenWithCorrectPassword() async throws {
+    func lockoutPreventsUnlockEvenWithCorrectPassphrase() async throws {
         let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let opaqueAuthService = MockOpaqueAuthService()
         let service = AuthenticationService(

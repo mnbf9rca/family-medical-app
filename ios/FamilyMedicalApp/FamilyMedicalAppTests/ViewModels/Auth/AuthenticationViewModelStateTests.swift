@@ -76,7 +76,7 @@ struct AuthenticationViewModelStateTests {
     }
 
     @Test
-    func lockClearsUnlockPassword() {
+    func lockClearsUnlockPassphrase() {
         let authService = MockAuthenticationService(isSetUp: true)
         let viewModel = AuthenticationViewModel(authService: authService)
 

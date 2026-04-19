@@ -13,7 +13,7 @@ struct AuthenticationViewModelUnlockTests {
     // MARK: - Password Unlock Tests
 
     @Test
-    func unlockWithCorrectPassword() async {
+    func unlockWithCorrectPassphrase() async {
         let authService = MockAuthenticationService(isSetUp: true)
         let viewModel = AuthenticationViewModel(authService: authService)
 
@@ -27,7 +27,7 @@ struct AuthenticationViewModelUnlockTests {
     }
 
     @Test
-    func unlockWithEmptyPassword() async {
+    func unlockWithEmptyPassphrase() async {
         let authService = MockAuthenticationService(isSetUp: true)
         let viewModel = AuthenticationViewModel(authService: authService)
 
@@ -40,7 +40,7 @@ struct AuthenticationViewModelUnlockTests {
     }
 
     @Test
-    func unlockWithWrongPassword() async {
+    func unlockWithWrongPassphrase() async {
         let authService = MockAuthenticationService(isSetUp: true, shouldFailUnlock: true)
         let viewModel = AuthenticationViewModel(authService: authService)
 
@@ -53,7 +53,7 @@ struct AuthenticationViewModelUnlockTests {
     }
 
     @Test
-    func unlockClearsPasswordOnSuccess() async {
+    func unlockClearsPassphraseOnSuccess() async {
         let authService = MockAuthenticationService(isSetUp: true)
         let viewModel = AuthenticationViewModel(authService: authService)
 
@@ -65,7 +65,7 @@ struct AuthenticationViewModelUnlockTests {
     }
 
     @Test
-    func unlockClearsPasswordOnWrongPassword() async {
+    func unlockClearsPassphraseOnWrongPassphrase() async {
         let authService = MockAuthenticationService(isSetUp: true, shouldFailUnlock: true)
         let viewModel = AuthenticationViewModel(authService: authService)
 
@@ -77,7 +77,7 @@ struct AuthenticationViewModelUnlockTests {
     }
 
     @Test
-    func unlockKeepsPasswordOnLockout() async {
+    func unlockKeepsPassphraseOnLockout() async {
         let authService = MockAuthenticationService(
             isSetUp: true,
             isLockedOut: true,

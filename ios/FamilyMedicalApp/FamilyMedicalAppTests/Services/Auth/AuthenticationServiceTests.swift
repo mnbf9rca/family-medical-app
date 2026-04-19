@@ -151,7 +151,7 @@ struct AuthenticationServiceTests {
     // MARK: - Password Unlock Tests
 
     @Test
-    func unlockWithCorrectPasswordSucceeds() async throws {
+    func unlockWithCorrectPassphraseSucceeds() async throws {
         let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let opaqueAuthService = MockOpaqueAuthService()
         let service = AuthenticationService(
@@ -169,7 +169,7 @@ struct AuthenticationServiceTests {
     }
 
     @Test
-    func unlockWithWrongPasswordFails() async throws {
+    func unlockWithWrongPassphraseFails() async throws {
         let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let opaqueAuthService = MockOpaqueAuthService()
         let service = AuthenticationService(

@@ -65,7 +65,7 @@ struct AuthenticationServiceLoginAndSetupTests {
     }
 
     @Test
-    func loginAndSetupThrowsWrongPasswordOnAuthFailure() async throws {
+    func loginAndSetupThrowsWrongPassphraseOnAuthFailure() async throws {
         let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let opaqueAuthService = MockOpaqueAuthService()
         opaqueAuthService.shouldFailLogin = true
