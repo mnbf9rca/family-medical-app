@@ -23,11 +23,8 @@
 //! `cargo test rate_limit_error_logging --features testing` picks it up).
 
 use recordwell_opaque_worker::rate_limit::{
-    check_rate_limit_inner, GetEntryResult, RateLimitConfig, RateLimitDiagnostic, RateLimitEntry, RateLimitStore,
+    check_rate_limit_inner, GetEntryResult, RateLimitConfig, RateLimitEntry, RateLimitFailure, RateLimitStore,
 };
-// `RateLimitEntry` is only used as the parameter type of `put_entry` in the
-// `RateLimitStore` impl below; the fake never constructs one because none
-// of the failure-mode tests need a `Found(entry)` read path.
 use std::cell::RefCell;
 
 /// Controllable fake KV store. Each operation can be scripted to return
@@ -41,12 +38,9 @@ struct FakeStore {
 
 enum FakeGetResult {
     Missing,
+    Found(RateLimitEntry),
     Undeserializable(String),
     Transport(String),
-    // No `Found` variant: the four failure-mode tests all start from
-    // empty-or-errored KV state. A `Found(entry)` path would exercise the
-    // happy-path window-increment logic, which is covered implicitly by the
-    // existing production code path and not by this observability suite.
 }
 
 enum FakePutResult {
@@ -74,6 +68,7 @@ impl RateLimitStore for FakeStore {
             .expect("FakeStore: get_entry called without a scripted result");
         match r {
             FakeGetResult::Missing => Ok(GetEntryResult::Missing),
+            FakeGetResult::Found(entry) => Ok(GetEntryResult::Found(entry)),
             FakeGetResult::Undeserializable(err) => Ok(GetEntryResult::Undeserializable(err)),
             FakeGetResult::Transport(err) => Err(err),
         }
@@ -114,11 +109,11 @@ fn block_on<F: std::future::Future>(fut: F) -> F::Output {
     let waker: Waker = Arc::new(NoopWaker).into();
     let mut ctx = Context::from_waker(&waker);
     let mut fut = Box::pin(fut);
-    loop {
-        match fut.as_mut().poll(&mut ctx) {
-            Poll::Ready(v) => return v,
-            Poll::Pending => continue,
-        }
+    match fut.as_mut().poll(&mut ctx) {
+        Poll::Ready(v) => v,
+        Poll::Pending => panic!(
+            "block_on: future returned Pending; this runner only supports sync futures — use a real async runtime if you need true async"
+        ),
     }
 }
 
@@ -157,7 +152,7 @@ fn rate_limit_error_logging_kv_get_error_emits_get_diagnostic_and_allows() {
     assert_eq!(outcome.decision, None, "fail-open on KV get error");
     assert_eq!(outcome.diagnostics.len(), 1, "exactly one diagnostic expected");
     match &outcome.diagnostics[0] {
-        RateLimitDiagnostic::KvGet { key, err } => {
+        RateLimitFailure::KvGet { key, err } => {
             assert_eq!(key, "rate:xyz:login");
             assert!(
                 err.contains("KV unreachable"),
@@ -184,7 +179,7 @@ fn rate_limit_error_logging_deser_error_emits_deser_diagnostic_and_allows() {
     assert_eq!(outcome.decision, None, "fail-open on deser error");
     assert_eq!(outcome.diagnostics.len(), 1, "exactly one diagnostic expected");
     match &outcome.diagnostics[0] {
-        RateLimitDiagnostic::Deser { key, err } => {
+        RateLimitFailure::Deser { key, err } => {
             assert_eq!(key, "rate:pq:register");
             assert!(err.contains("invalid type"), "must preserve serde error text");
         }
@@ -211,10 +206,66 @@ fn rate_limit_error_logging_kv_put_error_emits_put_diagnostic_and_allows() {
     assert_eq!(outcome.decision, None, "fail-open on KV put error");
     assert_eq!(outcome.diagnostics.len(), 1, "exactly one diagnostic expected");
     match &outcome.diagnostics[0] {
-        RateLimitDiagnostic::KvPut { key, err } => {
+        RateLimitFailure::KvPut { key, err } => {
             assert_eq!(key, "rate:lmn:login");
             assert!(err.contains("throttled"));
         }
         other => panic!("expected KvPut, got {other:?}"),
     }
+}
+
+#[test]
+fn rate_limit_error_logging_under_limit_increment_emits_no_failure() {
+    // Scenario: existing entry within its window, count below max. Expected:
+    // request allowed, exactly one put (the incremented entry), no failure
+    // diagnostics. Exercises the `Found(entry)` + `count < max_requests`
+    // control-flow branch that the failure-mode tests do not cover.
+    let config = default_config();
+    let now: u64 = 10_000;
+    let existing = RateLimitEntry::new_for_testing(config.max_requests - 1, now - 5);
+    let store = FakeStore::default()
+        .with_get(FakeGetResult::Found(existing))
+        .with_put(FakePutResult::Ok);
+
+    let outcome = block_on(check_rate_limit_inner(&store, "rate:uvw:login", now, &config));
+
+    assert_eq!(outcome.decision, None, "under-limit request must be allowed");
+    assert!(
+        outcome.diagnostics.is_empty(),
+        "happy-path increment must emit no failure diagnostics, got {:?}",
+        outcome.diagnostics
+    );
+    assert_eq!(*store.put_calls.borrow(), 1, "increment must persist the updated entry");
+}
+
+#[test]
+fn rate_limit_error_logging_at_limit_denial_emits_no_failure() {
+    // Scenario: existing entry within its window, count already at max.
+    // Expected: request denied with retry_after until window expiry, zero
+    // puts (early return), no failure diagnostics. Exercises the
+    // `Found(entry)` + `count >= max_requests` branch.
+    let config = default_config();
+    let window_start: u64 = 10_000;
+    let now: u64 = window_start + 10; // 10s into the window
+    let expected_retry_after = config.window_seconds - (now - window_start);
+    let existing = RateLimitEntry::new_for_testing(config.max_requests, window_start);
+    let store = FakeStore::default().with_get(FakeGetResult::Found(existing));
+
+    let outcome = block_on(check_rate_limit_inner(&store, "rate:rst:login", now, &config));
+
+    assert_eq!(
+        outcome.decision,
+        Some(expected_retry_after),
+        "at-limit request must be denied with retry_after until window expiry"
+    );
+    assert!(
+        outcome.diagnostics.is_empty(),
+        "denied request must emit no failure diagnostics, got {:?}",
+        outcome.diagnostics
+    );
+    assert_eq!(
+        *store.put_calls.borrow(),
+        0,
+        "denied request must not write (early return)"
+    );
 }

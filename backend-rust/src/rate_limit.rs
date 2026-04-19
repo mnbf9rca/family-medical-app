@@ -58,6 +58,15 @@ pub struct RateLimitEntry {
     window_start: u64,
 }
 
+#[cfg(feature = "testing")]
+impl RateLimitEntry {
+    /// Test-only constructor so integration tests can script a `Found(entry)`
+    /// read into the fake KV store. Not compiled into the release worker.
+    pub fn new_for_testing(count: u32, window_start: u64) -> Self {
+        Self { count, window_start }
+    }
+}
+
 /// Outcome of a single `check_rate_limit_inner` invocation.
 ///
 /// `decision` drives the control-flow response to the caller. `diagnostics`
@@ -68,21 +77,18 @@ pub struct RateLimitEntry {
 pub struct RateLimitOutcome {
     /// `None` = allow, `Some(retry_after_secs)` = deny.
     pub decision: Option<u64>,
-    /// Zero or more observability events from this check.
-    pub diagnostics: Vec<RateLimitDiagnostic>,
+    /// Zero or more failures observed during this check.
+    pub diagnostics: Vec<RateLimitFailure>,
 }
 
 /// A KV-layer failure observed while checking the rate limit.
 ///
 /// These are emitted as distinct log lines so operators can alert on
 /// each independently. See ADR-0011 §"Rate-limiter fail-open policy and
-/// alerting contract" for the alerting thresholds.
-///
-/// Variants drop the `Error` suffix (per clippy::enum_variant_names) —
-/// the enum name already communicates "failure observation". The `Counter`
-/// doc line pins the externally-observable name emitted to logs.
+/// alerting contract" for the alerting thresholds. The `Counter` doc line
+/// on each variant pins the externally-observable name emitted to logs.
 #[derive(Debug, PartialEq, Eq)]
-pub enum RateLimitDiagnostic {
+pub enum RateLimitFailure {
     /// KV `get` returned a transport error. Transient Cloudflare infra failure.
     /// Counter: `rate_limit_kv_get_error`. Severity: warn.
     KvGet { key: String, err: String },
@@ -184,20 +190,20 @@ pub async fn check_rate_limit_inner<S: RateLimitStore>(
     now: u64,
     config: &RateLimitConfig,
 ) -> RateLimitOutcome {
-    let mut diagnostics: Vec<RateLimitDiagnostic> = Vec::new();
+    let mut diagnostics: Vec<RateLimitFailure> = Vec::new();
 
     let existing: Option<RateLimitEntry> = match store.get_entry(key).await {
         Ok(GetEntryResult::Found(entry)) => Some(entry),
         Ok(GetEntryResult::Missing) => None,
         Ok(GetEntryResult::Undeserializable(err)) => {
-            diagnostics.push(RateLimitDiagnostic::Deser {
+            diagnostics.push(RateLimitFailure::Deser {
                 key: key.to_string(),
                 err,
             });
             None
         }
         Err(err) => {
-            diagnostics.push(RateLimitDiagnostic::KvGet {
+            diagnostics.push(RateLimitFailure::KvGet {
                 key: key.to_string(),
                 err,
             });
@@ -230,7 +236,7 @@ pub async fn check_rate_limit_inner<S: RateLimitStore>(
     };
 
     if let Err(err) = store.put_entry(key, &next_entry, config.window_seconds).await {
-        diagnostics.push(RateLimitDiagnostic::KvPut {
+        diagnostics.push(RateLimitFailure::KvPut {
             key: key.to_string(),
             err,
         });
@@ -241,23 +247,23 @@ pub async fn check_rate_limit_inner<S: RateLimitStore>(
 
 /// Translate a diagnostic into a `console_*!` log line. The `counter=` prefix
 /// is load-bearing: ops dashboards grep for it to build per-counter alerts.
-fn emit_diagnostic(diag: &RateLimitDiagnostic) {
+fn emit_diagnostic(diag: &RateLimitFailure) {
     match diag {
-        RateLimitDiagnostic::KvGet { key, err } => {
+        RateLimitFailure::KvGet { key, err } => {
             console_warn!(
                 "[rate_limit] counter=rate_limit_kv_get_error key={} err={} (fail-open)",
                 key,
                 err
             );
         }
-        RateLimitDiagnostic::Deser { key, err } => {
+        RateLimitFailure::Deser { key, err } => {
             console_error!(
-                "[rate_limit] counter=rate_limit_deser_error key={} err={} (overwriting on next write)",
+                "[rate_limit] counter=rate_limit_deser_error key={} err={} (overwriting with fresh window)",
                 key,
                 err
             );
         }
-        RateLimitDiagnostic::KvPut { key, err } => {
+        RateLimitFailure::KvPut { key, err } => {
             console_warn!(
                 "[rate_limit] counter=rate_limit_kv_put_error key={} err={} (fail-open)",
                 key,

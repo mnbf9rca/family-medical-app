@@ -286,7 +286,7 @@ The read path emits three distinct counters (as structured `console_*!` log line
 - `rate_limit_deser_error` — stored entry failed to deserialize. **Expected to be flat zero in normal operation.** A non-zero rate indicates either a schema migration is in flight without a corresponding read-side migration, or an active attempt to poison a rate-limit key. Severity: error. Alert immediately.
 - `rate_limit_kv_put_error` — KV backend unavailable on write. Same class as `kv_get_error`. Severity: warn.
 
-The write path emits `rate_limit_kv_put_error` for the single put site (the read-then-write has exactly one `put_entry` call regardless of whether the window is new or incremented).
+The write path emits `rate_limit_kv_put_error` for the single put site. When the request is allowed (new window or incremented count), there is exactly one `put_entry` call; a denied request short-circuits with zero puts.
 
 ### Alerting contract
 

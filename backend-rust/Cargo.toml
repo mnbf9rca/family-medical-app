@@ -11,10 +11,11 @@ description = "OPAQUE authentication worker for RecordWell"
 crate-type = ["cdylib", "rlib"]
 
 [features]
-# Exposes internal test hooks (`__test_hooks` module) so integration tests in
-# `tests/` can drive `check_rate_limit_inner` with a fake KV store. NOT enabled
-# in release builds and NOT part of the public API. Integration tests that
-# need it declare `required-features = ["testing"]` in `[[test]]` below.
+# Exposes `rate_limit` as `pub mod` (see `src/lib.rs`) so integration tests in
+# `tests/` can link against `check_rate_limit_inner`, `RateLimitStore`, and the
+# related types. NOT enabled in release builds — the wasm worker's public API
+# is unchanged. Integration tests that need it declare
+# `required-features = ["testing"]` in `[[test]]` below.
 testing = []
 
 [[test]]
