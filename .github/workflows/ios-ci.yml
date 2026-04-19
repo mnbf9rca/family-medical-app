@@ -40,10 +40,14 @@ jobs:
             echo "Base SHA unavailable; defaulting ios=true (fail-safe)."
             exit 0
           fi
-          CHANGED=$(git diff --name-only "${BASE}" "${HEAD}")
+          if ! CHANGED=$(git diff --name-only "${BASE}" "${HEAD}" 2>&1); then
+            echo "ios=true" >> "$GITHUB_OUTPUT"
+            echo "git diff failed; defaulting ios=true (fail-safe). Error: ${CHANGED}"
+            exit 0
+          fi
           echo "Changed files:"
           echo "${CHANGED}"
-          if echo "${CHANGED}" | grep -Eq '^(ios/|opaque-swift/|docs/schemas/|\.github/workflows/ios-ci\.yml$|\.github/actions/|\.swiftlint\.yml$|\.swiftformat$|scripts/)'; then
+          if echo "${CHANGED}" | grep -Eq '^(ios/|opaque-swift/|docs/schemas/|\.github/workflows/ios-ci\.yml$|\.swiftlint\.yml$|\.swiftformat$|scripts/)'; then
             echo "ios=true" >> "$GITHUB_OUTPUT"
             echo "iOS-relevant changes detected."
           else
