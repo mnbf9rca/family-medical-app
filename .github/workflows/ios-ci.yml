@@ -228,7 +228,7 @@ jobs:
             | xcpretty
 
       - name: Save DerivedData cache
-        if: steps.filter.outputs.ios == 'true'
+        if: always() && steps.filter.outputs.ios == 'true'
         uses: actions/cache/save@v5
         with:
           path: ~/Library/Developer/Xcode/DerivedData
