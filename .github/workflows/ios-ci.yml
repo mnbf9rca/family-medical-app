@@ -3,46 +3,87 @@ name: iOS CI
 on:
   push:
     branches: [main]
-    paths:
-      - 'ios/**'
-      - 'opaque-swift/**'
-      - 'docs/schemas/**'
-      - '.github/workflows/ios-ci.yml'
-      - '.swiftlint.yml'
-      - '.swiftformat'
   pull_request:
     branches: [main]
-    paths:
-      - 'ios/**'
-      - 'opaque-swift/**'
-      - 'docs/schemas/**'
-      - '.github/workflows/ios-ci.yml'
-      - '.swiftlint.yml'
-      - '.swiftformat'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      ios: ${{ steps.filter.outputs.ios }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Filter changed paths
+        id: filter
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+            HEAD="${{ github.event.pull_request.head.sha }}"
+          else
+            BASE="${{ github.event.before }}"
+            HEAD="${{ github.sha }}"
+          fi
+          # Fail-safe on ambiguous base: zero SHA (new branch / first push),
+          # empty, or unreachable (shallow clone edge case) → run everything.
+          if [ -z "${BASE}" ] || [ "${BASE}" = "0000000000000000000000000000000000000000" ] \
+             || ! git cat-file -e "${BASE}^{commit}" 2>/dev/null; then
+            echo "ios=true" >> "$GITHUB_OUTPUT"
+            echo "Base SHA unavailable; defaulting ios=true (fail-safe)."
+            exit 0
+          fi
+          if ! CHANGED=$(git diff --name-only "${BASE}" "${HEAD}" 2>&1); then
+            echo "ios=true" >> "$GITHUB_OUTPUT"
+            echo "git diff failed; defaulting ios=true (fail-safe). Error: ${CHANGED}"
+            exit 0
+          fi
+          echo "Changed files:"
+          echo "${CHANGED}"
+          if echo "${CHANGED}" | grep -Eq '^(ios/|opaque-swift/|docs/schemas/|\.github/workflows/ios-ci\.yml$|\.swiftlint\.yml$|\.swiftformat$|scripts/)'; then
+            echo "ios=true" >> "$GITHUB_OUTPUT"
+            echo "iOS-relevant changes detected."
+          else
+            echo "ios=false" >> "$GITHUB_OUTPUT"
+            echo "No iOS-relevant changes."
+          fi
+
   lint:
     name: Lint
-    runs-on: macos-26
+    needs: changes
+    runs-on: ${{ needs.changes.outputs.ios == 'true' && 'macos-26' || 'ubuntu-latest' }}
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v6
-      - run: brew install swiftlint
-      - run: |
+      - name: Skip (no iOS changes)
+        if: needs.changes.outputs.ios != 'true'
+        run: echo "No iOS changes; Lint is a no-op for this PR."
+      - if: needs.changes.outputs.ios == 'true'
+        run: brew install swiftlint
+      - if: needs.changes.outputs.ios == 'true'
+        run: |
           cd ios/FamilyMedicalApp
           swiftlint lint --config ../../.swiftlint.yml --strict --reporter github-actions-logging
 
   format-check:
     name: Format Check
-    runs-on: macos-26
+    needs: changes
+    runs-on: ${{ needs.changes.outputs.ios == 'true' && 'macos-26' || 'ubuntu-latest' }}
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v6
+      - name: Skip (no iOS changes)
+        if: needs.changes.outputs.ios != 'true'
+        run: echo "No iOS changes; Format Check is a no-op for this PR."
       - name: Install pinned SwiftFormat
+        if: needs.changes.outputs.ios == 'true'
         run: |
           # Single source of truth for the version: .pre-commit-config.yaml
           SWIFTFORMAT_VERSION=$(awk '/nicklockwood\/SwiftFormat/{f=1; next} f && /rev:/{print $2; exit}' .pre-commit-config.yaml)
@@ -61,19 +102,26 @@ jobs:
             exit 1
           fi
           echo "$BIN_DIR" >> "$GITHUB_PATH"
-      - run: swiftformat --config .swiftformat --lint ios/FamilyMedicalApp/FamilyMedicalApp
+      - if: needs.changes.outputs.ios == 'true'
+        run: swiftformat --config .swiftformat --lint ios/FamilyMedicalApp/FamilyMedicalApp
 
   xcframework:
     name: Build XCFramework
-    runs-on: macos-26
+    needs: changes
+    runs-on: ${{ needs.changes.outputs.ios == 'true' && 'macos-26' || 'ubuntu-latest' }}
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v6
+      - name: Skip (no iOS changes)
+        if: needs.changes.outputs.ios != 'true'
+        run: echo "No iOS changes; Build XCFramework is a no-op for this PR."
 
       - name: Select Xcode version
+        if: needs.changes.outputs.ios == 'true'
         run: sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
 
       - name: Get Xcode version
+        if: needs.changes.outputs.ios == 'true'
         id: xcode-version
         run: |
           xcodebuild -version
@@ -81,6 +129,7 @@ jobs:
           echo "version=$(xcodebuild -version | awk 'NR==1 {print $2}')" >> "$GITHUB_OUTPUT"
 
       - name: Restore XCFramework cache
+        if: needs.changes.outputs.ios == 'true'
         id: cache
         uses: actions/cache@v5
         with:
@@ -91,22 +140,23 @@ jobs:
           key: ${{ runner.os }}-xcframework-xcode${{ steps.xcode-version.outputs.version }}-${{ hashFiles('opaque-swift/src/lib.rs', 'opaque-swift/Cargo.toml', 'opaque-swift/build-xcframework.sh', 'opaque-swift/uniffi-bindgen.rs') }}
 
       - name: Install Rust toolchain
-        if: steps.cache.outputs.cache-hit != 'true'
+        if: needs.changes.outputs.ios == 'true' && steps.cache.outputs.cache-hit != 'true'
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-apple-ios,aarch64-apple-ios-sim,x86_64-apple-ios
 
       - name: Cache Rust dependencies
-        if: steps.cache.outputs.cache-hit != 'true'
+        if: needs.changes.outputs.ios == 'true' && steps.cache.outputs.cache-hit != 'true'
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: opaque-swift
 
       - name: Build XCFramework
-        if: steps.cache.outputs.cache-hit != 'true'
+        if: needs.changes.outputs.ios == 'true' && steps.cache.outputs.cache-hit != 'true'
         run: cd opaque-swift && chmod +x build-xcframework.sh && ./build-xcframework.sh
 
       - name: Upload XCFramework artifact
+        if: needs.changes.outputs.ios == 'true'
         uses: actions/upload-artifact@v7
         with:
           name: OpaqueSwift-xcframework
@@ -118,8 +168,8 @@ jobs:
 
   build:
     name: Build & Test (${{ matrix.device }})
-    needs: [xcframework]
-    runs-on: macos-26
+    needs: [changes, xcframework]
+    runs-on: ${{ needs.changes.outputs.ios == 'true' && 'macos-26' || 'ubuntu-latest' }}
     timeout-minutes: 35
     strategy:
       matrix:
@@ -130,11 +180,16 @@ jobs:
             destination: platform=iOS Simulator,name=iPad Pro 13-inch (M5)
     steps:
       - uses: actions/checkout@v6
+      - name: Skip (no iOS changes)
+        if: needs.changes.outputs.ios != 'true'
+        run: echo "No iOS changes; Build & Test (${{ matrix.device }}) is a no-op for this PR."
 
       - name: Select Xcode version
+        if: needs.changes.outputs.ios == 'true'
         run: sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
 
       - name: Get Xcode version
+        if: needs.changes.outputs.ios == 'true'
         id: xcode-version
         run: |
           xcodebuild -version
@@ -142,15 +197,18 @@ jobs:
           echo "version=$(xcodebuild -version | awk 'NR==1 {print $2}')" >> "$GITHUB_OUTPUT"
 
       - name: Download XCFramework
+        if: needs.changes.outputs.ios == 'true'
         uses: actions/download-artifact@v8
         with:
           name: OpaqueSwift-xcframework
           path: opaque-swift
 
       - name: List available simulators (debug)
+        if: needs.changes.outputs.ios == 'true'
         run: xcrun simctl list devices available | head -50
 
       - name: Restore DerivedData cache
+        if: needs.changes.outputs.ios == 'true'
         uses: actions/cache/restore@v5
         with:
           path: ~/Library/Developer/Xcode/DerivedData
@@ -160,6 +218,7 @@ jobs:
             ${{ runner.os }}-deriveddata-xcode${{ steps.xcode-version.outputs.version }}-
 
       - name: Build
+        if: needs.changes.outputs.ios == 'true'
         run: |
           set -o pipefail
           cd ios/FamilyMedicalApp
@@ -172,28 +231,30 @@ jobs:
             | xcpretty
 
       - name: Save DerivedData cache
+        if: always() && needs.changes.outputs.ios == 'true'
         uses: actions/cache/save@v5
-        if: always()
         with:
           path: ~/Library/Developer/Xcode/DerivedData
           key: ${{ runner.os }}-deriveddata-xcode${{ steps.xcode-version.outputs.version }}-${{ matrix.device }}-${{ hashFiles('ios/**/*.swift') }}
 
       - name: Disable CPU-intensive services
+        if: needs.changes.outputs.ios == 'true'
         run: |
           sudo launchctl bootout system/com.apple.PerfPowerServices 2>/dev/null || true
           sudo launchctl bootout system/com.apple.metadata.mds 2>/dev/null || true
 
       - name: Run Tests
+        if: needs.changes.outputs.ios == 'true'
         run: ./scripts/run-tests.sh --destination "${{ matrix.destination }}"
 
       - name: Generate coverage JSON
-        if: matrix.device == 'iPhone'
+        if: needs.changes.outputs.ios == 'true' && matrix.device == 'iPhone'
         run: |
           cd ios/FamilyMedicalApp
           xcrun xccov view --report --json test-results/TestResults.xcresult > test-results/coverage.json
 
       - name: Upload coverage reports
-        if: matrix.device == 'iPhone'
+        if: needs.changes.outputs.ios == 'true' && matrix.device == 'iPhone'
         uses: actions/upload-artifact@v7
         with:
           name: coverage-report
@@ -201,17 +262,22 @@ jobs:
           retention-days: 30
 
       - name: Check coverage thresholds
-        if: matrix.device == 'iPhone'
+        if: needs.changes.outputs.ios == 'true' && matrix.device == 'iPhone'
         run: ./scripts/check-coverage.sh
 
   security-scan:
     name: Security Scan
-    runs-on: macos-26
+    needs: changes
+    runs-on: ${{ needs.changes.outputs.ios == 'true' && 'macos-26' || 'ubuntu-latest' }}
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v6
+      - name: Skip (no iOS changes)
+        if: needs.changes.outputs.ios != 'true'
+        run: echo "No iOS changes; Security Scan is a no-op for this PR."
 
       - name: Run SwiftLint security rules
+        if: needs.changes.outputs.ios == 'true'
         run: |
           brew install swiftlint
           cd ios/FamilyMedicalApp
@@ -239,6 +305,7 @@ jobs:
           fi
 
       - name: Check for sensitive files
+        if: needs.changes.outputs.ios == 'true'
         run: |
           SENSITIVE_FILES=$(find . -type f \( -name "*.p12" -o -name "*.mobileprovision" -o -name "*_key.pem" -o -name "*.keystore" \) | grep -v ".git" || true)
           if [ -n "$SENSITIVE_FILES" ]; then

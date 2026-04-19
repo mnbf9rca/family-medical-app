@@ -31,9 +31,6 @@ id = "671b81ebdc2946e494d0d37c2059f9d6"
 binding = "RATE_LIMITS"
 id = "5d519620a3c341bc8821fc568ce67beb"
 
-[vars]
-ENVIRONMENT = "production"
-
 [observability]
 enabled = true
 
@@ -52,7 +49,6 @@ enabled = true
 [env.preview]
 workers_dev = true
 routes = []
-vars = { ENVIRONMENT = "preview" }
 
 # Test KV namespaces (shared across PRs, isolated from production)
 [[env.preview.kv_namespaces]]
@@ -69,4 +65,4 @@ id = "cfa578b6fed44c81bdadf7773eccb31b"
 
 [[env.preview.kv_namespaces]]
 binding = "RATE_LIMITS"
-id = "5d519620a3c341bc8821fc568ce67beb"
+id = "f2d4f9b2ae114050a81be15abb1ab134"

@@ -99,10 +99,10 @@ async fn handle_ready(env: &Env) -> Result<Response> {
 }
 
 fn cors_preflight() -> Result<Response> {
-    let headers = Headers::new();
-    headers.set("Access-Control-Allow-Origin", "*")?;
-    headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")?;
-    headers.set("Access-Control-Allow-Headers", "Content-Type")?;
-    headers.set("Access-Control-Max-Age", "86400")?;
+    let headers = routes::build_response_headers(&[
+        ("Access-Control-Allow-Methods", "GET, POST, OPTIONS"),
+        ("Access-Control-Allow-Headers", "Content-Type"),
+        ("Access-Control-Max-Age", "86400"),
+    ])?;
     Ok(Response::empty()?.with_headers(headers))
 }
