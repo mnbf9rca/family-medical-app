@@ -7,6 +7,16 @@ struct PasswordValidationServiceTests {
 
     let service = PasswordValidationService()
 
+    // MARK: - Policy Constants
+
+    @Test
+    func minimumLengthEnforcesNISTFloor() {
+        // Project minimum of 12 chars, per NIST SP 800-63B §5.1.1.2 guidance
+        // (NIST requires ≥8; this project uses 12 as its internal floor).
+        // Anchor: catches accidental downward regression of the policy constant.
+        #expect(PasswordValidationService.minimumLength >= 12)
+    }
+
     // MARK: - Validation Tests
 
     @Test

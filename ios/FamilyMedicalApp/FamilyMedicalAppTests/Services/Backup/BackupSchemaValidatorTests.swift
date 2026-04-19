@@ -20,7 +20,7 @@ struct BackupSchemaValidatorTests {
 
     private func makeUnencryptedFile(payload: BackupPayload) -> BackupFile {
         BackupFile(
-            schema: "https://recordwell.app/schemas/backup-v1.json",
+            schema: BackupFile.schemaURL,
             formatName: BackupFile.formatNameValue,
             formatVersion: BackupFile.currentVersion,
             generator: "FamilyMedicalApp/1.0.0 (iOS)",
@@ -46,7 +46,7 @@ struct BackupSchemaValidatorTests {
     @Test("Serialized BackupFile validates against schema")
     func serializedBackupFileValidatesAgainstSchema() throws {
         let file = BackupFile(
-            schema: "https://recordwell.app/schemas/backup-v1.json",
+            schema: BackupFile.schemaURL,
             formatName: BackupFile.formatNameValue,
             formatVersion: BackupFile.currentVersion,
             generator: "FamilyMedicalApp/1.0.0 (iOS)",
@@ -152,7 +152,7 @@ struct BackupSchemaValidatorTests {
         let validator = BackupSchemaValidator.forTesting()
         let validJSON = Data("""
         {
-            "$schema": "https://recordwell.app/schemas/backup-v1.json",
+            "$schema": "\(BackupFile.schemaURL)",
             "formatName": "RecordWell Backup",
             "formatVersion": "1.0",
             "generator": "FamilyMedicalApp/1.0.0 (iOS)",

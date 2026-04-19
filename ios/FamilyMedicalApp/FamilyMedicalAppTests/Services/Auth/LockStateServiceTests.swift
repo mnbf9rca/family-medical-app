@@ -21,6 +21,28 @@ struct LockStateServiceTests {
         #expect(service.isLocked == false)
     }
 
+    @Test
+    func initDoesNotSeedStoredTimeout() throws {
+        let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
+
+        _ = LockStateService(userDefaults: userDefaults)
+
+        // After init, no value should have been persisted to UserDefaults — the getter's
+        // fallback handles first-launch.
+        #expect(userDefaults.object(forKey: "com.family-medical-app.lock-timeout") == nil)
+    }
+
+    @Test
+    func defaultTimeoutChangeReachesUpgradingUsers() throws {
+        let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
+        userDefaults.set(0, forKey: "com.family-medical-app.lock-timeout")
+
+        let service = LockStateService(userDefaults: userDefaults)
+
+        // Getter treats stored 0 as absent and falls back to default.
+        #expect(service.lockTimeoutSeconds == 300)
+    }
+
     // MARK: - Lock/Unlock Tests
 
     @Test

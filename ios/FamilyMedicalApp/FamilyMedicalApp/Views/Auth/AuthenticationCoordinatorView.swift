@@ -54,12 +54,12 @@ struct AuthenticationCoordinatorView: View {
         case .background, .inactive:
             // Record background time for lock timeout
             if viewModel.isAuthenticated {
-                viewModel.lockStateService.recordBackgroundTime()
+                viewModel.onEnterBackground()
             }
 
         case .active:
             // Check if should lock based on timeout
-            if viewModel.isAuthenticated, viewModel.lockStateService.shouldLockOnForeground() {
+            if viewModel.isAuthenticated, viewModel.shouldLockOnForeground() {
                 viewModel.lock()
             }
 

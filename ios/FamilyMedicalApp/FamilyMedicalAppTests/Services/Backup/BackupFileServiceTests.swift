@@ -71,6 +71,42 @@ struct BackupFileServiceTests {
         }
     }
 
+    // MARK: - Password Policy Alignment Tests
+
+    @Test(
+        "Rejects passwords shorter than PasswordValidationService.minimumLength",
+        arguments: [
+            String(repeating: "a", count: PasswordValidationService.minimumLength - 1),
+            String(repeating: "b", count: PasswordValidationService.minimumLength - 2),
+            String(repeating: "c", count: PasswordValidationService.minimumLength - 3),
+            String(repeating: "d", count: PasswordValidationService.minimumLength - 4)
+        ]
+    )
+    func rejectsPasswordsBelowAlignedMinimum(password: String) throws {
+        let service = BackupFileService(
+            keyDerivationService: KeyDerivationService(),
+            encryptionService: EncryptionService()
+        )
+        let payload = BackupFileServiceTestHelpers.makeTestPayload()
+
+        #expect(throws: BackupError.passwordTooWeak) {
+            _ = try service.createEncryptedBackup(payload: payload, password: password)
+        }
+    }
+
+    @Test("Accepts password at the aligned minimum length")
+    func acceptsPasswordAtAlignedMinimum() throws {
+        let service = BackupFileService(
+            keyDerivationService: KeyDerivationService(),
+            encryptionService: EncryptionService()
+        )
+        let payload = BackupFileServiceTestHelpers.makeTestPayload()
+
+        // BackupFileService enforces only length; complexity is PasswordValidationService's domain.
+        let minLengthPassword = String(repeating: "P", count: PasswordValidationService.minimumLength)
+        _ = try service.createEncryptedBackup(payload: payload, password: minLengthPassword)
+    }
+
     // MARK: - Unencrypted Tests
 
     @Test("Creates unencrypted backup correctly")
@@ -301,9 +337,11 @@ struct BackupFileServiceTests {
             _ = try service.readUnencryptedBackup(file: file)
         }
     }
+}
 
-    // MARK: - Format Validation Tests
+// MARK: - Format Validation Tests
 
+extension BackupFileServiceTests {
     @Test("Throws unsupportedVersion for wrong formatVersion")
     func throwsForUnsupportedVersion() throws {
         let service = BackupFileService(

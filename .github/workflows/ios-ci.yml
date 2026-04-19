@@ -135,7 +135,6 @@ jobs:
         with:
           path: |
             opaque-swift/OpaqueSwift.xcframework
-            opaque-swift/generated
             opaque-swift/Sources
           key: ${{ runner.os }}-xcframework-xcode${{ steps.xcode-version.outputs.version }}-${{ hashFiles('opaque-swift/src/lib.rs', 'opaque-swift/Cargo.toml', 'opaque-swift/build-xcframework.sh', 'opaque-swift/uniffi-bindgen.rs') }}
 
@@ -162,7 +161,6 @@ jobs:
           name: OpaqueSwift-xcframework
           path: |
             opaque-swift/OpaqueSwift.xcframework
-            opaque-swift/generated
             opaque-swift/Sources
           retention-days: 1
 
