@@ -17,7 +17,7 @@ else
   exit 1
 fi
 echo -n "  headers include Access-Control-Allow-Origin... "
-HEADERS=$(curl -sI "$BASE_URL/health/live")
+HEADERS=$(curl -sD - -o /dev/null "$BASE_URL/health/live")
 if echo "$HEADERS" | grep -iq "^access-control-allow-origin: \*"; then
   echo "OK"
 else
@@ -38,7 +38,7 @@ else
   exit 1
 fi
 echo -n "  headers include Access-Control-Allow-Origin... "
-HEADERS=$(curl -sI "$BASE_URL/health/ready")
+HEADERS=$(curl -sD - -o /dev/null "$BASE_URL/health/ready")
 if echo "$HEADERS" | grep -iq "^access-control-allow-origin: \*"; then
   echo "OK"
 else
@@ -57,7 +57,7 @@ else
   exit 1
 fi
 echo -n "  headers include Access-Control-Allow-Origin... "
-HEADERS=$(curl -sI -X OPTIONS "$BASE_URL/auth/opaque/register/start")
+HEADERS=$(curl -sD - -o /dev/null -X OPTIONS "$BASE_URL/auth/opaque/register/start")
 if echo "$HEADERS" | grep -iq "^access-control-allow-origin: \*"; then
   echo "OK"
 else
