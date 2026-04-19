@@ -71,7 +71,7 @@ final class DocumentPickerViewModel {
     /// No ADR currently pins this value. When the driver changes — e.g. sync
     /// batching quantising attachment payloads, attachment re-encryption
     /// cost on key rotation, or a UI affordance that makes larger sets
-    /// browseable — update this comment and cross-reference whichever ADR
+    /// browsable — update this comment and cross-reference whichever ADR
     /// captures the new rationale.
     static let maxPerRecord: Int = 5
 

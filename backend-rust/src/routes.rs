@@ -5,8 +5,11 @@ use serde::{Deserialize, Serialize};
 use worker::*;
 
 /// TTL for OPAQUE server-state KV entries.
-/// The duration equals one default rate-limit window; see ADR-0011
-/// §"Server-side fake-record TTL" for why this matches RFC 9807 §10.9.
+/// Bounds the server-side fake-record lifetime per RFC 9807 §10.9 — must
+/// be ≥ the longest plausible client-side KE2 → KE3 round trip. See
+/// ADR-0011 §"Server-side fake-record TTL"; this value is independently
+/// tunable from the rate-limit windows, even when the numbers happen to
+/// match.
 const LOGIN_STATE_TTL_SECONDS: u64 = 60;
 
 // Request/Response types
