@@ -246,3 +246,24 @@ The current value coincidentally equals `DEFAULT_WINDOW_SECONDS`. The equality i
 ### What to change together
 
 Any change to `DEFAULT_MAX_REQUESTS` / `DEFAULT_WINDOW_SECONDS` / `REGISTRATION_MAX_REQUESTS` / `REGISTRATION_WINDOW_SECONDS` / `LOGIN_STATE_TTL_SECONDS` must be reflected in this addendum and cross-checked against the client-side ladder in `AuthenticationService.swift`.
+
+## Addendum: Session / auto-lock lifetime (2026-04-18)
+
+Default auto-lock timeout: **300 seconds (5 minutes)** (see `LockStateService.defaultTimeout`).
+
+### Rationale
+
+A medical-records app sits between two typical mobile timeout points:
+
+- Banking apps often auto-lock after 60–120 seconds — a strong security stance but a high interruption rate for short, task-focused sessions.
+- General-purpose apps commonly leave lock-state to the device's own OS screen lock (often 5 minutes), relying on the device passcode as the fallback.
+
+Five minutes was chosen because:
+
+1. The primary threat model (ADR-0001) treats the device as a soft-trust boundary — the OS screen lock is the first line of defence and its lifetime is user-controlled.
+2. The OPAQUE primary passphrase is relatively expensive to re-enter (12+ chars); forcing re-entry every 60s materially degrades session-continuity for common flows like "photograph three bottles, then annotate them."
+3. Users with higher risk tolerance can configure their own OS screen-lock to be shorter; the app respects `WillResignActive` and `DidEnterBackground` immediately rather than relying on its own timer for those transitions.
+
+### Tunability contract
+
+The 300s value is a tunable, not a constant. If user research or a compliance requirement shifts the balance, update this section and the `LockStateService.defaultTimeout` value together.
