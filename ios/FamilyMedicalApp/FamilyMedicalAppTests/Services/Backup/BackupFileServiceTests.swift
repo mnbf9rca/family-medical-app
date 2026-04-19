@@ -75,7 +75,10 @@ struct BackupFileServiceTests {
 
     @Test(
         "Rejects passwords shorter than PasswordValidationService.minimumLength",
-        arguments: ["EightCh1", "ElevenCh11!"]
+        arguments: [
+            String(repeating: "a", count: PasswordValidationService.minimumLength - 1),
+            String(repeating: "b", count: PasswordValidationService.minimumLength - 4)
+        ]
     )
     func rejectsPasswordsBelowAlignedMinimum(password: String) throws {
         let service = BackupFileService(
@@ -97,8 +100,8 @@ struct BackupFileServiceTests {
         )
         let payload = BackupFileServiceTestHelpers.makeTestPayload()
 
-        // Exactly 12 characters — must NOT throw.
-        _ = try service.createEncryptedBackup(payload: payload, password: "TwelveChar1!")
+        let minLengthPassword = String(repeating: "P", count: PasswordValidationService.minimumLength)
+        _ = try service.createEncryptedBackup(payload: payload, password: minLengthPassword)
     }
 
     // MARK: - Unencrypted Tests

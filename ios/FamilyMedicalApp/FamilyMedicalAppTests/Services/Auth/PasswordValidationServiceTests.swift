@@ -24,6 +24,13 @@ struct PasswordValidationServiceTests {
     }
 
     @Test
+    func minimumLengthEnforcesNISTFloor() {
+        // NIST SP 800-63B sets the absolute floor for memorized secrets.
+        // This anchor catches accidental downward regression of the policy.
+        #expect(PasswordValidationService.minimumLength >= 12)
+    }
+
+    @Test
     func commonPasswordFailsValidation() {
         let password = "password123456" // Common password from list
         let errors = service.validate(password)
