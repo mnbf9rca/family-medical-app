@@ -3,7 +3,7 @@ set -euo pipefail
 
 cd "$(dirname "$0")"
 
-# Build for all iOS targets
+# Build .a libraries for all iOS targets
 echo "Building for iOS device (aarch64)..."
 cargo build --release --target aarch64-apple-ios
 
@@ -13,38 +13,16 @@ cargo build --release --target aarch64-apple-ios-sim
 echo "Building for iOS simulator (x86_64)..."
 cargo build --release --target x86_64-apple-ios
 
-# Generate Swift bindings directly into Sources/OpaqueSwiftFFI/
-# uniffi-bindgen produces three files: opaque_swiftFFI.h, opaque_swift.swift,
-# and opaque_swiftFFI.modulemap. The .h belongs here; the .swift is moved to
-# Sources/OpaqueSwift/ below; the .modulemap is removed because module.modulemap
-# is written by the heredoc below (Issue 89 carve-out).
+# Generate Swift bindings into their final SwiftPM target directories
 echo "Generating Swift bindings..."
-mkdir -p Sources/OpaqueSwiftFFI
+mkdir -p Sources/OpaqueSwiftFFI Sources/OpaqueSwift
 cargo run --bin uniffi-bindgen generate \
     --library target/aarch64-apple-ios/release/libopaque_swift.a \
     --language swift \
     --out-dir Sources/OpaqueSwiftFFI
-
-# Create fat library for simulators (combines arm64 and x86_64)
-echo "Creating fat library for simulators..."
-mkdir -p target/ios-simulator-universal/release
-lipo -create \
-    target/aarch64-apple-ios-sim/release/libopaque_swift.a \
-    target/x86_64-apple-ios/release/libopaque_swift.a \
-    -output target/ios-simulator-universal/release/libopaque_swift.a
-
-# Create XCFramework (library only, no headers to avoid conflicts)
-echo "Creating XCFramework..."
-rm -rf OpaqueSwift.xcframework
-
-xcodebuild -create-xcframework \
-    -library target/aarch64-apple-ios/release/libopaque_swift.a \
-    -library target/ios-simulator-universal/release/libopaque_swift.a \
-    -output OpaqueSwift.xcframework
-
-# Move Swift bindings to their target, remove the unused bindgen modulemap
-mkdir -p Sources/OpaqueSwift
 mv Sources/OpaqueSwiftFFI/opaque_swift.swift Sources/OpaqueSwift/
+# uniffi-bindgen also emits opaque_swiftFFI.modulemap; module.modulemap below
+# is the canonical one (Issue 89 carve-out), so the bindgen one is removed.
 rm -f Sources/OpaqueSwiftFFI/opaque_swiftFFI.modulemap
 
 # Set up the FFI module for Swift Package
@@ -65,6 +43,23 @@ module opaque_swiftFFI {
     export *
 }
 EOF
+
+# Create fat library for simulators (combines arm64 and x86_64)
+echo "Creating fat library for simulators..."
+mkdir -p target/ios-simulator-universal/release
+lipo -create \
+    target/aarch64-apple-ios-sim/release/libopaque_swift.a \
+    target/x86_64-apple-ios/release/libopaque_swift.a \
+    -output target/ios-simulator-universal/release/libopaque_swift.a
+
+# Create XCFramework (library only, no headers to avoid conflicts)
+echo "Creating XCFramework..."
+rm -rf OpaqueSwift.xcframework
+
+xcodebuild -create-xcframework \
+    -library target/aarch64-apple-ios/release/libopaque_swift.a \
+    -library target/ios-simulator-universal/release/libopaque_swift.a \
+    -output OpaqueSwift.xcframework
 
 echo "Done! OpaqueSwift.xcframework created"
 echo ""
