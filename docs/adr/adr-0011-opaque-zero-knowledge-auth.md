@@ -267,3 +267,28 @@ Five minutes was chosen because:
 ### Tunability contract
 
 The 300s value is a tunable, not a constant. If user research or a compliance requirement shifts the balance, update this section and the `LockStateService.defaultTimeout` value together.
+
+## Addendum: Rate-limiter fail-open policy and alerting contract (2026-04-18)
+
+**Policy:** the rate limiter in `backend-rust/src/rate_limit.rs` fails open on KV-backend errors. A failure to read or write the counter entry allows the request through rather than blocking it.
+
+**Rationale.** Cloudflare's edge network (the pre-application layer) is the primary defence against L3/L4 floods.
+Application-level rate limiting exists to tame *correlated* high-effort attacks — repeated OPAQUE-handshake attempts from the same client identifier.
+If the KV backend is degraded enough that rate-limit counters are unavailable, auth flows that depend on KV (`CREDENTIALS`, `LOGIN_STATES`, `BUNDLES`) are also degraded, so the rate-limiter's fail-open stance does not widen the attacker's actual window.
+
+**Self-limiting property.** When a stored rate-limit entry fails to deserialize (possible causes: schema migration, byte poisoning via a bug elsewhere), the read path treats it as `None` → fresh window → `count=1` → the next write overwrites the poisoned bytes with well-formed JSON. The attacker's payoff is *exactly one extra allowed request* for the affected client identifier, after which normal accounting resumes.
+
+### Failure-mode taxonomy and counters
+
+The read path emits three distinct counters (as structured `console_*!` log lines with a `counter=` prefix; ops dashboards grep this prefix to build per-counter alerts):
+
+- `rate_limit_kv_get_error` — KV backend unavailable (transient). Expected to be near-zero in normal operation; bursts indicate a Cloudflare KV incident. Severity: warn.
+- `rate_limit_deser_error` — stored entry failed to deserialize. **Expected to be flat zero in normal operation.** A non-zero rate indicates either a schema migration is in flight without a corresponding read-side migration, or an active attempt to poison a rate-limit key. Severity: error. Alert immediately.
+- `rate_limit_kv_put_error` — KV backend unavailable on write. Same class as `kv_get_error`. Severity: warn.
+
+The write path emits `rate_limit_kv_put_error` for the single put site (the read-then-write has exactly one `put_entry` call regardless of whether the window is new or incremented).
+
+### Alerting contract
+
+- `rate_limit_deser_error > 0` over any 5-minute window → page oncall.
+- `rate_limit_kv_get_error` or `rate_limit_kv_put_error` sustained > 10/min for 5 minutes → alert (indicates KV incident).

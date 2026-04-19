@@ -1,6 +1,16 @@
 mod opaque;
-mod rate_limit;
 mod routes;
+
+// `rate_limit` is private in release builds and exposed only when the
+// `testing` feature is enabled, so the integration test in
+// `tests/rate_limit_error_logging_test.rs` can reach
+// `check_rate_limit_inner` and the `RateLimitStore` trait without making
+// them part of the worker's release-build public API. See
+// `backend-rust/Cargo.toml` for the feature wiring.
+#[cfg(not(feature = "testing"))]
+mod rate_limit;
+#[cfg(feature = "testing")]
+pub mod rate_limit;
 
 use serde::Serialize;
 use std::collections::HashMap;
