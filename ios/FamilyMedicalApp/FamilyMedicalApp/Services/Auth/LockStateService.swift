@@ -77,11 +77,6 @@ final class LockStateService: LockStateServiceProtocol {
 
     init(userDefaults: UserDefaults = .standard) {
         self.userDefaults = userDefaults
-
-        // Initialize timeout if not set
-        if userDefaults.integer(forKey: Self.lockTimeoutKey) == 0 {
-            userDefaults.set(Self.defaultTimeout, forKey: Self.lockTimeoutKey)
-        }
     }
 
     // MARK: - LockStateServiceProtocol
