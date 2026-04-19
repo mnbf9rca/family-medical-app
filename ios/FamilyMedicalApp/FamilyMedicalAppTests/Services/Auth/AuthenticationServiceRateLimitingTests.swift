@@ -20,7 +20,7 @@ struct AuthenticationServiceRateLimitingTests {
         var setUpPassphraseBytes = Array("CorrectPassword123!".utf8)
         try await service.setUp(passphraseBytes: &setUpPassphraseBytes, username: "testuser", enableBiometric: false)
 
-        // Make OPAQUE fail for wrong password
+        // Make OPAQUE fail for wrong passphrase
         opaqueAuthService.shouldFailLogin = true
 
         // First two failures don't lock

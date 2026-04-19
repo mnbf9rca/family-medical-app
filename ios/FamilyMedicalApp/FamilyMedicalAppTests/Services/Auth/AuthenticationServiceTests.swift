@@ -148,7 +148,7 @@ struct AuthenticationServiceTests {
         #expect(opaqueAuthService.lastRegisteredUsername == "testuser")
     }
 
-    // MARK: - Password Unlock Tests
+    // MARK: - Passphrase Unlock Tests
 
     @Test
     func unlockWithCorrectPassphraseSucceeds() async throws {

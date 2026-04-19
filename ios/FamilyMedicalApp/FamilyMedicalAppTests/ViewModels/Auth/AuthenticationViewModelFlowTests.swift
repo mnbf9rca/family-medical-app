@@ -207,9 +207,9 @@ struct AuthenticationViewModelFlowTests {
 
     @Test
     func submitExistingPassphraseTransitionsToBiometricSetup() async {
-        // Note: Per the new flow, submitExistingPassphrase no longer validates the password
+        // Note: Per the new flow, submitExistingPassphrase no longer validates the passphrase
         // immediately. It transitions to biometricSetup, and completeSetup performs the actual
-        // OPAQUE login. Password validation errors are now handled in completeSetup.
+        // OPAQUE login. Passphrase validation errors are now handled in completeSetup.
         let authService = MockAuthenticationService(isSetUp: false)
         let viewModel = AuthenticationViewModel(authService: authService)
         viewModel.flowState = .passphraseEntry(username: "testuser", isReturningUser: true)

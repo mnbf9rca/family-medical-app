@@ -10,7 +10,7 @@ struct AuthenticationViewModelUnlockTests {
     private let wrongTestCredential = "wrong-credential"
     private let attemptTestCredential = "attempt-credential"
 
-    // MARK: - Password Unlock Tests
+    // MARK: - Passphrase Unlock Tests
 
     @Test
     func unlockWithCorrectPassphrase() async {
