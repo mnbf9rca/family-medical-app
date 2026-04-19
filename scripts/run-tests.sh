@@ -94,7 +94,15 @@ if ! [[ "$LIMIT" =~ ^[0-9]+$ ]]; then
 fi
 
 # Apply default destination if not set
-DESTINATION="${DESTINATION:-platform=iOS Simulator,name=iPhone 17,OS=26.2}"
+# CI runners are ephemeral (fresh VM per run), so name= destinations are safe there.
+# Local / long-running machines retain ~/Library/Developer/XCTestDevices/ across invocations,
+# where name= clones a new ~16GB simulator each time (see AGENTS.md). Require an explicit
+# UUID-based DESTINATION there to prevent the storage bomb.
+if [[ -n "${CI:-}" ]] || [[ -n "${GITHUB_ACTIONS:-}" ]]; then
+    DESTINATION="${DESTINATION:-platform=iOS Simulator,name=iPhone 17,OS=26.2}"
+else
+    : "${DESTINATION:?must be set locally — see AGENTS.md for the UUID-lookup pattern}"
+fi
 
 # Capture start time for duration tracking
 START_TIME=$(date +%s)
