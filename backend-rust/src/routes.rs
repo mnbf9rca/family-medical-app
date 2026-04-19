@@ -178,12 +178,13 @@ pub async fn handle_register_start(
                 "[opaque/register/start] Rate limited: {}...",
                 &body.client_identifier[..8]
             );
+            let retry_after_str = retry_after.to_string();
             return json_response_with_headers(
                 &ErrorResponse {
                     error: "Too many requests".into(),
                 },
                 429,
-                &[("Retry-After", &retry_after.to_string())],
+                &[("Retry-After", &retry_after_str)],
             );
         }
     }
@@ -295,12 +296,13 @@ pub async fn handle_login_start(
         if let Err(retry_after) = check_rate_limit(&rate_limits, &body.client_identifier, "login_start", &config).await
         {
             console_log!("[opaque/login/start] Rate limited: {}...", &body.client_identifier[..8]);
+            let retry_after_str = retry_after.to_string();
             return json_response_with_headers(
                 &ErrorResponse {
                     error: "Too many requests".into(),
                 },
                 429,
-                &[("Retry-After", &retry_after.to_string())],
+                &[("Retry-After", &retry_after_str)],
             );
         }
     }
