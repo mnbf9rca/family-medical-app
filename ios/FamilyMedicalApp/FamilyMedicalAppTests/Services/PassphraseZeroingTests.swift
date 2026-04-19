@@ -3,7 +3,7 @@ import Testing
 
 /// Tests verifying that passphrase bytes are securely zeroed after authentication operations.
 /// These tests validate RFC 9807 Section 4.1 compliance.
-struct PasswordZeroingTests {
+struct PassphraseZeroingTests {
     /// Test that passphrase bytes are zeroed after setUp
     @Test
     func passphraseBytesAreZeroedAfterSetUp() async throws {
