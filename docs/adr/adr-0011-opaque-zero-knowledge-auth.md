@@ -237,10 +237,12 @@ The iOS client applies its own escalating device-lockout ladder in `Authenticati
 
 This client ladder defends against a stranger with the physical device; the server ladder defends against a remote attacker burning credentials against the API. The two layers are deliberately independent — a client that bypasses or reinstalls past the device-lockout still hits the server ceiling before causing persistent damage.
 
-### What to change together
-
-Any change to `DEFAULT_MAX_REQUESTS` / `DEFAULT_WINDOW_SECONDS` / `REGISTRATION_MAX_REQUESTS` / `REGISTRATION_WINDOW_SECONDS` must be reflected in this addendum and cross-checked against the client-side ladder in `AuthenticationService.swift`.
-
 ### Server-side fake-record TTL
 
 Per RFC 9807 §10.9, the server must synthesise a deterministic fake login envelope on username miss to prevent timing / structure-based account enumeration. The fake-record state is stored in the `LOGIN_STATES` KV namespace and evicted after `LOGIN_STATE_TTL_SECONDS` (currently 60). This window must be ≥ the longest plausible client-side KE2 → KE3 round trip; 60s is deliberately generous.
+
+The current value coincidentally equals `DEFAULT_WINDOW_SECONDS`. The equality is convenient but not semantic — retune independently.
+
+### What to change together
+
+Any change to `DEFAULT_MAX_REQUESTS` / `DEFAULT_WINDOW_SECONDS` / `REGISTRATION_MAX_REQUESTS` / `REGISTRATION_WINDOW_SECONDS` / `LOGIN_STATE_TTL_SECONDS` must be reflected in this addendum and cross-checked against the client-side ladder in `AuthenticationService.swift`.
