@@ -36,11 +36,15 @@ Field IDs are auto-generated UUIDs, not user-provided strings. `displayName` bec
 
 ### 2. Hybrid Logical Clock for Versions
 
+*(Never implemented — see Superseded banner above.)*
+
 Replace sequential `version: Int` with `(timestamp, deviceId, counter)` tuple.
 
 **Rationale**: Sequential integers collide when two devices independently create the same version number. The hybrid clock ensures **uniqueness** - no two versions can ever be identical. Ordering is secondary; the primary goal is collision avoidance.
 
 ### 3. Schema Merge is Trivial (Set Union)
+
+*(Never implemented — see Superseded banner above.)*
 
 Schema merge is just a set union by field UUID:
 
@@ -50,6 +54,8 @@ Schema merge is just a set union by field UUID:
 **Rationale**: With UUID-based field IDs, there are no structural conflicts. Two devices adding fields independently just results in more fields. The only "conflict" is when the same field (same UUID) has different metadata (displayName, etc.) - ask user to pick.
 
 ### 4. Field Visibility State
+
+*(Never implemented — see Superseded banner above.)*
 
 Fields have visibility: `.active`, `.hidden`, `.deprecated`. Hidden fields keep their data in records.
 
