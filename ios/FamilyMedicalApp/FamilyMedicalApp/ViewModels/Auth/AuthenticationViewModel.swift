@@ -51,7 +51,7 @@ final class AuthenticationViewModel {
 
     // MARK: - Unlock State
 
-    var unlockPassword = ""
+    var unlockPassphrase = ""
     var storedUsername: String {
         authService.storedUsername ?? ""
     }
@@ -134,9 +134,9 @@ final class AuthenticationViewModel {
     // MARK: - Unlock Actions
 
     @MainActor
-    func unlockWithPassword() async {
-        guard !unlockPassword.isEmpty else {
-            errorMessage = "Please enter your password"
+    func unlockWithPassphrase() async {
+        guard !unlockPassphrase.isEmpty else {
+            errorMessage = "Please enter your passphrase"
             return
         }
 
@@ -144,22 +144,22 @@ final class AuthenticationViewModel {
         errorMessage = nil
 
         do {
-            var passwordBytes = passwordToBytes(unlockPassword)
-            try await authService.unlockWithPassword(&passwordBytes)
-            unlockPassword = "" // Clear on success
+            var passphraseBytes = passphraseToBytes(unlockPassphrase)
+            try await authService.unlockWithPassphrase(&passphraseBytes)
+            unlockPassphrase = "" // Clear on success
             isAuthenticated = true
             flowState = .authenticated
             lockStateService.unlock()
         } catch let error as AuthenticationError {
             errorMessage = error.errorDescription
             if case .accountLocked = error {
-                // Keep password so user can retry after lockout expires
+                // Keep passphrase so user can retry after lockout expires
             } else {
-                unlockPassword = ""
+                unlockPassphrase = ""
             }
         } catch {
             errorMessage = error.localizedDescription
-            unlockPassword = ""
+            unlockPassphrase = ""
         }
 
         isLoading = false
@@ -213,7 +213,7 @@ final class AuthenticationViewModel {
         flowState = .unlock
         lockStateService.lock()
         errorMessage = nil
-        unlockPassword = ""
+        unlockPassphrase = ""
 
         showBiometricPrompt = authService.isBiometricEnabled
     }
@@ -227,7 +227,7 @@ final class AuthenticationViewModel {
         lockStateService.unlock()
         errorMessage = nil
 
-        unlockPassword = ""
+        unlockPassphrase = ""
         username = ""
         passphrase = ""
         confirmPassphrase = ""
@@ -259,27 +259,31 @@ final class AuthenticationViewModel {
         passwordValidator.validate(passphrase)
     }
 
-    /// Converts password string to bytes for secure handling
-    /// - Parameter password: Password string
-    /// - Returns: Password as mutable byte array
-    private func passwordToBytes(_ password: String) -> [UInt8] {
-        Array(password.utf8)
+    /// Converts passphrase string to bytes for secure handling
+    /// - Parameter passphrase: Passphrase string
+    /// - Returns: Passphrase as mutable byte array
+    private func passphraseToBytes(_ passphrase: String) -> [UInt8] {
+        Array(passphrase.utf8)
     }
 
-    func performUnlockWithPassword(_ password: String) async throws {
-        var passwordBytes = passwordToBytes(password)
-        try await authService.unlockWithPassword(&passwordBytes)
+    func performUnlockWithPassphrase(_ passphrase: String) async throws {
+        var passphraseBytes = passphraseToBytes(passphrase)
+        try await authService.unlockWithPassphrase(&passphraseBytes)
     }
 
-    func performSetUp(password: String, username: String, enableBiometric: Bool) async throws {
-        var passwordBytes = passwordToBytes(password)
-        try await authService.setUp(passwordBytes: &passwordBytes, username: username, enableBiometric: enableBiometric)
+    func performSetUp(passphrase: String, username: String, enableBiometric: Bool) async throws {
+        var passphraseBytes = passphraseToBytes(passphrase)
+        try await authService.setUp(
+            passphraseBytes: &passphraseBytes,
+            username: username,
+            enableBiometric: enableBiometric
+        )
     }
 
-    func performLoginAndSetup(password: String, username: String, enableBiometric: Bool) async throws {
-        var passwordBytes = passwordToBytes(password)
+    func performLoginAndSetup(passphrase: String, username: String, enableBiometric: Bool) async throws {
+        var passphraseBytes = passphraseToBytes(passphrase)
         try await authService.loginAndSetup(
-            passwordBytes: &passwordBytes,
+            passphraseBytes: &passphraseBytes,
             username: username,
             enableBiometric: enableBiometric
         )

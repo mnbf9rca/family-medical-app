@@ -17,13 +17,13 @@ struct AuthenticationViewModelUnlockTests {
         let authService = MockAuthenticationService(isSetUp: true)
         let viewModel = AuthenticationViewModel(authService: authService)
 
-        viewModel.unlockPassword = correctTestCredential
+        viewModel.unlockPassphrase = correctTestCredential
 
-        await viewModel.unlockWithPassword()
+        await viewModel.unlockWithPassphrase()
 
         #expect(viewModel.isAuthenticated == true)
         #expect(viewModel.errorMessage == nil)
-        #expect(viewModel.unlockPassword.isEmpty)
+        #expect(viewModel.unlockPassphrase.isEmpty)
     }
 
     @Test
@@ -31,12 +31,12 @@ struct AuthenticationViewModelUnlockTests {
         let authService = MockAuthenticationService(isSetUp: true)
         let viewModel = AuthenticationViewModel(authService: authService)
 
-        viewModel.unlockPassword = ""
+        viewModel.unlockPassphrase = ""
 
-        await viewModel.unlockWithPassword()
+        await viewModel.unlockWithPassphrase()
 
         #expect(viewModel.isAuthenticated == false)
-        #expect(viewModel.errorMessage == "Please enter your password")
+        #expect(viewModel.errorMessage == "Please enter your passphrase")
     }
 
     @Test
@@ -44,9 +44,9 @@ struct AuthenticationViewModelUnlockTests {
         let authService = MockAuthenticationService(isSetUp: true, shouldFailUnlock: true)
         let viewModel = AuthenticationViewModel(authService: authService)
 
-        viewModel.unlockPassword = wrongTestCredential
+        viewModel.unlockPassphrase = wrongTestCredential
 
-        await viewModel.unlockWithPassword()
+        await viewModel.unlockWithPassphrase()
 
         #expect(viewModel.isAuthenticated == false)
         #expect(viewModel.errorMessage != nil)
@@ -57,11 +57,11 @@ struct AuthenticationViewModelUnlockTests {
         let authService = MockAuthenticationService(isSetUp: true)
         let viewModel = AuthenticationViewModel(authService: authService)
 
-        viewModel.unlockPassword = correctTestCredential
+        viewModel.unlockPassphrase = correctTestCredential
 
-        await viewModel.unlockWithPassword()
+        await viewModel.unlockWithPassphrase()
 
-        #expect(viewModel.unlockPassword.isEmpty)
+        #expect(viewModel.unlockPassphrase.isEmpty)
     }
 
     @Test
@@ -69,11 +69,11 @@ struct AuthenticationViewModelUnlockTests {
         let authService = MockAuthenticationService(isSetUp: true, shouldFailUnlock: true)
         let viewModel = AuthenticationViewModel(authService: authService)
 
-        viewModel.unlockPassword = wrongTestCredential
+        viewModel.unlockPassphrase = wrongTestCredential
 
-        await viewModel.unlockWithPassword()
+        await viewModel.unlockWithPassphrase()
 
-        #expect(viewModel.unlockPassword.isEmpty)
+        #expect(viewModel.unlockPassphrase.isEmpty)
     }
 
     @Test
@@ -85,11 +85,11 @@ struct AuthenticationViewModelUnlockTests {
         )
         let viewModel = AuthenticationViewModel(authService: authService)
 
-        viewModel.unlockPassword = attemptTestCredential
+        viewModel.unlockPassphrase = attemptTestCredential
 
-        await viewModel.unlockWithPassword()
+        await viewModel.unlockWithPassphrase()
 
-        #expect(viewModel.unlockPassword == attemptTestCredential)
+        #expect(viewModel.unlockPassphrase == attemptTestCredential)
     }
 
     // MARK: - Biometric Unlock Tests

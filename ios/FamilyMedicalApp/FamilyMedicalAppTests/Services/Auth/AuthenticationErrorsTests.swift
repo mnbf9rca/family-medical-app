@@ -58,8 +58,8 @@ struct AuthenticationErrorsTests {
     // MARK: - Authentication Error Descriptions
 
     @Test
-    func wrongPasswordHasDescription() {
-        let error = AuthenticationError.wrongPassword
+    func wrongPassphraseHasDescription() {
+        let error = AuthenticationError.wrongPassphrase
         #expect(error.errorDescription?.isEmpty == false)
         #expect(error.errorDescription?.contains("Incorrect") == true)
     }
@@ -104,14 +104,14 @@ struct AuthenticationErrorsTests {
 
     @Test
     func equalErrorsAreEqual() {
-        let error1 = AuthenticationError.wrongPassword
-        let error2 = AuthenticationError.wrongPassword
+        let error1 = AuthenticationError.wrongPassphrase
+        let error2 = AuthenticationError.wrongPassphrase
         #expect(error1 == error2)
     }
 
     @Test
     func differentErrorsAreNotEqual() {
-        let error1 = AuthenticationError.wrongPassword
+        let error1 = AuthenticationError.wrongPassphrase
         let error2 = AuthenticationError.notSetUp
         #expect(error1 != error2)
     }

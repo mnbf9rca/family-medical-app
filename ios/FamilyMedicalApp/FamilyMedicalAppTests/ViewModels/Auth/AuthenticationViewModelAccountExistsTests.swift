@@ -128,9 +128,9 @@ private final class MockAuthenticationServiceWithAccountExists: AuthenticationSe
         self.shouldThrowAccountExists = shouldThrowAccountExists
     }
 
-    func setUp(passwordBytes: inout [UInt8], username: String, enableBiometric: Bool) async throws {
-        for index in passwordBytes.indices {
-            passwordBytes[index] = 0
+    func setUp(passphraseBytes: inout [UInt8], username: String, enableBiometric: Bool) async throws {
+        for index in passphraseBytes.indices {
+            passphraseBytes[index] = 0
         }
         if shouldThrowAccountExists {
             let loginResult = OpaqueLoginResult(
@@ -145,9 +145,9 @@ private final class MockAuthenticationServiceWithAccountExists: AuthenticationSe
         isBiometricEnabled = enableBiometric
     }
 
-    func loginAndSetup(passwordBytes: inout [UInt8], username: String, enableBiometric: Bool) async throws {
-        for index in passwordBytes.indices {
-            passwordBytes[index] = 0
+    func loginAndSetup(passphraseBytes: inout [UInt8], username: String, enableBiometric: Bool) async throws {
+        for index in passphraseBytes.indices {
+            passphraseBytes[index] = 0
         }
         isSetUp = true
         storedUsername = username
@@ -164,9 +164,9 @@ private final class MockAuthenticationServiceWithAccountExists: AuthenticationSe
         isBiometricEnabled = enableBiometric
     }
 
-    func unlockWithPassword(_ passwordBytes: inout [UInt8]) async throws {
-        for index in passwordBytes.indices {
-            passwordBytes[index] = 0
+    func unlockWithPassphrase(_ passphraseBytes: inout [UInt8]) async throws {
+        for index in passphraseBytes.indices {
+            passphraseBytes[index] = 0
         }
     }
 

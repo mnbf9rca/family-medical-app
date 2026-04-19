@@ -17,23 +17,23 @@ struct AuthenticationServiceRateLimitingTests {
             userDefaults: userDefaults
         )
 
-        var setUpPasswordBytes = Array("CorrectPassword123!".utf8)
-        try await service.setUp(passwordBytes: &setUpPasswordBytes, username: "testuser", enableBiometric: false)
+        var setUpPassphraseBytes = Array("CorrectPassword123!".utf8)
+        try await service.setUp(passphraseBytes: &setUpPassphraseBytes, username: "testuser", enableBiometric: false)
 
         // Make OPAQUE fail for wrong password
         opaqueAuthService.shouldFailLogin = true
 
         // First two failures don't lock
         for _ in 1 ... 2 {
-            var wrongPasswordBytes = Array("WrongPassword123!".utf8)
-            try? await service.unlockWithPassword(&wrongPasswordBytes)
+            var wrongPassphraseBytes = Array("WrongPassword123!".utf8)
+            try? await service.unlockWithPassphrase(&wrongPassphraseBytes)
             #expect(service.isLockedOut == false)
         }
 
         // Third failure locks
         do {
-            var wrongPasswordBytes = Array("WrongPassword123!".utf8)
-            try await service.unlockWithPassword(&wrongPasswordBytes)
+            var wrongPassphraseBytes = Array("WrongPassword123!".utf8)
+            try await service.unlockWithPassphrase(&wrongPassphraseBytes)
             Issue.record("Expected accountLocked error")
         } catch let error as AuthenticationError {
             if case .accountLocked = error {
@@ -57,14 +57,14 @@ struct AuthenticationServiceRateLimitingTests {
             userDefaults: userDefaults
         )
 
-        var setUpPasswordBytes = Array("CorrectPassword123!".utf8)
-        try await service.setUp(passwordBytes: &setUpPasswordBytes, username: "testuser", enableBiometric: false)
+        var setUpPassphraseBytes = Array("CorrectPassword123!".utf8)
+        try await service.setUp(passphraseBytes: &setUpPassphraseBytes, username: "testuser", enableBiometric: false)
 
         // Trigger lockout with failed attempts
         opaqueAuthService.shouldFailLogin = true
         for _ in 1 ... 3 {
-            var wrongPasswordBytes = Array("WrongPassword123!".utf8)
-            try? await service.unlockWithPassword(&wrongPasswordBytes)
+            var wrongPassphraseBytes = Array("WrongPassword123!".utf8)
+            try? await service.unlockWithPassphrase(&wrongPassphraseBytes)
         }
 
         #expect(service.isLockedOut == true)
@@ -72,8 +72,8 @@ struct AuthenticationServiceRateLimitingTests {
         // Even with correct credentials (reset mock), lockout prevents unlock
         opaqueAuthService.shouldFailLogin = false
         do {
-            var correctPasswordBytes = Array("CorrectPassword123!".utf8)
-            try await service.unlockWithPassword(&correctPasswordBytes)
+            var correctPassphraseBytes = Array("CorrectPassword123!".utf8)
+            try await service.unlockWithPassphrase(&correctPassphraseBytes)
             Issue.record("Expected accountLocked error")
         } catch let error as AuthenticationError {
             if case .accountLocked = error {
@@ -94,22 +94,22 @@ struct AuthenticationServiceRateLimitingTests {
             userDefaults: userDefaults
         )
 
-        var setUpPasswordBytes = Array("CorrectPassword123!".utf8)
-        try await service.setUp(passwordBytes: &setUpPasswordBytes, username: "testuser", enableBiometric: false)
+        var setUpPassphraseBytes = Array("CorrectPassword123!".utf8)
+        try await service.setUp(passphraseBytes: &setUpPassphraseBytes, username: "testuser", enableBiometric: false)
 
         // Two failed attempts
         opaqueAuthService.shouldFailLogin = true
         for _ in 1 ... 2 {
-            var wrongPasswordBytes = Array("WrongPassword123!".utf8)
-            try? await service.unlockWithPassword(&wrongPasswordBytes)
+            var wrongPassphraseBytes = Array("WrongPassword123!".utf8)
+            try? await service.unlockWithPassphrase(&wrongPassphraseBytes)
         }
 
         #expect(service.failedAttemptCount == 2)
 
         // Successful unlock (reset mock)
         opaqueAuthService.shouldFailLogin = false
-        var correctPasswordBytes = Array("CorrectPassword123!".utf8)
-        try await service.unlockWithPassword(&correctPasswordBytes)
+        var correctPassphraseBytes = Array("CorrectPassword123!".utf8)
+        try await service.unlockWithPassphrase(&correctPassphraseBytes)
 
         #expect(service.failedAttemptCount == 0)
     }
