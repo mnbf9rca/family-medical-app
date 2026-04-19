@@ -259,15 +259,29 @@ Recommended Swift/SwiftUI tutorials (1-2 hours total):
 - Test different iPhone/iPad models
 - Simulate Face ID, location, etc.
 
-## Backend Development (Phase 2)
+## Backend Development
 
-When we reach Phase 2 (sync backend), we'll add:
+The backend lives at `backend-rust/` — a Rust [Cloudflare Worker](https://developers.cloudflare.com/workers/) that terminates the OPAQUE authentication protocol. It is deployed via `wrangler` to `api.recordwell.app/auth/opaque/*` and uses Cloudflare KV for credential envelopes, cipher bundles, and transient login state.
 
-- **Devcontainer** for backend API (Python FastAPI likely)
-- **Docker Compose** for local database
-- Backend can be developed in VS Code while iOS in Xcode
+### Prerequisites
 
-Configuration will be added in Phase 2 issues.
+- **Rust** (stable): `brew install rustup && rustup-init`, then `rustup default stable`.
+- **wrangler** (Cloudflare Workers CLI): `brew install wrangler` or `npm install -g wrangler`.
+- **worker-build** (installed automatically by `wrangler dev` / `wrangler deploy` via the `[build]` hook in `backend-rust/wrangler.toml`).
+
+### Local development
+
+```bash
+cd backend-rust
+wrangler dev           # local Worker runtime with hot reload
+cargo test             # Rust unit + integration tests
+```
+
+Authentication against the local Worker requires `api.recordwell.app` resolve somewhere — point the iOS app at the dev URL via the `baseURL:` init parameter on `OpaqueAuthService` (no xcconfig override exists today; see `OpaqueAuthService.swift:25-33`).
+
+### Deployment
+
+Production deploy is triggered by `wrangler deploy` from `backend-rust/`; routes and KV namespace bindings are pinned in `wrangler.toml`. PR-preview deployments use `--name recordwell-opaque-pr-N`.
 
 ## Verification
 
