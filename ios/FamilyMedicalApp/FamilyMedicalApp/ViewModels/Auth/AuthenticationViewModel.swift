@@ -93,7 +93,7 @@ final class AuthenticationViewModel {
     private let authService: AuthenticationServiceProtocol
     private let biometricService: BiometricServiceProtocol
     private let passwordValidator: PasswordValidationServiceProtocol
-    let lockStateService: LockStateServiceProtocol
+    private let lockStateService: LockStateServiceProtocol
     let demoModeService: DemoModeServiceProtocol
     let demoDataSeeder: DemoDataSeederProtocol
     let keychainService: KeychainServiceProtocol
@@ -194,6 +194,16 @@ final class AuthenticationViewModel {
         }
 
         await unlockWithBiometric()
+    }
+
+    // MARK: - Scene Phase Actions
+
+    func onEnterBackground() {
+        lockStateService.recordBackgroundTime()
+    }
+
+    var shouldLockOnForeground: Bool {
+        lockStateService.shouldLockOnForeground()
     }
 
     // MARK: - Lock/Logout Actions
