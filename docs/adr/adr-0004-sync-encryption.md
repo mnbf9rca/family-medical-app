@@ -215,6 +215,19 @@ We will implement a **recovery code-based multi-device system** with **last-writ
 - [BIP39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki): Mnemonic code specification
 - [1Password Security Design](https://support.1password.com/secret-key-security/): Recovery code approach
 
+## Addendum: Document blob size cap (2026-04-18)
+
+`DocumentBlobService.maxFileSizeBytes` is currently **10 MB** (`10 * 1024 * 1024` bytes). This is a pragmatic local-storage cap — not a limit imposed by any underlying storage or crypto primitive. It bounds the in-memory cost of encrypting blobs and generating thumbnails, and keeps the on-disk footprint tractable for today's local-only deployment.
+
+### Revisit trigger
+
+When sync / replication work begins (this ADR's core subject), the per-blob size cap becomes a network/replication cost decision, not just a local-storage decision. At that point the limit must be re-evaluated:
+
+1. Keep 10 MB and document the decision in this ADR.
+2. Change it (larger or smaller) and update `DocumentBlobService.maxFileSizeBytes` alongside this ADR entry.
+
+Either way, the inline comment in `DocumentBlobService.swift` now points at this section rather than self-acknowledging an ADR gap.
+
 ---
 
 **Decision Date**: 2025-12-21
