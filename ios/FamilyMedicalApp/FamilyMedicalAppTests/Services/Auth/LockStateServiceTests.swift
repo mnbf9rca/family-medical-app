@@ -33,7 +33,7 @@ struct LockStateServiceTests {
     }
 
     @Test
-    func defaultTimeoutFallbackHandlesZeroStoredValue() throws {
+    func defaultTimeoutChangeReachesUpgradingUsers() throws {
         let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         userDefaults.set(0, forKey: "com.family-medical-app.lock-timeout")
 
