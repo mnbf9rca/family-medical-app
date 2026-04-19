@@ -178,14 +178,12 @@ pub async fn handle_register_start(
                 "[opaque/register/start] Rate limited: {}...",
                 &body.client_identifier[..8]
             );
-            let headers = Headers::new();
-            headers.set("Retry-After", &retry_after.to_string())?;
             return json_response_with_headers(
                 &ErrorResponse {
                     error: "Too many requests".into(),
                 },
                 429,
-                headers,
+                &[("Retry-After", &retry_after.to_string())],
             );
         }
     }
@@ -297,14 +295,12 @@ pub async fn handle_login_start(
         if let Err(retry_after) = check_rate_limit(&rate_limits, &body.client_identifier, "login_start", &config).await
         {
             console_log!("[opaque/login/start] Rate limited: {}...", &body.client_identifier[..8]);
-            let headers = Headers::new();
-            headers.set("Retry-After", &retry_after.to_string())?;
             return json_response_with_headers(
                 &ErrorResponse {
                     error: "Too many requests".into(),
                 },
                 429,
-                headers,
+                &[("Retry-After", &retry_after.to_string())],
             );
         }
     }
@@ -484,20 +480,32 @@ pub async fn handle_login_finish(mut req: Request, env: &Env) -> Result<Response
     )
 }
 
+/// Build a `Headers` object with `Access-Control-Allow-Origin: *` pre-set.
+///
+/// `extras` is a slice of `(name, value)` pairs appended after the CORS
+/// origin header.  All three response-building helpers funnel through here
+/// so that `Access-Control-Allow-Origin` has exactly one definition in the
+/// crate.
+pub(crate) fn build_response_headers(extras: &[(&str, &str)]) -> Result<Headers> {
+    let headers = Headers::new();
+    headers.set("Access-Control-Allow-Origin", "*")?;
+    for (name, value) in extras {
+        headers.set(name, value)?;
+    }
+    Ok(headers)
+}
+
 pub fn json_response<T: Serialize>(data: &T, status: u16) -> Result<Response> {
     let body = serde_json::to_string(data)?;
-    let headers = Headers::new();
-    headers.set("Content-Type", "application/json")?;
-    headers.set("Access-Control-Allow-Origin", "*")?;
-
+    let headers = build_response_headers(&[("Content-Type", "application/json")])?;
     Response::from_body(ResponseBody::Body(body.into_bytes())).map(|r| r.with_status(status).with_headers(headers))
 }
 
-fn json_response_with_headers<T: Serialize>(data: &T, status: u16, headers: Headers) -> Result<Response> {
+fn json_response_with_headers<T: Serialize>(data: &T, status: u16, extras: &[(&str, &str)]) -> Result<Response> {
     let body = serde_json::to_string(data)?;
-    headers.set("Content-Type", "application/json")?;
-    headers.set("Access-Control-Allow-Origin", "*")?;
-
+    let mut combined = vec![("Content-Type", "application/json")];
+    combined.extend_from_slice(extras);
+    let headers = build_response_headers(&combined)?;
     Response::from_body(ResponseBody::Body(body.into_bytes())).map(|r| r.with_status(status).with_headers(headers))
 }
 

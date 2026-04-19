@@ -16,6 +16,15 @@ else
   echo "FAIL ($STATUS: $RESPONSE)"
   exit 1
 fi
+echo -n "  headers include Access-Control-Allow-Origin... "
+HEADERS=$(curl -sI "$BASE_URL/health/live")
+if echo "$HEADERS" | grep -iq "^access-control-allow-origin: \*"; then
+  echo "OK"
+else
+  echo "FAIL (missing or wrong CORS origin on /health/live)"
+  echo "$HEADERS"
+  exit 1
+fi
 
 # Test readiness endpoint
 echo -n "GET /health/ready... "
@@ -28,6 +37,15 @@ else
   echo "FAIL ($STATUS: $RESPONSE)"
   exit 1
 fi
+echo -n "  headers include Access-Control-Allow-Origin... "
+HEADERS=$(curl -sI "$BASE_URL/health/ready")
+if echo "$HEADERS" | grep -iq "^access-control-allow-origin: \*"; then
+  echo "OK"
+else
+  echo "FAIL (missing or wrong CORS origin on /health/ready)"
+  echo "$HEADERS"
+  exit 1
+fi
 
 # Test CORS preflight
 echo -n "OPTIONS /auth/opaque/register/start... "
@@ -36,6 +54,15 @@ if [ "$STATUS" = "200" ]; then
   echo "OK"
 else
   echo "FAIL ($STATUS)"
+  exit 1
+fi
+echo -n "  headers include Access-Control-Allow-Origin... "
+HEADERS=$(curl -sI -X OPTIONS "$BASE_URL/auth/opaque/register/start")
+if echo "$HEADERS" | grep -iq "^access-control-allow-origin: \*"; then
+  echo "OK"
+else
+  echo "FAIL (missing or wrong CORS origin on OPTIONS /auth/opaque/register/start)"
+  echo "$HEADERS"
   exit 1
 fi
 
