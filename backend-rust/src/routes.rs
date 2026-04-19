@@ -79,7 +79,8 @@ pub struct LoginStartRequest {
 /// - `loginResponse` (Rust: `login_response`): base64-encoded opaque-ke `CredentialResponse` blob.
 /// - `stateKey` (Rust: `state_key`): opaque server-state handle (plain string, no base64) the
 ///   client must echo back on login/finish. Encodes a fake-vs-real record
-///   discriminator per RFC 9807 §10.9; server-managed, TTL 60s.
+///   discriminator per RFC 9807 §10.9; server-managed, TTL
+///   `LOGIN_STATE_TTL_SECONDS`.
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LoginStartResponse {
