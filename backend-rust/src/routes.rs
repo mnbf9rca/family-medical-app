@@ -4,6 +4,11 @@ use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
 use serde::{Deserialize, Serialize};
 use worker::*;
 
+/// TTL for OPAQUE server-state KV entries.
+/// The duration equals one default rate-limit window; see ADR-0011
+/// §"Server-side fake-record TTL" for why this matches RFC 9807 §10.9.
+const LOGIN_STATE_TTL_SECONDS: u64 = 60;
+
 // Request/Response types
 //
 // These DTOs define the HTTP wire contract between the iOS
@@ -355,8 +360,8 @@ pub async fn handle_login_start(
         }
     };
 
-    // Store server state temporarily (60 second TTL)
-    // State key includes record type (f=fake, r=real) for finish step
+    // Store server state temporarily.
+    // State key includes record type (f=fake, r=real) for finish step.
     let login_states = env.kv("LOGIN_STATES")?;
     let state_key = format!(
         "state:{}:{}:{}",
@@ -367,7 +372,7 @@ pub async fn handle_login_start(
 
     login_states
         .put(&state_key, BASE64.encode(&result.state))?
-        .expiration_ttl(60)
+        .expiration_ttl(LOGIN_STATE_TTL_SECONDS)
         .execute()
         .await?;
 
