@@ -100,6 +100,7 @@ struct BackupFileServiceTests {
         )
         let payload = BackupFileServiceTestHelpers.makeTestPayload()
 
+        // BackupFileService enforces only length; complexity is PasswordValidationService's domain.
         let minLengthPassword = String(repeating: "P", count: PasswordValidationService.minimumLength)
         _ = try service.createEncryptedBackup(payload: payload, password: minLengthPassword)
     }
