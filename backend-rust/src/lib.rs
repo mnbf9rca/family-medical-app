@@ -1,10 +1,28 @@
 mod opaque;
-mod rate_limit;
 mod routes;
+
+// `rate_limit` is private in release builds and exposed only when the
+// `testing` feature is enabled, so the integration test in
+// `tests/rate_limit_error_logging_test.rs` can reach
+// `check_rate_limit_inner` and the `RateLimitStore` trait without making
+// them part of the worker's release-build public API. See
+// `backend-rust/Cargo.toml` for the feature wiring.
+#[cfg(not(feature = "testing"))]
+mod rate_limit;
+#[cfg(feature = "testing")]
+pub mod rate_limit;
 
 use serde::Serialize;
 use std::collections::HashMap;
 use worker::*;
+
+/// Preflight cache duration for CORS `Access-Control-Max-Age`.
+/// 24h is the maximum browsers typically honour. Because the OPAQUE
+/// auth wire contract is still iterating (see ADR-0011), reviewers
+/// should lower this if a breaking change to allowed headers ever
+/// ships, since browsers will hold stale permissions up to the cache
+/// duration.
+const CORS_PREFLIGHT_MAX_AGE_SECONDS: u32 = 86400;
 
 #[derive(Serialize)]
 struct HealthStatus {
@@ -99,10 +117,11 @@ async fn handle_ready(env: &Env) -> Result<Response> {
 }
 
 fn cors_preflight() -> Result<Response> {
+    let max_age = CORS_PREFLIGHT_MAX_AGE_SECONDS.to_string();
     let headers = routes::build_response_headers(&[
         ("Access-Control-Allow-Methods", "GET, POST, OPTIONS"),
         ("Access-Control-Allow-Headers", "Content-Type"),
-        ("Access-Control-Max-Age", "86400"),
+        ("Access-Control-Max-Age", &max_age),
     ])?;
     Ok(Response::empty()?.with_headers(headers))
 }

@@ -5,7 +5,22 @@ edition = "2021"
 description = "OPAQUE authentication worker for RecordWell"
 
 [lib]
-crate-type = ["cdylib"]
+# `cdylib` is required for the wasm worker build; `rlib` is required so
+# integration tests in `tests/` can link against the library and exercise
+# modules gated behind the `testing` feature (see `tests/rate_limit_error_logging_test.rs`).
+crate-type = ["cdylib", "rlib"]
+
+[features]
+# Exposes `rate_limit` as `pub mod` (see `src/lib.rs`) so integration tests in
+# `tests/` can link against `check_rate_limit_inner`, `RateLimitStore`, and the
+# related types. NOT enabled in release builds — the wasm worker's public API
+# is unchanged. Integration tests that need it declare
+# `required-features = ["testing"]` in `[[test]]` below.
+testing = []
+
+[[test]]
+name = "rate_limit_error_logging_test"
+required-features = ["testing"]
 
 [dependencies]
 worker = "0.7"

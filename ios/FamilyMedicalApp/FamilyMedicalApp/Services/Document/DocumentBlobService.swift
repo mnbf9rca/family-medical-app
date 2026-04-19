@@ -87,8 +87,10 @@ actor DocumentBlobService: DocumentBlobServiceProtocol {
     ///
     /// Rationale: bounds the in-memory cost of encrypting blobs and generating
     /// thumbnails, and keeps the on-disk footprint and eventual sync-payload size
-    /// tractable. No ADR pins this value; it is a pragmatic cap that should be
-    /// revisited when sync lands and real-world payload distributions are known.
+    /// tractable. See ADR-0004 §"Addendum: Document blob size cap" for the
+    /// revisit contract: when sync / replication lands, this value must be
+    /// re-evaluated and either kept (with rationale) or changed (alongside an
+    /// updated ADR entry).
     static let maxFileSizeBytes = 10 * 1_024 * 1_024
 
     /// Target maximum edge length of generated thumbnails: 200 px.

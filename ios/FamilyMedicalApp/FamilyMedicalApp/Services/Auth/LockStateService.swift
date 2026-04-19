@@ -35,21 +35,14 @@ final class LockStateService: LockStateServiceProtocol {
     private static let lockTimeoutKey = "com.family-medical-app.lock-timeout"
     private static let demoModeKey = "com.family-medical-app.demo-mode"
 
-    /// Default auto-lock timeout: 300 seconds (5 minutes) of background time.
+    /// Default auto-lock timeout in seconds.
     ///
-    /// Threat model: an unattended device left in a pocket, bag, or on a desk
-    /// is the dominant compromise scenario for a mobile medical-records app.
-    /// A short auto-lock window trades a small UX cost (re-auth after a coffee
-    /// break) for a substantially reduced surface area to a stranger who picks
-    /// up the device while it's unlocked.
+    /// See ADR-0011 §"Session / auto-lock lifetime" for the 5-minute
+    /// rationale and the tunability contract.
     ///
     /// Override path: `lockTimeoutSeconds` on `LockStateServiceProtocol` is
     /// persisted to `UserDefaults` and may be set programmatically. No settings
     /// UI binds to this value today.
-    ///
-    /// No Phase-0 ADR currently captures session-lifetime rationale; this
-    /// default should be lifted into an ADR addendum (or a new ADR) when the
-    /// session-management story is formalised.
     private static let defaultTimeout = 300 // 5 minutes
 
     // MARK: - Properties

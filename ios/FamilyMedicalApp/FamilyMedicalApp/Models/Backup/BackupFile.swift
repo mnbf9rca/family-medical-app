@@ -146,7 +146,11 @@ struct BackupKDF: Codable, Equatable {
     /// Output key length in bytes
     let keyLength: Int
 
-    /// Default Argon2id parameters matching ADR-0002
+    /// Default Argon2id parameters for the backup KDF.
+    ///
+    /// Values are pinned to ADR-0002 §"Argon2id Parameters" and enforced by
+    /// `BackupKDFParametersTests`; that test will fail if either the ADR or
+    /// these constants drift without the other being updated.
     static var defaultArgon2id: BackupKDF {
         BackupKDF(
             algorithm: "Argon2id",

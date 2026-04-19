@@ -1,8 +1,16 @@
 use crate::opaque;
-use crate::rate_limit::{check_rate_limit, RateLimitConfig};
+use crate::rate_limit::{check_rate_limit, RateLimitConfig, REGISTRATION_MAX_REQUESTS, REGISTRATION_WINDOW_SECONDS};
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
 use serde::{Deserialize, Serialize};
 use worker::*;
+
+/// TTL for OPAQUE server-state KV entries.
+/// Bounds the server-side fake-record lifetime per RFC 9807 §10.9 — must
+/// be ≥ the longest plausible client-side KE2 → KE3 round trip. See
+/// ADR-0011 §"Server-side fake-record TTL"; this value is independently
+/// tunable from the rate-limit windows, even when the numbers happen to
+/// match.
+const LOGIN_STATE_TTL_SECONDS: u64 = 60;
 
 // Request/Response types
 //
@@ -74,7 +82,8 @@ pub struct LoginStartRequest {
 /// - `loginResponse` (Rust: `login_response`): base64-encoded opaque-ke `CredentialResponse` blob.
 /// - `stateKey` (Rust: `state_key`): opaque server-state handle (plain string, no base64) the
 ///   client must echo back on login/finish. Encodes a fake-vs-real record
-///   discriminator per RFC 9807 §10.9; server-managed, TTL 60s.
+///   discriminator per RFC 9807 §10.9; server-managed, TTL ~60s
+///   (server-side constant `LOGIN_STATE_TTL_SECONDS`).
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LoginStartResponse {
@@ -168,8 +177,8 @@ pub async fn handle_register_start(
     // Rate limiting per client_identifier
     if let Ok(rate_limits) = env.kv("RATE_LIMITS") {
         let config = RateLimitConfig {
-            max_requests: 3,     // Stricter for registration
-            window_seconds: 300, // 5 minute window
+            max_requests: REGISTRATION_MAX_REQUESTS,
+            window_seconds: REGISTRATION_WINDOW_SECONDS,
         };
         if let Err(retry_after) =
             check_rate_limit(&rate_limits, &body.client_identifier, "register_start", &config).await
@@ -355,8 +364,8 @@ pub async fn handle_login_start(
         }
     };
 
-    // Store server state temporarily (60 second TTL)
-    // State key includes record type (f=fake, r=real) for finish step
+    // Store server state temporarily.
+    // State key includes record type (f=fake, r=real) for finish step.
     let login_states = env.kv("LOGIN_STATES")?;
     let state_key = format!(
         "state:{}:{}:{}",
@@ -367,7 +376,7 @@ pub async fn handle_login_start(
 
     login_states
         .put(&state_key, BASE64.encode(&result.state))?
-        .expiration_ttl(60)
+        .expiration_ttl(LOGIN_STATE_TTL_SECONDS)
         .execute()
         .await?;
 
