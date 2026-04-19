@@ -15,8 +15,17 @@ struct LoginStartResult {
 /// Uses OpaqueSwift (UniFFI-wrapped opaque-ke) for client-side cryptography.
 ///
 /// ## Test Username Bypass
-/// In DEBUG builds, usernames matching `testuser` or `test_*` patterns
-/// bypass actual API calls for testing purposes.
+///
+/// When `UITestingHelpers.isUITesting` is true (i.e. the process was
+/// launched with the `--uitesting` command-line argument),
+/// `shouldBypassForTestUsername` short-circuits API calls for usernames
+/// equal to `testuser` or prefixed `test_`. This supports deterministic
+/// XCUITest runs.
+///
+/// `UITestingHelpers.isUITesting` calls `assert(!isTesting, ...)` in
+/// non-DEBUG builds, but Swift assertions are elided under `-O` in
+/// release. See issue #177 for whether this should be hardened with an
+/// explicit `#if DEBUG` guard.
 final class OpaqueAuthService: OpaqueAuthServiceProtocol, @unchecked Sendable {
     let baseURL: URL
     let session: URLSession
@@ -50,7 +59,7 @@ final class OpaqueAuthService: OpaqueAuthServiceProtocol, @unchecked Sendable {
         logger.logOperation("register", state: "started")
         logger.debug("Registering user with base URL: \(baseURL.absoluteString)")
 
-        // Bypass for test usernames in DEBUG builds
+        // Bypass for test usernames under UI testing
         if Self.shouldBypassForTestUsername(username) {
             return makeTestRegistrationResult(passwordBytes: passwordBytes)
         }
@@ -78,7 +87,7 @@ final class OpaqueAuthService: OpaqueAuthServiceProtocol, @unchecked Sendable {
         logger.logOperation("login", state: "started")
         logger.debug("Attempting OPAQUE login for user")
 
-        // Bypass for test usernames in DEBUG builds
+        // Bypass for test usernames under UI testing
         if Self.shouldBypassForTestUsername(username) {
             logger.debug("Using test username bypass for login")
             return makeTestLoginResult(passwordBytes: passwordBytes)
@@ -317,7 +326,7 @@ final class OpaqueAuthService: OpaqueAuthServiceProtocol, @unchecked Sendable {
     }
 
     func uploadBundle(username: String, bundle: Data) async throws {
-        // Bypass for test usernames in DEBUG builds
+        // Bypass for test usernames under UI testing
         if Self.shouldBypassForTestUsername(username) { return }
 
         let clientIdentifier = try generateClientIdentifier(username: username)

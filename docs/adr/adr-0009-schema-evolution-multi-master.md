@@ -11,7 +11,6 @@
 ### Implementation Progress (Issue #71)
 
 - ✅ UUID-based field IDs - Built-in fields use hardcoded deterministic UUIDs
-- ✅ Field visibility states - `FieldVisibility` enum with `.active`, `.hidden`, `.deprecated`
 - ✅ Device identity for provenance - `UUID.zero` sentinel for built-in; `createdBy`/`updatedBy` on fields
 - ✅ Per-Person schema ownership - Each Person has independent schema copies, encrypted with their FMK
 - ✅ Schema as source of truth - Views and ViewModels fetch from SchemaService, not hardcoded built-ins

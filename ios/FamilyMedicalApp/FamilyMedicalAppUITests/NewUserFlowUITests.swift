@@ -69,7 +69,7 @@ final class NewUserFlowUITests: XCTestCase {
         app = XCUIApplication()
         app.launchForUITesting(resetState: true)
 
-        // Use test_* pattern to trigger OPAQUE bypass in DEBUG builds
+        // Use test_* pattern to trigger OPAQUE bypass under UI testing
         let customUsername = "test_customuser"
         let customPassphrase = "unique-good-pass-1234"
 

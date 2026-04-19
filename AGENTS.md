@@ -44,7 +44,7 @@
   - Use `--detailed` flag with check-coverage.sh to see function-level coverage details for files below 100%
   - **Using other methods will fail CI** meaning the PR cannot be merged
   - Create tests up front or as you go to ensure you hit coverage
-  - **Never use device names in test destinations.** Using `-destination 'platform=iOS Simulator,name=iPhone 17'` clones a new simulator into `~/Library/Developer/XCTestDevices/` on every invocation, consuming ~16GB each. Use the UUID instead:
+  - **On local development and long-running machines, never use device names in test destinations.** Using `-destination 'platform=iOS Simulator,name=iPhone 17'` clones a new simulator into `~/Library/Developer/XCTestDevices/` on every invocation, consuming ~16GB each. Use the UUID instead:
 
   ```bash
   # Find and boot the simulator once per session
@@ -53,6 +53,9 @@
 
   # Always use the UUID in test commands
   xcodebuild test -destination 'platform=iOS Simulator,id=<UUID>' ...  
+  ```
+
+  - On ephemeral CI runners (fresh VM per run) explicit `name=...` destinations are acceptable — the storage cost doesn't persist.
 
 ## Principles
 
