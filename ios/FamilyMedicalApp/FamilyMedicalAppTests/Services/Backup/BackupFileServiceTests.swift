@@ -77,7 +77,9 @@ struct BackupFileServiceTests {
         "Rejects passwords shorter than PasswordValidationService.minimumLength",
         arguments: [
             String(repeating: "a", count: PasswordValidationService.minimumLength - 1),
-            String(repeating: "b", count: PasswordValidationService.minimumLength - 4)
+            String(repeating: "b", count: PasswordValidationService.minimumLength - 2),
+            String(repeating: "c", count: PasswordValidationService.minimumLength - 3),
+            String(repeating: "d", count: PasswordValidationService.minimumLength - 4)
         ]
     )
     func rejectsPasswordsBelowAlignedMinimum(password: String) throws {
