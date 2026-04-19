@@ -7,7 +7,7 @@ import Testing
 /// test fails. The constants below ARE the source of truth for this
 /// assertion; any change MUST be reflected in
 /// `docs/adr/adr-0002-key-hierarchy.md` first.
-struct BackupKDFParametersTest {
+struct BackupKDFParametersTests {
     // Pinned to ADR-0002. Update together.
     private static let adr0002Memory: Int = 64 * 1_024 * 1_024 // 64 MB = 67,108,864 bytes
     private static let adr0002Iterations: Int = 3
