@@ -14,7 +14,7 @@ enum AuthenticationError: LocalizedError, Equatable, Hashable {
     case passwordMismatch
 
     // Authentication errors
-    case wrongPassword
+    case wrongPassphrase
     case notSetUp
     case accountLocked(remainingSeconds: Int)
     case verificationFailed
@@ -46,8 +46,8 @@ enum AuthenticationError: LocalizedError, Equatable, Hashable {
         case .passwordMismatch:
             return "Passwords do not match"
         // Authentication errors
-        case .wrongPassword:
-            return "Incorrect password"
+        case .wrongPassphrase:
+            return "Incorrect passphrase"
         case .notSetUp:
             return "User account has not been set up"
         case let .accountLocked(remainingSeconds):

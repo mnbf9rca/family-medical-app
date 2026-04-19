@@ -10,74 +10,74 @@ struct AuthenticationViewModelUnlockTests {
     private let wrongTestCredential = "wrong-credential"
     private let attemptTestCredential = "attempt-credential"
 
-    // MARK: - Password Unlock Tests
+    // MARK: - Passphrase Unlock Tests
 
     @Test
-    func unlockWithCorrectPassword() async {
+    func unlockWithCorrectPassphrase() async {
         let authService = MockAuthenticationService(isSetUp: true)
         let viewModel = AuthenticationViewModel(authService: authService)
 
-        viewModel.unlockPassword = correctTestCredential
+        viewModel.unlockPassphrase = correctTestCredential
 
-        await viewModel.unlockWithPassword()
+        await viewModel.unlockWithPassphrase()
 
         #expect(viewModel.isAuthenticated == true)
         #expect(viewModel.errorMessage == nil)
-        #expect(viewModel.unlockPassword.isEmpty)
+        #expect(viewModel.unlockPassphrase.isEmpty)
     }
 
     @Test
-    func unlockWithEmptyPassword() async {
+    func unlockWithEmptyPassphrase() async {
         let authService = MockAuthenticationService(isSetUp: true)
         let viewModel = AuthenticationViewModel(authService: authService)
 
-        viewModel.unlockPassword = ""
+        viewModel.unlockPassphrase = ""
 
-        await viewModel.unlockWithPassword()
+        await viewModel.unlockWithPassphrase()
 
         #expect(viewModel.isAuthenticated == false)
-        #expect(viewModel.errorMessage == "Please enter your password")
+        #expect(viewModel.errorMessage == "Please enter your passphrase")
     }
 
     @Test
-    func unlockWithWrongPassword() async {
+    func unlockWithWrongPassphrase() async {
         let authService = MockAuthenticationService(isSetUp: true, shouldFailUnlock: true)
         let viewModel = AuthenticationViewModel(authService: authService)
 
-        viewModel.unlockPassword = wrongTestCredential
+        viewModel.unlockPassphrase = wrongTestCredential
 
-        await viewModel.unlockWithPassword()
+        await viewModel.unlockWithPassphrase()
 
         #expect(viewModel.isAuthenticated == false)
         #expect(viewModel.errorMessage != nil)
     }
 
     @Test
-    func unlockClearsPasswordOnSuccess() async {
+    func unlockClearsPassphraseOnSuccess() async {
         let authService = MockAuthenticationService(isSetUp: true)
         let viewModel = AuthenticationViewModel(authService: authService)
 
-        viewModel.unlockPassword = correctTestCredential
+        viewModel.unlockPassphrase = correctTestCredential
 
-        await viewModel.unlockWithPassword()
+        await viewModel.unlockWithPassphrase()
 
-        #expect(viewModel.unlockPassword.isEmpty)
+        #expect(viewModel.unlockPassphrase.isEmpty)
     }
 
     @Test
-    func unlockClearsPasswordOnWrongPassword() async {
+    func unlockClearsPassphraseOnWrongPassphrase() async {
         let authService = MockAuthenticationService(isSetUp: true, shouldFailUnlock: true)
         let viewModel = AuthenticationViewModel(authService: authService)
 
-        viewModel.unlockPassword = wrongTestCredential
+        viewModel.unlockPassphrase = wrongTestCredential
 
-        await viewModel.unlockWithPassword()
+        await viewModel.unlockWithPassphrase()
 
-        #expect(viewModel.unlockPassword.isEmpty)
+        #expect(viewModel.unlockPassphrase.isEmpty)
     }
 
     @Test
-    func unlockKeepsPasswordOnLockout() async {
+    func unlockKeepsPassphraseOnLockout() async {
         let authService = MockAuthenticationService(
             isSetUp: true,
             isLockedOut: true,
@@ -85,11 +85,11 @@ struct AuthenticationViewModelUnlockTests {
         )
         let viewModel = AuthenticationViewModel(authService: authService)
 
-        viewModel.unlockPassword = attemptTestCredential
+        viewModel.unlockPassphrase = attemptTestCredential
 
-        await viewModel.unlockWithPassword()
+        await viewModel.unlockWithPassphrase()
 
-        #expect(viewModel.unlockPassword == attemptTestCredential)
+        #expect(viewModel.unlockPassphrase == attemptTestCredential)
     }
 
     // MARK: - Biometric Unlock Tests

@@ -76,15 +76,15 @@ struct AuthenticationViewModelStateTests {
     }
 
     @Test
-    func lockClearsUnlockPassword() {
+    func lockClearsUnlockPassphrase() {
         let authService = MockAuthenticationService(isSetUp: true)
         let viewModel = AuthenticationViewModel(authService: authService)
 
-        viewModel.unlockPassword = genericTestCredential
+        viewModel.unlockPassphrase = genericTestCredential
 
         viewModel.lock()
 
-        #expect(viewModel.unlockPassword.isEmpty)
+        #expect(viewModel.unlockPassphrase.isEmpty)
     }
 
     @Test
@@ -134,7 +134,7 @@ struct AuthenticationViewModelStateTests {
         viewModel.username = genericTestCredential
         viewModel.passphrase = genericTestCredential
         viewModel.confirmPassphrase = genericTestCredential
-        viewModel.unlockPassword = genericTestCredential
+        viewModel.unlockPassphrase = genericTestCredential
         viewModel.showBiometricPrompt = true
         viewModel.errorMessage = "error"
 
@@ -145,7 +145,7 @@ struct AuthenticationViewModelStateTests {
         #expect(viewModel.username.isEmpty)
         #expect(viewModel.passphrase.isEmpty)
         #expect(viewModel.confirmPassphrase.isEmpty)
-        #expect(viewModel.unlockPassword.isEmpty)
+        #expect(viewModel.unlockPassphrase.isEmpty)
         #expect(viewModel.showBiometricPrompt == false)
         #expect(viewModel.errorMessage == nil)
     }

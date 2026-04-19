@@ -20,9 +20,9 @@ struct AuthenticationServiceExportKeyTests {
             userDefaults: userDefaults
         )
 
-        var passwordBytes = Array("MySecurePassword123!".utf8)
+        var passphraseBytes = Array("MySecurePassword123!".utf8)
         await #expect(throws: AuthenticationError.setupFailed) {
-            try await service.setUp(passwordBytes: &passwordBytes, username: "testuser", enableBiometric: false)
+            try await service.setUp(passphraseBytes: &passphraseBytes, username: "testuser", enableBiometric: false)
         }
     }
 
@@ -38,9 +38,9 @@ struct AuthenticationServiceExportKeyTests {
             userDefaults: userDefaults
         )
 
-        var passwordBytes = Array("MySecurePassword123!".utf8)
+        var passphraseBytes = Array("MySecurePassword123!".utf8)
         await #expect(throws: AuthenticationError.setupFailed) {
-            try await service.setUp(passwordBytes: &passwordBytes, username: "testuser", enableBiometric: false)
+            try await service.setUp(passphraseBytes: &passphraseBytes, username: "testuser", enableBiometric: false)
         }
     }
 
@@ -56,8 +56,8 @@ struct AuthenticationServiceExportKeyTests {
             userDefaults: userDefaults
         )
 
-        var passwordBytes = Array("MySecurePassword123!".utf8)
-        try await service.setUp(passwordBytes: &passwordBytes, username: "testuser", enableBiometric: false)
+        var passphraseBytes = Array("MySecurePassword123!".utf8)
+        try await service.setUp(passphraseBytes: &passphraseBytes, username: "testuser", enableBiometric: false)
         #expect(service.isSetUp == true)
     }
 
@@ -76,16 +76,16 @@ struct AuthenticationServiceExportKeyTests {
             opaqueAuthService: opaqueAuthService,
             userDefaults: userDefaults
         )
-        var setUpPasswordBytes = Array("MySecurePassword123!".utf8)
-        try await service.setUp(passwordBytes: &setUpPasswordBytes, username: "testuser", enableBiometric: false)
+        var setUpPassphraseBytes = Array("MySecurePassword123!".utf8)
+        try await service.setUp(passphraseBytes: &setUpPassphraseBytes, username: "testuser", enableBiometric: false)
         #expect(service.isSetUp == true)
 
         // Change mock to return empty export key during login (unlock path)
         opaqueAuthService.testExportKey = Data()
 
-        var unlockPasswordBytes = Array("MySecurePassword123!".utf8)
+        var unlockPassphraseBytes = Array("MySecurePassword123!".utf8)
         await #expect(throws: AuthenticationError.verificationFailed) {
-            try await service.unlockWithPassword(&unlockPasswordBytes)
+            try await service.unlockWithPassphrase(&unlockPassphraseBytes)
         }
     }
 
@@ -102,16 +102,16 @@ struct AuthenticationServiceExportKeyTests {
             opaqueAuthService: opaqueAuthService,
             userDefaults: userDefaults
         )
-        var setUpPasswordBytes = Array("MySecurePassword123!".utf8)
-        try await service.setUp(passwordBytes: &setUpPasswordBytes, username: "testuser", enableBiometric: false)
+        var setUpPassphraseBytes = Array("MySecurePassword123!".utf8)
+        try await service.setUp(passphraseBytes: &setUpPassphraseBytes, username: "testuser", enableBiometric: false)
         #expect(service.isSetUp == true)
 
         // Change mock to return invalid length export key during login (unlock path)
         opaqueAuthService.testExportKey = Data(repeating: 0xAB, count: 32)
 
-        var unlockPasswordBytes = Array("MySecurePassword123!".utf8)
+        var unlockPassphraseBytes = Array("MySecurePassword123!".utf8)
         await #expect(throws: AuthenticationError.verificationFailed) {
-            try await service.unlockWithPassword(&unlockPasswordBytes)
+            try await service.unlockWithPassphrase(&unlockPassphraseBytes)
         }
     }
 }

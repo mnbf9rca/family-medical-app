@@ -41,9 +41,9 @@ final class MockAuthenticationService: AuthenticationServiceProtocol {
         self.biometricService = biometricService
     }
 
-    func setUp(passwordBytes: inout [UInt8], username: String, enableBiometric: Bool) async throws {
-        for index in passwordBytes.indices {
-            passwordBytes[index] = 0
+    func setUp(passphraseBytes: inout [UInt8], username: String, enableBiometric: Bool) async throws {
+        for index in passphraseBytes.indices {
+            passphraseBytes[index] = 0
         }
         isSetUp = true
         storedUsername = username
@@ -55,12 +55,12 @@ final class MockAuthenticationService: AuthenticationServiceProtocol {
         }
     }
 
-    func loginAndSetup(passwordBytes: inout [UInt8], username: String, enableBiometric: Bool) async throws {
-        for index in passwordBytes.indices {
-            passwordBytes[index] = 0
+    func loginAndSetup(passphraseBytes: inout [UInt8], username: String, enableBiometric: Bool) async throws {
+        for index in passphraseBytes.indices {
+            passphraseBytes[index] = 0
         }
         if shouldFailLoginAndSetup {
-            throw AuthenticationError.wrongPassword
+            throw AuthenticationError.wrongPassphrase
         }
         isSetUp = true
         storedUsername = username
@@ -88,16 +88,16 @@ final class MockAuthenticationService: AuthenticationServiceProtocol {
         }
     }
 
-    func unlockWithPassword(_ passwordBytes: inout [UInt8]) async throws {
-        for index in passwordBytes.indices {
-            passwordBytes[index] = 0
+    func unlockWithPassphrase(_ passphraseBytes: inout [UInt8]) async throws {
+        for index in passphraseBytes.indices {
+            passphraseBytes[index] = 0
         }
         if shouldFailUnlock {
             if isLockedOut {
                 throw AuthenticationError.accountLocked(remainingSeconds: lockoutRemainingSeconds)
             }
             failedAttemptCount += 1
-            throw AuthenticationError.wrongPassword
+            throw AuthenticationError.wrongPassphrase
         }
     }
 

@@ -100,13 +100,13 @@ extension AuthenticationViewModel {
             if isReturningUser {
                 // Returning user on new device: login with OPAQUE, then set up local account
                 try await performLoginAndSetup(
-                    password: passphrase,
+                    passphrase: passphrase,
                     username: username,
                     enableBiometric: enableBiometric
                 )
             } else {
                 // New user: register with OPAQUE
-                try await performSetUp(password: passphrase, username: username, enableBiometric: enableBiometric)
+                try await performSetUp(passphrase: passphrase, username: username, enableBiometric: enableBiometric)
             }
             isSetUp = true
             isAuthenticated = true

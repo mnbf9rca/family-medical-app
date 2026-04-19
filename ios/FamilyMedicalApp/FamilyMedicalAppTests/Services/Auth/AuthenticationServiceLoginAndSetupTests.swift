@@ -19,8 +19,8 @@ struct AuthenticationServiceLoginAndSetupTests {
 
         #expect(service.isSetUp == false)
 
-        var passwordBytes = Array("MySecurePassword123!".utf8)
-        try await service.loginAndSetup(passwordBytes: &passwordBytes, username: "testuser", enableBiometric: false)
+        var passphraseBytes = Array("MySecurePassword123!".utf8)
+        try await service.loginAndSetup(passphraseBytes: &passphraseBytes, username: "testuser", enableBiometric: false)
 
         #expect(service.isSetUp == true)
         #expect(opaqueAuthService.loginCallCount == 1)
@@ -41,8 +41,8 @@ struct AuthenticationServiceLoginAndSetupTests {
             userDefaults: userDefaults
         )
 
-        var passwordBytes = Array("MySecurePassword123!".utf8)
-        try await service.loginAndSetup(passwordBytes: &passwordBytes, username: "testuser", enableBiometric: false)
+        var passphraseBytes = Array("MySecurePassword123!".utf8)
+        try await service.loginAndSetup(passphraseBytes: &passphraseBytes, username: "testuser", enableBiometric: false)
 
         #expect(service.storedUsername == "testuser")
     }
@@ -58,14 +58,14 @@ struct AuthenticationServiceLoginAndSetupTests {
             userDefaults: userDefaults
         )
 
-        var passwordBytes = Array("MySecurePassword123!".utf8)
-        try await service.loginAndSetup(passwordBytes: &passwordBytes, username: "testuser", enableBiometric: true)
+        var passphraseBytes = Array("MySecurePassword123!".utf8)
+        try await service.loginAndSetup(passphraseBytes: &passphraseBytes, username: "testuser", enableBiometric: true)
 
         #expect(service.isBiometricEnabled == true)
     }
 
     @Test
-    func loginAndSetupThrowsWrongPasswordOnAuthFailure() async throws {
+    func loginAndSetupThrowsWrongPassphraseOnAuthFailure() async throws {
         let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let opaqueAuthService = MockOpaqueAuthService()
         opaqueAuthService.shouldFailLogin = true
@@ -75,9 +75,13 @@ struct AuthenticationServiceLoginAndSetupTests {
             userDefaults: userDefaults
         )
 
-        var passwordBytes = Array("WrongPassword123!".utf8)
-        await #expect(throws: AuthenticationError.wrongPassword) {
-            try await service.loginAndSetup(passwordBytes: &passwordBytes, username: "testuser", enableBiometric: false)
+        var passphraseBytes = Array("WrongPassword123!".utf8)
+        await #expect(throws: AuthenticationError.wrongPassphrase) {
+            try await service.loginAndSetup(
+                passphraseBytes: &passphraseBytes,
+                username: "testuser",
+                enableBiometric: false
+            )
         }
 
         #expect(service.isSetUp == false)

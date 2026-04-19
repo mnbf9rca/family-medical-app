@@ -61,7 +61,7 @@ struct UnlockView: View {
                     .font(.subheadline)
                     .accessibilityIdentifier("usePassphraseButton")
                 } else {
-                    // Password entry - NO Form, just plain TextFields like Duolingo
+                    // Passphrase entry - NO Form, just plain TextFields like Duolingo
                     VStack(spacing: 12) {
                         // Username display (read-only - OPAQUE uses stored username)
                         HStack {
@@ -77,9 +77,9 @@ struct UnlockView: View {
                         // Passphrase field
                         Group {
                             if UITestingHelpers.isUITesting {
-                                TextField("Passphrase", text: $viewModel.unlockPassword)
+                                TextField("Passphrase", text: $viewModel.unlockPassphrase)
                             } else {
-                                SecureField("Passphrase", text: $viewModel.unlockPassword)
+                                SecureField("Passphrase", text: $viewModel.unlockPassphrase)
                                     .textContentType(.password)
                             }
                         }
@@ -106,10 +106,11 @@ struct UnlockView: View {
                                     .padding()
                             }
                         }
-                        .background(viewModel.unlockPassword.isEmpty || viewModel.isLockedOut ? Color.gray : Color.blue)
+                        .background(viewModel.unlockPassphrase.isEmpty || viewModel.isLockedOut ? Color.gray : Color
+                            .blue)
                         .foregroundColor(.white)
                         .cornerRadius(10)
-                        .disabled(viewModel.unlockPassword.isEmpty || viewModel.isLockedOut || viewModel.isLoading)
+                        .disabled(viewModel.unlockPassphrase.isEmpty || viewModel.isLockedOut || viewModel.isLoading)
                         .accessibilityIdentifier("unlockButton")
                     }
                     .onAppear {
@@ -186,7 +187,7 @@ struct UnlockView: View {
 
     private func submitUnlock() {
         Task {
-            await viewModel.unlockWithPassword()
+            await viewModel.unlockWithPassphrase()
         }
     }
 

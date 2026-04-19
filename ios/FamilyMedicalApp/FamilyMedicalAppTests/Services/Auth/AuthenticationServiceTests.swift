@@ -20,8 +20,8 @@ struct AuthenticationServiceTests {
 
         #expect(service.isSetUp == false)
 
-        var passwordBytes = Array("MySecurePassword123!".utf8)
-        try await service.setUp(passwordBytes: &passwordBytes, username: "testuser", enableBiometric: false)
+        var passphraseBytes = Array("MySecurePassword123!".utf8)
+        try await service.setUp(passphraseBytes: &passphraseBytes, username: "testuser", enableBiometric: false)
 
         #expect(service.isSetUp == true)
         #expect(userDefaults.bool(forKey: "com.family-medical-app.account-setup-complete") == true)
@@ -40,8 +40,8 @@ struct AuthenticationServiceTests {
             userDefaults: userDefaults
         )
 
-        var passwordBytes = Array("MySecurePassword123!".utf8)
-        try await service.setUp(passwordBytes: &passwordBytes, username: "testuser", enableBiometric: false)
+        var passphraseBytes = Array("MySecurePassword123!".utf8)
+        try await service.setUp(passphraseBytes: &passphraseBytes, username: "testuser", enableBiometric: false)
 
         let publicKeyData = userDefaults.data(forKey: "com.family-medical-app.identity-public-key")
         #expect(publicKeyData != nil)
@@ -59,8 +59,8 @@ struct AuthenticationServiceTests {
             userDefaults: userDefaults
         )
 
-        var passwordBytes = Array("MySecurePassword123!".utf8)
-        try await service.setUp(passwordBytes: &passwordBytes, username: "testuser", enableBiometric: true)
+        var passphraseBytes = Array("MySecurePassword123!".utf8)
+        try await service.setUp(passphraseBytes: &passphraseBytes, username: "testuser", enableBiometric: true)
 
         #expect(service.isBiometricEnabled == true)
     }
@@ -76,8 +76,8 @@ struct AuthenticationServiceTests {
             userDefaults: userDefaults
         )
 
-        var passwordBytes = Array("MySecurePassword123!".utf8)
-        try await service.setUp(passwordBytes: &passwordBytes, username: "testuser", enableBiometric: true)
+        var passphraseBytes = Array("MySecurePassword123!".utf8)
+        try await service.setUp(passphraseBytes: &passphraseBytes, username: "testuser", enableBiometric: true)
 
         #expect(service.isBiometricEnabled == false)
     }
@@ -92,8 +92,8 @@ struct AuthenticationServiceTests {
             userDefaults: userDefaults
         )
 
-        var passwordBytes = Array("MySecurePassword123!".utf8)
-        try await service.setUp(passwordBytes: &passwordBytes, username: "testuser", enableBiometric: false)
+        var passphraseBytes = Array("MySecurePassword123!".utf8)
+        try await service.setUp(passphraseBytes: &passphraseBytes, username: "testuser", enableBiometric: false)
 
         #expect(service.storedUsername == "testuser")
     }
@@ -121,8 +121,8 @@ struct AuthenticationServiceTests {
             userDefaults: userDefaults
         )
 
-        var passwordBytes = Array("MySecurePassword123!".utf8)
-        try await service.setUp(passwordBytes: &passwordBytes, username: "testuser", enableBiometric: false)
+        var passphraseBytes = Array("MySecurePassword123!".utf8)
+        try await service.setUp(passphraseBytes: &passphraseBytes, username: "testuser", enableBiometric: false)
         #expect(service.storedUsername == "testuser")
 
         service.logout()
@@ -141,17 +141,17 @@ struct AuthenticationServiceTests {
             userDefaults: userDefaults
         )
 
-        var passwordBytes = Array("MySecurePassword123!".utf8)
-        try await service.setUp(passwordBytes: &passwordBytes, username: "testuser", enableBiometric: false)
+        var passphraseBytes = Array("MySecurePassword123!".utf8)
+        try await service.setUp(passphraseBytes: &passphraseBytes, username: "testuser", enableBiometric: false)
 
         #expect(opaqueAuthService.registerCallCount == 1)
         #expect(opaqueAuthService.lastRegisteredUsername == "testuser")
     }
 
-    // MARK: - Password Unlock Tests
+    // MARK: - Passphrase Unlock Tests
 
     @Test
-    func unlockWithCorrectPasswordSucceeds() async throws {
+    func unlockWithCorrectPassphraseSucceeds() async throws {
         let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let opaqueAuthService = MockOpaqueAuthService()
         let service = AuthenticationService(
@@ -160,16 +160,16 @@ struct AuthenticationServiceTests {
             userDefaults: userDefaults
         )
 
-        var setUpPasswordBytes = Array("MySecurePassword123!".utf8)
-        try await service.setUp(passwordBytes: &setUpPasswordBytes, username: "testuser", enableBiometric: false)
-        var unlockPasswordBytes = Array("MySecurePassword123!".utf8)
-        try await service.unlockWithPassword(&unlockPasswordBytes)
+        var setUpPassphraseBytes = Array("MySecurePassword123!".utf8)
+        try await service.setUp(passphraseBytes: &setUpPassphraseBytes, username: "testuser", enableBiometric: false)
+        var unlockPassphraseBytes = Array("MySecurePassword123!".utf8)
+        try await service.unlockWithPassphrase(&unlockPassphraseBytes)
         // No error thrown means success
         #expect(opaqueAuthService.loginCallCount == 1)
     }
 
     @Test
-    func unlockWithWrongPasswordFails() async throws {
+    func unlockWithWrongPassphraseFails() async throws {
         let userDefaults = try #require(UserDefaults(suiteName: "test-\(UUID().uuidString)"))
         let opaqueAuthService = MockOpaqueAuthService()
         let service = AuthenticationService(
@@ -178,15 +178,15 @@ struct AuthenticationServiceTests {
             userDefaults: userDefaults
         )
 
-        var setUpPasswordBytes = Array("CorrectPassword123!".utf8)
-        try await service.setUp(passwordBytes: &setUpPasswordBytes, username: "testuser", enableBiometric: false)
+        var setUpPassphraseBytes = Array("CorrectPassword123!".utf8)
+        try await service.setUp(passphraseBytes: &setUpPassphraseBytes, username: "testuser", enableBiometric: false)
 
         // Make OPAQUE fail authentication
         opaqueAuthService.shouldFailLogin = true
 
-        var wrongPasswordBytes = Array("WrongPassword123!".utf8)
-        await #expect(throws: AuthenticationError.wrongPassword) {
-            try await service.unlockWithPassword(&wrongPasswordBytes)
+        var wrongPassphraseBytes = Array("WrongPassword123!".utf8)
+        await #expect(throws: AuthenticationError.wrongPassphrase) {
+            try await service.unlockWithPassphrase(&wrongPassphraseBytes)
         }
     }
 
@@ -198,9 +198,9 @@ struct AuthenticationServiceTests {
             userDefaults: userDefaults
         )
 
-        var passwordBytes = Array("SomePassword123!".utf8)
+        var passphraseBytes = Array("SomePassword123!".utf8)
         await #expect(throws: AuthenticationError.notSetUp) {
-            try await service.unlockWithPassword(&passwordBytes)
+            try await service.unlockWithPassphrase(&passphraseBytes)
         }
     }
 
@@ -219,8 +219,8 @@ struct AuthenticationServiceTests {
             userDefaults: userDefaults
         )
 
-        var passwordBytes = Array("MyPassword123!".utf8)
-        try await service.setUp(passwordBytes: &passwordBytes, username: "testuser", enableBiometric: true)
+        var passphraseBytes = Array("MyPassword123!".utf8)
+        try await service.setUp(passphraseBytes: &passphraseBytes, username: "testuser", enableBiometric: true)
 
         try await service.unlockWithBiometric()
         // No error thrown means success
@@ -236,8 +236,8 @@ struct AuthenticationServiceTests {
             userDefaults: userDefaults
         )
 
-        var passwordBytes = Array("MyPassword123!".utf8)
-        try await service.setUp(passwordBytes: &passwordBytes, username: "testuser", enableBiometric: false)
+        var passphraseBytes = Array("MyPassword123!".utf8)
+        try await service.setUp(passphraseBytes: &passphraseBytes, username: "testuser", enableBiometric: false)
 
         await #expect(throws: AuthenticationError.biometricNotAvailable) {
             try await service.unlockWithBiometric()
@@ -255,14 +255,14 @@ struct AuthenticationServiceTests {
             userDefaults: userDefaults
         )
 
-        var passwordBytes = Array("MyPassword123!".utf8)
-        try await service.setUp(passwordBytes: &passwordBytes, username: "testuser", enableBiometric: true)
+        var passphraseBytes = Array("MyPassword123!".utf8)
+        try await service.setUp(passphraseBytes: &passphraseBytes, username: "testuser", enableBiometric: true)
 
         // Create failed attempts
         opaqueAuthService.shouldFailLogin = true
         for _ in 1 ... 2 {
-            var wrongPasswordBytes = Array("WrongPassword!".utf8)
-            try? await service.unlockWithPassword(&wrongPasswordBytes)
+            var wrongPassphraseBytes = Array("WrongPassword!".utf8)
+            try? await service.unlockWithPassphrase(&wrongPassphraseBytes)
         }
 
         #expect(service.failedAttemptCount == 2)
@@ -316,8 +316,8 @@ struct AuthenticationServiceTests {
             userDefaults: userDefaults
         )
 
-        var passwordBytes = Array("MyPassword123!".utf8)
-        try await service.setUp(passwordBytes: &passwordBytes, username: "testuser", enableBiometric: true)
+        var passphraseBytes = Array("MyPassword123!".utf8)
+        try await service.setUp(passphraseBytes: &passphraseBytes, username: "testuser", enableBiometric: true)
 
         #expect(service.isBiometricEnabled == true)
 
@@ -342,8 +342,8 @@ struct AuthenticationServiceTests {
             userDefaults: userDefaults
         )
 
-        var passwordBytes = Array("MyPassword123!".utf8)
-        try await service.setUp(passwordBytes: &passwordBytes, username: "testuser", enableBiometric: true)
+        var passphraseBytes = Array("MyPassword123!".utf8)
+        try await service.setUp(passphraseBytes: &passphraseBytes, username: "testuser", enableBiometric: true)
 
         #expect(service.isSetUp == true)
 

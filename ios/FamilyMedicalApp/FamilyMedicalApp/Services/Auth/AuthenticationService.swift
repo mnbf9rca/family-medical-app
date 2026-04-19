@@ -22,19 +22,19 @@ protocol AuthenticationServiceProtocol {
     /// Stored username for display on unlock screen
     var storedUsername: String? { get }
 
-    /// Set up authentication with password bytes (RFC 9807 compliant)
+    /// Set up authentication with passphrase bytes (RFC 9807 compliant)
     /// - Parameters:
-    ///   - passwordBytes: Password as bytes (will be zeroed after use)
+    ///   - passphraseBytes: Passphrase as bytes (will be zeroed after use)
     ///   - username: User identifier
     ///   - enableBiometric: Whether to enable biometric unlock
-    func setUp(passwordBytes: inout [UInt8], username: String, enableBiometric: Bool) async throws
+    func setUp(passphraseBytes: inout [UInt8], username: String, enableBiometric: Bool) async throws
 
-    /// Login and set up with password bytes (RFC 9807 compliant)
+    /// Login and set up with passphrase bytes (RFC 9807 compliant)
     /// - Parameters:
-    ///   - passwordBytes: Password as bytes (will be zeroed after use)
+    ///   - passphraseBytes: Passphrase as bytes (will be zeroed after use)
     ///   - username: User identifier
     ///   - enableBiometric: Whether to enable biometric unlock
-    func loginAndSetup(passwordBytes: inout [UInt8], username: String, enableBiometric: Bool) async throws
+    func loginAndSetup(passphraseBytes: inout [UInt8], username: String, enableBiometric: Bool) async throws
 
     /// Complete setup using a pre-authenticated login result (from duplicate registration recovery)
     /// - Parameters:
@@ -48,9 +48,9 @@ protocol AuthenticationServiceProtocol {
         enableBiometric: Bool
     ) async throws
 
-    /// Unlock with password bytes (RFC 9807 compliant)
-    /// - Parameter passwordBytes: Password as bytes (will be zeroed after use)
-    func unlockWithPassword(_ passwordBytes: inout [UInt8]) async throws
+    /// Unlock with passphrase bytes (RFC 9807 compliant)
+    /// - Parameter passphraseBytes: Passphrase as bytes (will be zeroed after use)
+    func unlockWithPassphrase(_ passphraseBytes: inout [UInt8]) async throws
 
     /// Unlock with biometric authentication
     /// - Throws: AuthenticationError if authentication fails
@@ -168,9 +168,9 @@ final class AuthenticationService: AuthenticationServiceProtocol {
 
     // MARK: - AuthenticationServiceProtocol
 
-    func setUp(passwordBytes: inout [UInt8], username: String, enableBiometric: Bool) async throws {
+    func setUp(passphraseBytes: inout [UInt8], username: String, enableBiometric: Bool) async throws {
         defer {
-            keyDerivationService.secureZero(&passwordBytes)
+            keyDerivationService.secureZero(&passphraseBytes)
         }
 
         logger.logOperation("setUp", state: "started")
@@ -178,7 +178,10 @@ final class AuthenticationService: AuthenticationServiceProtocol {
         // Register with OPAQUE server using bytes
         let registrationResult: OpaqueRegistrationResult
         do {
-            registrationResult = try await opaqueAuthService.register(username: username, passwordBytes: passwordBytes)
+            registrationResult = try await opaqueAuthService.register(
+                username: username,
+                passwordBytes: passphraseBytes
+            )
         } catch let OpaqueAuthError.accountExistsConfirmed(loginResult) {
             logger.info("Account exists (confirmed via login probe) - prompting user")
             throw AuthenticationError.accountExistsConfirmed(loginResult: loginResult)
@@ -195,9 +198,9 @@ final class AuthenticationService: AuthenticationServiceProtocol {
         logger.info("Account setup completed with OPAQUE, biometric enabled: \(enableBiometric)")
     }
 
-    func loginAndSetup(passwordBytes: inout [UInt8], username: String, enableBiometric: Bool) async throws {
+    func loginAndSetup(passphraseBytes: inout [UInt8], username: String, enableBiometric: Bool) async throws {
         defer {
-            keyDerivationService.secureZero(&passwordBytes)
+            keyDerivationService.secureZero(&passphraseBytes)
         }
 
         logger.logOperation("loginAndSetup", state: "started")
@@ -205,12 +208,12 @@ final class AuthenticationService: AuthenticationServiceProtocol {
         // Attempt OPAQUE login with server using bytes
         let loginResult: OpaqueLoginResult
         do {
-            loginResult = try await opaqueAuthService.login(username: username, passwordBytes: passwordBytes)
+            loginResult = try await opaqueAuthService.login(username: username, passwordBytes: passphraseBytes)
         } catch let error as OpaqueAuthError {
             logger.notice("OPAQUE login failed during loginAndSetup: \(error)")
             switch error {
             case .authenticationFailed:
-                throw AuthenticationError.wrongPassword
+                throw AuthenticationError.wrongPassphrase
             case .networkError:
                 throw AuthenticationError.networkError("Unable to connect to server")
             default:
@@ -248,12 +251,12 @@ final class AuthenticationService: AuthenticationServiceProtocol {
         logger.info("Existing account setup completed, biometric enabled: \(enableBiometric)")
     }
 
-    func unlockWithPassword(_ passwordBytes: inout [UInt8]) async throws {
+    func unlockWithPassphrase(_ passphraseBytes: inout [UInt8]) async throws {
         defer {
-            keyDerivationService.secureZero(&passwordBytes)
+            keyDerivationService.secureZero(&passphraseBytes)
         }
 
-        logger.logOperation("unlockWithPassword", state: "started")
+        logger.logOperation("unlockWithPassphrase", state: "started")
 
         // Check if locked out
         if isLockedOut {
@@ -265,7 +268,7 @@ final class AuthenticationService: AuthenticationServiceProtocol {
             throw AuthenticationError.notSetUp
         }
 
-        let candidateKey = try await deriveKeyViaOpaque(passwordBytes: passwordBytes)
+        let candidateKey = try await deriveKeyViaOpaque(passphraseBytes: passphraseBytes)
         try verifyAndCompleteUnlock(candidateKey: candidateKey)
     }
 
@@ -332,13 +335,13 @@ final class AuthenticationService: AuthenticationServiceProtocol {
     // MARK: - Key Derivation
 
     /// Derive primary key by performing OPAQUE login against the server.
-    private func deriveKeyViaOpaque(passwordBytes: [UInt8]) async throws -> SymmetricKey {
+    private func deriveKeyViaOpaque(passphraseBytes: [UInt8]) async throws -> SymmetricKey {
         guard let username = storedUsername else {
             throw AuthenticationError.notSetUp
         }
 
         do {
-            let loginResult = try await opaqueAuthService.login(username: username, passwordBytes: passwordBytes)
+            let loginResult = try await opaqueAuthService.login(username: username, passwordBytes: passphraseBytes)
 
             // RFC 9807 §6.4.4: Validate export key before use
             guard loginResult.exportKey.count == 64 else {
@@ -350,7 +353,7 @@ final class AuthenticationService: AuthenticationServiceProtocol {
         } catch is OpaqueAuthError {
             logger.notice("OPAQUE authentication failed")
             try handleFailedAttempt()
-            throw AuthenticationError.wrongPassword
+            throw AuthenticationError.wrongPassphrase
         }
     }
 
@@ -368,19 +371,19 @@ final class AuthenticationService: AuthenticationServiceProtocol {
             let decryptedString = String(data: decrypted, encoding: .utf8)
 
             guard decryptedString == Self.verificationPlaintext else {
-                throw AuthenticationError.wrongPassword
+                throw AuthenticationError.wrongPassphrase
             }
 
             // Success - reset failed attempts
             userDefaults.removeObject(forKey: Self.failedAttemptsKey)
             userDefaults.removeObject(forKey: Self.lockoutEndTimeKey)
 
-            logger.logOperation("unlockWithPassword", state: "success")
+            logger.logOperation("unlockWithPassphrase", state: "success")
         } catch is CryptoError {
-            // Decryption failed = wrong password
-            logger.notice("Password verification failed")
+            // Decryption failed = wrong passphrase
+            logger.notice("Passphrase verification failed")
             try handleFailedAttempt()
-            throw AuthenticationError.wrongPassword
+            throw AuthenticationError.wrongPassphrase
         }
     }
 
