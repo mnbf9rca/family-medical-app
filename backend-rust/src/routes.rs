@@ -482,18 +482,20 @@ pub async fn handle_login_finish(mut req: Request, env: &Env) -> Result<Response
     )
 }
 
-/// Build a `Headers` object with `Access-Control-Allow-Origin: *` pre-set.
+/// Build a `Headers` object whose `Access-Control-Allow-Origin: *` is
+/// guaranteed, regardless of what a caller puts in `extras`.
 ///
-/// `extras` is a slice of `(name, value)` pairs appended after the CORS
-/// origin header.  All three response-building helpers funnel through here
-/// so that `Access-Control-Allow-Origin` has exactly one definition in the
-/// crate.
+/// `extras` pairs are applied first; the CORS origin is set last so a
+/// caller cannot undermine the global CORS policy by passing
+/// `Access-Control-Allow-Origin` in `extras`. All response-building
+/// helpers funnel through here so ACAO has exactly one definition in
+/// the crate.
 pub(crate) fn build_response_headers(extras: &[(&str, &str)]) -> Result<Headers> {
     let headers = Headers::new();
-    headers.set("Access-Control-Allow-Origin", "*")?;
     for (name, value) in extras {
         headers.set(name, value)?;
     }
+    headers.set("Access-Control-Allow-Origin", "*")?;
     Ok(headers)
 }
 
@@ -503,10 +505,16 @@ pub fn json_response<T: Serialize>(data: &T, status: u16) -> Result<Response> {
     Response::from_body(ResponseBody::Body(body.into_bytes())).map(|r| r.with_status(status).with_headers(headers))
 }
 
+/// JSON response with caller-supplied extra headers (e.g. `Retry-After`).
+///
+/// The hardcoded `Content-Type: application/json` is appended AFTER the
+/// caller's extras, so a caller cannot accidentally override Content-Type
+/// by including it in `extras`. `build_response_headers` then sets CORS
+/// origin last, preserving the same policy guarantee.
 fn json_response_with_headers<T: Serialize>(data: &T, status: u16, extras: &[(&str, &str)]) -> Result<Response> {
     let body = serde_json::to_string(data)?;
-    let mut combined = vec![("Content-Type", "application/json")];
-    combined.extend_from_slice(extras);
+    let mut combined: Vec<(&str, &str)> = extras.to_vec();
+    combined.push(("Content-Type", "application/json"));
     let headers = build_response_headers(&combined)?;
     Response::from_body(ResponseBody::Body(body.into_bytes())).map(|r| r.with_status(status).with_headers(headers))
 }
