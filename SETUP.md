@@ -275,10 +275,11 @@ The backend lives at `backend-rust/` — a Rust [Cloudflare Worker](https://deve
 cd backend-rust
 wrangler dev                                 # local Worker runtime with hot reload
 cargo build --target wasm32-unknown-unknown  # build verification
-./tests/smoke_test.sh http://localhost:8787  # integration smoke against wrangler dev
+cargo test                                   # native unit + integration tests
+./tests/smoke_test.sh http://localhost:8787  # deploy-time smoke against wrangler dev
 ```
 
-`backend-rust/.cargo/config.toml` pins the build target to `wasm32-unknown-unknown`, so `cargo test` cannot run natively — the backend does not have native-runnable unit tests today. `tests/smoke_test.sh` is the integration test harness (CI runs it against each preview deploy); point it at any live `BASE_URL`, defaulting to `https://api.recordwell.app` when omitted.
+`cargo test` runs against the host triple for unit and integration coverage; `backend-rust/.cargo/config.toml` only scopes the `+simd128` rustflag to `wasm32-unknown-unknown` builds, leaving the host target free. `tests/smoke_test.sh` remains the deploy-time regression harness (CI runs it against each preview deploy); point it at any live `BASE_URL`, defaulting to `https://api.recordwell.app` when omitted.
 
 Authentication against the local Worker requires `api.recordwell.app` resolve somewhere — point the iOS app at the dev URL via the `baseURL:` init parameter on `OpaqueAuthService` (no xcconfig override exists today; see `defaultBaseURL` in `ios/FamilyMedicalApp/FamilyMedicalApp/Services/Auth/OpaqueAuthService.swift` for the hardcoded production endpoint).
 
