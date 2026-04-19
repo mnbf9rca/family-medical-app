@@ -56,7 +56,23 @@ final class DocumentPickerViewModel {
 
     // MARK: - Constants
 
-    /// Maximum drafts per record.
+    /// Maximum number of document drafts a user can stage against a single
+    /// parent record before the picker refuses new entries.
+    ///
+    /// Five is a product/UX cap, not a technical limit. It is sized to cover
+    /// the realistic cases we expect in this app — a few pages of lab
+    /// results, a medication-bottle photo set captured from multiple angles,
+    /// or a primary document paired with an annotation — while keeping the
+    /// per-record cost bounded. The worst-case on-disk/in-envelope footprint
+    /// for one record is `maxPerRecord * DocumentBlobService.maxFileSizeBytes`,
+    /// so this value must be tuned in conjunction with that cap, never in
+    /// isolation.
+    ///
+    /// No ADR currently pins this value. When the driver changes — e.g. sync
+    /// batching quantising attachment payloads, attachment re-encryption
+    /// cost on key rotation, or a UI affordance that makes larger sets
+    /// browseable — update this comment and cross-reference whichever ADR
+    /// captures the new rationale.
     static let maxPerRecord: Int = 5
 
     // MARK: - Types
