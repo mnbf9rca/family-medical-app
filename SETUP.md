@@ -277,7 +277,7 @@ wrangler dev           # local Worker runtime with hot reload
 cargo test             # Rust unit + integration tests
 ```
 
-Authentication against the local Worker requires `api.recordwell.app` resolve somewhere — point the iOS app at the dev URL via the `baseURL:` init parameter on `OpaqueAuthService` (no xcconfig override exists today; see `OpaqueAuthService.defaultBaseURL` for the hardcoded production endpoint).
+Authentication against the local Worker requires `api.recordwell.app` resolve somewhere — point the iOS app at the dev URL via the `baseURL:` init parameter on `OpaqueAuthService` (no xcconfig override exists today; see `defaultBaseURL` in `ios/FamilyMedicalApp/FamilyMedicalApp/Services/Auth/OpaqueAuthService.swift` for the hardcoded production endpoint).
 
 ### Deployment
 
