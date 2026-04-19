@@ -262,7 +262,7 @@ Five minutes was chosen because:
 
 1. The primary threat model (ADR-0001) treats the device as a soft-trust boundary — the OS screen lock is the first line of defence and its lifetime is user-controlled.
 2. The OPAQUE primary passphrase is relatively expensive to re-enter (12+ chars); forcing re-entry every 60s materially degrades session-continuity for common flows like "photograph three bottles, then annotate them."
-3. Users with higher risk tolerance can configure their own OS screen-lock to be shorter; the app respects `WillResignActive` and `DidEnterBackground` immediately rather than relying on its own timer for those transitions.
+3. The 300s timer protects only the *background-time* gap. The app locks immediately on `WillResignActive` / `DidEnterBackground`, so the timer is not guarding the foreground-but-unattended case — that threat is covered by the device's own OS screen lock, whose lifetime is user-controlled and which users with a stricter risk tolerance can tighten independently of this default.
 
 ### Tunability contract
 
