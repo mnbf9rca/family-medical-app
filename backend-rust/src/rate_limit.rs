@@ -6,6 +6,17 @@
 use serde::{Deserialize, Serialize};
 use worker::*;
 
+/// Default rate-limit ladder: 5 requests per 60-second window.
+/// See ADR-0011 §"Rate-limit ladder" for rationale.
+pub const DEFAULT_MAX_REQUESTS: u32 = 5;
+pub const DEFAULT_WINDOW_SECONDS: u64 = 60;
+
+/// Stricter ladder for registration endpoints: 3 requests per
+/// 300-second (5-minute) window. See ADR-0011 §"Rate-limit ladder"
+/// for why registration tolerates fewer attempts per window.
+pub const REGISTRATION_MAX_REQUESTS: u32 = 3;
+pub const REGISTRATION_WINDOW_SECONDS: u64 = 300;
+
 /// Rate limit configuration
 pub struct RateLimitConfig {
     /// Maximum requests per window
@@ -17,8 +28,8 @@ pub struct RateLimitConfig {
 impl Default for RateLimitConfig {
     fn default() -> Self {
         Self {
-            max_requests: 5,
-            window_seconds: 60,
+            max_requests: DEFAULT_MAX_REQUESTS,
+            window_seconds: DEFAULT_WINDOW_SECONDS,
         }
     }
 }

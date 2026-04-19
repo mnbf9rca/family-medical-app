@@ -1,5 +1,5 @@
 use crate::opaque;
-use crate::rate_limit::{check_rate_limit, RateLimitConfig};
+use crate::rate_limit::{check_rate_limit, RateLimitConfig, REGISTRATION_MAX_REQUESTS, REGISTRATION_WINDOW_SECONDS};
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
 use serde::{Deserialize, Serialize};
 use worker::*;
@@ -168,8 +168,8 @@ pub async fn handle_register_start(
     // Rate limiting per client_identifier
     if let Ok(rate_limits) = env.kv("RATE_LIMITS") {
         let config = RateLimitConfig {
-            max_requests: 3,     // Stricter for registration
-            window_seconds: 300, // 5 minute window
+            max_requests: REGISTRATION_MAX_REQUESTS,
+            window_seconds: REGISTRATION_WINDOW_SECONDS,
         };
         if let Err(retry_after) =
             check_rate_limit(&rate_limits, &body.client_identifier, "register_start", &config).await

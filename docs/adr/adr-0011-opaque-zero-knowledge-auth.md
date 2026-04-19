@@ -214,3 +214,29 @@ OPAQUE intentionally provides no indication of whether username or password is w
 **Decision Date**: 2026-01-28
 **Author**: Claude Code
 **Reviewers**: [To be assigned]
+
+## Addendum: Rate-limit ladder (2026-04-18)
+
+The OPAQUE auth endpoints use a two-tier rate-limit ladder.
+
+### Server-side defaults
+
+All endpoints (`backend-rust/src/rate_limit.rs`):
+
+- **Default ladder:** 5 requests per 60-second window (`DEFAULT_MAX_REQUESTS`, `DEFAULT_WINDOW_SECONDS`). Applied to `/login/start` (and any future endpoint that calls `RateLimitConfig::default()`).
+- **Registration ladder** (applied to `/register/start`): 3 requests per 300-second (5-minute) window (`REGISTRATION_MAX_REQUESTS`, `REGISTRATION_WINDOW_SECONDS`). Rationale: the registration handshake creates durable state (envelope storage, key-material derivation) per attempt, so the cost of tolerating a high attempt rate is meaningfully higher than for login.
+
+### Client-side back-off
+
+The iOS client applies its own escalating device-lockout ladder in `AuthenticationService.swift` (`rateLimitThresholds`) after consecutive failed unlock attempts, before touching the server:
+
+- 3 failures → 30-second lockout
+- 4 failures → 60 seconds
+- 5 failures → 300 seconds
+- 6+ failures → 900 seconds
+
+This client ladder defends against a stranger with the physical device; the server ladder defends against a remote attacker burning credentials against the API. The two layers are deliberately independent — a client that bypasses or reinstalls past the device-lockout still hits the server ceiling before causing persistent damage.
+
+### What to change together
+
+Any change to `DEFAULT_MAX_REQUESTS` / `DEFAULT_WINDOW_SECONDS` / `REGISTRATION_MAX_REQUESTS` / `REGISTRATION_WINDOW_SECONDS` must be reflected in this addendum and cross-checked against the client-side ladder in `AuthenticationService.swift`.
