@@ -202,7 +202,7 @@ final class AuthenticationViewModel {
         lockStateService.recordBackgroundTime()
     }
 
-    var shouldLockOnForeground: Bool {
+    func shouldLockOnForeground() -> Bool {
         lockStateService.shouldLockOnForeground()
     }
 

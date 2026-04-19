@@ -22,7 +22,7 @@ struct AuthenticationViewModelScenePhaseTests {
         mockLockStateService.shouldLockOnForegroundReturnValue = true
         let sut = AuthenticationViewModel(lockStateService: mockLockStateService)
 
-        #expect(sut.shouldLockOnForeground == true)
+        #expect(sut.shouldLockOnForeground() == true)
     }
 
     @Test
@@ -31,6 +31,6 @@ struct AuthenticationViewModelScenePhaseTests {
         mockLockStateService.shouldLockOnForegroundReturnValue = false
         let sut = AuthenticationViewModel(lockStateService: mockLockStateService)
 
-        #expect(sut.shouldLockOnForeground == false)
+        #expect(sut.shouldLockOnForeground() == false)
     }
 }

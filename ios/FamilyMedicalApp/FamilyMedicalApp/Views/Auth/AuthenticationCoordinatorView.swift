@@ -59,7 +59,7 @@ struct AuthenticationCoordinatorView: View {
 
         case .active:
             // Check if should lock based on timeout
-            if viewModel.isAuthenticated, viewModel.shouldLockOnForeground {
+            if viewModel.isAuthenticated, viewModel.shouldLockOnForeground() {
                 viewModel.lock()
             }
 
