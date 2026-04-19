@@ -2,6 +2,8 @@ import Testing
 @testable import FamilyMedicalApp
 
 /// Tests for AuthenticationViewModel scene phase delegation to LockStateService
+/// Unit tests for the ViewModel's scene-phase delegation surface.
+/// End-to-end scene-phase behaviour is covered by AuthenticationCoordinatorViewTests.
 @MainActor
 struct AuthenticationViewModelScenePhaseTests {
     @Test
