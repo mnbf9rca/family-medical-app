@@ -27,10 +27,6 @@ protocol BackupFileServiceProtocol: Sendable {
 
 /// Service for creating and reading backup files
 final class BackupFileService: BackupFileServiceProtocol, @unchecked Sendable {
-    // MARK: - Constants
-
-    private static let minimumPasswordLength = 8
-
     // MARK: - Dependencies
 
     private let keyDerivationService: KeyDerivationServiceProtocol
@@ -59,7 +55,7 @@ final class BackupFileService: BackupFileServiceProtocol, @unchecked Sendable {
     func createEncryptedBackup(payload: BackupPayload, password: String) throws -> BackupFile {
         let start = ContinuousClock.now
         logger.entry("createEncryptedBackup")
-        guard password.count >= Self.minimumPasswordLength else {
+        guard password.count >= PasswordValidationService.minimumLength else {
             throw BackupError.passwordTooWeak
         }
 

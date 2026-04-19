@@ -71,6 +71,36 @@ struct BackupFileServiceTests {
         }
     }
 
+    // MARK: - Password Policy Alignment Tests
+
+    @Test(
+        "Rejects passwords shorter than PasswordValidationService.minimumLength",
+        arguments: ["EightCh1", "ElevenCh11!"]
+    )
+    func rejectsPasswordsBelowAlignedMinimum(password: String) throws {
+        let service = BackupFileService(
+            keyDerivationService: KeyDerivationService(),
+            encryptionService: EncryptionService()
+        )
+        let payload = BackupFileServiceTestHelpers.makeTestPayload()
+
+        #expect(throws: BackupError.passwordTooWeak) {
+            _ = try service.createEncryptedBackup(payload: payload, password: password)
+        }
+    }
+
+    @Test("Accepts password at the aligned minimum length")
+    func acceptsPasswordAtAlignedMinimum() throws {
+        let service = BackupFileService(
+            keyDerivationService: KeyDerivationService(),
+            encryptionService: EncryptionService()
+        )
+        let payload = BackupFileServiceTestHelpers.makeTestPayload()
+
+        // Exactly 12 characters — must NOT throw.
+        _ = try service.createEncryptedBackup(payload: payload, password: "TwelveChar1!")
+    }
+
     // MARK: - Unencrypted Tests
 
     @Test("Creates unencrypted backup correctly")
@@ -301,9 +331,11 @@ struct BackupFileServiceTests {
             _ = try service.readUnencryptedBackup(file: file)
         }
     }
+}
 
-    // MARK: - Format Validation Tests
+// MARK: - Format Validation Tests
 
+extension BackupFileServiceTests {
     @Test("Throws unsupportedVersion for wrong formatVersion")
     func throwsForUnsupportedVersion() throws {
         let service = BackupFileService(

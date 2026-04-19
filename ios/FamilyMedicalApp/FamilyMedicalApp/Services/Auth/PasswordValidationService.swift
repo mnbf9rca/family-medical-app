@@ -41,7 +41,7 @@ protocol PasswordValidationServiceProtocol {
 final class PasswordValidationService: PasswordValidationServiceProtocol {
     // MARK: - Constants
 
-    private static let minimumLength = 12
+    static let minimumLength = 12
 
     // Common passwords loaded from SecLists (10,000 most common)
     // Source: https://github.com/danielmiessler/SecLists/blob/master/Passwords/Common-Credentials/10k-most-common.txt
